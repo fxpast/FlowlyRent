@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:11
+    container_name: flowlyrent-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: flowlyrent
+      MYSQL_USER: flowlyrent
+      MYSQL_PASSWORD: flowlyrent
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: flowlyrent-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: flowlyrent
+      DB_PASSWORD: flowlyrent
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/flowlyrent?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Europe/Paris
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_placeholder}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: flowlyrent-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    environment:
+      - API_URL=http://backend:8080/api
+
+volumes:
+  mariadb_data:

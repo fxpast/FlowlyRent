@@ -1,0 +1,52 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/flowlyrent?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Europe/Paris
+    username: ${DB_USERNAME:flowlyrent}
+    password: ${DB_PASSWORD:flowlyrent}
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Europe/Paris
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
+
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:admin123}
+
+sync:
+  ical:
+    cron: "0 0 */2 * * *"
+
+logging:
+  level:
+    com.flowlyrent: DEBUG
+    org.hibernate.SQL: WARN

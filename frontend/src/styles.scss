@@ -1,0 +1,24 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+h1 {
+  color: #1a237e;
+}
+
+mat-card {
+  border-radius: 12px !important;
+}
+
+.mat-mdc-snack-bar-container {
+  &.success { --mdc-snackbar-container-color: #2e7d32; }
+  &.error { --mdc-snackbar-container-color: #c62828; }
+}
