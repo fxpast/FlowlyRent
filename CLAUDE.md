@@ -6,7 +6,7 @@ FlowlyRent est une plateforme de gestion de location saisonnière (MVP).
 Elle permet à un hôte de centraliser ses réservations provenant de plusieurs plateformes (Booking.com, Airbnb, Abritel) et de gérer ses réservations directes.
 
 **Dépôt GitHub :** `fxpast/flowlyrent`
-**Branche de développement :** `claude/booking-mvp-objectives-yHm1I`
+**Branche de travail :** `master`
 
 ---
 
