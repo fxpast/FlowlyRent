@@ -6,8 +6,7 @@ import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.Beds24AccountRepository;
-import com.flowlyrent.service.Beds24SyncService;
-import com.flowlyrent.service.SyncResult;
+import com.flowlyrent.service.Beds24TokenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +23,7 @@ public class UserSettingsController {
     private final SecurityUtils securityUtils;
     private final AppUserRepository userRepository;
     private final Beds24AccountRepository beds24AccountRepository;
-    private final Beds24SyncService beds24SyncService;
+    private final Beds24TokenService beds24TokenService;
 
     @GetMapping("/profile")
     public ResponseEntity<LoginResponse> getProfile() {
@@ -73,7 +72,7 @@ public class UserSettingsController {
                 .orElseGet(() -> { Beds24Account a = new Beds24Account(); a.setAppUser(user); return a; });
 
         try {
-            beds24SyncService.connectWithSetupToken(account, setupToken);
+            beds24TokenService.connectWithSetupToken(account, setupToken);
             return ResponseEntity.ok(Map.of("status", "Connecté", "connected", true));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -87,12 +86,9 @@ public class UserSettingsController {
                 .orElseThrow(() -> new IllegalStateException("Compte Beds24 non connecté"));
 
         try {
-            int properties = beds24SyncService.syncUserProperties(account);
-            int bookings = beds24SyncService.syncUserBookings(account);
-            return ResponseEntity.ok(Map.of(
-                    "propertiesSynced", properties,
-                    "bookingsSynced", bookings,
-                    "status", "OK"));
+            // Architecture pass-through : plus de sync locale, le token est validé
+            beds24TokenService.getValidToken(account);
+            return ResponseEntity.ok(Map.of("status", "Connexion Beds24 active", "connected", true));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

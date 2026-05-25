@@ -1,132 +1,106 @@
 package com.flowlyrent.controller;
 
-import com.flowlyrent.dto.BookingRequest;
-import com.flowlyrent.dto.BookingResponse;
-import com.flowlyrent.dto.MessageDTO;
-import com.flowlyrent.model.AppUser;
-import com.flowlyrent.model.Property;
-import com.flowlyrent.model.enums.SenderType;
+import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.repository.AppUserRepository;
-import com.flowlyrent.repository.BookingRepository;
-import com.flowlyrent.repository.PropertyRepository;
-import com.flowlyrent.service.BookingService;
-import com.flowlyrent.service.MessageService;
-import com.flowlyrent.service.PaymentService;
+import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/public")
 @RequiredArgsConstructor
-@Tag(name = "Public - Site de réservation")
+@Tag(name = "Site public")
 public class PublicBookingController {
 
-    private final AppUserRepository appUserRepository;
-    private final PropertyRepository propertyRepository;
-    private final BookingService bookingService;
-    private final BookingRepository bookingRepository;
-    private final MessageService messageService;
-    private final PaymentService paymentService;
+    private final Beds24ApiClient beds24;
+    private final AppUserRepository userRepo;
+    private final Beds24AccountRepository accountRepo;
 
-    // -------------------------------------------------------------------------
-    // Routes par slug utilisateur : /public/{slug}/...
-    // -------------------------------------------------------------------------
+    // --- Propriétés du site public ---
 
     @GetMapping("/{slug}/properties")
-    public ResponseEntity<List<Property>> getPropertiesBySlug(@PathVariable String slug) {
-        return appUserRepository.findByPublicSiteSlug(slug)
-                .map(user -> ResponseEntity.ok(propertyRepository.findByAppUserAndActiveTrue(user)))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/{slug}/properties/{id}")
-    public ResponseEntity<Property> getPropertyBySlug(@PathVariable String slug,
-                                                       @PathVariable Long id) {
-        AppUser user = appUserRepository.findByPublicSiteSlug(slug)
-                .orElse(null);
-        if (user == null) return ResponseEntity.notFound().build();
-        return propertyRepository.findById(id)
-                .filter(p -> p.getAppUser() != null && p.getAppUser().getId().equals(user.getId()))
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/{slug}/properties/{id}/availability")
-    public ResponseEntity<Map<String, Object>> checkAvailabilityBySlug(
-            @PathVariable String slug,
-            @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
-
-        if (!appUserRepository.existsByPublicSiteSlug(slug)) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> getProperties(@PathVariable String slug, @RequestParam Map<String, String> params) {
+        try {
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.getProperties(beds24.tokenFor(account), params));
+        } catch (Exception e) {
+            return error(e);
         }
-        List<?> conflicts = bookingRepository.findConflictingBookings(id, checkIn, checkOut);
-        return ResponseEntity.ok(Map.of("available", conflicts.isEmpty()));
     }
+
+    @GetMapping("/{slug}/properties/{propertyId}/availability")
+    public ResponseEntity<?> getAvailability(
+            @PathVariable String slug,
+            @PathVariable String propertyId,
+            @RequestParam Map<String, String> params) {
+        try {
+            params.put("propertyId", propertyId);
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.getAvailability(beds24.tokenFor(account), params));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    @GetMapping("/{slug}/properties/{propertyId}/offers")
+    public ResponseEntity<?> getOffers(
+            @PathVariable String slug,
+            @PathVariable String propertyId,
+            @RequestParam Map<String, String> params) {
+        try {
+            params.put("propertyId", propertyId);
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.getOffers(beds24.tokenFor(account), params));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    // --- Réservation publique ---
 
     @PostMapping("/{slug}/bookings")
-    public ResponseEntity<BookingResponse> createBookingBySlug(@PathVariable String slug,
-                                                                @Valid @RequestBody BookingRequest request) {
-        if (!appUserRepository.existsByPublicSiteSlug(slug)) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> createBooking(
+            @PathVariable String slug,
+            @RequestBody List<Map<String, Object>> payload) {
+        try {
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.saveBookings(beds24.tokenFor(account), payload));
+        } catch (Exception e) {
+            return error(e);
         }
-        return ResponseEntity.ok(bookingService.createBooking(request));
     }
 
-    // -------------------------------------------------------------------------
-    // Routes génériques (rétro-compatibilité)
-    // -------------------------------------------------------------------------
+    // --- Messages OTA via Beds24 ---
 
-    @GetMapping("/properties")
-    public List<Property> getProperties() {
-        return propertyRepository.findByActiveTrue();
+    @GetMapping("/{slug}/bookings/{bookingId}/messages")
+    public ResponseEntity<?> getMessages(
+            @PathVariable String slug,
+            @PathVariable String bookingId) {
+        try {
+            Map<String, String> params = Map.of("bookingId", bookingId);
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.getMessages(beds24.tokenFor(account), params));
+        } catch (Exception e) {
+            return error(e);
+        }
     }
 
-    @GetMapping("/properties/{id}")
-    public ResponseEntity<Property> getProperty(@PathVariable Long id) {
-        return propertyRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    // --- Helpers ---
+
+    private Beds24Account accountForSlug(String slug) {
+        return userRepo.findByPublicSiteSlug(slug)
+                .flatMap(user -> accountRepo.findByAppUserId(user.getId()))
+                .filter(Beds24Account::isConnected)
+                .orElseThrow(() -> new IllegalArgumentException("Site non trouvé ou non connecté : " + slug));
     }
 
-    @GetMapping("/properties/{id}/availability")
-    public Map<String, Object> checkAvailability(
-            @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
-        List<?> conflicts = bookingRepository.findConflictingBookings(id, checkIn, checkOut);
-        return Map.of("available", conflicts.isEmpty());
-    }
-
-    @PostMapping("/bookings")
-    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest request) {
-        return ResponseEntity.ok(bookingService.createBooking(request));
-    }
-
-    @GetMapping("/bookings/{id}")
-    public ResponseEntity<BookingResponse> getBooking(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.getById(id));
-    }
-
-    @PostMapping("/messages/{bookingId}")
-    public ResponseEntity<MessageDTO> sendMessage(@PathVariable Long bookingId,
-                                                   @Valid @RequestBody MessageDTO dto) {
-        return ResponseEntity.ok(messageService.sendMessage(bookingId, dto.getContent(), SenderType.GUEST));
-    }
-
-    @PostMapping("/payments/{bookingId}/checkout")
-    public ResponseEntity<Map<String, Object>> checkout(@PathVariable Long bookingId,
-                                                         @RequestBody Map<String, String> body) throws Exception {
-        return ResponseEntity.ok(paymentService.createCheckoutSession(
-                bookingId, body.get("successUrl"), body.get("cancelUrl")));
+    private ResponseEntity<Map<String, String>> error(Exception e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
 }

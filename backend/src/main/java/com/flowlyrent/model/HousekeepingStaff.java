@@ -4,16 +4,22 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "guests")
+@Table(name = "housekeeping_staff")
 @Data
-public class Guest {
+public class HousekeepingStaff {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
 
     @Column(nullable = false)
     private String firstName;
@@ -21,13 +27,11 @@ public class Guest {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(nullable = false)
-    private String email;
-
     private String phone;
-    private String mobile;
-    private String country;
-    private String language = "fr";
+    private String status; // auto-entrepreneur, conciergerie, salarié
+    private BigDecimal hourlyRate;
+    private LocalDate hireDate;
+    private boolean active = true;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

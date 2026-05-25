@@ -1,6 +1,5 @@
 package com.flowlyrent.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
 import jakarta.persistence.*;
@@ -8,13 +7,10 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Cleaning / maintenance task, typically auto-generated on booking checkout
- * or created manually by the property manager.
- */
 @Entity
 @Table(name = "housekeeping_tasks")
 @Data
@@ -25,14 +21,19 @@ public class HousekeepingTask {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "property_id", nullable = false)
-    private Property property;
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
 
-    // The booking that triggered this task (null for manual tasks)
-    @JsonIgnoreProperties({"property", "notes", "comments", "invoiceItems", "apiMessage", "rateDescription"})
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
+    @JoinColumn(name = "staff_id")
+    private HousekeepingStaff staff;
+
+    // Références Beds24 (pas de FK locale — architecture pass-through)
+    @Column(nullable = false)
+    private String beds24PropertyId;
+
+    private String beds24BookingId; // null pour les tâches manuelles
+    private String propertyName;    // nom affiché (non-sensible, mis en cache)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -45,8 +46,8 @@ public class HousekeepingTask {
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.PENDING;
 
-    // Name or contact of the person assigned to this task
-    private String assignedTo;
+    private BigDecimal hourlyRate;
+    private Float extraHours;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
