@@ -133,26 +133,21 @@ import { MatTooltipModule } from '@angular/material/tooltip';
               <mat-icon color="primary">check_circle</mat-icon>
               <span>Compte Beds24 connecté</span>
             </div>
-            @if (beds24Status()!.lastSync) {
-              <p class="sync-info">
-                Dernière synchronisation : {{ beds24Status()!.lastSync | date:'dd/MM/yyyy HH:mm' }}
-                @if (beds24Status()!.lastSyncStatus) {
-                  &nbsp;— <span [class.error]="beds24Status()!.lastSyncStatus!.startsWith('ERROR')">
-                    {{ beds24Status()!.lastSyncStatus }}
-                  </span>
-                }
-              </p>
-            }
-            @if (syncResult()) {
-              <div class="sync-result">
-                @if (syncResult()!.error) {
-                  <p class="msg error">{{ syncResult()!.error }}</p>
-                } @else {
-                  <p class="msg success">
-                    Synchronisation réussie — {{ syncResult()!.propertiesSynced }} propriétés,
-                    {{ syncResult()!.bookingsSynced }} réservations
-                  </p>
-                }
+
+            <!-- URL Webhook à copier dans Beds24 -->
+            @if (profile()) {
+              <div class="webhook-box">
+                <div class="webhook-label">
+                  <mat-icon>webhook</mat-icon>
+                  <strong>URL Webhook Beds24</strong>
+                  <span class="webhook-hint">À coller dans Beds24 : Settings → Properties → Access → Booking Webhook</span>
+                </div>
+                <div class="webhook-url-row">
+                  <code class="webhook-url">{{ webhookUrl() }}</code>
+                  <button mat-icon-button (click)="copyWebhookUrl()" matTooltip="Copier">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
               </div>
             }
           } @else {
@@ -266,6 +261,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .cancel-area { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding-top: 16px; border-top: 1px solid #eee; }
     .cancel-hint { font-size: 12px; color: #999; }
     .msg.success { color: #2e7d32; }
+    .webhook-box { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+    .webhook-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; flex-wrap: wrap; }
+    .webhook-label mat-icon { font-size: 18px; height: 18px; width: 18px; color: #1976d2; }
+    .webhook-hint { font-size: 12px; color: #666; }
+    .webhook-url-row { display: flex; align-items: center; gap: 8px; }
+    .webhook-url { font-size: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; flex: 1; word-break: break-all; }
   `]
 })
 export class SettingsComponent implements OnInit {
@@ -295,12 +296,21 @@ export class SettingsComponent implements OnInit {
   syncing = signal(false);
   syncResult = signal<{ propertiesSynced?: number; bookingsSynced?: number; error?: string } | null>(null);
 
+  webhookUrl = signal('');
+
   constructor(private userService: UserService, private route: ActivatedRoute, private snackBar: MatSnackBar) {}
+
+  copyWebhookUrl(): void {
+    navigator.clipboard.writeText(this.webhookUrl()).then(() =>
+      this.snackBar.open('URL copiée !', '', { duration: 2000 })
+    );
+  }
 
   ngOnInit(): void {
     this.userService.getProfile().subscribe(p => {
       this.profile.set(p);
       this.profileEdit = { firstName: p.firstName ?? '', lastName: p.lastName ?? '', publicSiteSlug: p.publicSiteSlug ?? '' };
+      this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
     this.userService.getSubscription().subscribe(s => this.subInfo.set(s));
     this.loadBeds24Status();
