@@ -16,6 +16,14 @@ import { Property } from '../../core/models/booking.model';
       <div class="hero-content">
         <h1>Trouvez votre logement idéal</h1>
         <p>Réservez directement, sans commission</p>
+        <div class="hero-actions">
+          <a mat-raised-button routerLink="/admin/register" class="btn-register">
+            <mat-icon>person_add</mat-icon> Créer un compte
+          </a>
+          <a mat-stroked-button routerLink="/admin/login" class="btn-login">
+            <mat-icon>login</mat-icon> Connexion
+          </a>
+        </div>
       </div>
     </div>
 
@@ -53,9 +61,6 @@ import { Property } from '../../core/models/booking.model';
       }
     </div>
 
-    <div class="admin-link">
-      <a mat-button routerLink="/admin/login">Administration</a>
-    </div>
   `,
   styles: [`
     .hero {
@@ -63,7 +68,12 @@ import { Property } from '../../core/models/booking.model';
       color: white; padding: 80px 24px; text-align: center;
     }
     .hero h1 { font-size: 48px; margin: 0 0 16px; }
-    .hero p { font-size: 20px; opacity: 0.8; margin: 0; }
+    .hero p { font-size: 20px; opacity: 0.8; margin: 0 0 32px; }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn-register { background: white !important; color: #1a237e !important; font-weight: 600; font-size: 15px; }
+    .btn-register mat-icon { margin-right: 6px; }
+    .btn-login { border-color: rgba(255,255,255,0.7) !important; color: white !important; font-size: 15px; }
+    .btn-login mat-icon { margin-right: 6px; }
     .container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
     h2 { font-size: 28px; margin-bottom: 24px; }
     .properties-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -79,7 +89,6 @@ import { Property } from '../../core/models/booking.model';
     .property-info mat-icon { font-size: 18px; vertical-align: middle; margin-right: 4px; }
     .price { font-size: 20px; font-weight: bold; color: #1a237e; }
     .empty { text-align: center; color: #999; padding: 40px; }
-    .admin-link { text-align: center; padding: 24px; }
     @media (max-width: 900px) { .properties-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .properties-grid { grid-template-columns: 1fr; } .hero h1 { font-size: 28px; } }
   `]

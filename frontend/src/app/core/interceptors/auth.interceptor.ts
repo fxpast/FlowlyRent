@@ -4,12 +4,9 @@ import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
-  const credentials = auth.getCredentials();
-  if (credentials && req.url.includes('/admin') || req.url.includes('/sync')) {
-    const cloned = req.clone({
-      setHeaders: { Authorization: `Basic ${credentials}` }
-    });
-    return next(cloned);
+  const token = auth.getToken();
+  if (token && (req.url.includes('/admin') || req.url.includes('/sync') || req.url.includes('/user'))) {
+    return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
   }
   return next(req);
 };

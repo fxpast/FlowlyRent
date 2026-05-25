@@ -4,35 +4,57 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '@env/environment';
 
+interface LoginResponse {
+  token: string;
+  userId: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  plan: string;
+  publicSiteSlug: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  isLoggedIn = signal(this.checkStoredCredentials());
+  isLoggedIn = signal(!!localStorage.getItem('flr_token'));
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  login(username: string, password: string): Observable<unknown> {
-    const credentials = btoa(`${username}:${password}`);
-    return this.http.get(`${environment.apiUrl}/admin/bookings`, {
-      headers: { Authorization: `Basic ${credentials}` }
-    }).pipe(
-      tap(() => {
-        localStorage.setItem('flr_credentials', credentials);
+  login(email: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
+      tap(resp => {
+        localStorage.setItem('flr_token', resp.token);
+        localStorage.setItem('flr_user', JSON.stringify({
+          userId: resp.userId,
+          email: resp.email,
+          firstName: resp.firstName,
+          lastName: resp.lastName,
+          plan: resp.plan,
+          publicSiteSlug: resp.publicSiteSlug
+        }));
         this.isLoggedIn.set(true);
       })
     );
   }
 
   logout(): void {
-    localStorage.removeItem('flr_credentials');
+    localStorage.removeItem('flr_token');
+    localStorage.removeItem('flr_user');
     this.isLoggedIn.set(false);
     this.router.navigate(['/admin/login']);
   }
 
-  getCredentials(): string | null {
-    return localStorage.getItem('flr_credentials');
+  getToken(): string | null {
+    return localStorage.getItem('flr_token');
   }
 
-  private checkStoredCredentials(): boolean {
-    return !!localStorage.getItem('flr_credentials');
+  getCurrentUser(): { userId: number; email: string; firstName: string; lastName: string; plan: string; publicSiteSlug: string } | null {
+    const raw = localStorage.getItem('flr_user');
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  // Rétrocompatibilité : l'intercepteur appellait getCredentials()
+  getCredentials(): string | null {
+    return this.getToken();
   }
 }

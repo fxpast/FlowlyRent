@@ -1,0 +1,123 @@
+package com.flowlyrent.controller;
+
+import com.flowlyrent.config.SecurityUtils;
+import com.flowlyrent.dto.LoginResponse;
+import com.flowlyrent.model.AppUser;
+import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.repository.AppUserRepository;
+import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.service.Beds24SyncService;
+import com.flowlyrent.service.SyncResult;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/user")
+@RequiredArgsConstructor
+@Tag(name = "Paramètres utilisateur")
+public class UserSettingsController {
+
+    private final SecurityUtils securityUtils;
+    private final AppUserRepository userRepository;
+    private final Beds24AccountRepository beds24AccountRepository;
+    private final Beds24SyncService beds24SyncService;
+
+    @GetMapping("/profile")
+    public ResponseEntity<LoginResponse> getProfile() {
+        AppUser user = securityUtils.getCurrentUser();
+        return ResponseEntity.ok(toProfileResponse(user));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<LoginResponse> updateProfile(@RequestBody Map<String, String> body) {
+        AppUser user = securityUtils.getCurrentUser();
+        if (body.containsKey("firstName")) user.setFirstName(body.get("firstName"));
+        if (body.containsKey("lastName"))  user.setLastName(body.get("lastName"));
+        if (body.containsKey("publicSiteSlug")) {
+            String slug = body.get("publicSiteSlug");
+            if (!slug.equals(user.getPublicSiteSlug()) && userRepository.existsByPublicSiteSlug(slug)) {
+                return ResponseEntity.badRequest().build();
+            }
+            user.setPublicSiteSlug(slug);
+        }
+        return ResponseEntity.ok(toProfileResponse(userRepository.save(user)));
+    }
+
+    // --- Beds24 ---
+
+    @GetMapping("/beds24/status")
+    public ResponseEntity<Map<String, Object>> beds24Status() {
+        AppUser user = securityUtils.getCurrentUser();
+        return beds24AccountRepository.findByAppUserId(user.getId())
+                .map(a -> ResponseEntity.ok(Map.<String, Object>of(
+                        "connected", a.isConnected(),
+                        "lastSync", a.getLastSync() != null ? a.getLastSync().toString() : "",
+                        "lastSyncStatus", a.getLastSyncStatus() != null ? a.getLastSyncStatus() : ""
+                )))
+                .orElse(ResponseEntity.ok(Map.of("connected", false)));
+    }
+
+    @PostMapping("/beds24/connect-token")
+    public ResponseEntity<Map<String, Object>> beds24ConnectWithToken(@RequestBody Map<String, String> body) {
+        AppUser user = securityUtils.getCurrentUser();
+        String setupToken = body.get("setupToken");
+        if (setupToken == null || setupToken.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Setup token manquant"));
+        }
+
+        Beds24Account account = beds24AccountRepository.findByAppUserId(user.getId())
+                .orElseGet(() -> { Beds24Account a = new Beds24Account(); a.setAppUser(user); return a; });
+
+        try {
+            beds24SyncService.connectWithSetupToken(account, setupToken);
+            return ResponseEntity.ok(Map.of("status", "Connecté", "connected", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/beds24/sync")
+    public ResponseEntity<Map<String, Object>> beds24Sync() {
+        AppUser user = securityUtils.getCurrentUser();
+        Beds24Account account = beds24AccountRepository.findByAppUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("Compte Beds24 non connecté"));
+
+        try {
+            int properties = beds24SyncService.syncUserProperties(account);
+            int bookings = beds24SyncService.syncUserBookings(account);
+            return ResponseEntity.ok(Map.of(
+                    "propertiesSynced", properties,
+                    "bookingsSynced", bookings,
+                    "status", "OK"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/beds24/disconnect")
+    public ResponseEntity<Map<String, String>> beds24Disconnect() {
+        AppUser user = securityUtils.getCurrentUser();
+        beds24AccountRepository.findByAppUserId(user.getId()).ifPresent(a -> {
+            a.setConnected(false);
+            a.setAccessToken(null);
+            a.setRefreshToken(null);
+            beds24AccountRepository.save(a);
+        });
+        return ResponseEntity.ok(Map.of("status", "Déconnecté"));
+    }
+
+    private LoginResponse toProfileResponse(AppUser user) {
+        LoginResponse r = new LoginResponse();
+        r.setUserId(user.getId());
+        r.setEmail(user.getEmail());
+        r.setFirstName(user.getFirstName());
+        r.setLastName(user.getLastName());
+        r.setPlan(user.getPlan());
+        r.setPublicSiteSlug(user.getPublicSiteSlug());
+        return r;
+    }
+}

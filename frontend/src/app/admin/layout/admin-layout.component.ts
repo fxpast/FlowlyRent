@@ -86,7 +86,11 @@ export class AdminLayoutComponent implements OnInit {
     { icon: 'book_online', label: 'Réservations', route: 'bookings' },
     { icon: 'chat', label: 'Messages', route: 'messages' },
     { icon: 'payment', label: 'Paiements', route: 'payments' },
-    { icon: 'sync', label: 'Synchronisation', route: 'sync' }
+    { icon: 'sync', label: 'Synchronisation', route: 'sync' },
+    { icon: 'calendar_month', label: 'Calendrier', route: 'calendar' },
+    { icon: 'cleaning_services', label: 'Ménage', route: 'housekeeping' },
+    { icon: 'bar_chart', label: 'Revenus', route: 'stats' },
+    { icon: 'settings', label: 'Paramètres', route: 'settings' }
   ];
 
   constructor(public auth: AuthService, private messageService: MessageService) {}

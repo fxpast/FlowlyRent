@@ -21,6 +21,10 @@ export const routes: Routes = [
     loadComponent: () => import('./admin/login/login.component').then(m => m.LoginComponent)
   },
   {
+    path: 'admin/register',
+    loadComponent: () => import('./admin/register/register.component').then(m => m.RegisterComponent)
+  },
+  {
     path: '**',
     redirectTo: '/public/home'
   }

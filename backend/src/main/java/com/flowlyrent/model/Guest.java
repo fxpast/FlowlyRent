@@ -25,6 +25,7 @@ public class Guest {
     private String email;
 
     private String phone;
+    private String mobile;
     private String country;
     private String language = "fr";
 

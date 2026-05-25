@@ -41,6 +41,22 @@ export const adminRoutes: Routes = [
       {
         path: 'sync',
         loadComponent: () => import('./sync/sync.component').then(m => m.SyncComponent)
+      },
+      {
+        path: 'housekeeping',
+        loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent)
+      },
+      {
+        path: 'calendar',
+        loadComponent: () => import('./calendar/calendar.component').then(m => m.CalendarComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent)
+      },
+      {
+        path: 'stats',
+        loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
       }
     ]
   }

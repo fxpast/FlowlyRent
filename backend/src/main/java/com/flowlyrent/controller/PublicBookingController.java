@@ -3,8 +3,10 @@ package com.flowlyrent.controller;
 import com.flowlyrent.dto.BookingRequest;
 import com.flowlyrent.dto.BookingResponse;
 import com.flowlyrent.dto.MessageDTO;
+import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Property;
 import com.flowlyrent.model.enums.SenderType;
+import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.BookingRepository;
 import com.flowlyrent.repository.PropertyRepository;
 import com.flowlyrent.service.BookingService;
@@ -27,11 +29,62 @@ import java.util.Map;
 @Tag(name = "Public - Site de réservation")
 public class PublicBookingController {
 
+    private final AppUserRepository appUserRepository;
     private final PropertyRepository propertyRepository;
     private final BookingService bookingService;
     private final BookingRepository bookingRepository;
     private final MessageService messageService;
     private final PaymentService paymentService;
+
+    // -------------------------------------------------------------------------
+    // Routes par slug utilisateur : /public/{slug}/...
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/{slug}/properties")
+    public ResponseEntity<List<Property>> getPropertiesBySlug(@PathVariable String slug) {
+        return appUserRepository.findByPublicSiteSlug(slug)
+                .map(user -> ResponseEntity.ok(propertyRepository.findByAppUserAndActiveTrue(user)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{slug}/properties/{id}")
+    public ResponseEntity<Property> getPropertyBySlug(@PathVariable String slug,
+                                                       @PathVariable Long id) {
+        AppUser user = appUserRepository.findByPublicSiteSlug(slug)
+                .orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
+        return propertyRepository.findById(id)
+                .filter(p -> p.getAppUser() != null && p.getAppUser().getId().equals(user.getId()))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{slug}/properties/{id}/availability")
+    public ResponseEntity<Map<String, Object>> checkAvailabilityBySlug(
+            @PathVariable String slug,
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
+
+        if (!appUserRepository.existsByPublicSiteSlug(slug)) {
+            return ResponseEntity.notFound().build();
+        }
+        List<?> conflicts = bookingRepository.findConflictingBookings(id, checkIn, checkOut);
+        return ResponseEntity.ok(Map.of("available", conflicts.isEmpty()));
+    }
+
+    @PostMapping("/{slug}/bookings")
+    public ResponseEntity<BookingResponse> createBookingBySlug(@PathVariable String slug,
+                                                                @Valid @RequestBody BookingRequest request) {
+        if (!appUserRepository.existsByPublicSiteSlug(slug)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(bookingService.createBooking(request));
+    }
+
+    // -------------------------------------------------------------------------
+    // Routes génériques (rétro-compatibilité)
+    // -------------------------------------------------------------------------
 
     @GetMapping("/properties")
     public List<Property> getProperties() {
@@ -50,7 +103,6 @@ public class PublicBookingController {
             @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
-
         List<?> conflicts = bookingRepository.findConflictingBookings(id, checkIn, checkOut);
         return Map.of("available", conflicts.isEmpty());
     }
@@ -75,8 +127,6 @@ public class PublicBookingController {
     public ResponseEntity<Map<String, Object>> checkout(@PathVariable Long bookingId,
                                                          @RequestBody Map<String, String> body) throws Exception {
         return ResponseEntity.ok(paymentService.createCheckoutSession(
-                bookingId,
-                body.get("successUrl"),
-                body.get("cancelUrl")));
+                bookingId, body.get("successUrl"), body.get("cancelUrl")));
     }
 }

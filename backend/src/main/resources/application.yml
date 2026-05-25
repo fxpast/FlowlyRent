@@ -38,6 +38,14 @@ stripe:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
 
+jwt:
+  # Changez cette clé en production (base64, minimum 32 octets)
+  secret: ${JWT_SECRET:Zmxvd2x5cmVudC1zZWNyZXQta2V5LTMyLWJ5dGVzLWxvbmchIQ==}
+  expiration: ${JWT_EXPIRATION:604800000}  # 7 jours en ms
+
+app:
+  name: ${APP_NAME:FlowlyRent}
+
 admin:
   username: ${ADMIN_USERNAME:admin}
   password: ${ADMIN_PASSWORD:admin123}

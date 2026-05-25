@@ -4,21 +4,20 @@ import com.flowlyrent.dto.BookingRequest;
 import com.flowlyrent.dto.BookingResponse;
 import com.flowlyrent.dto.GuestDTO;
 import com.flowlyrent.model.Booking;
-import com.flowlyrent.model.Guest;
 import com.flowlyrent.model.Payment;
 import com.flowlyrent.model.Property;
 import com.flowlyrent.model.enums.BookingStatus;
-import com.flowlyrent.model.enums.PaymentStatus;
 import com.flowlyrent.repository.BookingRepository;
-import com.flowlyrent.repository.GuestRepository;
 import com.flowlyrent.repository.PaymentRepository;
 import com.flowlyrent.repository.PropertyRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.UUID;
@@ -26,12 +25,15 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookingService {
 
     private final BookingRepository bookingRepository;
-    private final GuestRepository guestRepository;
     private final PropertyRepository propertyRepository;
     private final PaymentRepository paymentRepository;
+    private final EmailService emailService;
+
+    private static final String STATUS_CANCELLED = "cancelled";
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
@@ -44,29 +46,39 @@ public class BookingService {
             throw new IllegalStateException("Ces dates sont déjà réservées");
         }
 
-        Guest guest = resolveGuest(request.getGuest());
-
         Booking booking = new Booking();
         booking.setProperty(property);
-        booking.setGuest(guest);
-        booking.setCheckIn(request.getCheckIn());
-        booking.setCheckOut(request.getCheckOut());
-        booking.setGuestCount(request.getGuestCount());
-        booking.setSource(request.getSource());
+        booking.setArrival(request.getCheckIn());
+        booking.setDeparture(request.getCheckOut());
+        booking.setNumAdult(request.getGuestCount() > 0 ? request.getGuestCount() : 1);
+        booking.setStatus("new");
+        booking.applySource(request.getSource());
         booking.setNotes(request.getNotes());
-        booking.setStatus(BookingStatus.PENDING);
-        booking.setConfirmationCode(generateConfirmationCode());
+        booking.setReference(generateConfirmationCode());
+        booking.setBookingTime(LocalDateTime.now());
+        booking.setModifiedTime(LocalDateTime.now());
 
-        if (request.getTotalAmount() != null) {
-            booking.setTotalAmount(request.getTotalAmount());
-        } else {
-            booking.setTotalAmount(property.getPricePerNight()
-                    .multiply(java.math.BigDecimal.valueOf(booking.getNightsCount()))
-                    .add(property.getCleaningFee()));
+        // Coordonnées voyageur depuis le DTO
+        if (request.getGuest() != null) {
+            GuestDTO g = request.getGuest();
+            booking.setFirstName(g.getFirstName());
+            booking.setLastName(g.getLastName());
+            booking.setEmail(g.getEmail());
+            booking.setPhone(g.getPhone());
+            booking.setCountry(g.getCountry());
         }
 
-        booking = bookingRepository.save(booking);
-        return toResponse(booking);
+        if (request.getTotalAmount() != null) {
+            booking.setPrice(request.getTotalAmount());
+        } else if (property.getPricePerNight() != null) {
+            booking.setPrice(property.getPricePerNight()
+                    .multiply(java.math.BigDecimal.valueOf(booking.getNightsCount()))
+                    .add(property.getCleaningFee() != null ? property.getCleaningFee() : java.math.BigDecimal.ZERO));
+        }
+
+        Booking saved = bookingRepository.save(booking);
+        try { emailService.sendBookingConfirmation(saved); } catch (Exception e) { log.warn("Email confirmation: {}", e.getMessage()); }
+        return toResponse(saved);
     }
 
     @Transactional
@@ -74,15 +86,19 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable: " + id));
 
-        if (request.getCheckIn() != null) booking.setCheckIn(request.getCheckIn());
-        if (request.getCheckOut() != null) booking.setCheckOut(request.getCheckOut());
-        if (request.getGuestCount() > 0) booking.setGuestCount(request.getGuestCount());
-        if (request.getNotes() != null) booking.setNotes(request.getNotes());
-        if (request.getTotalAmount() != null) booking.setTotalAmount(request.getTotalAmount());
+        if (request.getCheckIn()  != null) booking.setArrival(request.getCheckIn());
+        if (request.getCheckOut() != null) booking.setDeparture(request.getCheckOut());
+        if (request.getGuestCount() > 0)   booking.setNumAdult(request.getGuestCount());
+        if (request.getNotes() != null)     booking.setNotes(request.getNotes());
+        if (request.getTotalAmount() != null) booking.setPrice(request.getTotalAmount());
         if (request.getGuest() != null) {
-            Guest guest = resolveGuest(request.getGuest());
-            booking.setGuest(guest);
+            GuestDTO g = request.getGuest();
+            if (g.getFirstName() != null) booking.setFirstName(g.getFirstName());
+            if (g.getLastName()  != null) booking.setLastName(g.getLastName());
+            if (g.getEmail()     != null) booking.setEmail(g.getEmail());
+            if (g.getPhone()     != null) booking.setPhone(g.getPhone());
         }
+        booking.setModifiedTime(LocalDateTime.now());
 
         return toResponse(bookingRepository.save(booking));
     }
@@ -91,73 +107,60 @@ public class BookingService {
     public BookingResponse updateStatus(Long id, BookingStatus status) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable: " + id));
-        booking.setStatus(status);
+        booking.applyStatus(status);
+        booking.setModifiedTime(LocalDateTime.now());
         return toResponse(bookingRepository.save(booking));
     }
 
     public BookingResponse getById(Long id) {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable: " + id));
-        return toResponse(booking);
+        return toResponse(bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable: " + id)));
     }
 
     public List<BookingResponse> getAllBookings() {
         return bookingRepository.findAllWithDetails().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
-    public List<BookingResponse> getArrivalsThisWeek() {
-        LocalDate[] weekRange = currentWeekRange();
-        return bookingRepository.findByCheckInBetweenAndStatusNot(
-                        weekRange[0], weekRange[1], BookingStatus.CANCELLED)
+    public List<BookingResponse> getAllBookingsByUser(Long userId) {
+        return bookingRepository.findAllByUserIdWithDetails(userId).stream()
+                .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    public List<BookingResponse> getArrivalsThisWeekByUser(Long userId) {
+        LocalDate[] r = currentWeekRange();
+        return bookingRepository.findByArrivalBetweenAndStatusNotAndPropertyAppUserId(
+                r[0], r[1], STATUS_CANCELLED, userId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    public List<BookingResponse> getDeparturesThisWeek() {
-        LocalDate[] weekRange = currentWeekRange();
-        return bookingRepository.findByCheckOutBetweenAndStatusNot(
-                        weekRange[0], weekRange[1], BookingStatus.CANCELLED)
+    public List<BookingResponse> getDeparturesThisWeekByUser(Long userId) {
+        LocalDate[] r = currentWeekRange();
+        return bookingRepository.findByDepartureBetweenAndStatusNotAndPropertyAppUserId(
+                r[0], r[1], STATUS_CANCELLED, userId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    public List<BookingResponse> getArrivalsForWeek(LocalDate weekStart) {
+    public List<BookingResponse> getArrivalsForWeekByUser(LocalDate weekStart, Long userId) {
         LocalDate weekEnd = weekStart.plusDays(6);
-        return bookingRepository.findByCheckInBetweenAndStatusNot(weekStart, weekEnd, BookingStatus.CANCELLED)
+        return bookingRepository.findByArrivalBetweenAndStatusNotAndPropertyAppUserId(
+                weekStart, weekEnd, STATUS_CANCELLED, userId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    public List<BookingResponse> getDeparturesForWeek(LocalDate weekStart) {
+    public List<BookingResponse> getDeparturesForWeekByUser(LocalDate weekStart, Long userId) {
         LocalDate weekEnd = weekStart.plusDays(6);
-        return bookingRepository.findByCheckOutBetweenAndStatusNot(weekStart, weekEnd, BookingStatus.CANCELLED)
+        return bookingRepository.findByDepartureBetweenAndStatusNotAndPropertyAppUserId(
+                weekStart, weekEnd, STATUS_CANCELLED, userId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     private LocalDate[] currentWeekRange() {
         LocalDate today = LocalDate.now();
-        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate sunday = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
-        return new LocalDate[]{monday, sunday};
-    }
-
-    private Guest resolveGuest(GuestDTO dto) {
-        if (dto.getId() != null) {
-            return guestRepository.findById(dto.getId())
-                    .orElseGet(() -> createGuest(dto));
-        }
-        return guestRepository.findByEmail(dto.getEmail())
-                .orElseGet(() -> createGuest(dto));
-    }
-
-    private Guest createGuest(GuestDTO dto) {
-        Guest guest = new Guest();
-        guest.setFirstName(dto.getFirstName());
-        guest.setLastName(dto.getLastName());
-        guest.setEmail(dto.getEmail());
-        guest.setPhone(dto.getPhone());
-        guest.setCountry(dto.getCountry());
-        if (dto.getLanguage() != null) guest.setLanguage(dto.getLanguage());
-        return guestRepository.save(guest);
+        return new LocalDate[]{
+            today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+            today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+        };
     }
 
     private String generateConfirmationCode() {
@@ -167,16 +170,16 @@ public class BookingService {
     public BookingResponse toResponse(Booking booking) {
         BookingResponse resp = new BookingResponse();
         resp.setId(booking.getId());
-        resp.setConfirmationCode(booking.getConfirmationCode());
-        resp.setCheckIn(booking.getCheckIn());
-        resp.setCheckOut(booking.getCheckOut());
+        resp.setConfirmationCode(booking.getReference());
+        resp.setCheckIn(booking.getArrival());
+        resp.setCheckOut(booking.getDeparture());
         resp.setNightsCount(booking.getNightsCount());
-        resp.setGuestCount(booking.getGuestCount() != null ? booking.getGuestCount() : 0);
-        resp.setStatus(booking.getStatus());
-        resp.setSource(booking.getSource());
-        resp.setTotalAmount(booking.getTotalAmount());
+        resp.setGuestCount(booking.getNumAdult() != null ? booking.getNumAdult() : 0);
+        resp.setStatus(booking.getBookingStatus());
+        resp.setSource(booking.getBookingSource());
+        resp.setTotalAmount(booking.getPrice());
         resp.setNotes(booking.getNotes());
-        resp.setCreatedAt(booking.getCreatedAt());
+        resp.setCreatedAt(booking.getBookingTime());
 
         if (booking.getProperty() != null) {
             BookingResponse.PropertySummary ps = new BookingResponse.PropertySummary();
@@ -187,16 +190,13 @@ public class BookingService {
             resp.setProperty(ps);
         }
 
-        if (booking.getGuest() != null) {
-            GuestDTO gd = new GuestDTO();
-            gd.setId(booking.getGuest().getId());
-            gd.setFirstName(booking.getGuest().getFirstName());
-            gd.setLastName(booking.getGuest().getLastName());
-            gd.setEmail(booking.getGuest().getEmail());
-            gd.setPhone(booking.getGuest().getPhone());
-            gd.setCountry(booking.getGuest().getCountry());
-            resp.setGuest(gd);
-        }
+        GuestDTO gd = new GuestDTO();
+        gd.setFirstName(booking.getFirstName());
+        gd.setLastName(booking.getLastName());
+        gd.setEmail(booking.getEmail());
+        gd.setPhone(booking.getPhone());
+        gd.setCountry(booking.getCountry());
+        resp.setGuest(gd);
 
         paymentRepository.findByBookingId(booking.getId()).ifPresent(p -> {
             BookingResponse.PaymentSummary ps = new BookingResponse.PaymentSummary();

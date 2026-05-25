@@ -2,13 +2,10 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.model.Booking;
 import com.flowlyrent.model.Channel;
-import com.flowlyrent.model.Guest;
-import com.flowlyrent.model.enums.BookingSource;
-import com.flowlyrent.model.enums.BookingStatus;
 import com.flowlyrent.model.enums.Platform;
+import com.flowlyrent.model.enums.SyncType;
 import com.flowlyrent.repository.BookingRepository;
 import com.flowlyrent.repository.ChannelRepository;
-import com.flowlyrent.repository.GuestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarBuilder;
@@ -27,9 +24,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,18 +39,18 @@ public class ICalSyncService {
 
     private final ChannelRepository channelRepository;
     private final BookingRepository bookingRepository;
-    private final GuestRepository guestRepository;
 
     @Scheduled(cron = "${sync.ical.cron:0 0 */2 * * *}")
     public void scheduledSync() {
         log.info("Démarrage de la synchronisation iCal planifiée");
-        List<Channel> channels = channelRepository.findByActiveTrue();
-        channels.forEach(this::syncChannel);
+        channelRepository.findByActiveTrue().stream()
+                .filter(c -> c.getSyncType() == SyncType.ICAL)
+                .forEach(this::syncChannel);
     }
 
     @Transactional
-    public SyncResult syncChannel(Channel channel) {
-        SyncResult result = new SyncResult();
+    public com.flowlyrent.service.SyncResult syncChannel(Channel channel) {
+        com.flowlyrent.service.SyncResult result = new com.flowlyrent.service.SyncResult();
         result.channelId = channel.getId();
         result.platform = channel.getPlatform();
 
@@ -95,45 +94,48 @@ public class ICalSyncService {
 
     private boolean processEvent(VEvent event, Channel channel) {
         try {
-            Uid uid = event.getProperty(Property.UID);
-            if (uid == null) return false;
+            Optional<Uid> uidOpt = event.getProperty(Property.UID);
+            if (uidOpt.isEmpty()) return false;
 
-            String externalId = uid.getValue();
-            if (bookingRepository.existsByExternalId(externalId)) {
+            String externalId = uidOpt.get().getValue();
+            if (bookingRepository.findByApiReference(externalId).isPresent()) {
                 return false;
             }
 
-            DtStart dtStart = event.getProperty(Property.DTSTART);
-            DtEnd dtEnd = event.getProperty(Property.DTEND);
-            if (dtStart == null || dtEnd == null) return false;
+            Optional<DtStart<?>> dtStartOpt = event.getProperty(Property.DTSTART);
+            Optional<DtEnd<?>> dtEndOpt = event.getProperty(Property.DTEND);
+            if (dtStartOpt.isEmpty() || dtEndOpt.isEmpty()) return false;
 
-            LocalDate checkIn = toLocalDate(dtStart.getDate());
-            LocalDate checkOut = toLocalDate(dtEnd.getDate());
+            LocalDate checkIn = toLocalDate(dtStartOpt.get().getDate());
+            LocalDate checkOut = toLocalDate(dtEndOpt.get().getDate());
 
             if (checkIn == null || checkOut == null || !checkOut.isAfter(checkIn)) {
                 return false;
             }
 
-            Summary summaryProp = event.getProperty(Property.SUMMARY);
-            String summary = summaryProp != null ? summaryProp.getValue() : "Réservation externe";
+            Optional<Summary> summaryOpt = event.getProperty(Property.SUMMARY);
+            String summary = summaryOpt.map(Property::getValue).orElse("Réservation externe");
 
-            Description descProp = event.getProperty(Property.DESCRIPTION);
-            String description = descProp != null ? descProp.getValue() : "";
+            Optional<Description> descOpt = event.getProperty(Property.DESCRIPTION);
+            String description = descOpt.map(Property::getValue).orElse("");
 
-            Guest guest = extractOrCreateGuest(summary, description, channel.getPlatform());
+            String guestName = extractGuestName(summary, channel.getPlatform());
 
             Booking booking = new Booking();
             booking.setProperty(channel.getProperty());
-            booking.setGuest(guest);
-            booking.setCheckIn(checkIn);
-            booking.setCheckOut(checkOut);
-            booking.setExternalId(externalId);
-            booking.setSource(platformToSource(channel.getPlatform()));
-            booking.setStatus(BookingStatus.CONFIRMED);
-            booking.setGuestCount(1);
+            booking.setFirstName(guestName);
+            booking.setLastName("(" + channel.getPlatform().name() + ")");
+            booking.setEmail(channel.getPlatform().name().toLowerCase() + "-" + externalId.hashCode() + "@ical.local");
+            booking.setArrival(checkIn);
+            booking.setDeparture(checkOut);
+            booking.setApiReference(externalId);
+            booking.setChannel(platformToChannel(channel.getPlatform()));
+            booking.setStatus("confirmed");
+            booking.setNumAdult(1);
             booking.setNotes(description.length() > 500 ? description.substring(0, 500) : description);
-            booking.setTotalAmount(BigDecimal.ZERO);
-            booking.setConfirmationCode(externalId.length() > 20 ? externalId.substring(0, 20) : externalId);
+            booking.setPrice(BigDecimal.ZERO);
+            booking.setReference(externalId.length() > 20 ? externalId.substring(0, 20) : externalId);
+            booking.setBookingTime(java.time.LocalDateTime.now());
 
             bookingRepository.save(booking);
             return true;
@@ -144,19 +146,6 @@ public class ICalSyncService {
         }
     }
 
-    private Guest extractOrCreateGuest(String summary, String description, Platform platform) {
-        String guestEmail = platform.name().toLowerCase() + "-guest@flowlyrent.local";
-        String guestName = extractGuestName(summary, platform);
-
-        return guestRepository.findByEmail(guestEmail).orElseGet(() -> {
-            Guest g = new Guest();
-            g.setFirstName(guestName);
-            g.setLastName("(" + platform.name() + ")");
-            g.setEmail(guestEmail);
-            return guestRepository.save(g);
-        });
-    }
-
     private String extractGuestName(String summary, Platform platform) {
         if (summary == null) return "Voyageur";
         // Booking.com: "CLOSED - Guest Name", Airbnb: "Airbnb (Guest)", Abritel: "Reserved"
@@ -164,22 +153,29 @@ public class ICalSyncService {
         return cleaned.isEmpty() ? "Voyageur" : cleaned;
     }
 
-    private LocalDate toLocalDate(net.fortuna.ical4j.model.Date date) {
+    private LocalDate toLocalDate(java.time.temporal.Temporal temporal) {
         try {
-            if (date instanceof net.fortuna.ical4j.model.DateTime dt) {
-                return dt.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            if (temporal instanceof LocalDate ld) {
+                return ld;
+            } else if (temporal instanceof LocalDateTime ldt) {
+                return ldt.toLocalDate();
+            } else if (temporal instanceof java.time.ZonedDateTime zdt) {
+                return zdt.toLocalDate();
+            } else if (temporal instanceof java.time.Instant instant) {
+                return instant.atZone(ZoneId.systemDefault()).toLocalDate();
             }
-            return LocalDate.parse(date.toString());
+            return null;
         } catch (Exception e) {
             return null;
         }
     }
 
-    private BookingSource platformToSource(Platform platform) {
+    private String platformToChannel(Platform platform) {
         return switch (platform) {
-            case BOOKING_COM -> BookingSource.BOOKING_COM;
-            case AIRBNB -> BookingSource.AIRBNB;
-            case ABRITEL -> BookingSource.ABRITEL;
+            case BOOKING_COM -> "booking";
+            case AIRBNB      -> "airbnb";
+            case ABRITEL     -> "abritel";
+            default          -> "ical";
         };
     }
 
@@ -199,11 +195,4 @@ public class ICalSyncService {
         return response.body();
     }
 
-    public static class SyncResult {
-        public Long channelId;
-        public Platform platform;
-        public String status;
-        public int bookingsImported;
-        public String error;
-    }
 }

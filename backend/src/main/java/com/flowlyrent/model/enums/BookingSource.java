@@ -4,5 +4,6 @@ public enum BookingSource {
     DIRECT,
     BOOKING_COM,
     AIRBNB,
-    ABRITEL
+    ABRITEL,
+    BEDS24
 }

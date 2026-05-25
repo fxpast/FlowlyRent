@@ -16,6 +16,7 @@ import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final EmailService emailService;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -69,7 +71,7 @@ public class PaymentService {
                         .build())
                 .putMetadata("bookingId", bookingId.toString())
                 .putMetadata("confirmationCode", booking.getConfirmationCode())
-                .setCustomerEmail(booking.getGuest().getEmail())
+                .setCustomerEmail(booking.getEmail())
                 .build();
 
         Session session = Session.create(params);
@@ -97,7 +99,7 @@ public class PaymentService {
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(amountCents)
                 .setCurrency("eur")
-                .setReceiptEmail(booking.getGuest().getEmail())
+                .setReceiptEmail(booking.getEmail())
                 .putMetadata("bookingId", bookingId.toString())
                 .setDescription("Réservation " + booking.getConfirmationCode())
                 .build();
@@ -134,6 +136,7 @@ public class PaymentService {
                         p.setStatus(PaymentStatus.COMPLETED);
                         p.setPaidAt(LocalDateTime.now());
                         paymentRepository.save(p);
+                        try { emailService.sendPaymentReceipt(p.getBooking(), p.getAmount()); } catch (Exception ignored) {}
                     });
                 }
             }
@@ -145,6 +148,9 @@ public class PaymentService {
                         p.setStripeChargeId(intent.getLatestCharge());
                         p.setPaidAt(LocalDateTime.now());
                         paymentRepository.save(p);
+                        BigDecimal amount = p.getAmount() != null ? p.getAmount()
+                                : BigDecimal.valueOf(intent.getAmount()).divide(BigDecimal.valueOf(100));
+                        try { emailService.sendPaymentReceipt(p.getBooking(), amount); } catch (Exception ignored) {}
                     });
                 }
             }

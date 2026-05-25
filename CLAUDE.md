@@ -2,8 +2,8 @@
 
 ## Vue d'ensemble
 
-FlowlyRent est une plateforme de gestion de location saisonnière (MVP).
-Elle permet à un hôte de centraliser ses réservations provenant de plusieurs plateformes (Booking.com, Airbnb, Abritel) et de gérer ses réservations directes.
+FlowlyRent est une plateforme SaaS multi-tenant de gestion de location saisonnière (MVP).
+Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pour centraliser automatiquement ses propriétés et réservations, gérer des réservations directes, et proposer un site de réservation public personnalisé.
 
 **Dépôt GitHub :** `fxpast/flowlyrent`
 **Branche de travail :** `master`
@@ -16,13 +16,33 @@ Elle permet à un hôte de centraliser ses réservations provenant de plusieurs 
 |--------|-------------|
 | Frontend | Angular 17 (standalone components) + Angular Material |
 | Backend | Java 17 + Spring Boot 3.2 |
-| Base de données | MariaDB 11 |
-| ORM | Spring Data JPA / Hibernate |
+| Base de données | MySQL/MariaDB (XAMPP en dev, MariaDB 11 en prod) |
+| ORM | Spring Data JPA / Hibernate (`ddl-auto: update`) |
+| Authentification | JWT (jjwt 0.12.5) — sujet = email, durée 7 jours |
 | Paiement | Stripe (Checkout Session + Payment Intent + Webhooks) |
 | Messagerie temps réel | WebSocket (STOMP via SockJS) |
-| Synchronisation plateformes | iCal (standard universel) |
+| Synchronisation plateformes | Beds24 API v2 (principal) + iCal (legacy) |
 | Infrastructure | Docker Compose |
 | API docs | Springdoc OpenAPI (Swagger UI) |
+
+---
+
+## Plans tarifaires
+
+| Plan | Prix | Propriétés | Notes |
+|------|------|-----------|-------|
+| FREE | 0€ | 1 | 2% de commission sur réservations directes |
+| STARTER | 9€/mois | 3 | |
+| PRO | 19€/mois | Illimité | |
+| AGENCE | 49€/mois | Illimité | Multi-utilisateurs |
+
+---
+
+## Architecture multi-tenant
+
+Chaque entité de données est rattachée à un `AppUser` via une FK `user_id` sur `Property`.
+Toutes les routes admin lisent l'utilisateur courant via `SecurityUtils.getCurrentUserId()`.
+**Règle absolue : ne jamais retourner de données appartenant à un autre utilisateur.**
 
 ---
 
@@ -36,36 +56,59 @@ FlowlyRent/
 │   └── src/main/java/com/flowlyrent/
 │       ├── FlowlyRentApplication.java
 │       ├── config/
-│       │   ├── SecurityConfig.java   # HTTP Basic auth, routes publiques/admin
-│       │   ├── WebConfig.java        # CORS (localhost:4200)
-│       │   └── WebSocketConfig.java  # STOMP /ws endpoint
+│       │   ├── SecurityConfig.java        # JWT + routes publiques/admin
+│       │   ├── JwtTokenProvider.java      # Génération / validation JWT
+│       │   ├── JwtAuthenticationFilter.java  # Filter Bearer token
+│       │   ├── SecurityUtils.java         # getCurrentUser(), getCurrentUserId()
+│       │   ├── WebConfig.java             # CORS (localhost:4200)
+│       │   └── WebSocketConfig.java       # STOMP /ws endpoint
 │       ├── model/
-│       │   ├── Property.java         # Logement
+│       │   ├── AppUser.java          # Utilisateur SaaS (implements UserDetails)
+│       │   ├── Beds24Account.java    # Compte Beds24 lié à un AppUser (1:1)
+│       │   ├── Property.java         # Logement (lié à AppUser)
+│       │   ├── PropertyRoom.java     # Chambre/unité Beds24 dans un logement
 │       │   ├── Booking.java          # Réservation
 │       │   ├── Guest.java            # Voyageur
 │       │   ├── Message.java          # Message hôte <-> voyageur
 │       │   ├── Payment.java          # Paiement Stripe
-│       │   ├── Channel.java          # Canal sync (iCal URL par plateforme)
+│       │   ├── Channel.java          # Canal iCal (legacy)
+│       │   ├── AvailabilityBlock.java # Blocage manuel de dates
+│       │   ├── HousekeepingTask.java  # Tâche ménage/maintenance
 │       │   └── enums/
-│       │       ├── BookingStatus.java  # PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
-│       │       ├── BookingSource.java  # DIRECT, BOOKING_COM, AIRBNB, ABRITEL
-│       │       ├── Platform.java       # BOOKING_COM, AIRBNB, ABRITEL
-│       │       ├── PaymentStatus.java  # PENDING, COMPLETED, REFUNDED, FAILED, CANCELLED
-│       │       └── SenderType.java     # GUEST, HOST
+│       │       ├── SubscriptionPlan.java  # FREE, STARTER, PRO, AGENCE
+│       │       ├── BookingStatus.java     # PENDING, CONFIRMED, CANCELLED, COMPLETED
+│       │       ├── BookingSource.java     # DIRECT, AIRBNB, BOOKING_COM, ABRITEL, BEDS24
+│       │       ├── Platform.java          # BOOKING_COM, AIRBNB, ABRITEL, BEDS24
+│       │       ├── SyncType.java          # ICAL, BEDS24
+│       │       ├── BlockType.java         # OWNER_STAY, MAINTENANCE, CLEANING, OTHER
+│       │       ├── TaskType.java          # CHECKIN_PREP, CHECKOUT_CLEANING, CLEANING, MAINTENANCE, INSPECTION
+│       │       ├── TaskStatus.java        # PENDING, IN_PROGRESS, DONE, SKIPPED
+│       │       ├── PaymentStatus.java     # PENDING, COMPLETED, REFUNDED, FAILED, CANCELLED
+│       │       └── SenderType.java        # GUEST, HOST
 │       ├── repository/               # Spring Data JPA (un par entité)
 │       ├── service/
-│       │   ├── BookingService.java   # CRUD + arrivées/départs par semaine
-│       │   ├── ICalSyncService.java  # Sync iCal automatique (cron toutes les 2h)
-│       │   ├── MessageService.java   # Messagerie + push WebSocket
-│       │   └── PaymentService.java   # Stripe Checkout + webhooks
+│       │   ├── Beds24SyncService.java # Sync Beds24 API v2 (propriétés, chambres, réservations)
+│       │   ├── BookingService.java    # CRUD + arrivées/départs par semaine (scopé par user)
+│       │   ├── ICalSyncService.java   # Sync iCal automatique (cron toutes les 2h)
+│       │   ├── MessageService.java    # Messagerie + push WebSocket
+│       │   ├── PaymentService.java    # Stripe Checkout + webhooks
+│       │   └── SyncResult.java        # DTO résultat de sync
 │       ├── controller/
-│       │   ├── AdminBookingController.java   # /admin/bookings/**
-│       │   ├── AdminMessageController.java   # /admin/messages/**
-│       │   ├── AdminPaymentController.java   # /admin/payments/**
-│       │   ├── SyncController.java           # /sync/channels/**
-│       │   ├── PublicBookingController.java  # /public/**
-│       │   └── StripeWebhookController.java  # /webhooks/stripe
-│       └── dto/                      # BookingRequest, BookingResponse, GuestDTO, etc.
+│       │   ├── AuthController.java          # /auth/register, /auth/login
+│       │   ├── UserSettingsController.java  # /user/profile, /user/beds24/**
+│       │   ├── AdminBookingController.java  # /admin/bookings/**
+│       │   ├── AdminMessageController.java  # /admin/messages/**
+│       │   ├── AdminPaymentController.java  # /admin/payments/**
+│       │   ├── SyncController.java          # /sync/channels/** (iCal uniquement)
+│       │   ├── PublicBookingController.java # /public/{slug}/** + /public/**
+│       │   └── StripeWebhookController.java # /webhooks/stripe
+│       └── dto/
+│           ├── Beds24ApiResponse.java   # Wrapper {"success":true,"data":[...],"pages":{}}
+│           ├── Beds24AuthDTO.java       # token, refreshToken, expiresIn
+│           ├── Beds24PropertyDTO.java   # Propriété Beds24
+│           ├── Beds24RoomDTO.java       # Chambre/unité Beds24
+│           ├── Beds24BookingDTO.java    # Réservation Beds24 (champs complets)
+│           └── ...                     # BookingRequest, BookingResponse, GuestDTO, etc.
 │
 ├── frontend/                         # Angular 17
 │   ├── angular.json
@@ -87,7 +130,7 @@ FlowlyRent/
 │           ├── core/
 │           │   ├── models/           # booking.model.ts, message.model.ts, payment.model.ts
 │           │   ├── services/
-│           │   │   ├── auth.service.ts      # Login HTTP Basic, localStorage
+│           │   │   ├── auth.service.ts      # Login JWT, localStorage
 │           │   │   ├── booking.service.ts   # Appels API admin réservations
 │           │   │   ├── message.service.ts   # Appels API + WebSocket STOMP
 │           │   │   ├── payment.service.ts   # Appels API paiements Stripe
@@ -96,7 +139,7 @@ FlowlyRent/
 │           │   ├── guards/
 │           │   │   └── auth.guard.ts        # Redirige /admin/login si non connecté
 │           │   └── interceptors/
-│           │       └── auth.interceptor.ts  # Ajoute Authorization: Basic sur /admin et /sync
+│           │       └── auth.interceptor.ts  # Ajoute Authorization: Bearer sur /admin et /sync
 │           ├── admin/
 │           │   ├── admin.routes.ts          # Lazy loading des pages admin
 │           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar
@@ -124,14 +167,49 @@ FlowlyRent/
 
 ---
 
+## Schéma base de données (tables auto-créées par Hibernate)
+
+| Table | Entité | Description |
+|-------|--------|-------------|
+| `users` | AppUser | Comptes SaaS — email, password BCrypt, plan, publicSiteSlug |
+| `beds24_accounts` | Beds24Account | Tokens Beds24 par user (refreshToken + accessToken court-vécu) |
+| `properties` | Property | Logements — liés à un user, beds24PropId pour la synchro |
+| `property_rooms` | PropertyRoom | Chambres/unités Beds24 dans un logement |
+| `property_images` | — | @ElementCollection sur Property |
+| `guests` | Guest | Voyageurs — email, phone, mobile, country |
+| `bookings` | Booking | Réservations — externalId ("beds24-{id}"), source, statut, montants détaillés |
+| `payments` | Payment | Paiements Stripe — OneToOne sur Booking |
+| `messages` | Message | Messages hôte ↔ voyageur |
+| `channels` | Channel | Canaux iCal (legacy — Beds24 géré via beds24_accounts) |
+| `availability_blocks` | AvailabilityBlock | Blocages manuels de dates (entretien, séjour proprio, etc.) |
+| `housekeeping_tasks` | HousekeepingTask | Tâches ménage/maintenance — auto-créées sur checkout de chaque réservation |
+
+---
+
 ## Endpoints API backend
 
 Le contexte path est `/api` — toutes les routes sont préfixées.
 
-### Admin (authentification HTTP Basic requise)
+### Authentification (public)
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| GET | `/admin/bookings` | Liste toutes les réservations |
+| POST | `/auth/register` | Créer un compte (retourne JWT) |
+| POST | `/auth/login` | Se connecter (retourne JWT) |
+
+### Paramètres utilisateur (JWT requis)
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/user/profile` | Profil de l'utilisateur connecté |
+| PUT | `/user/profile` | Modifier firstName, lastName, publicSiteSlug |
+| GET | `/user/beds24/status` | Statut connexion Beds24 + dernière sync |
+| POST | `/user/beds24/connect` | Connecter compte Beds24 `{username, password}` |
+| POST | `/user/beds24/sync` | Déclencher une sync manuelle Beds24 |
+| DELETE | `/user/beds24/disconnect` | Déconnecter le compte Beds24 |
+
+### Admin (JWT requis)
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/admin/bookings` | Liste des réservations (scopé user) |
 | GET | `/admin/bookings/{id}` | Détail d'une réservation |
 | POST | `/admin/bookings` | Créer une réservation directe |
 | PUT | `/admin/bookings/{id}` | Modifier une réservation |
@@ -141,22 +219,31 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | GET | `/admin/messages/{bookingId}` | Messages d'une réservation |
 | POST | `/admin/messages/{bookingId}` | Envoyer un message (hôte) |
 | GET | `/admin/messages/unread-count` | Nombre de messages non lus |
+| GET | `/admin/properties` | Liste des logements de l'utilisateur |
 | GET | `/admin/payments` | Liste des paiements |
 | POST | `/admin/payments/checkout-session` | Créer un lien Stripe Checkout |
 | POST | `/admin/payments/payment-intent` | Créer un Payment Intent Stripe |
+| GET | `/admin/housekeeping?from=&to=` | Tâches ménage (filtrées par date) |
+| POST | `/admin/housekeeping` | Créer une tâche manuelle |
+| PATCH | `/admin/housekeeping/{id}/status` | Changer le statut d'une tâche |
+| DELETE | `/admin/housekeeping/{id}` | Supprimer une tâche |
+| GET | `/admin/availability/calendar?from=&to=` | Données calendrier (propriétés, réservations, blocages) |
+| POST | `/admin/availability/blocks` | Créer un blocage de dates |
+| DELETE | `/admin/availability/blocks/{id}` | Supprimer un blocage |
 | GET | `/sync/channels` | Liste des canaux iCal |
-| POST | `/sync/channels` | Ajouter un canal |
-| PUT | `/sync/channels/{id}` | Modifier un canal |
-| POST | `/sync/channels/{id}/sync` | Déclencher une sync manuelle |
-| POST | `/sync/all` | Synchroniser tous les canaux |
+| POST | `/sync/channels` | Ajouter un canal iCal |
+| PUT | `/sync/channels/{id}` | Modifier un canal iCal |
+| POST | `/sync/channels/{id}/sync` | Déclencher une sync iCal manuelle |
+| POST | `/sync/all` | Synchroniser tous les canaux iCal |
 
 ### Public (sans authentification)
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| GET | `/public/properties` | Liste des logements actifs |
-| GET | `/public/properties/{id}` | Détail d'un logement |
-| GET | `/public/properties/{id}/availability?checkIn=&checkOut=` | Vérifier la disponibilité |
-| POST | `/public/bookings` | Créer une réservation (client) |
+| GET | `/public/{slug}/properties` | Logements actifs d'un hôte (par slug) |
+| GET | `/public/{slug}/properties/{id}` | Détail d'un logement |
+| GET | `/public/{slug}/properties/{id}/availability` | Vérifier la disponibilité |
+| POST | `/public/{slug}/bookings` | Créer une réservation (client) |
+| GET | `/public/properties` | Liste globale (legacy) |
 | GET | `/public/bookings/{id}` | Voir sa réservation |
 | POST | `/public/messages/{bookingId}` | Envoyer un message (voyageur) |
 | POST | `/public/payments/{bookingId}/checkout` | Démarrer le paiement Stripe |
@@ -172,6 +259,45 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 
 ---
 
+## Synchronisation Beds24
+
+La sync Beds24 est **au niveau du compte utilisateur** (pas par canal).
+
+### Flux d'authentification
+1. L'utilisateur saisit son email/mot de passe Beds24 dans l'admin
+2. `POST /user/beds24/connect` → `Beds24SyncService.connectAccount()` appelle Beds24 `/authentication/setup`
+3. **Le mot de passe n'est jamais stocké** — seul le `refreshToken` est conservé
+4. Le token d'accès (court-vécu, 24h) est auto-rafraîchi avant chaque appel API
+
+### Sync automatique
+- Toutes les 2h via `@Scheduled` dans `Beds24SyncService.scheduledSync()`
+- Sync incrémentale : `?modifiedFrom=` ISO UTC pour capturer créations + modifications + annulations
+- Première sync : `?arrivalFrom=` à 6 mois en arrière
+
+### Données synchronisées
+- **Propriétés** via `/properties` → entités `Property`
+- **Chambres** via `/properties/{id}/rooms` → entités `PropertyRoom`
+- **Réservations** via `/bookings` → entités `Booking` + `Guest`
+- **Tâche ménage** créée automatiquement à la date de départ pour chaque nouvelle réservation confirmée
+
+### Synchronisation iCal (legacy)
+Toujours disponible pour les plateformes sans compte Beds24 :
+
+| Plateforme | Où trouver l'URL iCal |
+|------------|----------------------|
+| Booking.com | Extranet → Calendrier → Exporter le calendrier |
+| Airbnb | Calendrier → Disponibilités → Exporter le calendrier |
+| Abritel | Calendrier → Synchroniser → Exporter iCal |
+
+---
+
+## Tokens de développement Beds24
+
+Les tokens de dev sont stockés dans **`.beds24.env.local`** (gitignored — jamais commité).
+Lire ce fichier pour tester l'API Beds24 sans passer par le flux d'authentification complet.
+
+---
+
 ## Variables d'environnement
 
 Copier `.env.example` en `.env` et remplir :
@@ -180,8 +306,8 @@ Copier `.env.example` en `.env` et remplir :
 # Backend
 DB_USERNAME=flowlyrent
 DB_PASSWORD=flowlyrent
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=mot_de_passe_fort
+JWT_SECRET=<base64 32+ bytes>
+JWT_EXPIRATION=604800000
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -192,32 +318,13 @@ stripePublishableKey: 'pk_test_...'
 
 ---
 
-## Synchronisation iCal — Plateformes
-
-La synchronisation fonctionne via le standard iCal (`.ics`), universel sur toutes les plateformes :
-
-| Plateforme | Où trouver l'URL iCal |
-|------------|----------------------|
-| Booking.com | Extranet → Calendrier → Exporter le calendrier |
-| Airbnb | Calendrier → Disponibilités → Exporter le calendrier |
-| Abritel | Calendrier → Synchroniser → Exporter iCal |
-
-La sync s'exécute **automatiquement toutes les 2 heures** (configurable via `sync.ical.cron` dans `application.yml`).
-Elle peut aussi être déclenchée manuellement depuis l'admin → Synchronisation.
-
----
-
 ## Lancer le projet
 
-### Développement local
+### Développement local (XAMPP)
 ```bash
-# Base de données
-docker run -d --name mariadb \
-  -e MYSQL_DATABASE=flowlyrent \
-  -e MYSQL_USER=flowlyrent \
-  -e MYSQL_PASSWORD=flowlyrent \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -p 3306:3306 mariadb:11
+# Démarrer XAMPP (MySQL sur localhost:3306)
+# Créer la base :
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS flowlyrent CHARACTER SET utf8mb4;"
 
 # Backend (depuis /backend)
 ./mvnw spring-boot:run
@@ -241,35 +348,32 @@ docker-compose up -d
 
 ## Objectifs MVP — Statut
 
-- [x] Synchronisation avec Booking.com (iCal)
-- [x] Synchronisation avec Airbnb (iCal)
-- [x] Synchronisation avec Abritel (iCal)
+- [x] Authentification JWT multi-tenant (register / login)
+- [x] Connexion compte Beds24 par user (username+password → refresh token)
+- [x] Synchronisation automatique propriétés depuis Beds24
+- [x] Synchronisation automatique chambres/unités depuis Beds24
+- [x] Synchronisation automatique réservations depuis Beds24 (incrémentale)
+- [x] Génération automatique tâches ménage à chaque checkout
+- [x] Blocages manuels de dates (AvailabilityBlock)
+- [x] Synchronisation avec Booking.com / Airbnb / Abritel (iCal)
 - [x] Liste des arrivées de la semaine (navigation semaine)
 - [x] Liste des départs de la semaine (navigation semaine)
-- [x] Page de réservations directes admin (création + liste)
-- [x] Modifier une réservation directe admin
-- [x] Page de paiement Stripe admin (lien Checkout)
-- [x] Recevoir un message du client (WebSocket temps réel)
-- [x] Envoyer un message au client depuis l'admin
-- [x] Site web de réservation public (accueil + fiche + paiement)
+- [x] Réservations directes admin (création + liste + modification)
+- [x] Paiement Stripe admin (lien Checkout)
+- [x] Messagerie temps réel hôte ↔ voyageur (WebSocket)
+- [x] Site de réservation public par slug (`/public/{slug}/properties`)
+- [x] Interface admin — paramètres Beds24 (connexion / sync manuelle)
+- [x] Interface admin — tâches ménage
+- [x] Interface admin — calendrier des disponibilités
+- [x] Notifications email (confirmation réservation, reçu paiement, rappel J-1)
+- [x] Tableau de bord revenus / statistiques
 
 ---
 
 ## Conventions de code
 
-- **Backend** : package `com.flowlyrent`, Lombok pour les getters/setters (`@Data`), DTOs séparés des entités
-- **Frontend** : composants standalone Angular 17, signals (`signal()`) pour l'état local, `@for` / `@if` (nouvelle syntaxe Angular)
+- **Backend** : package `com.flowlyrent`, Lombok (`@Data`), DTOs séparés des entités
+- **Frontend** : composants standalone Angular 17, signals (`signal()`), syntaxe `@for` / `@if`
+- **Multi-tenant** : toujours filtrer par `getCurrentUserId()` dans les contrôleurs admin
 - **Langue de l'interface** : Français
 - **Pas de commentaires inutiles** — le code se lit tout seul
-
----
-
-## Prochaines évolutions possibles
-
-- Calendrier visuel des disponibilités (vue mensuelle par logement)
-- Notifications email automatiques (confirmation, rappel)
-- Tableau de bord revenus / statistiques
-- Gestion multi-logements avancée
-- Authentification JWT (remplacer HTTP Basic)
-- Application mobile (Ionic / Capacitor)
-- Intégration API native Booking.com (partenariat requis)

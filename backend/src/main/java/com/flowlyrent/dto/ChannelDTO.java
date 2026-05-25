@@ -1,6 +1,7 @@
 package com.flowlyrent.dto;
 
 import com.flowlyrent.model.enums.Platform;
+import com.flowlyrent.model.enums.SyncType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -15,6 +16,9 @@ public class ChannelDTO {
 
     @NotNull
     private Long propertyId;
+
+    private SyncType syncType = SyncType.ICAL;
+    private String externalPropertyId; // ID propriété dans Beds24
 
     private String icalUrl;
     private String apiKey;

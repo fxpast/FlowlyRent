@@ -1,6 +1,7 @@
 package com.flowlyrent.model;
 
 import com.flowlyrent.model.enums.Platform;
+import com.flowlyrent.model.enums.SyncType;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,11 +26,23 @@ public class Channel {
     @JoinColumn(name = "property_id", nullable = false)
     private Property property;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SyncType syncType = SyncType.ICAL;
+
     @Column(columnDefinition = "TEXT")
     private String icalUrl;
 
-    private String apiKey;
+    private String apiKey;      // Beds24 : refresh token (durable)
     private String apiSecret;
+
+    // ID de la propriété dans Beds24 (requis si syncType = BEDS24)
+    private String externalPropertyId;
+
+    // Beds24 : access token courant (court-vécu)
+    @Column(columnDefinition = "TEXT")
+    private String accessToken;
+    private LocalDateTime tokenExpiresAt;
 
     private boolean active = true;
 

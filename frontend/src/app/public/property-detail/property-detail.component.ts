@@ -61,7 +61,7 @@ import { Property } from '../../core/models/booking.model';
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Voyageurs</mat-label>
-                <input matInput type="number" [(ngModel)]="guestCount" min="1" [max]="property()!.maxGuests">
+                <input matInput type="number" [(ngModel)]="guestCount" min="1" [max]="property()!.maxGuests ?? null">
               </mat-form-field>
             </div>
 

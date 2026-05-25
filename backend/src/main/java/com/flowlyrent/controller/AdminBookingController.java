@@ -1,5 +1,6 @@
 package com.flowlyrent.controller;
 
+import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.dto.BookingRequest;
 import com.flowlyrent.dto.BookingResponse;
 import com.flowlyrent.model.enums.BookingStatus;
@@ -23,11 +24,12 @@ import java.util.Map;
 public class AdminBookingController {
 
     private final BookingService bookingService;
+    private final SecurityUtils securityUtils;
 
     @GetMapping
-    @Operation(summary = "Liste toutes les réservations")
+    @Operation(summary = "Liste les réservations de l'utilisateur connecté")
     public List<BookingResponse> getAllBookings() {
-        return bookingService.getAllBookings();
+        return bookingService.getAllBookingsByUser(securityUtils.getCurrentUserId());
     }
 
     @GetMapping("/{id}")
@@ -60,19 +62,19 @@ public class AdminBookingController {
     @Operation(summary = "Arrivées de la semaine")
     public List<BookingResponse> getArrivals(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        if (weekStart != null) {
-            return bookingService.getArrivalsForWeek(weekStart);
-        }
-        return bookingService.getArrivalsThisWeek();
+        Long userId = securityUtils.getCurrentUserId();
+        return weekStart != null
+                ? bookingService.getArrivalsForWeekByUser(weekStart, userId)
+                : bookingService.getArrivalsThisWeekByUser(userId);
     }
 
     @GetMapping("/departures")
     @Operation(summary = "Départs de la semaine")
     public List<BookingResponse> getDepartures(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        if (weekStart != null) {
-            return bookingService.getDeparturesForWeek(weekStart);
-        }
-        return bookingService.getDeparturesThisWeek();
+        Long userId = securityUtils.getCurrentUserId();
+        return weekStart != null
+                ? bookingService.getDeparturesForWeekByUser(weekStart, userId)
+                : bookingService.getDeparturesThisWeekByUser(userId);
     }
 }

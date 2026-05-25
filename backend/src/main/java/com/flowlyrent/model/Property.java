@@ -1,5 +1,6 @@
 package com.flowlyrent.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,6 +42,20 @@ public class Property {
     @CollectionTable(name = "property_images", joinColumns = @JoinColumn(name = "property_id"))
     @Column(name = "image_url")
     private List<String> images = new ArrayList<>();
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private AppUser appUser;
+
+    // ID de la propriété dans Beds24 (null si propriété créée directement)
+    private String beds24PropId;
+
+    private String propertyType;  // apartment, townhome, ...
+    private Double latitude;
+    private Double longitude;
+    private String checkInTime;   // ex: "16:00"
+    private String checkOutTime;  // ex: "11:00"
 
     private boolean active = true;
 
