@@ -25,6 +25,13 @@ export interface UserProfile {
   publicSiteSlug: string;
 }
 
+export interface SubscriptionInfo {
+  plan: string;
+  stripeSubscriptionId: string | null;
+  planExpiresAt: string | null;
+  maxProperties: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private base = environment.apiUrl;
@@ -56,5 +63,22 @@ export class UserService {
 
   disconnectBeds24(): Observable<{ status: string }> {
     return this.http.delete<{ status: string }>(`${this.base}/user/beds24/disconnect`);
+  }
+
+  getSubscription(): Observable<SubscriptionInfo> {
+    return this.http.get<SubscriptionInfo>(`${this.base}/admin/subscription`);
+  }
+
+  startSubscriptionCheckout(plan: string): Observable<{ url: string; sessionId: string }> {
+    const successUrl = `${window.location.origin}/admin/settings?subscription=success`;
+    const cancelUrl = `${window.location.origin}/admin/settings?subscription=cancelled`;
+    return this.http.post<{ url: string; sessionId: string }>(
+      `${this.base}/admin/subscription/checkout`,
+      { plan, successUrl, cancelUrl }
+    );
+  }
+
+  cancelSubscription(): Observable<{ status: string }> {
+    return this.http.delete<{ status: string }>(`${this.base}/admin/subscription`);
   }
 }

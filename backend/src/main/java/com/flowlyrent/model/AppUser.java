@@ -42,6 +42,8 @@ public class AppUser implements UserDetails {
     private String publicSiteSlug;
 
     private String stripeCustomerId;
+    private String stripeSubscriptionId;
+    private java.time.LocalDateTime planExpiresAt;
 
     private boolean active = true;
 

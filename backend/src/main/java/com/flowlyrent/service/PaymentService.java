@@ -34,6 +34,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
+    private final SubscriptionService subscriptionService;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -132,14 +133,20 @@ public class PaymentService {
             case "checkout.session.completed" -> {
                 Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
                 if (session != null) {
-                    paymentRepository.findByStripeCheckoutSessionId(session.getId()).ifPresent(p -> {
-                        p.setStatus(PaymentStatus.COMPLETED);
-                        p.setPaidAt(LocalDateTime.now());
-                        paymentRepository.save(p);
-                        try { emailService.sendPaymentReceipt(p.getBooking(), p.getAmount()); } catch (Exception ignored) {}
-                    });
+                    if ("subscription".equals(session.getMode())) {
+                        subscriptionService.handleSubscriptionEvent(event);
+                    } else {
+                        paymentRepository.findByStripeCheckoutSessionId(session.getId()).ifPresent(p -> {
+                            p.setStatus(PaymentStatus.COMPLETED);
+                            p.setPaidAt(LocalDateTime.now());
+                            paymentRepository.save(p);
+                            try { emailService.sendPaymentReceipt(p.getBooking(), p.getAmount()); } catch (Exception ignored) {}
+                        });
+                    }
                 }
             }
+            case "customer.subscription.updated", "customer.subscription.deleted", "invoice.payment_failed" ->
+                subscriptionService.handleSubscriptionEvent(event);
             case "payment_intent.succeeded" -> {
                 PaymentIntent intent = (PaymentIntent) event.getDataObjectDeserializer().getObject().orElse(null);
                 if (intent != null) {

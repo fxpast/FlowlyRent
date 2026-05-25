@@ -37,6 +37,10 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
+  price:
+    starter: ${STRIPE_PRICE_STARTER:}
+    pro: ${STRIPE_PRICE_PRO:}
+    agence: ${STRIPE_PRICE_AGENCE:}
 
 jwt:
   # Changez cette clé en production (base64, minimum 32 octets)

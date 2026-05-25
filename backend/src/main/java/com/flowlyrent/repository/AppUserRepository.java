@@ -10,4 +10,5 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByPublicSiteSlug(String slug);
     boolean existsByEmail(String email);
     boolean existsByPublicSiteSlug(String slug);
+    java.util.Optional<AppUser> findByStripeCustomerId(String stripeCustomerId);
 }
