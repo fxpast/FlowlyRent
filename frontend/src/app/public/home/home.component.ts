@@ -8,9 +8,15 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
+    <div class="beta-bar">
+      <mat-icon>science</mat-icon>
+      Version bêta MVP — L'application est en cours de développement actif. Certaines fonctionnalités peuvent être incomplètes ou évoluer.
+    </div>
+
     <div class="hero">
       <div class="hero-content">
         <img src="assets/logo.svg" alt="FlowlyRent" class="hero-logo" />
+        <div class="beta-badge">Bêta</div>
         <h1>Gérez vos locations en toute simplicité</h1>
         <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
         <div class="hero-actions">
@@ -46,7 +52,19 @@ import { MatIconModule } from '@angular/material/icon';
       padding: 80px 24px 100px;
       text-align: center;
     }
-    .hero-logo { width: 240px; height: auto; filter: brightness(0) invert(1); margin-bottom: 32px; display: block; margin-left: auto; margin-right: auto; }
+    .beta-bar {
+      display: flex; align-items: center; gap: 8px; justify-content: center;
+      background: #fff8e1; color: #795548; font-size: 13px; font-weight: 500;
+      padding: 10px 24px; border-bottom: 1px solid #ffe082;
+    }
+    .beta-bar mat-icon { font-size: 18px; width: 18px; height: 18px; color: #f57f17; flex-shrink: 0; }
+    .hero-logo { width: 240px; height: auto; filter: brightness(0) invert(1); margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto; }
+    .beta-badge {
+      display: inline-block; background: rgba(255,255,255,0.2); color: white;
+      font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      padding: 3px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4);
+      margin-bottom: 20px;
+    }
     .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
     .hero p { font-size: 20px; opacity: 0.85; margin: 0 0 40px; }
     .hero-actions { display: flex; gap: 16px; justify-content: center; }
