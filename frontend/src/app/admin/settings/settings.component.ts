@@ -88,7 +88,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
                 <div class="plan-name">{{ plan.label }}</div>
                 <div class="plan-price">
                   @if (plan.price === 0) { Gratuit }
-                  @else { {{ plan.price }}€<span>/mois</span> }
+                  @else { xx€<span>/mois</span> }
                 </div>
                 <ul class="plan-features">
                   @for (f of plan.features; track f) { <li>{{ f }}</li> }
@@ -96,10 +96,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
                 @if (subInfo()!.plan === plan.key) {
                   <div class="current-badge"><mat-icon>check_circle</mat-icon> Plan actuel</div>
                 } @else if (plan.key !== 'FREE') {
-                  <button mat-flat-button color="primary" class="plan-btn"
-                          (click)="subscribeTo(plan.key)"
-                          [disabled]="subscribing()">
-                    @if (subscribing()) { <mat-spinner diameter="16" /> } @else { Choisir ce plan }
+                  <button mat-flat-button class="plan-btn" disabled
+                          matTooltip="Bientôt disponible">
+                    Bientôt disponible
                   </button>
                 }
               </div>
