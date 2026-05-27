@@ -11,8 +11,8 @@ import { AuthService } from '../core/services/auth.service';
   imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule],
   template: `
     <mat-toolbar color="primary" class="toolbar">
-      <mat-icon>admin_panel_settings</mat-icon>
-      <span class="title">FlowlyRent — Admin</span>
+      <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
+      <span class="admin-badge">Admin</span>
       <span class="spacer"></span>
       <button mat-icon-button routerLink="/superadmin/dashboard" matTooltip="Dashboard">
         <mat-icon>dashboard</mat-icon>
@@ -30,7 +30,12 @@ import { AuthService } from '../core/services/auth.service';
   `,
   styles: [`
     .toolbar { gap: 12px; }
-    .title { font-size: 18px; font-weight: 600; margin-left: 8px; }
+    .toolbar-logo { height: 36px; width: auto; filter: brightness(0) invert(1); }
+    .admin-badge {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px;
+      text-transform: uppercase;
+    }
     .spacer { flex: 1; }
     .content { padding: 32px; max-width: 1200px; margin: 0 auto; }
   `]

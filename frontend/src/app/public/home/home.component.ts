@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
   template: `
     <div class="hero">
       <div class="hero-content">
+        <img src="assets/logo.svg" alt="FlowlyRent" class="hero-logo" />
         <h1>Gérez vos locations en toute simplicité</h1>
         <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
         <div class="hero-actions">
@@ -42,9 +43,10 @@ import { MatIconModule } from '@angular/material/icon';
     .hero {
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
       color: white;
-      padding: 100px 24px;
+      padding: 80px 24px 100px;
       text-align: center;
     }
+    .hero-logo { width: 240px; height: auto; filter: brightness(0) invert(1); margin-bottom: 32px; display: block; margin-left: auto; margin-right: auto; }
     .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
     .hero p { font-size: 20px; opacity: 0.85; margin: 0 0 40px; }
     .hero-actions { display: flex; gap: 16px; justify-content: center; }

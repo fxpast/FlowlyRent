@@ -17,11 +17,9 @@ import { UserService } from '../../core/services/user.service';
   template: `
     <div class="login-container">
       <mat-card class="login-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>home</mat-icon>
-          <mat-card-title>FlowlyRent</mat-card-title>
-          <mat-card-subtitle>Administration</mat-card-subtitle>
-        </mat-card-header>
+        <div class="login-logo">
+          <img src="assets/logo.svg" alt="FlowlyRent" />
+        </div>
         <mat-card-content>
           <form (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
@@ -56,10 +54,10 @@ import { UserService } from '../../core/services/user.service';
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
     }
     .login-card { width: 380px; padding: 24px; }
+    .login-logo { text-align: center; padding: 16px 0 24px; }
+    .login-logo img { width: 200px; height: auto; }
     .full-width { width: 100%; margin-bottom: 16px; }
     .error { color: #f44336; margin-bottom: 12px; }
-    mat-card-header { margin-bottom: 24px; }
-    mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #0288d1; }
     .footer { padding: 16px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
     .footer a { color: #0288d1; font-weight: 500; text-decoration: none; margin-left: 4px; }
     .footer a:hover { text-decoration: underline; }

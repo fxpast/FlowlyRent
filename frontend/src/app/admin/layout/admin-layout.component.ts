@@ -27,8 +27,7 @@ interface NavItem { icon: string; label: string; route: string; }
         [opened]="!isMobile()"
         class="sidenav">
         <div class="logo">
-          <mat-icon>home</mat-icon>
-          <span>FlowlyRent</span>
+          <img src="assets/logo.svg" alt="FlowlyRent" class="logo-img" />
           @if (isMobile()) {
             <button mat-icon-button class="close-btn" (click)="sidenav.close()">
               <mat-icon>close</mat-icon>
@@ -56,7 +55,9 @@ interface NavItem { icon: string; label: string; route: string; }
               <mat-icon>menu</mat-icon>
             </button>
           }
-          <span class="toolbar-title">{{ isMobile() ? 'FlowlyRent' : '' }}</span>
+          @if (isMobile()) {
+            <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
+          }
           <span class="toolbar-spacer"></span>
           <button mat-icon-button (click)="auth.logout()" title="Déconnexion">
             <mat-icon>logout</mat-icon>
@@ -73,14 +74,14 @@ interface NavItem { icon: string; label: string; route: string; }
     .sidenav { width: 220px; background: #0288d1; color: white; }
     .logo {
       display: flex; align-items: center; gap: 10px;
-      padding: 20px 16px; font-size: 20px; font-weight: bold;
+      padding: 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-    .logo mat-icon:first-child { font-size: 28px; }
+    .logo-img { width: 160px; height: auto; filter: brightness(0) invert(1); }
     .close-btn { margin-left: auto; color: white; }
     mat-nav-list a { color: rgba(255,255,255,0.85); margin: 4px 8px; border-radius: 8px; }
     .active-link { background: rgba(255,255,255,0.15) !important; color: white !important; }
-    .toolbar-title { font-size: 18px; font-weight: 600; margin-left: 4px; }
+    .toolbar-logo { height: 32px; width: auto; filter: brightness(0) invert(1); }
     .toolbar-spacer { flex: 1 1 auto; }
     .content { padding: 24px; }
     .badge {
