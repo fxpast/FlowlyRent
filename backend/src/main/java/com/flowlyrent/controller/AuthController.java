@@ -5,9 +5,12 @@ import com.flowlyrent.dto.LoginRequest;
 import com.flowlyrent.dto.LoginResponse;
 import com.flowlyrent.dto.RegisterRequest;
 import com.flowlyrent.model.AppUser;
+import com.flowlyrent.model.enums.AnalyticsEventType;
 import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.repository.AppUserRepository;
+import com.flowlyrent.service.AnalyticsService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +31,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final AnalyticsService analyticsService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -48,13 +52,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         AppUser user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
 
+        analyticsService.record(AnalyticsEventType.LOGIN, user.getId(), null, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(buildLoginResponse(user));
     }
 
@@ -67,6 +72,7 @@ public class AuthController {
         resp.setLastName(user.getLastName());
         resp.setPlan(user.getPlan());
         resp.setPublicSiteSlug(user.getPublicSiteSlug());
+        resp.setRole(user.getRole());
         return resp;
     }
 

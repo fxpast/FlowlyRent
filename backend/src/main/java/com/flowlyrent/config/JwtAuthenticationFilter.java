@@ -29,11 +29,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             try {
                 var claims = jwtTokenProvider.validateToken(token);
-                String plan = claims.get("plan", String.class);
+                String role = claims.get("role", String.class);
+                if (role == null) role = "USER";
                 var auth = new UsernamePasswordAuthenticationToken(
                         claims.getSubject(),
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + plan)));
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception e) {
                 SecurityContextHolder.clearContext();

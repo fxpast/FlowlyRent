@@ -2,6 +2,7 @@ package com.flowlyrent.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flowlyrent.model.enums.SubscriptionPlan;
+import com.flowlyrent.model.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -37,6 +38,10 @@ public class AppUser implements UserDetails {
     @Column(nullable = false)
     private SubscriptionPlan plan = SubscriptionPlan.FREE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
+
     // Slug unique pour le site de réservation public : /public/{slug}
     @Column(unique = true)
     private String publicSiteSlug;
@@ -57,7 +62,7 @@ public class AppUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + plan.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override

@@ -8,8 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatChipsModule } from '@angular/material/chips';
-import { UserService, UserProfile, Beds24Status, SubscriptionInfo } from '../../core/services/user.service';
+import { UserService, UserProfile, Beds24Status } from '../../core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -21,105 +20,25 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     CommonModule, FormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatDividerModule,
-    MatProgressSpinnerModule, MatChipsModule,
-    MatSnackBarModule, MatTooltipModule
+    MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule
   ],
   template: `
     <h2>Paramètres</h2>
 
-    <!-- Profil utilisateur -->
-    <mat-card class="section-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar>person</mat-icon>
-        <mat-card-title>Profil</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        @if (profile()) {
-          <div class="form-row">
-            <mat-form-field>
-              <mat-label>Prénom</mat-label>
-              <input matInput [(ngModel)]="profileEdit.firstName" />
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Nom</mat-label>
-              <input matInput [(ngModel)]="profileEdit.lastName" />
-            </mat-form-field>
-          </div>
-          <mat-form-field class="full-width">
-            <mat-label>Slug du site public</mat-label>
-            <input matInput [(ngModel)]="profileEdit.publicSiteSlug" />
-            <mat-hint>URL : /public/{{ profileEdit.publicSiteSlug }}/properties</mat-hint>
-          </mat-form-field>
-          <div class="plan-info">
-            <mat-icon>stars</mat-icon>
-            Plan actuel : <strong>{{ profile()!.plan }}</strong>
-            &nbsp;·&nbsp; {{ profile()!.email }}
-          </div>
-          @if (profileMsg()) {
-            <p class="msg" [class.error]="profileError()">{{ profileMsg() }}</p>
-          }
-        } @else {
-          <mat-spinner diameter="32" />
-        }
-      </mat-card-content>
-      <mat-card-actions>
-        <button mat-flat-button color="primary" (click)="saveProfile()" [disabled]="savingProfile()">
-          @if (savingProfile()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
-        </button>
-      </mat-card-actions>
-    </mat-card>
-
-    <!-- Abonnement -->
-    <mat-card class="section-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar>workspace_premium</mat-icon>
-        <mat-card-title>Abonnement</mat-card-title>
-        <mat-card-subtitle>Gérez votre plan FlowlyRent</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        @if (subInfo()) {
-          @if (subMsg()) {
-            <p class="msg" [class.success]="!subError()" [class.error]="subError()">{{ subMsg() }}</p>
-          }
-          <div class="plans-grid">
-            @for (plan of plans; track plan.key) {
-              <div class="plan-card" [class.current]="subInfo()!.plan === plan.key" [class.popular]="plan.popular">
-                @if (plan.popular) { <div class="popular-badge">Populaire</div> }
-                <div class="plan-name">{{ plan.label }}</div>
-                <div class="plan-price">
-                  @if (plan.price === 0) { Gratuit }
-                  @else { xx€<span>/mois</span> }
-                </div>
-                <ul class="plan-features">
-                  @for (f of plan.features; track f) { <li>{{ f }}</li> }
-                </ul>
-                @if (subInfo()!.plan === plan.key) {
-                  <div class="current-badge"><mat-icon>check_circle</mat-icon> Plan actuel</div>
-                } @else if (plan.key !== 'FREE') {
-                  <button mat-flat-button class="plan-btn" disabled
-                          matTooltip="Bientôt disponible">
-                    Bientôt disponible
-                  </button>
-                }
-              </div>
-            }
-          </div>
-          @if (subInfo()!.stripeSubscriptionId) {
-            <div class="cancel-area">
-              <button mat-stroked-button color="warn" (click)="cancelPlan()" [disabled]="cancelling()">
-                @if (cancelling()) { <mat-spinner diameter="16" /> } @else { Annuler mon abonnement }
-              </button>
-              <span class="cancel-hint">Vous reviendrez au plan FREE.</span>
-            </div>
-          }
-        } @else {
-          <mat-spinner diameter="32" />
-        }
-      </mat-card-content>
-    </mat-card>
+    <!-- Connexion Beds24 — mise en avant -->
+    @if (beds24Status() && !beds24Status()!.connected) {
+      <div class="beds24-banner">
+        <mat-icon class="beds24-banner-icon">sync</mat-icon>
+        <div class="beds24-banner-text">
+          <strong>Connectez votre compte Beds24 pour commencer</strong>
+          <span>Synchronisez automatiquement vos propriétés et réservations depuis Beds24.</span>
+        </div>
+        <mat-icon class="beds24-banner-arrow">arrow_downward</mat-icon>
+      </div>
+    }
 
     <!-- Connexion Beds24 -->
-    <mat-card class="section-card">
+    <mat-card class="section-card" [class.beds24-highlight]="beds24Status() && !beds24Status()!.connected">
       <mat-card-header>
         <mat-icon mat-card-avatar>sync</mat-icon>
         <mat-card-title>Connexion Beds24</mat-card-title>
@@ -217,6 +136,49 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         }
       </mat-card-actions>
     </mat-card>
+
+    <!-- Profil utilisateur -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>person</mat-icon>
+        <mat-card-title>Profil</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (profile()) {
+          <div class="form-row">
+            <mat-form-field>
+              <mat-label>Prénom</mat-label>
+              <input matInput [(ngModel)]="profileEdit.firstName" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Nom</mat-label>
+              <input matInput [(ngModel)]="profileEdit.lastName" />
+            </mat-form-field>
+          </div>
+          <mat-form-field class="full-width">
+            <mat-label>Slug du site public</mat-label>
+            <input matInput [(ngModel)]="profileEdit.publicSiteSlug" />
+            <mat-hint>URL : /public/{{ profileEdit.publicSiteSlug }}/properties</mat-hint>
+          </mat-form-field>
+          <div class="plan-info">
+            <mat-icon>stars</mat-icon>
+            Plan actuel : <strong>{{ profile()!.plan }}</strong>
+            &nbsp;·&nbsp; {{ profile()!.email }}
+          </div>
+          @if (profileMsg()) {
+            <p class="msg" [class.error]="profileError()">{{ profileMsg() }}</p>
+          }
+        } @else {
+          <mat-spinner diameter="32" />
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="saveProfile()" [disabled]="savingProfile()">
+          @if (savingProfile()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
   `,
   styles: [`
     h2 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
@@ -243,22 +205,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .error { color: #d32f2f; }
     mat-card-actions { padding: 16px; display: flex; align-items: center; }
     mat-spinner { display: inline-block; }
-    .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin: 16px 0; }
-    .plan-card { border: 2px solid #e0e0e0; border-radius: 12px; padding: 16px; position: relative; transition: border-color .2s; }
-    .plan-card.current { border-color: #1976d2; background: #f0f7ff; }
-    .plan-card.popular { border-color: #ff9800; }
-    .popular-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ff9800; color: white; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; }
-    .plan-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-    .plan-price { font-size: 24px; font-weight: 800; color: #1976d2; margin-bottom: 12px; }
-    .plan-price span { font-size: 14px; font-weight: 400; color: #666; }
-    .plan-features { list-style: none; padding: 0; margin: 0 0 16px; font-size: 13px; color: #555; }
-    .plan-features li::before { content: "✓ "; color: #2e7d32; font-weight: 700; }
-    .plan-features li { margin-bottom: 4px; }
-    .current-badge { display: flex; align-items: center; gap: 4px; color: #1976d2; font-size: 13px; font-weight: 600; }
-    .current-badge mat-icon { font-size: 18px; height: 18px; width: 18px; }
-    .plan-btn { width: 100%; }
-    .cancel-area { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding-top: 16px; border-top: 1px solid #eee; }
-    .cancel-hint { font-size: 12px; color: #999; }
     .msg.success { color: #2e7d32; }
     .webhook-box { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
     .webhook-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; flex-wrap: wrap; }
@@ -266,6 +212,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .webhook-hint { font-size: 12px; color: #666; }
     .webhook-url-row { display: flex; align-items: center; gap: 8px; }
     .webhook-url { font-size: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; flex: 1; word-break: break-all; }
+    .beds24-banner { display: flex; align-items: center; gap: 16px; background: #e3f2fd; border: 2px solid #1976d2; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; max-width: 700px; }
+    .beds24-banner-icon { color: #1976d2; font-size: 32px; width: 32px; height: 32px; flex-shrink: 0; }
+    .beds24-banner-text { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .beds24-banner-text strong { font-size: 15px; color: #0d47a1; }
+    .beds24-banner-text span { font-size: 13px; color: #1565c0; }
+    .beds24-banner-arrow { color: #1976d2; font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+    .beds24-highlight { border: 2px solid #1976d2 !important; box-shadow: 0 0 0 4px rgba(25,118,210,0.1); }
   `]
 })
 export class SettingsComponent implements OnInit {
@@ -274,19 +227,6 @@ export class SettingsComponent implements OnInit {
   savingProfile = signal(false);
   profileMsg = signal('');
   profileError = signal(false);
-
-  subInfo = signal<SubscriptionInfo | null>(null);
-  subMsg = signal('');
-  subError = signal(false);
-  subscribing = signal(false);
-  cancelling = signal(false);
-
-  plans = [
-    { key: 'FREE',    label: 'FREE',    price: 0,  popular: false, features: ['1 propriété', 'Site de réservation', 'Sync iCal', '2% commission'] },
-    { key: 'STARTER', label: 'STARTER', price: 9,  popular: false, features: ['3 propriétés', 'Sync Beds24', 'Paiements Stripe', 'Messagerie'] },
-    { key: 'PRO',     label: 'PRO',     price: 19, popular: true,  features: ['Propriétés illimitées', 'Sync Beds24', 'Ménage & calendrier', 'Statistiques'] },
-    { key: 'AGENCE',  label: 'AGENCE',  price: 49, popular: false, features: ['Propriétés illimitées', 'Multi-utilisateurs', 'Tout PRO inclus', 'Support prioritaire'] },
-  ];
 
   beds24Status = signal<Beds24Status | null>(null);
   b24SetupToken = '';
@@ -311,43 +251,7 @@ export class SettingsComponent implements OnInit {
       this.profileEdit = { firstName: p.firstName ?? '', lastName: p.lastName ?? '', publicSiteSlug: p.publicSiteSlug ?? '' };
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
-    this.userService.getSubscription().subscribe(s => this.subInfo.set(s));
     this.loadBeds24Status();
-
-    const status = this.route.snapshot.queryParamMap.get('subscription');
-    if (status === 'success') this.snackBar.open('Abonnement activé avec succès !', 'Fermer', { duration: 5000 });
-    if (status === 'cancelled') this.snackBar.open('Paiement annulé.', 'Fermer', { duration: 4000 });
-  }
-
-  subscribeTo(plan: string): void {
-    this.subscribing.set(true);
-    this.subMsg.set('');
-    this.userService.startSubscriptionCheckout(plan).subscribe({
-      next: r => window.location.href = r.url,
-      error: err => {
-        this.subscribing.set(false);
-        this.subMsg.set(err.error?.error ?? 'Erreur lors de la création du lien de paiement');
-        this.subError.set(true);
-      }
-    });
-  }
-
-  cancelPlan(): void {
-    if (!confirm('Confirmer l\'annulation de votre abonnement ? Vous passerez au plan FREE.')) return;
-    this.cancelling.set(true);
-    this.userService.cancelSubscription().subscribe({
-      next: () => {
-        this.cancelling.set(false);
-        this.userService.getSubscription().subscribe(s => this.subInfo.set(s));
-        this.subMsg.set('Abonnement annulé, plan réinitialisé à FREE.');
-        this.subError.set(false);
-      },
-      error: err => {
-        this.cancelling.set(false);
-        this.subMsg.set(err.error?.error ?? 'Erreur lors de l\'annulation');
-        this.subError.set(true);
-      }
-    });
   }
 
   saveProfile(): void {

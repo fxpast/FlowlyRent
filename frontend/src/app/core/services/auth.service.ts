@@ -12,6 +12,7 @@ interface LoginResponse {
   lastName: string;
   plan: string;
   publicSiteSlug: string;
+  role: 'USER' | 'ADMIN';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,7 +31,8 @@ export class AuthService {
           firstName: resp.firstName,
           lastName: resp.lastName,
           plan: resp.plan,
-          publicSiteSlug: resp.publicSiteSlug
+          publicSiteSlug: resp.publicSiteSlug,
+          role: resp.role ?? 'USER'
         }));
         this.isLoggedIn.set(true);
       })
@@ -48,9 +50,13 @@ export class AuthService {
     return localStorage.getItem('flr_token');
   }
 
-  getCurrentUser(): { userId: number; email: string; firstName: string; lastName: string; plan: string; publicSiteSlug: string } | null {
+  getCurrentUser(): { userId: number; email: string; firstName: string; lastName: string; plan: string; publicSiteSlug: string; role: string } | null {
     const raw = localStorage.getItem('flr_user');
     return raw ? JSON.parse(raw) : null;
+  }
+
+  isAdmin(): boolean {
+    return this.getCurrentUser()?.role === 'ADMIN';
   }
 
   // Rétrocompatibilité : l'intercepteur appellait getCredentials()

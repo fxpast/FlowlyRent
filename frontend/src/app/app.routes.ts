@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { superadminGuard } from './core/guards/superadmin.guard';
 
 export const routes: Routes = [
   {
@@ -23,6 +24,11 @@ export const routes: Routes = [
   {
     path: 'admin/register',
     loadComponent: () => import('./admin/register/register.component').then(m => m.RegisterComponent)
+  },
+  {
+    path: 'superadmin',
+    canActivate: [superadminGuard],
+    loadChildren: () => import('./superadmin/superadmin.routes').then(m => m.superadminRoutes)
   },
   {
     path: '**',

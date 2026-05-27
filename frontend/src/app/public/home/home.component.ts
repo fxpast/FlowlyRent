@@ -14,7 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
         <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
         <div class="hero-actions">
           <a mat-raised-button routerLink="/admin/login" class="btn-login">
-            <mat-icon>login</mat-icon> Accès admin
+            <mat-icon>login</mat-icon> Espace hôte
           </a>
         </div>
       </div>

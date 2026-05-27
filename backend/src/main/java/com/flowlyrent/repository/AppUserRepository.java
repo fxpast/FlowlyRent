@@ -1,8 +1,12 @@
 package com.flowlyrent.repository;
 
 import com.flowlyrent.model.AppUser;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
@@ -11,4 +15,9 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     boolean existsByEmail(String email);
     boolean existsByPublicSiteSlug(String slug);
     java.util.Optional<AppUser> findByStripeCustomerId(String stripeCustomerId);
+
+    long countByCreatedAtAfter(LocalDateTime after);
+
+    @Query(value = "SELECT DATE(created_at) as day, COUNT(*) as cnt FROM users WHERE created_at > :after GROUP BY DATE(created_at) ORDER BY day", nativeQuery = true)
+    List<Object[]> findDailyNewUsers(@Param("after") LocalDateTime after);
 }

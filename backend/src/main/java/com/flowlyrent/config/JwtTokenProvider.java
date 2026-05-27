@@ -25,6 +25,7 @@ public class JwtTokenProvider {
                 .subject(user.getEmail())
                 .claim("userId", user.getId())
                 .claim("plan", user.getPlan().name())
+                .claim("role", user.getRole().name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(secretKey())

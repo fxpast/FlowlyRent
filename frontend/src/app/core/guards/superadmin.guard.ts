@@ -2,10 +2,9 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = () => {
+export const superadminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (!auth.isLoggedIn()) return router.createUrlTree(['/admin/login']);
-  if (auth.isAdmin()) return router.createUrlTree(['/superadmin/dashboard']);
-  return true;
+  if (auth.isLoggedIn() && auth.isAdmin()) return true;
+  return router.createUrlTree(['/admin/login']);
 };
