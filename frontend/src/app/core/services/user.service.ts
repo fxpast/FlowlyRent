@@ -81,4 +81,11 @@ export class UserService {
   cancelSubscription(): Observable<{ status: string }> {
     return this.http.delete<{ status: string }>(`${this.base}/admin/subscription`);
   }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<{ status?: string; error?: string }> {
+    return this.http.patch<{ status?: string; error?: string }>(
+      `${this.base}/user/password`,
+      { currentPassword, newPassword }
+    );
+  }
 }

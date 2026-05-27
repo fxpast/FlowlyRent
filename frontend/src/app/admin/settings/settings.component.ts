@@ -137,6 +137,44 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-actions>
     </mat-card>
 
+    <!-- Changer le mot de passe -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>lock</mat-icon>
+        <mat-card-title>Mot de passe</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-form-field class="full-width">
+          <mat-label>Mot de passe actuel</mat-label>
+          <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.current" autocomplete="current-password" />
+          <button mat-icon-button matSuffix (click)="showPwd.set(!showPwd())">
+            <mat-icon>{{ showPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </mat-form-field>
+        <mat-form-field class="full-width">
+          <mat-label>Nouveau mot de passe</mat-label>
+          <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.new" autocomplete="new-password" />
+          <mat-hint>8 caractères minimum</mat-hint>
+        </mat-form-field>
+        <mat-form-field class="full-width">
+          <mat-label>Confirmer le nouveau mot de passe</mat-label>
+          <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.confirm" autocomplete="new-password" />
+          @if (pwd.confirm && pwd.new !== pwd.confirm) {
+            <mat-error>Les mots de passe ne correspondent pas</mat-error>
+          }
+        </mat-form-field>
+        @if (pwdMsg()) {
+          <p class="msg" [class.error]="pwdError()">{{ pwdMsg() }}</p>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="changePassword()"
+          [disabled]="savingPwd() || !pwd.current || pwd.new.length < 8 || pwd.new !== pwd.confirm">
+          @if (savingPwd()) { <mat-spinner diameter="18" /> } @else { Changer le mot de passe }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
     <!-- Profil utilisateur -->
     <mat-card class="section-card">
       <mat-card-header>
@@ -237,6 +275,12 @@ export class SettingsComponent implements OnInit {
 
   webhookUrl = signal('');
 
+  pwd = { current: '', new: '', confirm: '' };
+  savingPwd = signal(false);
+  pwdMsg = signal('');
+  pwdError = signal(false);
+  showPwd = signal(false);
+
   constructor(private userService: UserService, private route: ActivatedRoute, private snackBar: MatSnackBar) {}
 
   copyWebhookUrl(): void {
@@ -268,6 +312,24 @@ export class SettingsComponent implements OnInit {
         this.savingProfile.set(false);
         this.profileMsg.set('Erreur lors de la mise à jour (le slug est peut-être déjà utilisé)');
         this.profileError.set(true);
+      }
+    });
+  }
+
+  changePassword(): void {
+    this.savingPwd.set(true);
+    this.pwdMsg.set('');
+    this.userService.changePassword(this.pwd.current, this.pwd.new).subscribe({
+      next: () => {
+        this.savingPwd.set(false);
+        this.pwdMsg.set('Mot de passe mis à jour');
+        this.pwdError.set(false);
+        this.pwd = { current: '', new: '', confirm: '' };
+      },
+      error: err => {
+        this.savingPwd.set(false);
+        this.pwdMsg.set(err.error?.error ?? 'Mot de passe actuel incorrect');
+        this.pwdError.set(true);
       }
     });
   }

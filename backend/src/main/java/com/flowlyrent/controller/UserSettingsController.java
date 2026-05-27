@@ -10,6 +10,7 @@ import com.flowlyrent.service.Beds24TokenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,6 +25,7 @@ public class UserSettingsController {
     private final AppUserRepository userRepository;
     private final Beds24AccountRepository beds24AccountRepository;
     private final Beds24TokenService beds24TokenService;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping("/profile")
     public ResponseEntity<LoginResponse> getProfile() {
@@ -44,6 +46,22 @@ public class UserSettingsController {
             user.setPublicSiteSlug(slug);
         }
         return ResponseEntity.ok(toProfileResponse(userRepository.save(user)));
+    }
+
+    @PatchMapping("/password")
+    public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> body) {
+        String currentPassword = body.get("currentPassword");
+        String newPassword = body.get("newPassword");
+        if (currentPassword == null || newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Mot de passe invalide (8 caractères minimum)"));
+        }
+        AppUser user = securityUtils.getCurrentUser();
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            return ResponseEntity.status(401).body(Map.of("error", "Mot de passe actuel incorrect"));
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("status", "Mot de passe mis à jour"));
     }
 
     // --- Beds24 ---
