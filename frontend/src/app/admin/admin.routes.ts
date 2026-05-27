@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { ComingSoonComponent } from './coming-soon/coming-soon.component';
 
 export const adminRoutes: Routes = [
   {
@@ -36,19 +37,23 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'messages',
-        loadComponent: () => import('./messages/messages.component').then(m => m.MessagesComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Messages' }
       },
       {
         path: 'payments',
-        loadComponent: () => import('./payments/payments.component').then(m => m.PaymentsComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Paiements' }
       },
       {
         path: 'sync',
-        loadComponent: () => import('./sync/sync.component').then(m => m.SyncComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Synchronisation' }
       },
       {
         path: 'housekeeping',
-        loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Ménage' }
       },
       {
         path: 'calendar',
@@ -60,11 +65,13 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'stats',
-        loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Revenus' }
       },
       {
         path: 'reports',
-        loadComponent: () => import('./reports/reports.component').then(m => m.ReportsComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Rapports' }
       }
     ]
   }
