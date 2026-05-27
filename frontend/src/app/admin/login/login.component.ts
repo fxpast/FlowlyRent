@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -70,14 +72,18 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private userService: UserService, private router: Router) {}
 
   onSubmit(): void {
     if (!this.username || !this.password) return;
     this.loading.set(true);
     this.error.set('');
-    this.auth.login(this.username, this.password).subscribe({
-      next: () => this.router.navigate(['/admin/dashboard']),
+    this.auth.login(this.username, this.password).pipe(
+      switchMap(() => this.userService.getBeds24Status())
+    ).subscribe({
+      next: status => {
+        this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']);
+      },
       error: () => {
         this.error.set('Identifiants incorrects');
         this.loading.set(false);
