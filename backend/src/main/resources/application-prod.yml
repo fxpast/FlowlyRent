@@ -19,4 +19,4 @@ logging:
 
 app:
   cors:
-    allowed-origins: "https://flowlyrent.netlify.app"
+    allowed-origins: "https://flowlyrent.com,https://www.flowlyrent.com"
