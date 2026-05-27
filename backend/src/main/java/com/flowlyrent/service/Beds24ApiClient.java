@@ -56,8 +56,17 @@ public class Beds24ApiClient {
 
     public List<Map<String, Object>> saveBookings(String token, List<Map<String, Object>> payload) throws Exception {
         String body = objectMapper.writeValueAsString(payload);
+        log.info("[Beds24] saveBookings payload: {}", body);
         String response = post(BASE + "/bookings", token, body);
-        return objectMapper.readValue(response, new TypeReference<>() {});
+        log.info("[Beds24] saveBookings response: {}", response);
+        List<Map<String, Object>> results = objectMapper.readValue(response, new TypeReference<>() {});
+        for (Map<String, Object> r : results) {
+            if (Boolean.FALSE.equals(r.get("success"))) {
+                Object errors = r.get("errors");
+                throw new RuntimeException("Beds24 booking error: " + (errors != null ? errors : response));
+            }
+        }
+        return results;
     }
 
     public Map<String, Object> deleteBookings(String token, List<Long> ids) throws Exception {

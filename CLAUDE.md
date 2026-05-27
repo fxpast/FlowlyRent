@@ -8,6 +8,8 @@ Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pou
 **Dépôt GitHub :** `fxpast/flowlyrent`
 **Branche de travail :** `master`
 
+> **RÈGLE ABSOLUE — GIT** : Ne jamais exécuter `git push` ni créer de Pull Request sans accord explicite de l'utilisateur. Toujours demander confirmation avant toute action qui affecte le dépôt distant.
+
 ---
 
 ## Stack technique
@@ -22,7 +24,8 @@ Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pou
 | Paiement | Stripe (Checkout Session + Payment Intent + Webhooks) |
 | Messagerie temps réel | WebSocket (STOMP via SockJS) |
 | Synchronisation plateformes | Beds24 API v2 (principal) + iCal (legacy) |
-| Infrastructure | Docker Compose |
+| Infrastructure dev | Docker Compose / XAMPP local |
+| Infrastructure prod | Netlify (frontend) + Railway (backend + MySQL) |
 | API docs | Springdoc OpenAPI (Swagger UI) |
 
 ---
@@ -334,15 +337,34 @@ npm install
 npm start  # → http://localhost:4200 avec proxy vers :8080
 ```
 
-### Production (Docker Compose)
-```bash
-cp .env.example .env
-# Éditer .env avec les vraies clés
-docker-compose up -d
-# Admin → http://localhost:4200/admin/login
-# Public → http://localhost:4200/public/home
-# Swagger → http://localhost:8080/api/swagger-ui.html
-```
+### Production (Netlify + Railway)
+
+**Frontend → Netlify**
+- Connecter le repo GitHub sur [app.netlify.com](https://app.netlify.com)
+- Netlify lit automatiquement `frontend/netlify.toml`
+- Build : `npm ci && npm run build -- --configuration production`
+- Publish : `dist/flowlyrent/browser`
+- Mettre à jour `environment.prod.ts` avec l'URL Railway du backend
+
+**Backend → Railway**
+- Connecter le repo GitHub sur [railway.app](https://railway.app)
+- Root directory : `backend/` — Railway détecte le Dockerfile
+- Ajouter un plugin MySQL dans le projet Railway
+- Variables d'environnement Railway à configurer :
+  ```
+  SPRING_PROFILES_ACTIVE=prod
+  JWT_SECRET=<clé base64 32+ octets>
+  STRIPE_SECRET_KEY=sk_live_...
+  STRIPE_WEBHOOK_SECRET=whsec_...
+  CORS_ALLOWED_ORIGINS=https://<ton-site>.netlify.app
+  ```
+  Les variables `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`
+  sont injectées automatiquement par Railway depuis le plugin MySQL.
+
+**Profil Spring Boot prod** : `application-prod.yml` (se charge via `SPRING_PROFILES_ACTIVE=prod`)
+
+**CORS** : `WebConfig.java` lit `app.cors.allowed-origins` — défaut localhost:4200 en dev,
+variable `CORS_ALLOWED_ORIGINS` en prod.
 
 ---
 

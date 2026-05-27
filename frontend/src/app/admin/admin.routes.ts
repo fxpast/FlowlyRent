@@ -7,6 +7,10 @@ export const adminRoutes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'today',
+        loadComponent: () => import('./today/today.component').then(m => m.TodayComponent)
+      },
+      {
         path: 'dashboard',
         loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
@@ -57,6 +61,10 @@ export const adminRoutes: Routes = [
       {
         path: 'stats',
         loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./reports/reports.component').then(m => m.ReportsComponent)
       }
     ]
   }

@@ -49,6 +49,8 @@ jwt:
 
 app:
   name: ${APP_NAME:FlowlyRent}
+  cors:
+    allowed-origins: "http://localhost:4200,http://localhost:3000"
 
 admin:
   username: ${ADMIN_USERNAME:admin}

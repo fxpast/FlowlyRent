@@ -1,35 +1,41 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCardModule } from '@angular/material/card';
 import { environment } from '@env/environment';
+import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { BlackoutDialogComponent, BlackoutDialogResult } from '../blackout-dialog/blackout-dialog.component';
+import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 
-interface CalProperty { id: number; name: string; city: string; }
-interface CalBooking  { id: number; propertyId: number; arrival: string; departure: string; guestName: string; status: string; channel: string; }
-interface CalBlock    { id: number; propertyId: number; startDate: string; endDate: string; type: string; notes: string; }
+interface CalProperty { id: string; name: string; city: string; }
+interface CalBooking  { id: string; propertyId: string; arrival: string; departure: string; guestName: string; status: string; channel: string; }
+interface CalBlock    { id: string; propertyId: string; startDate: string; endDate: string; type: string; notes: string; }
 
 interface DayCell {
   date: string;        // YYYY-MM-DD
-  bookingId?: number;
+  bookingId?: string;
   guestName?: string;
   isFirstDay?: boolean;
   isLastDay?: boolean;
   channel?: string;
-  blockId?: number;
+  blockId?: string;
   blockType?: string;
   blockNotes?: string;
   isBlockFirst?: boolean;
   isBlockLast?: boolean;
   isWeekend: boolean;
   isToday: boolean;
+  price?: number;
+  minStay?: number;
+  override?: number;
 }
 
 const BLOCK_LABELS: Record<string, string> = {
@@ -51,14 +57,16 @@ const CHANNEL_COLORS: Record<string, string> = {
   selector: 'app-calendar',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    MatButtonModule, MatIconModule, MatSelectModule,
-    MatFormFieldModule, MatInputModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatCardModule
+    CommonModule, FormsModule, RouterLink, MatDialogModule,
+    MatButtonModule, MatIconModule, MatSelectModule, MatFormFieldModule,
+    MatTooltipModule, MatProgressSpinnerModule
   ],
   template: `
     <div class="cal-header">
       <h2>Calendrier des disponibilités</h2>
+      <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
+        <mat-icon>add</mat-icon> Nouvelle réservation
+      </a>
     </div>
 
     <!-- Navigation mois -->
@@ -67,13 +75,23 @@ const CHANNEL_COLORS: Record<string, string> = {
       <span class="month-label">{{ monthLabel() }}</span>
       <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
       <button mat-stroked-button (click)="goToday()" style="margin-left:12px">Aujourd'hui</button>
+
+      <mat-form-field appearance="outline" class="prop-filter" subscriptSizing="dynamic">
+        <mat-select [value]="selectedPropertyId()" (selectionChange)="selectedPropertyId.set($event.value)">
+          <mat-option value="all">Toutes les propriétés</mat-option>
+          @for (p of properties(); track p.id) {
+            <mat-option [value]="p.id">{{ p.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
       <span class="spacer"></span>
       <!-- Légende -->
       <div class="legend">
         <span class="leg"><span class="dot" style="background:#1976d2"></span> Direct</span>
         <span class="leg"><span class="dot" style="background:#FF5A5F"></span> Airbnb</span>
         <span class="leg"><span class="dot" style="background:#003580"></span> Booking</span>
-        <span class="leg"><span class="dot" style="background:#f57c00"></span> Blocage</span>
+        <span class="leg"><span class="dot stripe-dot"></span> Blackout</span>
       </div>
     </div>
 
@@ -82,11 +100,12 @@ const CHANNEL_COLORS: Record<string, string> = {
     } @else {
 
     <!-- Grille calendrier -->
-    <div class="cal-wrapper">
+    <div class="cal-wrapper" #calWrapper>
       <table class="cal-table">
         <thead>
           <tr>
             <th class="prop-col">Logement</th>
+            <th class="type-col"></th>
             @for (d of days(); track d.date) {
               <th class="day-th" [class.weekend]="d.isWeekend" [class.today]="d.isToday">
                 <div class="day-num">{{ d.date.slice(8) }}</div>
@@ -96,39 +115,75 @@ const CHANNEL_COLORS: Record<string, string> = {
           </tr>
         </thead>
         <tbody>
-          @for (row of grid(); track row.property.id) {
-            <tr>
-              <td class="prop-cell">
+          @for (row of filteredGrid(); track row.property.id) {
+            <!-- Ligne blackout -->
+            <tr class="info-row">
+              <td class="prop-cell" rowspan="4">
                 <div class="prop-name" [title]="row.property.name">{{ row.property.name }}</div>
                 @if (row.property.city) {
                   <div class="prop-city">{{ row.property.city }}</div>
                 }
               </td>
+              <td class="type-cell type-block"><mat-icon class="row-icon">block</mat-icon></td>
+              @for (cell of row.cells; track cell.date) {
+                <td class="info-cell blackout-cell"
+                    [class.weekend]="cell.isWeekend"
+                    [class.is-blocked]="!!cell.blockId"
+                    [class.block-first]="cell.isBlockFirst"
+                    [class.block-last]="cell.isBlockLast"
+                    [class.clickable]="!!cell.blockId"
+                    [title]="cell.blockId ? cellTooltip(cell) : ''"
+                    (click)="onCellClick(row.property, cell, 'blackout')">
+                  @if (cell.isBlockFirst) {
+                    <span class="block-chip-small">{{ blockLabel(cell.blockType!) }}</span>
+                  }
+                </td>
+              }
+            </tr>
+            <!-- Ligne prix -->
+            <tr class="info-row">
+              <td class="type-cell type-price"><mat-icon class="row-icon">euro</mat-icon></td>
+              @for (cell of row.cells; track cell.date) {
+                <td class="info-cell price-cell clickable"
+                    [class.weekend]="cell.isWeekend"
+                    (click)="onCellClick(row.property, cell, 'price')">
+                  @if (cell.price) { {{ cell.price | number:'1.0-0' }} }
+                </td>
+              }
+            </tr>
+            <!-- Ligne durée minimum -->
+            <tr class="info-row">
+              <td class="type-cell type-minstay"><mat-icon class="row-icon">schedule</mat-icon></td>
+              @for (cell of row.cells; track cell.date) {
+                <td class="info-cell minstay-cell clickable"
+                    [class.weekend]="cell.isWeekend"
+                    (click)="onCellClick(row.property, cell, 'minstay')">
+                  @if (cell.minStay && cell.minStay > 0) { {{ cell.minStay }}n }
+                </td>
+              }
+            </tr>
+            <!-- Ligne réservations -->
+            <tr class="last-subrow">
+              <td class="type-cell">Rés.</td>
               @for (cell of row.cells; track cell.date) {
                 <td class="day-cell"
                     [class.weekend]="cell.isWeekend"
                     [class.today]="cell.isToday"
                     [class.booked]="!!cell.bookingId"
-                    [class.blocked]="!!cell.blockId && !cell.bookingId"
                     [class.first-day]="cell.isFirstDay"
                     [class.last-day]="cell.isLastDay"
-                    [class.block-first]="cell.isBlockFirst"
-                    [class.block-last]="cell.isBlockLast"
                     [style.background]="cellBg(cell)"
                     [title]="cellTooltip(cell)"
                     (click)="onCellClick(row.property, cell)">
                   @if (cell.isFirstDay && cell.guestName) {
                     <span class="guest-chip">{{ cell.guestName | slice:0:14 }}</span>
                   }
-                  @if (cell.isBlockFirst && !cell.bookingId) {
-                    <span class="block-chip">{{ blockLabel(cell.blockType!) }}</span>
-                  }
                 </td>
               }
             </tr>
           }
-          @if (grid().length === 0) {
-            <tr><td [attr.colspan]="days().length + 1" class="empty-row">
+          @if (filteredGrid().length === 0) {
+            <tr><td [attr.colspan]="days().length + 2" class="empty-row">
               Aucun logement. Connectez votre compte Beds24 ou créez des propriétés.
             </td></tr>
           }
@@ -137,139 +192,150 @@ const CHANNEL_COLORS: Record<string, string> = {
     </div>
 
     }<!-- end @if loading -->
-
-    <!-- Panel création de blocage -->
-    @if (selection) {
-      <div class="block-panel">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Bloquer des dates</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p><strong>{{ selection.property.name }}</strong> — du {{ selection.startDate }} au {{ selection.endDate }}</p>
-            <div class="form-row">
-              <mat-form-field>
-                <mat-label>Type</mat-label>
-                <mat-select [(ngModel)]="blockForm.type">
-                  <mat-option value="OWNER_STAY">Séjour propriétaire</mat-option>
-                  <mat-option value="MAINTENANCE">Maintenance</mat-option>
-                  <mat-option value="CLEANING">Nettoyage</mat-option>
-                  <mat-option value="OTHER">Autre</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field class="flex2">
-                <mat-label>Notes (optionnel)</mat-label>
-                <input matInput [(ngModel)]="blockForm.notes" />
-              </mat-form-field>
-            </div>
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-flat-button color="warn" (click)="confirmBlock()">
-              <mat-icon>block</mat-icon> Bloquer
-            </button>
-            <button mat-button (click)="selection = null">Annuler</button>
-          </mat-card-actions>
-        </mat-card>
-      </div>
-    }
   `,
   styles: [`
-    .cal-header { margin-bottom: 16px; }
+    .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     h2 { margin: 0; font-size: 24px; font-weight: 500; }
     .nav-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     .month-label { font-size: 20px; font-weight: 600; min-width: 180px; text-align: center; }
     .spacer { flex: 1; }
+    .prop-filter { width: 220px; margin-left: 16px; }
+    .prop-filter .mat-mdc-form-field-infix { padding-top: 6px !important; padding-bottom: 6px !important; min-height: unset; }
     .legend { display: flex; gap: 16px; font-size: 12px; }
     .leg { display: flex; align-items: center; gap: 4px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .stripe-dot { border-radius: 2px; background: repeating-linear-gradient(45deg,#f57c00 0,#f57c00 3px,#ffe0b2 3px,#ffe0b2 7px); }
 
     .center { display: flex; justify-content: center; padding: 60px; }
 
     .cal-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid #e0e0e0; }
     .cal-table { border-collapse: collapse; min-width: 100%; table-layout: fixed; }
 
-    .prop-col { width: 160px; min-width: 160px; background: #f5f5f5; position: sticky; left: 0; z-index: 2; border-right: 2px solid #ddd; }
+    .prop-col { width: 150px; min-width: 150px; background: #f5f5f5; position: sticky; left: 0; z-index: 2; border-right: 1px solid #ddd; }
+    .type-col { width: 36px; min-width: 36px; background: #f5f5f5; position: sticky; left: 150px; z-index: 2; border-right: 2px solid #ddd; }
     .day-th { width: 38px; min-width: 38px; text-align: center; padding: 4px 0; background: #fafafa; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #f0f0f0; }
     .day-th.weekend { background: #f3e5f5; }
     .day-th.today { background: #e3f2fd; }
     .day-num { font-size: 13px; font-weight: 600; }
     .day-name { font-size: 10px; color: #888; text-transform: capitalize; }
 
-    .prop-cell { background: #f5f5f5; padding: 8px 12px; border-right: 2px solid #ddd; border-bottom: 1px solid #e0e0e0; position: sticky; left: 0; z-index: 1; }
-    .prop-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    .prop-cell {
+      background: #f5f5f5; padding: 8px 10px;
+      border-right: 1px solid #ddd; border-bottom: 2px solid #ddd;
+      position: sticky; left: 0; z-index: 1;
+      vertical-align: middle;
+    }
+    .prop-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 132px; }
     .prop-city { font-size: 11px; color: #888; }
 
+    .type-cell {
+      background: #f5f5f5; font-size: 10px; color: #aaa;
+      text-align: center; padding: 2px 4px;
+      border-right: 2px solid #ddd; border-bottom: 1px solid #e8e8e8;
+      position: sticky; left: 150px; z-index: 1;
+      vertical-align: middle;
+    }
+    .type-price   { color: #2e7d32; }
+    .type-minstay { color: #0288d1; }
+    .row-icon { font-size: 13px; width: 13px; height: 13px; vertical-align: middle; }
+
     .day-cell {
-      height: 44px; min-width: 38px;
+      height: 40px; min-width: 38px;
       border-right: 1px solid #f0f0f0;
       border-bottom: 1px solid #e0e0e0;
-      cursor: pointer;
+      cursor: default;
       position: relative;
       overflow: hidden;
       vertical-align: middle;
       transition: filter 0.1s;
     }
+    .day-cell.booked  { cursor: pointer; }
     .day-cell:hover { filter: brightness(0.92); }
     .day-cell.weekend { background: rgba(0,0,0,0.02); }
     .day-cell.today { outline: 2px solid #1976d2; outline-offset: -2px; }
+    .day-cell.booked  { color: white; }
+    .day-cell.first-day { border-radius: 6px 0 0 6px; }
+    .day-cell.last-day  { border-radius: 0 6px 6px 0; }
 
-    .day-cell.booked  { color: white; border-top: 3px solid transparent; border-bottom: 3px solid transparent; }
-    .day-cell.blocked { color: white; }
-    .day-cell.first-day { border-radius: 6px 0 0 6px; margin-left: 2px; }
-    .day-cell.last-day  { border-radius: 0 6px 6px 0; margin-right: 2px; }
-
-    .guest-chip, .block-chip {
-      position: absolute;
-      left: 4px; top: 50%;
+    .guest-chip {
+      position: absolute; left: 4px; top: 50%;
       transform: translateY(-50%);
       font-size: 11px; font-weight: 600;
-      white-space: nowrap;
-      color: white !important;
+      white-space: nowrap; color: white !important;
       text-shadow: 0 1px 3px rgba(0,0,0,0.5);
       pointer-events: none;
     }
 
-    .empty-row { text-align: center; padding: 40px; color: #888; font-style: italic; }
+    .blackout-cell {
+      height: 18px; min-width: 38px;
+      border-right: 1px solid #f0f0f0;
+      vertical-align: middle; position: relative; overflow: hidden;
+    }
+    .blackout-cell.is-blocked {
+      background: repeating-linear-gradient(
+        45deg, #f57c00 0px, #f57c00 3px, #ffe0b2 3px, #ffe0b2 9px
+      );
+    }
+    .blackout-cell.block-first { border-radius: 4px 0 0 4px; }
+    .blackout-cell.block-last  { border-radius: 0 4px 4px 0; }
+    .block-chip-small {
+      position: absolute; left: 3px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px; font-weight: 600; color: #bf360c;
+      white-space: nowrap; pointer-events: none;
+      text-shadow: 0 0 2px #fff;
+    }
+    .type-block { color: #f57c00; }
 
-    .block-panel {
-      position: fixed; bottom: 24px; right: 24px;
-      z-index: 100; width: 420px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      border-radius: 12px;
+    .info-row td { border-bottom: 1px solid #efefef; }
+    .last-subrow td { border-bottom: 2px solid #ddd; }
+
+    .info-cell {
+      height: 18px; min-width: 38px;
+      font-size: 10px; text-align: center;
+      border-right: 1px solid #f0f0f0;
+      vertical-align: middle;
+      white-space: nowrap;
       overflow: hidden;
     }
-    .form-row { display: flex; gap: 12px; margin-top: 8px; }
-    .form-row mat-form-field { flex: 1; }
-    .form-row .flex2 { flex: 2; }
-    mat-card-actions { padding: 8px 16px; display: flex; gap: 8px; }
+    .info-cell.weekend { background: rgba(0,0,0,0.015); }
+    .price-cell   { color: #2e7d32; font-weight: 500; }
+    .minstay-cell { color: #0288d1; }
+
+    .clickable { cursor: pointer; }
+    .clickable:hover { filter: brightness(0.9); }
+
+    .empty-row { text-align: center; padding: 40px; color: #888; font-style: italic; }
   `]
 })
 export class CalendarComponent implements OnInit {
+  @ViewChild('calWrapper') calWrapper!: ElementRef<HTMLDivElement>;
   private base = environment.apiUrl;
 
   year  = signal(new Date().getFullYear());
   month = signal(new Date().getMonth() + 1); // 1-12
 
-  loading = signal(false);
+  loading    = signal(false);
   properties = signal<CalProperty[]>([]);
   bookings   = signal<CalBooking[]>([]);
   blocks     = signal<CalBlock[]>([]);
+  calendarData = signal<Record<string, Record<string, { price?: number; minStay?: number; override?: number }>>>({});
 
   days = computed(() => this.buildDays(this.year(), this.month()));
-  grid = computed(() => this.buildGrid());
+  grid = signal<{ property: CalProperty; cells: DayCell[] }[]>([]);
+
+  selectedPropertyId = signal<string>('all');
+  filteredGrid = computed(() => {
+    const id = this.selectedPropertyId();
+    return id === 'all' ? this.grid() : this.grid().filter(r => r.property.id === id);
+  });
 
   monthLabel = computed(() => {
     const d = new Date(this.year(), this.month() - 1, 1);
     return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   });
 
-  selection: { property: CalProperty; startDate: string; endDate: string } | null = null;
-  blockForm = { type: 'OWNER_STAY', notes: '' };
-
-  private dragStart: string | null = null;
-  private dragProperty: CalProperty | null = null;
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -294,64 +360,79 @@ export class CalendarComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.selection = null;
     const from = `${this.year()}-${String(this.month()).padStart(2,'0')}-01`;
     const lastDay = new Date(this.year(), this.month(), 0).getDate();
     const to = `${this.year()}-${String(this.month()).padStart(2,'0')}-${lastDay}`;
 
-    this.http.get<{ properties: CalProperty[]; bookings: CalBooking[]; blocks: CalBlock[] }>(
+    this.http.get<{
+      properties: CalProperty[];
+      bookings: CalBooking[];
+      blocks: CalBlock[];
+      calendarData?: Record<string, Record<string, { price?: number; minStay?: number }>>;
+    }>(
       `${this.base}/admin/availability/calendar`, { params: { from, to } }
     ).subscribe({
       next: r => {
-        this.properties.set(r.properties);
-        this.bookings.set(r.bookings);
-        this.blocks.set(r.blocks);
+        this.properties.set(r.properties ?? []);
+        this.bookings.set(r.bookings ?? []);
+        this.blocks.set(r.blocks ?? []);
+        this.calendarData.set(r.calendarData ?? {});
+        this.grid.set(this.buildGrid());
         this.loading.set(false);
+        setTimeout(() => this.scrollToToday(), 50);
       },
-      error: () => this.loading.set(false)
+      error: (e) => { console.error('[Calendar] error', e); this.loading.set(false); }
     });
   }
 
-  onCellClick(property: CalProperty, cell: DayCell): void {
-    if (cell.blockId) {
-      if (confirm(`Supprimer le blocage "${this.blockLabel(cell.blockType!)}" ?`)) {
-        this.http.delete(`${this.base}/admin/availability/blocks/${cell.blockId}`).subscribe(() => this.load());
+  onCellClick(property: CalProperty, cell: DayCell, rowType: 'booking' | 'blackout' | 'price' | 'minstay' = 'booking'): void {
+    if (rowType === 'booking') {
+      if (!cell.bookingId) return;
+      const booking = this.bookings().find(b => String(b.id) === String(cell.bookingId));
+      if (booking) {
+        const data = { ...booking, propName: property.name, propCity: property.city };
+        const ref = this.dialog.open(BookingDetailDialogComponent, { data, width: '520px' });
+        ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
+      } else {
+        this.router.navigate(['/admin/bookings', cell.bookingId, 'edit']);
       }
-      return;
+    } else if (rowType === 'blackout') {
+      const block = this.blocks().find(b => b.id === cell.blockId);
+      const startDate = block?.startDate ?? cell.date;
+      const endDate   = block?.endDate   ?? cell.date;
+      const ref = this.dialog.open(BlackoutDialogComponent, {
+        data: { propertyName: property.name, startDate, endDate },
+        width: '400px'
+      });
+      ref.afterClosed().subscribe((result: BlackoutDialogResult | undefined) => {
+        if (!result) return;
+        this.http.post(`${this.base}/admin/availability/blackout`, null, {
+          params: { propertyId: property.id, from: result.from, to: result.to, override: result.override }
+        }).subscribe({ next: () => this.load(), error: (e) => console.error('[Calendar] blackout error', e) });
+      });
+    } else if (rowType === 'price' || rowType === 'minstay') {
+      const field = rowType === 'price' ? 'price' : 'minStay';
+      const ref = this.dialog.open(PriceDialogComponent, {
+        data: { propertyName: property.name, date: cell.date, field, price: cell.price, minStay: cell.minStay },
+        width: '380px'
+      });
+      ref.afterClosed().subscribe((result: PriceDialogResult | undefined) => {
+        if (!result) return;
+        const params: Record<string, string> = {
+          propertyId: property.id, from: result.from, to: result.to
+        };
+        if (result.price   != null) params['price']   = String(result.price);
+        if (result.minStay != null) params['minStay'] = String(result.minStay);
+        this.http.post(`${this.base}/admin/availability/price`, null, { params }).subscribe({
+          next: () => this.load(),
+          error: (e) => console.error('[Calendar] price error', e)
+        });
+      });
     }
-    if (cell.bookingId) return;
-
-    if (!this.selection || this.selection.property.id !== property.id) {
-      this.selection = { property, startDate: cell.date, endDate: cell.date };
-      this.blockForm = { type: 'OWNER_STAY', notes: '' };
-    } else {
-      const s = this.selection.startDate <= cell.date ? this.selection.startDate : cell.date;
-      const e = this.selection.startDate <= cell.date ? cell.date : this.selection.startDate;
-      this.selection = { ...this.selection, startDate: s, endDate: e };
-    }
-  }
-
-  confirmBlock(): void {
-    if (!this.selection) return;
-    const payload = {
-      propertyId: this.selection.property.id,
-      startDate:  this.selection.startDate,
-      endDate:    this.selection.endDate,
-      type:       this.blockForm.type,
-      notes:      this.blockForm.notes
-    };
-    this.http.post(`${this.base}/admin/availability/blocks`, payload).subscribe(() => {
-      this.selection = null;
-      this.load();
-    });
   }
 
   cellBg(cell: DayCell): string {
-    if (cell.bookingId) {
-      const booking = this.bookings().find(b => b.id === cell.bookingId);
-      return CHANNEL_COLORS[booking?.channel ?? ''] ?? '#1976d2';
-    }
-    if (cell.blockId) return '#f57c00';
+    if (cell.bookingId) return CHANNEL_COLORS[cell.channel ?? ''] ?? '#1976d2';
     return '';
   }
 
@@ -378,15 +459,27 @@ export class CalendarComponent implements OnInit {
     });
   }
 
+  private scrollToToday(): void {
+    const today = new Date().toISOString().split('T')[0];
+    const dayIndex = this.days().findIndex(d => d.date === today);
+    if (dayIndex < 0 || !this.calWrapper?.nativeElement) return;
+    const colWidth = 38;
+    // Recule de 3 jours pour montrer du contexte avant aujourd'hui
+    const scrollLeft = Math.max(0, (dayIndex - 3) * colWidth);
+    this.calWrapper.nativeElement.scrollLeft = scrollLeft;
+  }
+
   private buildGrid(): { property: CalProperty; cells: DayCell[] }[] {
-    const ds = this.days();
-    const bs = this.bookings();
-    const bls = this.blocks();
+    const ds   = this.days();
+    const bs   = this.bookings();
+    const bls  = this.blocks();
+    const cal  = this.calendarData();
 
     return this.properties().map(prop => ({
       property: prop,
       cells: ds.map(d => {
         const cell: DayCell = { ...d };
+        const propCal = cal[prop.id] ?? {};
 
         const booking = bs.find(b =>
           b.propertyId === prop.id && b.arrival <= d.date && b.departure > d.date
@@ -403,11 +496,18 @@ export class CalendarComponent implements OnInit {
           b.propertyId === prop.id && b.startDate <= d.date && b.endDate >= d.date
         );
         if (block && !booking) {
-          cell.blockId     = block.id;
-          cell.blockType   = block.type;
-          cell.blockNotes  = block.notes;
+          cell.blockId      = block.id;
+          cell.blockType    = block.type;
+          cell.blockNotes   = block.notes;
           cell.isBlockFirst = block.startDate === d.date;
           cell.isBlockLast  = block.endDate   === d.date;
+        }
+
+        const dayData = propCal[d.date];
+        if (dayData) {
+          if (dayData.price    != null) cell.price    = Number(dayData.price);
+          if (dayData.minStay  != null) cell.minStay  = Number(dayData.minStay);
+          if (dayData.override != null) cell.override = Number(dayData.override);
         }
 
         return cell;

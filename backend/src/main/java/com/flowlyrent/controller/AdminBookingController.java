@@ -6,16 +6,21 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/admin/bookings")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Réservations admin")
 public class AdminBookingController {
 
@@ -23,11 +28,94 @@ public class AdminBookingController {
     private final Beds24AccountRepository accountRepo;
     private final SecurityUtils securityUtils;
 
+    @GetMapping("/estimate")
+    public ResponseEntity<?> estimate(@RequestParam String propId,
+                                       @RequestParam String arrival,
+                                       @RequestParam String departure) {
+        try {
+            Beds24Account account = requireAccount();
+            String token = beds24.tokenFor(account);
+
+            LocalDate arrDate = LocalDate.parse(arrival.substring(0, 10));
+            LocalDate depDate = LocalDate.parse(departure.substring(0, 10));
+            long nights = java.time.temporal.ChronoUnit.DAYS.between(arrDate, depDate);
+            if (nights <= 0) return ResponseEntity.badRequest().body(Map.of("error", "Dates invalides"));
+
+            Map<String, String> calParams = new HashMap<>();
+            calParams.put("startDate",      arrDate.toString());
+            calParams.put("endDate",        depDate.minusDays(1).toString());
+            calParams.put("includePrices",  "1");
+            calParams.put("includeMinStay", "1");
+            List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+
+            String pId = idStr(propId);
+            log.info("[estimate] propId={} rooms={}", pId, rooms.size());
+
+            double nightsPrice = 0.0;
+            for (Map<String, Object> room : rooms) {
+                if (!pId.equals(idStr(room.get("propertyId")))) continue;
+                Object calObj = room.get("calendar");
+                if (!(calObj instanceof List)) { log.info("[estimate] no calendar array in room {}", room.get("roomId")); continue; }
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> cal = (List<Map<String, Object>>) calObj;
+                for (Map<String, Object> entry : cal) {
+                    Object p = entry.get("price1");
+                    if (p == null) continue;
+                    double price;
+                    try { price = Double.parseDouble(p.toString()); } catch (Exception ignored) { continue; }
+                    try {
+                        LocalDate from = LocalDate.parse(entry.get("from").toString().substring(0, 10));
+                        LocalDate to   = LocalDate.parse(entry.get("to").toString().substring(0, 10));
+                        LocalDate eff_from = from.isBefore(arrDate) ? arrDate : from;
+                        LocalDate eff_to   = to.isAfter(depDate)   ? depDate : to;
+                        long n = java.time.temporal.ChronoUnit.DAYS.between(eff_from, eff_to);
+                        if (n > 0) nightsPrice += price * n;
+                    } catch (Exception ignored) { nightsPrice += price; }
+                }
+            }
+            log.info("[estimate] nights={} nightsPrice={}", nights, nightsPrice);
+
+            double taxeSejour = Math.round(nightsPrice * 0.0275 * 100.0) / 100.0;
+
+            return ResponseEntity.ok(Map.of(
+                    "nights",      nights,
+                    "nightsPrice", Math.round(nightsPrice * 100.0) / 100.0,
+                    "taxeSejour",  taxeSejour
+            ));
+        } catch (Exception e) { return error(e); }
+    }
+
+    @GetMapping("/debug-fields")
+    public ResponseEntity<?> debugFields() {
+        try {
+            Beds24Account account = requireAccount();
+            String token = beds24.tokenFor(account);
+            List<Map<String, Object>> bookings = beds24.getBookings(token,
+                    Map.of("arrivalFrom", LocalDate.now().minusDays(60).toString(),
+                           "arrivalTo",   LocalDate.now().plusDays(60).toString()));
+            if (bookings.isEmpty()) return ResponseEntity.ok(Map.of("count", 0, "note", "Aucune réservation trouvée"));
+            Map<String, Object> first = bookings.get(0);
+            log.info("[DEBUG] keys={} | sample={}", first.keySet(), first);
+            return ResponseEntity.ok(Map.of("count", bookings.size(), "keys", first.keySet(), "first", first));
+        } catch (Exception e) { return error(e); }
+    }
+
     @GetMapping
     public ResponseEntity<?> getBookings(@RequestParam Map<String, String> params) {
         try {
             Beds24Account account = requireAccount();
             return ResponseEntity.ok(beds24.getBookings(beds24.tokenFor(account), params));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getBooking(@PathVariable Long id) {
+        try {
+            Beds24Account account = requireAccount();
+            List<Map<String, Object>> list = beds24.getBookings(beds24.tokenFor(account), Map.of("id", id.toString()));
+            return list.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(list.get(0));
         } catch (Exception e) {
             return error(e);
         }
@@ -42,7 +130,12 @@ public class AdminBookingController {
                     "arrivalTo", start.plusDays(6).toString()
             );
             Beds24Account account = requireAccount();
-            return ResponseEntity.ok(beds24.getBookings(beds24.tokenFor(account), params));
+            List<Map<String, Object>> bookings = beds24.getBookings(beds24.tokenFor(account), params);
+            if (!bookings.isEmpty()) {
+                log.info("[DEBUG] Beds24 booking fields: {}", bookings.get(0).keySet());
+                log.info("[DEBUG] First booking sample: {}", bookings.get(0));
+            }
+            return ResponseEntity.ok(bookings);
         } catch (Exception e) {
             return error(e);
         }
@@ -67,10 +160,77 @@ public class AdminBookingController {
     public ResponseEntity<?> saveBookings(@RequestBody List<Map<String, Object>> payload) {
         try {
             Beds24Account account = requireAccount();
-            return ResponseEntity.ok(beds24.saveBookings(beds24.tokenFor(account), payload));
+            String token = beds24.tokenFor(account);
+
+            List<Map<String, Object>> processed = new ArrayList<>();
+            for (Map<String, Object> booking : payload) {
+                Map<String, Object> b = new HashMap<>(booking);
+
+                // Mapping noms de champs Angular → Beds24
+                mapField(b, "guestFirstName", "firstName");
+                mapField(b, "guestLastName",  "lastName");
+                mapField(b, "guestEmail",     "email");
+                mapField(b, "guestPhone",     "phone");
+                mapField(b, "guestCountry",   "country");
+                mapField(b, "totalPrice",     "price");
+
+                boolean isCreate = b.get("id") == null;
+
+                if (isCreate) {
+                    // Valeurs par défaut pour une nouvelle réservation
+                    b.putIfAbsent("status",   "confirmed");
+                    b.putIfAbsent("lang",     "fr");
+                    b.putIfAbsent("country",  "France");
+                    b.putIfAbsent("numChild", 0);
+                    b.putIfAbsent("mobile",   0);
+                    b.putIfAbsent("lastName", "");
+                    b.putIfAbsent("email",    "");
+
+                    // Résolution roomId depuis propId / propertyId
+                    if (b.get("roomId") == null) {
+                        String propId = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
+                        if (propId == null) throw new IllegalArgumentException("propId manquant");
+                        String arrival = Objects.toString(b.get("arrival"), LocalDate.now().toString()).substring(0, 10);
+                        Map<String, String> calParams = new HashMap<>();
+                        calParams.put("startDate", arrival);
+                        calParams.put("endDate",   arrival);
+                        List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+                        String roomId = rooms.stream()
+                                .filter(r -> propId.equals(idStr(r.get("propertyId"))))
+                                .map(r -> idStr(r.get("roomId")))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalArgumentException("Chambre non trouvée pour propriété " + propId));
+                        b.put("roomId", Long.parseLong(roomId));
+                    }
+                }
+
+                // Supprime les champs Angular inconnus de Beds24
+                for (String f : List.of("propId", "propertyId", "propName", "propCity",
+                                         "guestName", "guestFirstName", "guestLastName",
+                                         "guestEmail", "guestPhone", "guestCountry", "totalPrice",
+                                         "fraisMenage", "taxeSejour")) {
+                    b.remove(f);
+                }
+
+                processed.add(b);
+            }
+
+            log.info("[Bookings] Payload envoyé à Beds24: {}", processed);
+            return ResponseEntity.ok(beds24.saveBookings(token, processed));
         } catch (Exception e) {
             return error(e);
         }
+    }
+
+    private void mapField(Map<String, Object> b, String from, String to) {
+        if (b.containsKey(from) && !b.containsKey(to)) b.put(to, b.get(from));
+    }
+
+    private String idStr(Object v) {
+        if (v == null) return null;
+        String s = v.toString();
+        if (s.contains(".")) { try { return String.valueOf((long) Double.parseDouble(s)); } catch (Exception ignored) {} }
+        return s.isBlank() ? null : s;
     }
 
     @DeleteMapping
