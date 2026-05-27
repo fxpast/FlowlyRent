@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:mariadb://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&sslMode=trust&allowPublicKeyRetrieval=true
+    url: jdbc:mariadb://${MYSQLHOST}:${MYSQLPORT}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&sslMode=trust&allowPublicKeyRetrieval=true
     username: ${MYSQLUSER}
     password: ${MYSQLPASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
