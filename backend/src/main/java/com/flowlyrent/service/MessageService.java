@@ -1,71 +1,44 @@
 package com.flowlyrent.service;
 
-import com.flowlyrent.dto.MessageDTO;
-import com.flowlyrent.model.Booking;
-import com.flowlyrent.model.Message;
-import com.flowlyrent.model.enums.SenderType;
-import com.flowlyrent.repository.BookingRepository;
-import com.flowlyrent.repository.MessageRepository;
+import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.repository.Beds24AccountRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
+/**
+ * Messages proxiés vers Beds24 — aucun stockage local.
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MessageService {
 
-    private final MessageRepository messageRepository;
-    private final BookingRepository bookingRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final Beds24ApiClient beds24;
+    private final Beds24AccountRepository accountRepo;
 
-    public List<MessageDTO> getMessagesForBooking(Long bookingId) {
-        return messageRepository.findByBookingIdOrderByCreatedAtAsc(bookingId)
-                .stream().map(this::toDTO).collect(Collectors.toList());
+    public List<Map<String, Object>> getMessages(Long userId, String bookingId) throws Exception {
+        String token = tokenFor(userId);
+        return beds24.getMessages(token, Map.of("bookingId", bookingId));
     }
 
-    @Transactional
-    public MessageDTO sendMessage(Long bookingId, String content, SenderType sender) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable: " + bookingId));
-
-        Message message = new Message();
-        message.setBooking(booking);
-        message.setContent(content);
-        message.setSender(sender);
-        message = messageRepository.save(message);
-
-        MessageDTO dto = toDTO(message);
-        // Notify via WebSocket
-        messagingTemplate.convertAndSend("/topic/messages/" + bookingId, dto);
-
-        return dto;
+    public List<Map<String, Object>> sendMessage(Long userId, String bookingId, String message) throws Exception {
+        String token = tokenFor(userId);
+        List<Map<String, Object>> payload = List.of(Map.of(
+                "bookingId", bookingId,
+                "message", message,
+                "type", "host"
+        ));
+        return beds24.sendMessages(token, payload);
     }
 
-    @Transactional
-    public void markAsRead(Long bookingId, SenderType sender) {
-        List<Message> messages = messageRepository.findByBookingIdOrderByCreatedAtAsc(bookingId);
-        messages.stream()
-                .filter(m -> m.getSender() == sender && !m.isRead())
-                .forEach(m -> m.setRead(true));
-        messageRepository.saveAll(messages);
-    }
-
-    public long getUnreadGuestMessagesCount() {
-        return messageRepository.countByReadFalseAndSender(SenderType.GUEST);
-    }
-
-    private MessageDTO toDTO(Message m) {
-        MessageDTO dto = new MessageDTO();
-        dto.setId(m.getId());
-        dto.setBookingId(m.getBooking().getId());
-        dto.setSender(m.getSender());
-        dto.setContent(m.getContent());
-        dto.setRead(m.isRead());
-        dto.setCreatedAt(m.getCreatedAt());
-        return dto;
+    private String tokenFor(Long userId) throws Exception {
+        Beds24Account account = accountRepo.findByAppUserId(userId)
+                .filter(Beds24Account::isConnected)
+                .orElseThrow(() -> new IllegalStateException("Compte Beds24 non connecté"));
+        return beds24.tokenFor(account);
     }
 }

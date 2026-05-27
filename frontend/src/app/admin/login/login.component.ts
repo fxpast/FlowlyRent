@@ -52,15 +52,15 @@ import { AuthService } from '../../core/services/auth.service';
   styles: [`
     .login-container {
       display: flex; justify-content: center; align-items: center; height: 100vh;
-      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+      background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
     }
     .login-card { width: 380px; padding: 24px; }
     .full-width { width: 100%; margin-bottom: 16px; }
     .error { color: #f44336; margin-bottom: 12px; }
     mat-card-header { margin-bottom: 24px; }
-    mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #1a237e; }
+    mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #0288d1; }
     .footer { padding: 16px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
-    .footer a { color: #1a237e; font-weight: 500; text-decoration: none; margin-left: 4px; }
+    .footer a { color: #0288d1; font-weight: 500; text-decoration: none; margin-left: 4px; }
     .footer a:hover { text-decoration: underline; }
   `]
 })

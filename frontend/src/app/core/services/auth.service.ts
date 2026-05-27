@@ -41,7 +41,7 @@ export class AuthService {
     localStorage.removeItem('flr_token');
     localStorage.removeItem('flr_user');
     this.isLoggedIn.set(false);
-    this.router.navigate(['/admin/login']);
+    this.router.navigate(['/public/home']);
   }
 
   getToken(): string | null {

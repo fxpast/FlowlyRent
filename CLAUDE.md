@@ -294,6 +294,30 @@ Toujours disponible pour les plateformes sans compte Beds24 :
 
 ---
 
+## Code PHP de référence
+
+Le dossier **`C:\FlowlyRent\php_code\`** contient l'application PHP legacy qui sert de référence pour le portage vers FlowlyRent.
+
+> Ce dossier est **gitignored** — ne jamais le committer.
+
+Fichiers clés à consulter en priorité :
+
+| Fichier | Contenu |
+|---------|---------|
+| `functions.php` | ~80 Ko — toutes les fonctions Beds24 API (référence principale) |
+| `formulaire_newBooking.php` | Création de réservation directe |
+| `formulaire_UpdateBook.php` | Modification de réservation |
+| `calendrier_reservations.php` | Logique calendrier des réservations |
+| `formulaire_menage.php` | Gestion des tâches ménage |
+| `formulaire_message.php` | Messagerie hôte ↔ voyageur |
+| `statistiques_plateformes.php` | Statistiques et revenus par plateforme |
+| `beds24.php` | Appels directs API Beds24 |
+| `strategie_minStay.php` | Gestion durée minimum de séjour |
+
+**Usage** : quand un comportement est incertain (formules de calcul, mapping de champs Beds24, logique métier), consulter le fichier PHP correspondant comme référence.
+
+---
+
 ## Tokens de développement Beds24
 
 Les tokens de dev sont stockés dans **`.beds24.env.local`** (gitignored — jamais commité).
@@ -336,6 +360,32 @@ mysql -u root -e "CREATE DATABASE IF NOT EXISTS flowlyrent CHARACTER SET utf8mb4
 npm install
 npm start  # → http://localhost:4200 avec proxy vers :8080
 ```
+
+### Connexion base Railway (production)
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Host | `zephyr.proxy.rlwy.net` |
+| Port | `48793` |
+| Base | `railway` |
+| User | `root` |
+| Password | → voir mémoire Claude (jamais dans git) |
+
+**Importer les données locales → Railway** (à refaire après chaque évolution de schéma) :
+
+```powershell
+# 1. Exporter XAMPP
+& "C:\xampp\mysql\bin\mysqldump.exe" -u root flowlyrent > flowlyrent_export.sql
+
+# 2. Importer via Node (nécessaire car XAMPP = MariaDB client, Railway = MySQL 8)
+#    Créer C:\FlowlyRent\_tmp_import\ avec package.json + import.mjs (voir mémoire Claude)
+#    puis : node import.mjs
+```
+
+> Le client MariaDB de XAMPP ne supporte pas le plugin `caching_sha2_password` de MySQL 8.
+> Utiliser le script Node.js `mysql2` qui gère aussi le décodage UTF-16 LE du dump.
+
+---
 
 ### Production (Netlify + Railway)
 

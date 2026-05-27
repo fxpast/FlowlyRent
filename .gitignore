@@ -21,6 +21,13 @@ dist/
 # Claude Code
 .claude/
 
+# Code PHP de référence (application legacy Beds24 — ne pas committer)
+php_code/
+
+# Import DB temporaire
+_tmp_import/
+flowlyrent_export.sql
+
 # Logs
 *.log
 logs/

@@ -1,6 +1,5 @@
 package com.flowlyrent.dto;
 
-import com.flowlyrent.model.enums.SenderType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -10,7 +9,7 @@ import java.time.LocalDateTime;
 public class MessageDTO {
     private Long id;
     private Long bookingId;
-    private SenderType sender;
+    private String sender;
 
     @NotBlank
     private String content;

@@ -110,7 +110,7 @@ import { Property } from '../../core/models/booking.model';
     }
   `,
   styles: [`
-    .navbar { padding: 8px 24px; background: #1a237e; }
+    .navbar { padding: 8px 24px; background: #0288d1; }
     .navbar a { color: white; }
     .container { max-width: 1000px; margin: 32px auto; padding: 0 24px; }
     .property-header { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
@@ -122,13 +122,13 @@ import { Property } from '../../core/models/booking.model';
     .description { color: #444; line-height: 1.6; margin: 16px 0; }
     .details { display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
     .details mat-icon { font-size: 18px; vertical-align: middle; }
-    .price { font-size: 28px; font-weight: bold; color: #1a237e; }
+    .price { font-size: 28px; font-weight: bold; color: #0288d1; }
     .booking-card { margin-top: 8px; }
     .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
     .availability { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
     .availability.ok { background: #e8f5e9; color: #2e7d32; }
     .availability.error { background: #ffebee; color: #c62828; }
-    h3 { color: #1a237e; margin: 16px 0 8px; }
+    h3 { color: #0288d1; margin: 16px 0 8px; }
     @media (max-width: 768px) { .property-header { grid-template-columns: 1fr; } }
   `]
 })

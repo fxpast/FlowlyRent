@@ -77,19 +77,19 @@ import { environment } from '@env/environment';
   styles: [`
     .container {
       min-height: 100vh; display: flex; justify-content: center; align-items: center;
-      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+      background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
       padding: 24px;
     }
     .card { width: 100%; max-width: 440px; padding: 24px; }
     mat-card-header { margin-bottom: 24px; }
-    mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #1a237e; }
+    mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #0288d1; }
     .row { display: flex; gap: 12px; }
     .row mat-form-field { flex: 1; }
     .full { width: 100%; }
     .submit-btn { margin-top: 8px; height: 44px; font-size: 15px; }
     .error { color: #d32f2f; font-size: 13px; margin: 0 0 12px; }
     .footer { padding: 16px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
-    .footer a { color: #1a237e; font-weight: 500; text-decoration: none; margin-left: 4px; }
+    .footer a { color: #0288d1; font-weight: 500; text-decoration: none; margin-left: 4px; }
     .footer a:hover { text-decoration: underline; }
   `]
 })

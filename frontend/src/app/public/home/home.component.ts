@@ -1,104 +1,90 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { PublicService } from '../../core/services/public.service';
-import { Property } from '../../core/models/booking.model';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
     <div class="hero">
       <div class="hero-content">
-        <h1>Trouvez votre logement idéal</h1>
-        <p>Réservez directement, sans commission</p>
+        <h1>Gérez vos locations en toute simplicité</h1>
+        <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
         <div class="hero-actions">
-          <a mat-raised-button routerLink="/admin/register" class="btn-register">
-            <mat-icon>person_add</mat-icon> Créer un compte
-          </a>
-          <a mat-stroked-button routerLink="/admin/login" class="btn-login">
-            <mat-icon>login</mat-icon> Connexion
+          <a mat-raised-button routerLink="/admin/login" class="btn-login">
+            <mat-icon>login</mat-icon> Accès admin
           </a>
         </div>
       </div>
     </div>
 
-    <div class="container">
-      <h2>Nos logements</h2>
-      <div class="properties-grid">
-        @for (p of properties(); track p.id) {
-          <mat-card class="property-card">
-            @if (p.images && p.images.length > 0) {
-              <img mat-card-image [src]="p.images[0]" [alt]="p.name">
-            } @else {
-              <div class="placeholder-img"><mat-icon>home</mat-icon></div>
-            }
-            <mat-card-header>
-              <mat-card-title>{{ p.name }}</mat-card-title>
-              <mat-card-subtitle>{{ p.city }}, {{ p.country }}</mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              <p>{{ p.description | slice:0:120 }}{{ p.description && p.description.length > 120 ? '...' : '' }}</p>
-              <div class="property-info">
-                <span><mat-icon>people</mat-icon> {{ p.maxGuests }} pers.</span>
-                <span class="price">{{ p.pricePerNight | currency:'EUR':'symbol':'1.0-0' }} / nuit</span>
-              </div>
-            </mat-card-content>
-            <mat-card-actions>
-              <a mat-raised-button color="primary" [routerLink]="['/public/property', p.id]">
-                Voir et réserver
-              </a>
-            </mat-card-actions>
-          </mat-card>
-        }
+    <div class="features">
+      <div class="feature">
+        <mat-icon>sync</mat-icon>
+        <h3>Synchronisation Beds24</h3>
+        <p>Connectez votre compte Beds24 pour accéder à vos propriétés et réservations en temps réel, sans stockage de données.</p>
       </div>
-      @if (properties().length === 0) {
-        <p class="empty">Aucun logement disponible pour le moment.</p>
-      }
+      <div class="feature">
+        <mat-icon>cleaning_services</mat-icon>
+        <h3>Gestion du ménage</h3>
+        <p>Planifiez et suivez les tâches de ménage par propriété et par agent.</p>
+      </div>
+      <div class="feature">
+        <mat-icon>assessment</mat-icon>
+        <h3>Rapports & exports</h3>
+        <p>Générez vos rapports à la volée depuis vos données Beds24, sans qu'elles transitent par nos serveurs. Export PDF, Excel ou CSV.</p>
+      </div>
     </div>
-
   `,
   styles: [`
     .hero {
-      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-      color: white; padding: 80px 24px; text-align: center;
+      background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
+      color: white;
+      padding: 100px 24px;
+      text-align: center;
     }
-    .hero h1 { font-size: 48px; margin: 0 0 16px; }
-    .hero p { font-size: 20px; opacity: 0.8; margin: 0 0 32px; }
-    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .btn-register { background: white !important; color: #1a237e !important; font-weight: 600; font-size: 15px; }
-    .btn-register mat-icon { margin-right: 6px; }
-    .btn-login { border-color: rgba(255,255,255,0.7) !important; color: white !important; font-size: 15px; }
+    .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
+    .hero p { font-size: 20px; opacity: 0.85; margin: 0 0 40px; }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; }
+    .btn-login {
+      background: white !important;
+      color: #0288d1 !important;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 8px 28px;
+    }
     .btn-login mat-icon { margin-right: 6px; }
-    .container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
-    h2 { font-size: 28px; margin-bottom: 24px; }
-    .properties-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .property-card { cursor: pointer; transition: box-shadow 0.2s; }
-    .property-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
-    .placeholder-img {
-      height: 200px; background: #e0e0e0;
-      display: flex; align-items: center; justify-content: center;
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      max-width: 960px;
+      margin: 64px auto;
+      padding: 0 24px;
     }
-    .placeholder-img mat-icon { font-size: 64px; width: 64px; height: 64px; color: #9e9e9e; }
-    img[mat-card-image] { height: 200px; object-fit: cover; }
-    .property-info { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
-    .property-info mat-icon { font-size: 18px; vertical-align: middle; margin-right: 4px; }
-    .price { font-size: 20px; font-weight: bold; color: #1a237e; }
-    .empty { text-align: center; color: #999; padding: 40px; }
-    @media (max-width: 900px) { .properties-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 600px) { .properties-grid { grid-template-columns: 1fr; } .hero h1 { font-size: 28px; } }
+    .feature {
+      text-align: center;
+      padding: 32px 16px;
+      border-radius: 12px;
+      background: #f8f9ff;
+    }
+    .feature mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: #0288d1;
+      margin-bottom: 16px;
+    }
+    .feature h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+    .feature p { margin: 0; color: #555; line-height: 1.6; }
+
+    @media (max-width: 700px) {
+      .features { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
+    }
   `]
 })
-export class HomeComponent implements OnInit {
-  properties = signal<Property[]>([]);
-
-  constructor(private publicService: PublicService) {}
-
-  ngOnInit(): void {
-    this.publicService.getProperties().subscribe(data => this.properties.set(data));
-  }
-}
+export class HomeComponent {}

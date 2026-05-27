@@ -85,7 +85,7 @@ import { Booking } from '../../core/models/booking.model';
     .host-message { justify-content: flex-end; }
     .guest-message { justify-content: flex-start; }
     .bubble { max-width: 70%; padding: 10px 14px; border-radius: 16px; }
-    .host-message .bubble { background: #1a237e; color: white; border-bottom-right-radius: 4px; }
+    .host-message .bubble { background: #0288d1; color: white; border-bottom-right-radius: 4px; }
     .guest-message .bubble { background: #f5f5f5; border-bottom-left-radius: 4px; }
     .bubble p { margin: 0 0 4px; }
     .bubble small { opacity: 0.7; font-size: 11px; }

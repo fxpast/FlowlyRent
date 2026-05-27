@@ -117,7 +117,7 @@ import { Message } from '../../core/models/message.model';
     }
   `,
   styles: [`
-    .navbar { display: flex; align-items: center; gap: 16px; padding: 8px 24px; background: #1a237e; color: white; }
+    .navbar { display: flex; align-items: center; gap: 16px; padding: 8px 24px; background: #0288d1; color: white; }
     .navbar a { color: white; }
     .title { font-size: 18px; font-weight: bold; }
     .success-banner { background: #e8f5e9; color: #2e7d32; display: flex; align-items: center; gap: 16px; padding: 24px; }
@@ -127,7 +127,7 @@ import { Message } from '../../core/models/message.model';
     .container { max-width: 800px; margin: 32px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 24px; }
     .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .info-item { display: flex; align-items: flex-start; gap: 12px; }
-    .info-item mat-icon { color: #1a237e; flex-shrink: 0; }
+    .info-item mat-icon { color: #0288d1; flex-shrink: 0; }
     .info-item strong { display: block; font-size: 12px; color: #666; }
     .info-item span { font-size: 15px; }
     .messages { min-height: 200px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 0; margin-bottom: 16px; }
@@ -136,7 +136,7 @@ import { Message } from '../../core/models/message.model';
     .guest-msg { justify-content: flex-end; }
     .bubble { max-width: 70%; padding: 10px 14px; border-radius: 16px; }
     .host-msg .bubble { background: #f5f5f5; border-bottom-left-radius: 4px; }
-    .guest-msg .bubble { background: #1a237e; color: white; border-bottom-right-radius: 4px; }
+    .guest-msg .bubble { background: #0288d1; color: white; border-bottom-right-radius: 4px; }
     .bubble p { margin: 0 0 4px; }
     .bubble small { opacity: 0.7; font-size: 11px; }
     .empty-msg { color: #999; text-align: center; padding: 24px; }

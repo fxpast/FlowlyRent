@@ -196,8 +196,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .form-row mat-form-field { flex: 1; }
     .form-row .flex2 { flex: 2; }
     mat-card-actions { padding: 8px 16px; }
-    .filters { display: flex; gap: 16px; margin-bottom: 16px; }
-    .filters mat-form-field { flex: 1; max-width: 220px; }
+    .filters { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters mat-form-field { flex: 1; min-width: 140px; max-width: 220px; }
+    @media (max-width: 768px) {
+      .header-row { flex-wrap: wrap; gap: 8px; }
+      .form-row { flex-direction: column; gap: 0; }
+      .filters mat-form-field { max-width: 100%; }
+      .tasks-grid { grid-template-columns: 1fr; }
+      h2 { font-size: 20px; }
+    }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { text-align: center; color: #888; padding: 40px; }
     .tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
