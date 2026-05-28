@@ -11,6 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { HttpClient } from '@angular/common/http';
 import { BookingService } from '../../core/services/booking.service';
 import { environment } from '../../../environments/environment';
@@ -18,11 +20,12 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-booking-form',
   standalone: true,
+  providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatSnackBarModule, MatProgressSpinnerModule,
-    MatTooltipModule
+    MatTooltipModule, MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="header">
@@ -76,11 +79,16 @@ import { environment } from '../../../environments/environment';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Arrivée</mat-label>
-              <input matInput formControlName="arrival" type="date" required>
+              <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required>
+              <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
+              <mat-datepicker #arrivalPicker></mat-datepicker>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Départ</mat-label>
-              <input matInput formControlName="departure" type="date" required>
+              <input matInput [matDatepicker]="departurePicker" formControlName="departure"
+                     required [min]="minDeparture">
+              <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
+              <mat-datepicker #departurePicker [startAt]="form.get('arrival')?.value"></mat-datepicker>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Adultes</mat-label>
@@ -91,6 +99,25 @@ import { environment } from '../../../environments/environment';
               <input matInput formControlName="numChild" type="number" min="0">
             </mat-form-field>
           </div>
+
+          <!-- Avertissement de chevauchement -->
+          @if (overlapError()?.length) {
+            <div class="overlap-warning">
+              <mat-icon>warning_amber</mat-icon>
+              <div>
+                <strong>Chevauchement détecté</strong> avec une réservation existante :
+                @for (b of overlapError()!; track b.id) {
+                  <div class="overlap-item">{{ b.guestName }} · {{ b.arrival }} → {{ b.departure }}</div>
+                }
+              </div>
+            </div>
+          }
+          @if (checkingOverlap()) {
+            <div class="checking-overlap">
+              <mat-spinner diameter="16"></mat-spinner>
+              <span>Vérification des disponibilités…</span>
+            </div>
+          }
 
           <h3>Tarification</h3>
           <div class="form-row pricing-row">
@@ -137,7 +164,8 @@ import { environment } from '../../../environments/environment';
                 <mat-icon>cancel</mat-icon> Annuler la réservation
               </button>
             }
-            <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+            <button mat-raised-button color="primary" type="submit"
+                    [disabled]="form.invalid || saving() || !!overlapError()?.length">
               {{ isEdit() ? 'Enregistrer' : 'Créer la réservation' }}
             </button>
           </div>
@@ -155,6 +183,22 @@ import { environment } from '../../../environments/environment';
     .full-width { width: 100%; margin-bottom: 16px; }
     .actions { display: flex; gap: 16px; justify-content: flex-end; margin-top: 16px; }
     h3 { color: #0288d1; margin: 16px 0 8px; }
+
+    .overlap-warning {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #fff3e0; border: 1px solid #f57c00;
+      border-radius: 6px; padding: 12px 16px;
+      margin-bottom: 16px; color: #e65100;
+    }
+    .overlap-warning mat-icon { color: #f57c00; flex-shrink: 0; margin-top: 2px; }
+    .overlap-item { font-size: 13px; margin-top: 4px; }
+
+    .checking-overlap {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: #888;
+      margin-bottom: 16px;
+    }
+
     @media (max-width: 768px) {
       .form-row { grid-template-columns: 1fr; gap: 0; }
       .pricing-row { grid-template-columns: 1fr; }
@@ -168,13 +212,24 @@ export class BookingFormComponent implements OnInit {
   saving = signal(false);
   calculating = signal(false);
   loadingProps = signal(true);
+  checkingOverlap = signal(false);
+  overlapError = signal<any[] | null>(null);
   properties = signal<{ id: string; name: string }[]>([]);
   estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number } | null>(null);
   bookingId: string | null = null;
 
   get canEstimate(): boolean {
-    const v = this.form?.value;
-    return !!(v?.propId && v?.arrival && v?.departure && v.arrival < v.departure);
+    const arr = this.toDateStr(this.form?.value?.arrival);
+    const dep = this.toDateStr(this.form?.value?.departure);
+    return !!(this.form?.value?.propId && arr && dep && arr < dep);
+  }
+
+  get minDeparture(): Date | null {
+    const a = this.form.get('arrival')?.value;
+    if (!a) return null;
+    const d = new Date(a instanceof Date ? a : new Date(a + 'T12:00:00'));
+    d.setDate(d.getDate() + 1);
+    return d;
   }
 
   constructor(
@@ -192,8 +247,8 @@ export class BookingFormComponent implements OnInit {
       guestPhone:     [''],
       guestCountry:   [''],
       propId:         ['', Validators.required],
-      arrival:        ['', Validators.required],
-      departure:      ['', Validators.required],
+      arrival:        [null, Validators.required],
+      departure:      [null, Validators.required],
       numAdult:       [1, Validators.min(1)],
       numChild:       [0],
       fraisMenage:    [0],
@@ -215,27 +270,85 @@ export class BookingFormComponent implements OnInit {
       error: () => this.loadingProps.set(false)
     });
 
+    // Overlap check on property or date change
+    this.form.get('propId')!.valueChanges.subscribe(() => this.checkOverlap());
+    this.form.get('arrival')!.valueChanges.subscribe(() => {
+      // Clear departure if it's before or equal to the new arrival
+      const arr = this.form.get('arrival')!.value;
+      const dep = this.form.get('departure')!.value;
+      if (arr && dep && dep <= arr) this.form.get('departure')!.setValue(null);
+      this.checkOverlap();
+    });
+    this.form.get('departure')!.valueChanges.subscribe(() => this.checkOverlap());
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEdit.set(true);
       this.bookingId = id;
       const state = window.history.state;
       if (state?.booking) {
-        this.form.patchValue(state.booking);
+        this.patchBooking(state.booking);
       } else {
         this.bookingService.getById(id).subscribe({
-          next: (b: any) => this.form.patchValue(b),
+          next: (b: any) => this.patchBooking(b),
           error: () => this.snackBar.open('Impossible de charger la réservation', 'Fermer', { duration: 4000 })
         });
       }
     }
   }
 
+  private patchBooking(b: any): void {
+    this.form.patchValue({
+      ...b,
+      arrival:   this.parseDate(b.arrival),
+      departure: this.parseDate(b.departure)
+    });
+  }
+
+  private parseDate(s: string | null | undefined): Date | null {
+    if (!s) return null;
+    return new Date(s.substring(0, 10) + 'T12:00:00');
+  }
+
+  private toDateStr(d: Date | string | null | undefined): string {
+    if (!d) return '';
+    if (typeof d === 'string') return d.substring(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private checkOverlap(): void {
+    const v = this.form.value;
+    const arrival   = this.toDateStr(v.arrival);
+    const departure = this.toDateStr(v.departure);
+    if (!v.propId || !arrival || !departure || arrival >= departure) {
+      this.overlapError.set(null);
+      return;
+    }
+    this.checkingOverlap.set(true);
+    this.http.get<any>(`${environment.apiUrl}/admin/availability/calendar`, {
+      params: { from: arrival, to: departure }
+    }).subscribe({
+      next: data => {
+        const pid = String(v.propId);
+        const conflicts = (data.bookings ?? []).filter((b: any) =>
+          String(b.propertyId) === pid &&
+          String(b.id) !== String(this.bookingId) &&
+          b.arrival < departure && b.departure > arrival
+        );
+        this.overlapError.set(conflicts.length > 0 ? conflicts : null);
+        this.checkingOverlap.set(false);
+      },
+      error: () => { this.overlapError.set(null); this.checkingOverlap.set(false); }
+    });
+  }
+
   calculateEstimate(): void {
     const v = this.form.value;
+    const arrival   = this.toDateStr(v.arrival);
+    const departure = this.toDateStr(v.departure);
     this.calculating.set(true);
     this.http.get<any>(`${environment.apiUrl}/admin/bookings/estimate`, {
-      params: { propId: v.propId, arrival: v.arrival, departure: v.departure }
+      params: { propId: v.propId, arrival, departure }
     }).subscribe({
       next: (res) => {
         this.estimateResult.set(res);
@@ -275,7 +388,12 @@ export class BookingFormComponent implements OnInit {
     if (this.form.invalid) return;
     this.saving.set(true);
 
-    const payload: any = { ...this.form.value };
+    const v = this.form.value;
+    const payload: any = {
+      ...v,
+      arrival:   this.toDateStr(v.arrival),
+      departure: this.toDateStr(v.departure)
+    };
     if (this.bookingId) payload['id'] = this.bookingId;
 
     this.bookingService.save([payload]).subscribe({

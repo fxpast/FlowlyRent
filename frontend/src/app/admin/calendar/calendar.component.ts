@@ -25,7 +25,9 @@ interface DayCell {
   guestName?: string;
   isFirstDay?: boolean;
   isLastDay?: boolean;
+  showName?: boolean;
   channel?: string;
+  splitCheckoutChannel?: string;  // set when this day is both a checkout and a checkin
   blockId?: string;
   blockType?: string;
   blockNotes?: string;
@@ -175,7 +177,7 @@ const CHANNEL_COLORS: Record<string, string> = {
                     [style.background]="cellBg(cell)"
                     [title]="cellTooltip(cell)"
                     (click)="onCellClick(row.property, cell)">
-                  @if (cell.isFirstDay && cell.guestName) {
+                  @if (cell.showName && cell.guestName) {
                     <span class="guest-chip">{{ cell.guestName | slice:0:14 }}</span>
                   }
                 </td>
@@ -254,12 +256,11 @@ const CHANNEL_COLORS: Record<string, string> = {
     .day-cell.weekend { background: rgba(0,0,0,0.02); }
     .day-cell.today { outline: 2px solid #1976d2; outline-offset: -2px; }
     .day-cell.booked  { color: white; }
-    .day-cell.first-day { border-radius: 6px 0 0 6px; }
-    .day-cell.last-day  { border-radius: 0 6px 6px 0; }
 
     .guest-chip {
-      position: absolute; left: 4px; top: 50%;
+      position: absolute; left: 0; right: 0; top: 50%;
       transform: translateY(-50%);
+      text-align: center;
       font-size: 11px; font-weight: 600;
       white-space: nowrap; color: white !important;
       text-shadow: 0 1px 3px rgba(0,0,0,0.5);
@@ -432,8 +433,16 @@ export class CalendarComponent implements OnInit {
   }
 
   cellBg(cell: DayCell): string {
-    if (cell.bookingId) return CHANNEL_COLORS[cell.channel ?? ''] ?? '#1976d2';
-    return '';
+    if (!cell.bookingId) return '';
+    const color = CHANNEL_COLORS[cell.channel ?? ''] ?? '#1976d2';
+    if (cell.splitCheckoutChannel !== undefined) {
+      const coColor = CHANNEL_COLORS[cell.splitCheckoutChannel] ?? '#1976d2';
+      return `linear-gradient(to right, ${coColor} 50%, ${color} 50%)`;
+    }
+    if (cell.isFirstDay && cell.isLastDay) return color;
+    if (cell.isFirstDay) return `linear-gradient(to right, transparent 50%, ${color} 50%)`;
+    if (cell.isLastDay)  return `linear-gradient(to right, ${color} 50%, transparent 50%)`;
+    return color;
   }
 
   cellTooltip(cell: DayCell): string {
@@ -475,27 +484,67 @@ export class CalendarComponent implements OnInit {
     const bls  = this.blocks();
     const cal  = this.calendarData();
 
+    // Pre-compute midpoint date for each booking's visible span in this month
+    const midDates = new Map<string, string>();
+    bs.forEach(b => {
+      const visStart = ds.findIndex(d => d.date >= b.arrival && d.date <= b.departure);
+      if (visStart < 0) return;
+      let visEnd = visStart;
+      for (let i = ds.length - 1; i >= visStart; i--) {
+        if (ds[i].date >= b.arrival && ds[i].date <= b.departure) { visEnd = i; break; }
+      }
+      midDates.set(b.id, ds[Math.round((visStart + visEnd) / 2)].date);
+    });
+
     return this.properties().map(prop => ({
       property: prop,
       cells: ds.map(d => {
         const cell: DayCell = { ...d };
         const propCal = cal[prop.id] ?? {};
 
-        const booking = bs.find(b =>
-          b.propertyId === prop.id && b.arrival <= d.date && b.departure > d.date
-        );
-        if (booking) {
-          cell.bookingId  = booking.id;
-          cell.guestName  = booking.guestName.trim() || 'Voyageur';
-          cell.isFirstDay = booking.arrival === d.date;
-          cell.isLastDay  = booking.departure === this.nextDay(d.date);
-          cell.channel    = booking.channel;
+        // Separate checkin, checkout and through-day lookups to handle split days
+        const bookingCO  = bs.find(b => b.propertyId === prop.id && b.departure === d.date && b.arrival < d.date);
+        const bookingCI  = bs.find(b => b.propertyId === prop.id && b.arrival === d.date);
+        const bookingMid = (!bookingCO && !bookingCI)
+          ? bs.find(b => b.propertyId === prop.id && b.arrival < d.date && b.departure > d.date)
+          : undefined;
+
+        if (bookingCO && bookingCI) {
+          // Split day: left half = checkout color, right half = checkin color
+          cell.bookingId            = bookingCI.id;
+          cell.guestName            = bookingCI.guestName.trim() || 'Voyageur';
+          cell.isFirstDay           = true;
+          cell.isLastDay            = false;
+          cell.channel              = bookingCI.channel;
+          cell.splitCheckoutChannel = bookingCO.channel;
+          cell.showName             = false;
+        } else if (bookingCI) {
+          cell.bookingId  = bookingCI.id;
+          cell.guestName  = bookingCI.guestName.trim() || 'Voyageur';
+          cell.isFirstDay = true;
+          cell.isLastDay  = bookingCI.departure === d.date;
+          cell.channel    = bookingCI.channel;
+          cell.showName   = midDates.get(bookingCI.id) === d.date;
+        } else if (bookingCO) {
+          cell.bookingId  = bookingCO.id;
+          cell.guestName  = bookingCO.guestName.trim() || 'Voyageur';
+          cell.isFirstDay = false;
+          cell.isLastDay  = true;
+          cell.channel    = bookingCO.channel;
+          cell.showName   = midDates.get(bookingCO.id) === d.date;
+        } else if (bookingMid) {
+          cell.bookingId  = bookingMid.id;
+          cell.guestName  = bookingMid.guestName.trim() || 'Voyageur';
+          cell.isFirstDay = false;
+          cell.isLastDay  = false;
+          cell.channel    = bookingMid.channel;
+          cell.showName   = midDates.get(bookingMid.id) === d.date;
         }
 
         const block = bls.find(b =>
           b.propertyId === prop.id && b.startDate <= d.date && b.endDate >= d.date
         );
-        if (block && !booking) {
+        if (block && !cell.bookingId) {
           cell.blockId      = block.id;
           cell.blockType    = block.type;
           cell.blockNotes   = block.notes;
@@ -515,9 +564,4 @@ export class CalendarComponent implements OnInit {
     }));
   }
 
-  private nextDay(date: string): string {
-    const d = new Date(date + 'T12:00:00');
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  }
 }
