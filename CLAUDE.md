@@ -6,9 +6,20 @@ FlowlyRent est une plateforme SaaS multi-tenant de gestion de location saisonni�
 Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pour centraliser automatiquement ses propriétés et réservations, gérer des réservations directes, et proposer un site de réservation public personnalisé.
 
 **Dépôt GitHub :** `fxpast/flowlyrent`
-**Branche de travail :** `master`
+**Domaine production :** `flowlyrent.com`
 
-> **RÈGLE ABSOLUE — GIT** : Ne jamais exécuter `git push` ni créer de Pull Request sans accord explicite de l'utilisateur. Toujours demander confirmation avant toute action qui affecte le dépôt distant.
+## Workflow Git
+
+| Branche | Rôle |
+|---------|------|
+| `dev` | Développement — tous les commits et pushs de Claude vont ici |
+| `master` | Production — géré exclusivement par l'utilisateur |
+
+> **RÈGLE ABSOLUE — GIT** :
+> - Toujours travailler sur la branche `dev` (`git checkout dev` avant tout commit)
+> - Ne **jamais** committer ni pousser sur `master`
+> - C'est l'utilisateur qui merge `dev → master` et décide de ce qui part en prod
+> - Ne jamais exécuter `git push origin master` ni créer de Pull Request sans accord explicite
 
 ---
 
@@ -77,8 +88,12 @@ FlowlyRent/
 │       │   ├── Channel.java          # Canal iCal (legacy)
 │       │   ├── AvailabilityBlock.java # Blocage manuel de dates
 │       │   ├── HousekeepingTask.java  # Tâche ménage/maintenance
+│       │   ├── AnalyticsEvent.java    # Événement analytics (PAGE_VIEW, LOGIN, CLICK)
+│       │   ├── Feedback.java          # Feedback utilisateur (catégorie + message + statut)
 │       │   └── enums/
 │       │       ├── SubscriptionPlan.java  # FREE, STARTER, PRO, AGENCE
+│       │       ├── UserRole.java          # USER, ADMIN
+│       │       ├── AnalyticsEventType.java # PAGE_VIEW, LOGIN, CLICK
 │       │       ├── BookingStatus.java     # PENDING, CONFIRMED, CANCELLED, COMPLETED
 │       │       ├── BookingSource.java     # DIRECT, AIRBNB, BOOKING_COM, ABRITEL, BEDS24
 │       │       ├── Platform.java          # BOOKING_COM, AIRBNB, ABRITEL, BEDS24
@@ -95,22 +110,27 @@ FlowlyRent/
 │       │   ├── ICalSyncService.java   # Sync iCal automatique (cron toutes les 2h)
 │       │   ├── MessageService.java    # Messagerie + push WebSocket
 │       │   ├── PaymentService.java    # Stripe Checkout + webhooks
+│       │   ├── AnalyticsService.java  # Enregistrement events + calcul KPIs superadmin
 │       │   └── SyncResult.java        # DTO résultat de sync
 │       ├── controller/
 │       │   ├── AuthController.java          # /auth/register, /auth/login
-│       │   ├── UserSettingsController.java  # /user/profile, /user/beds24/**
+│       │   ├── UserSettingsController.java  # /user/profile, /user/beds24/**, /user/password, /user/feedback
 │       │   ├── AdminBookingController.java  # /admin/bookings/**
 │       │   ├── AdminMessageController.java  # /admin/messages/**
 │       │   ├── AdminPaymentController.java  # /admin/payments/**
 │       │   ├── SyncController.java          # /sync/channels/** (iCal uniquement)
 │       │   ├── PublicBookingController.java # /public/{slug}/** + /public/**
-│       │   └── StripeWebhookController.java # /webhooks/stripe
+│       │   ├── StripeWebhookController.java # /webhooks/stripe
+│       │   ├── AnalyticsController.java     # /analytics/track (public — visiteurs anonymes)
+│       │   ├── FeedbackController.java      # /user/feedback (POST)
+│       │   └── SuperAdminController.java    # /superadmin/** (ROLE_ADMIN requis)
 │       └── dto/
 │           ├── Beds24ApiResponse.java   # Wrapper {"success":true,"data":[...],"pages":{}}
 │           ├── Beds24AuthDTO.java       # token, refreshToken, expiresIn
 │           ├── Beds24PropertyDTO.java   # Propriété Beds24
 │           ├── Beds24RoomDTO.java       # Chambre/unité Beds24
 │           ├── Beds24BookingDTO.java    # Réservation Beds24 (champs complets)
+│           ├── SuperAdminStatsDTO.java  # KPIs dashboard superadmin
 │           └── ...                     # BookingRequest, BookingResponse, GuestDTO, etc.
 │
 ├── frontend/                         # Angular 17
@@ -133,20 +153,23 @@ FlowlyRent/
 │           ├── core/
 │           │   ├── models/           # booking.model.ts, message.model.ts, payment.model.ts
 │           │   ├── services/
-│           │   │   ├── auth.service.ts      # Login JWT, localStorage
+│           │   │   ├── auth.service.ts      # Login JWT, localStorage (stocke role USER/ADMIN)
 │           │   │   ├── booking.service.ts   # Appels API admin réservations
 │           │   │   ├── message.service.ts   # Appels API + WebSocket STOMP
 │           │   │   ├── payment.service.ts   # Appels API paiements Stripe
 │           │   │   ├── sync.service.ts      # Appels API synchronisation iCal
-│           │   │   └── public.service.ts    # Appels API site public
+│           │   │   ├── public.service.ts    # Appels API site public
+│           │   │   ├── analytics.service.ts # Auto-tracking PAGE_VIEW (tous visiteurs, auth ou non)
+│           │   │   └── user.service.ts      # Profil, Beds24, mot de passe
 │           │   ├── guards/
-│           │   │   └── auth.guard.ts        # Redirige /admin/login si non connecté
+│           │   │   ├── auth.guard.ts        # Redirige vers /admin/login ou /superadmin/dashboard selon rôle
+│           │   │   └── superadmin.guard.ts  # Vérifie isAdmin() — protège /superadmin/**
 │           │   └── interceptors/
-│           │       └── auth.interceptor.ts  # Ajoute Authorization: Bearer sur /admin et /sync
+│           │       └── auth.interceptor.ts  # Bearer token sur /admin, /sync, /user, /superadmin, /analytics
 │           ├── admin/
 │           │   ├── admin.routes.ts          # Lazy loading des pages admin
 │           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar
-│           │   ├── login/login.component.ts
+│           │   ├── login/login.component.ts           # Redirige ADMIN → /superadmin/dashboard
 │           │   ├── dashboard/dashboard.component.ts  # Stats du jour + listes semaine
 │           │   ├── arrivals/arrivals.component.ts    # Arrivées avec navigation semaine
 │           │   ├── departures/departures.component.ts
@@ -154,10 +177,18 @@ FlowlyRent/
 │           │   ├── booking-form/booking-form.component.ts  # Créer/modifier réservation
 │           │   ├── messages/messages.component.ts    # Chat temps réel
 │           │   ├── payments/payments.component.ts    # Génération liens Stripe
-│           │   └── sync/sync.component.ts            # Gestion canaux iCal
+│           │   ├── sync/sync.component.ts            # Gestion canaux iCal
+│           │   ├── settings/settings.component.ts    # Beds24 + Profil + Mot de passe
+│           │   └── feedback/feedback.component.ts    # Formulaire feedback MVP
+│           ├── superadmin/                           # Accessible uniquement ROLE_ADMIN
+│           │   ├── superadmin.routes.ts
+│           │   ├── superadmin-layout.component.ts
+│           │   ├── dashboard/superadmin-dashboard.component.ts  # KPIs (users, logins, clics, visiteurs anonymes)
+│           │   ├── users/superadmin-users.component.ts          # Liste users + reset mot de passe
+│           │   └── feedbacks/superadmin-feedbacks.component.ts  # Feedbacks + gestion statut
 │           └── public/
 │               ├── public.routes.ts
-│               ├── home/home.component.ts            # Liste des logements
+│               ├── home/home.component.ts            # Page d'accueil (bandeau bêta MVP)
 │               ├── property-detail/property-detail.component.ts  # Fiche + réservation
 │               └── booking/booking.component.ts      # Récapitulatif + messages client
 │
@@ -186,6 +217,8 @@ FlowlyRent/
 | `channels` | Channel | Canaux iCal (legacy — Beds24 géré via beds24_accounts) |
 | `availability_blocks` | AvailabilityBlock | Blocages manuels de dates (entretien, séjour proprio, etc.) |
 | `housekeeping_tasks` | HousekeepingTask | Tâches ménage/maintenance — auto-créées sur checkout de chaque réservation |
+| `analytics_events` | AnalyticsEvent | Événements PAGE_VIEW / LOGIN / CLICK — userId NULL pour visiteurs anonymes |
+| `feedbacks` | Feedback | Feedbacks utilisateurs — catégorie, message, statut (NEW/IN_PROGRESS/DONE/REJECTED) |
 
 ---
 
@@ -205,9 +238,11 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | GET | `/user/profile` | Profil de l'utilisateur connecté |
 | PUT | `/user/profile` | Modifier firstName, lastName, publicSiteSlug |
 | GET | `/user/beds24/status` | Statut connexion Beds24 + dernière sync |
-| POST | `/user/beds24/connect` | Connecter compte Beds24 `{username, password}` |
+| POST | `/user/beds24/connect-token` | Connecter compte Beds24 via setup token |
 | POST | `/user/beds24/sync` | Déclencher une sync manuelle Beds24 |
 | DELETE | `/user/beds24/disconnect` | Déconnecter le compte Beds24 |
+| PATCH | `/user/password` | Changer son mot de passe (vérifie l'ancien) |
+| POST | `/user/feedback` | Soumettre un feedback MVP |
 
 ### Admin (JWT requis)
 | Méthode | Route | Description |
@@ -250,6 +285,22 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | GET | `/public/bookings/{id}` | Voir sa réservation |
 | POST | `/public/messages/{bookingId}` | Envoyer un message (voyageur) |
 | POST | `/public/payments/{bookingId}/checkout` | Démarrer le paiement Stripe |
+
+### Analytics (public — sans authentification)
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| POST | `/analytics/track` | Enregistrer un événement `{type, page}` — userId null si non connecté |
+
+### Superadmin (ROLE_ADMIN requis)
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/superadmin/stats` | KPIs (users, logins, clics, visiteurs anonymes) |
+| GET | `/superadmin/users` | Liste de tous les utilisateurs |
+| PATCH | `/superadmin/users/{id}/password` | Réinitialiser le mot de passe d'un user |
+| GET | `/superadmin/feedbacks` | Liste des feedbacks |
+| PATCH | `/superadmin/feedbacks/{id}/status` | Changer le statut d'un feedback |
+
+> **Comptes exclus des KPIs** : `fxpast@gmail.com` et `pastouretroger@gmail.com` (définis dans `AnalyticsService.INTERNAL_EMAILS`)
 
 ### Webhooks
 | Méthode | Route | Description |
@@ -406,7 +457,7 @@ npm start  # → http://localhost:4200 avec proxy vers :8080
   JWT_SECRET=<clé base64 32+ octets>
   STRIPE_SECRET_KEY=sk_live_...
   STRIPE_WEBHOOK_SECRET=whsec_...
-  CORS_ALLOWED_ORIGINS=https://<ton-site>.netlify.app
+  CORS_ALLOWED_ORIGINS=https://flowlyrent.com,https://www.flowlyrent.com,https://flowlyrent.netlify.app
   ```
   Les variables `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`
   sont injectées automatiquement par Railway depuis le plugin MySQL.
@@ -439,6 +490,13 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - [x] Interface admin — calendrier des disponibilités
 - [x] Notifications email (confirmation réservation, reçu paiement, rappel J-1)
 - [x] Tableau de bord revenus / statistiques
+- [x] Rôles utilisateurs (USER / ADMIN) — JWT claim "role"
+- [x] Dashboard superadmin — KPIs filtrés (utilisateurs, connexions, clics, visiteurs anonymes)
+- [x] Tracking analytique automatique (PAGE_VIEW tous visiteurs + LOGIN)
+- [x] Feedback utilisateurs — formulaire + gestion superadmin
+- [x] Changement de mot de passe — auto (paramètres) + admin (superadmin)
+- [x] Logo SVG + favicon maison bleue
+- [x] Domaine personnalisé flowlyrent.com
 
 ---
 
@@ -449,3 +507,4 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - **Multi-tenant** : toujours filtrer par `getCurrentUserId()` dans les contrôleurs admin
 - **Langue de l'interface** : Français
 - **Pas de commentaires inutiles** — le code se lit tout seul
+- **Git** : travailler sur `dev`, ne jamais toucher à `master`
