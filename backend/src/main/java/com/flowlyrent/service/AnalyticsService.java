@@ -6,23 +6,30 @@ import com.flowlyrent.model.enums.AnalyticsEventType;
 import com.flowlyrent.repository.AnalyticsEventRepository;
 import com.flowlyrent.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
 
-    private static final List<String> INTERNAL_EMAILS = List.of(
-        "fxpast@gmail.com",
-        "pastouretroger@gmail.com"
-    );
+    @Value("${app.analytics.internal-emails:}")
+    private String internalEmailsConfig;
 
     private final AnalyticsEventRepository analyticsRepo;
     private final AppUserRepository userRepo;
+
+    private List<String> getInternalEmails() {
+        if (internalEmailsConfig == null || internalEmailsConfig.isBlank()) return List.of();
+        return Arrays.stream(internalEmailsConfig.split(","))
+            .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+    }
 
     public void record(AnalyticsEventType type, Long userId, String page, String ip) {
         AnalyticsEvent event = new AnalyticsEvent();
@@ -38,7 +45,7 @@ public class AnalyticsService {
         LocalDateTime minus7  = now.minusDays(7);
         LocalDateTime minus30 = now.minusDays(30);
 
-        List<Long> excludeIds = userRepo.findIdsByEmailIn(INTERNAL_EMAILS);
+        List<Long> excludeIds = userRepo.findIdsByEmailIn(getInternalEmails());
         if (excludeIds.isEmpty()) excludeIds = List.of(-1L);
 
         List<SuperAdminStatsDTO.PageStatDTO> topPages = analyticsRepo

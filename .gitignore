@@ -9,9 +9,15 @@ node_modules/
 dist/
 .angular/
 
-# Environnement
+# Environnement (ne jamais committer les fichiers .env avec de vraies valeurs)
 .env
+.env.*
 *.env.local
+!.env.example
+
+# Secrets Spring Boot locaux
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-dev.yml
 
 # IDE
 .idea/

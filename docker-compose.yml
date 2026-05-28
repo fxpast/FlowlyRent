@@ -5,10 +5,10 @@ services:
     image: mariadb:11
     container_name: flowlyrent-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: flowlyrent
-      MYSQL_USER: flowlyrent
-      MYSQL_PASSWORD: flowlyrent
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-flowlyrent}
+      MYSQL_USER: ${DB_USERNAME:-flowlyrent}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-flowlyrent}
     ports:
       - "3306:3306"
     volumes:
@@ -27,14 +27,15 @@ services:
       db:
         condition: service_healthy
     environment:
-      DB_USERNAME: flowlyrent
-      DB_PASSWORD: flowlyrent
-      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/flowlyrent?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Europe/Paris
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      DB_USERNAME: ${DB_USERNAME:-flowlyrent}
+      DB_PASSWORD: ${DB_PASSWORD:-flowlyrent}
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/${MYSQL_DATABASE:-flowlyrent}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Europe/Paris
+      JWT_SECRET: ${JWT_SECRET:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_placeholder}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     ports:
       - "8080:8080"
 

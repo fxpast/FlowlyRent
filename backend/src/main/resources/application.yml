@@ -43,18 +43,20 @@ stripe:
     agence: ${STRIPE_PRICE_AGENCE:}
 
 jwt:
-  # Changez cette clé en production (base64, minimum 32 octets)
-  secret: ${JWT_SECRET:Zmxvd2x5cmVudC1zZWNyZXQta2V5LTMyLWJ5dGVzLWxvbmchIQ==}
+  # Obligatoire en production : variable d'environnement JWT_SECRET (base64, minimum 32 octets)
+  secret: ${JWT_SECRET:ZGV2LW9ubHktZG8tbm90LXVzZS1pbi1wcm9kdWN0aW9uLXBsZWFzZS1jaGFuZ2U=}
   expiration: ${JWT_EXPIRATION:604800000}  # 7 jours en ms
 
 app:
   name: ${APP_NAME:FlowlyRent}
   cors:
     allowed-origins: "http://localhost:4200,http://localhost:3000"
+  analytics:
+    internal-emails: ${ANALYTICS_INTERNAL_EMAILS:}
 
 admin:
-  username: ${ADMIN_USERNAME:admin}
-  password: ${ADMIN_PASSWORD:admin123}
+  username: ${ADMIN_USERNAME:}
+  password: ${ADMIN_PASSWORD:}
 
 sync:
   ical:

@@ -300,7 +300,7 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | GET | `/superadmin/feedbacks` | Liste des feedbacks |
 | PATCH | `/superadmin/feedbacks/{id}/status` | Changer le statut d'un feedback |
 
-> **Comptes exclus des KPIs** : `fxpast@gmail.com` et `pastouretroger@gmail.com` (définis dans `AnalyticsService.INTERNAL_EMAILS`)
+> **Comptes exclus des KPIs** : configurés via la variable d'environnement `ANALYTICS_INTERNAL_EMAILS` (liste séparée par virgules dans `.env`)
 
 ### Webhooks
 | Méthode | Route | Description |
@@ -414,13 +414,8 @@ npm start  # → http://localhost:4200 avec proxy vers :8080
 
 ### Connexion base Railway (production)
 
-| Paramètre | Valeur |
-|-----------|--------|
-| Host | `zephyr.proxy.rlwy.net` |
-| Port | `48793` |
-| Base | `railway` |
-| User | `root` |
-| Password | → voir mémoire Claude (jamais dans git) |
+Les paramètres de connexion Railway (host, port, password) sont disponibles dans le dashboard Railway.
+Ne jamais les committer dans git.
 
 **Importer les données locales → Railway** (à refaire après chaque évolution de schéma) :
 
@@ -429,7 +424,7 @@ npm start  # → http://localhost:4200 avec proxy vers :8080
 & "C:\xampp\mysql\bin\mysqldump.exe" -u root flowlyrent > flowlyrent_export.sql
 
 # 2. Importer via Node (nécessaire car XAMPP = MariaDB client, Railway = MySQL 8)
-#    Créer C:\FlowlyRent\_tmp_import\ avec package.json + import.mjs (voir mémoire Claude)
+#    Créer C:\FlowlyRent\_tmp_import\ avec package.json + import.mjs
 #    puis : node import.mjs
 ```
 
