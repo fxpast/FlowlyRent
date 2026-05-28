@@ -3,22 +3,19 @@ import { HttpClient } from '@angular/common/http';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { environment } from '@env/environment';
-import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
 
-  constructor(private http: HttpClient, private router: Router, private auth: AuthService) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   init(): void {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(e => {
-      if (!this.auth.isLoggedIn()) return;
       this.track('PAGE_VIEW', (e as NavigationEnd).urlAfterRedirects);
     });
   }
 
   trackClick(label: string): void {
-    if (!this.auth.isLoggedIn()) return;
     this.track('CLICK', label);
   }
 
