@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/bookings")
@@ -98,6 +99,61 @@ public class AdminBookingController {
             log.info("[DEBUG] keys={} | sample={}", first.keySet(), first);
             return ResponseEntity.ok(Map.of("count", bookings.size(), "keys", first.keySet(), "first", first));
         } catch (Exception e) { return error(e); }
+    }
+
+    @GetMapping("/overlap")
+    public ResponseEntity<?> checkOverlap(
+            @RequestParam String propId,
+            @RequestParam String arrival,
+            @RequestParam String departure,
+            @RequestParam(defaultValue = "") String excludeId) {
+        try {
+            Beds24Account account = requireAccount();
+            String token = beds24.tokenFor(account);
+
+            LocalDate arrDate = LocalDate.parse(arrival.substring(0, 10));
+            String arr = arrival.substring(0, 10);
+            String dep = departure.substring(0, 10);
+
+            Map<String, String> params = new HashMap<>();
+            params.put("arrivalFrom", arrDate.minusDays(60).toString());
+            params.put("arrivalTo",   dep);
+            List<Map<String, Object>> bookings = beds24.getBookings(token, params);
+
+            String pid = idStr(propId);
+            List<Map<String, Object>> conflicts = bookings.stream()
+                .filter(b -> {
+                    String status = Objects.toString(b.get("status"), "").toLowerCase();
+                    if (!status.equals("new") && !status.equals("confirmed")) return false;
+                    Object bPid = b.get("propId") != null ? b.get("propId") : b.get("propertyId");
+                    if (!Objects.equals(pid, idStr(bPid))) return false;
+                    if (!excludeId.isEmpty() && excludeId.equals(idStr(b.get("id")))) return false;
+                    String bArr = truncateDate(Objects.toString(b.get("arrival"), ""));
+                    String bDep = truncateDate(Objects.toString(b.get("departure"), ""));
+                    return !bArr.isEmpty() && !bDep.isEmpty()
+                        && bArr.compareTo(dep) < 0
+                        && bDep.compareTo(arr) > 0;
+                })
+                .map(b -> {
+                    String first = Objects.toString(b.get("guestFirstName") != null ? b.get("guestFirstName") : b.get("firstName"), "");
+                    String last  = Objects.toString(b.get("guestLastName")  != null ? b.get("guestLastName")  : b.get("lastName"),  "");
+                    String guest = (first + " " + last).trim();
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id",        idStr(b.get("id")));
+                    m.put("guestName", guest.isEmpty() ? "Voyageur" : guest);
+                    m.put("arrival",   truncateDate(Objects.toString(b.get("arrival"), "")));
+                    m.put("departure", truncateDate(Objects.toString(b.get("departure"), "")));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+            return ResponseEntity.ok(conflicts);
+        } catch (Exception e) { return error(e); }
+    }
+
+    private String truncateDate(String date) {
+        if (date == null || date.length() < 10) return date == null ? "" : date;
+        return date.substring(0, 10);
     }
 
     @GetMapping

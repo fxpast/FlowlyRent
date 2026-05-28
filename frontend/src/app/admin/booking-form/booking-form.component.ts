@@ -1,4 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Subject, switchMap, debounceTime, of, catchError, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -206,7 +207,9 @@ import { environment } from '../../../environments/environment';
     }
   `]
 })
-export class BookingFormComponent implements OnInit {
+export class BookingFormComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private readonly overlapTrigger$ = new Subject<{ propId: string; arrival: string; departure: string } | null>();
   form: FormGroup;
   isEdit = signal(false);
   saving = signal(false);
@@ -258,7 +261,29 @@ export class BookingFormComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   ngOnInit(): void {
+    this.overlapTrigger$.pipe(
+      debounceTime(400),
+      switchMap(params => {
+        if (!params) { this.checkingOverlap.set(false); return of([]); }
+        this.checkingOverlap.set(true);
+        const httpParams: any = { propId: params.propId, arrival: params.arrival, departure: params.departure };
+        if (this.bookingId) httpParams['excludeId'] = this.bookingId;
+        return this.http.get<any[]>(`${environment.apiUrl}/admin/bookings/overlap`, { params: httpParams }).pipe(
+          catchError(() => of([]))
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(conflicts => {
+      this.overlapError.set(conflicts.length > 0 ? conflicts : null);
+      this.checkingOverlap.set(false);
+    });
+
     this.bookingService.getPropertyNames().subscribe({
       next: names => {
         this.properties.set(
@@ -322,24 +347,10 @@ export class BookingFormComponent implements OnInit {
     const departure = this.toDateStr(v.departure);
     if (!v.propId || !arrival || !departure || arrival >= departure) {
       this.overlapError.set(null);
+      this.overlapTrigger$.next(null);
       return;
     }
-    this.checkingOverlap.set(true);
-    this.http.get<any>(`${environment.apiUrl}/admin/availability/calendar`, {
-      params: { from: arrival, to: departure }
-    }).subscribe({
-      next: data => {
-        const pid = String(v.propId);
-        const conflicts = (data.bookings ?? []).filter((b: any) =>
-          String(b.propertyId) === pid &&
-          String(b.id) !== String(this.bookingId) &&
-          b.arrival < departure && b.departure > arrival
-        );
-        this.overlapError.set(conflicts.length > 0 ? conflicts : null);
-        this.checkingOverlap.set(false);
-      },
-      error: () => { this.overlapError.set(null); this.checkingOverlap.set(false); }
-    });
+    this.overlapTrigger$.next({ propId: String(v.propId), arrival, departure });
   }
 
   calculateEstimate(): void {
