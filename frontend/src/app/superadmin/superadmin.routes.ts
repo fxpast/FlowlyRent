@@ -13,6 +13,10 @@ export const superadminRoutes: Routes = [
       {
         path: 'users',
         loadComponent: () => import('./users/superadmin-users.component').then(m => m.SuperadminUsersComponent)
+      },
+      {
+        path: 'feedbacks',
+        loadComponent: () => import('./feedbacks/superadmin-feedbacks.component').then(m => m.SuperadminFeedbacksComponent)
       }
     ]
   }

@@ -115,7 +115,8 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'cleaning_services',label: 'Ménage',           route: 'housekeeping' },
     { icon: 'bar_chart',        label: 'Revenus',          route: 'stats' },
     { icon: 'assessment',       label: 'Rapports',         route: 'reports' },
-    { icon: 'settings',         label: 'Paramètres',       route: 'settings' }
+    { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
+    { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' }
   ];
 
   constructor(public auth: AuthService, private messageService: MessageService) {}

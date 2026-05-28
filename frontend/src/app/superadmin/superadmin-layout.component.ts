@@ -20,6 +20,9 @@ import { AuthService } from '../core/services/auth.service';
       <button mat-icon-button routerLink="/superadmin/users" matTooltip="Utilisateurs">
         <mat-icon>group</mat-icon>
       </button>
+      <button mat-icon-button routerLink="/superadmin/feedbacks" matTooltip="Feedbacks">
+        <mat-icon>rate_review</mat-icon>
+      </button>
       <button mat-stroked-button (click)="logout()" style="margin-left:16px;color:white;border-color:rgba(255,255,255,.5)">
         <mat-icon>logout</mat-icon> Déconnexion
       </button>
