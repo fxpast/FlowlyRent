@@ -26,6 +26,8 @@ interface DayCell {
   isFirstDay?: boolean;
   isLastDay?: boolean;
   showName?: boolean;
+  bookingSpan?: number;       // visible days in this month for the booking (set on showName cell)
+  bookingMidOffset?: number;  // cells from visStart to mid (for left positioning)
   channel?: string;
   splitCheckoutChannel?: string;  // set when this day is both a checkout and a checkin
   blockId?: string;
@@ -172,13 +174,28 @@ const CHANNEL_COLORS: Record<string, string> = {
                     [class.weekend]="cell.isWeekend"
                     [class.today]="cell.isToday"
                     [class.booked]="!!cell.bookingId"
-                    [class.first-day]="cell.isFirstDay"
-                    [class.last-day]="cell.isLastDay"
-                    [style.background]="cellBg(cell)"
+                    [class.show-name]="cell.showName"
                     [title]="cellTooltip(cell)"
                     (click)="onCellClick(row.property, cell)">
+                  @if (cell.bookingId) {
+                    @if (cell.splitCheckoutChannel !== undefined) {
+                      <div class="bkg bkg-split-co" [style.background]="getColor(cell.splitCheckoutChannel)"></div>
+                      <div class="bkg bkg-split-ci" [style.background]="getColor(cell.channel)"></div>
+                    } @else {
+                      <div class="bkg"
+                           [class.bkg-first]="cell.isFirstDay && !cell.isLastDay"
+                           [class.bkg-last]="!cell.isFirstDay && cell.isLastDay"
+                           [class.bkg-only]="cell.isFirstDay && cell.isLastDay"
+                           [style.background]="getColor(cell.channel)">
+                      </div>
+                    }
+                  }
                   @if (cell.showName && cell.guestName) {
-                    <span class="guest-chip">{{ cell.guestName | slice:0:14 }}</span>
+                    <span class="guest-chip"
+                          [style.left.px]="-(cell.bookingMidOffset ?? 0) * 38 + 4"
+                          [style.width.px]="(cell.bookingSpan ?? 1) * 38 - 8">
+                      {{ cell.guestName }}
+                    </span>
                   }
                 </td>
               }
@@ -251,20 +268,35 @@ const CHANNEL_COLORS: Record<string, string> = {
       vertical-align: middle;
       transition: filter 0.1s;
     }
-    .day-cell.booked  { cursor: pointer; }
-    .day-cell:hover { filter: brightness(0.92); }
-    .day-cell.weekend { background: rgba(0,0,0,0.02); }
-    .day-cell.today { outline: 2px solid #1976d2; outline-offset: -2px; }
-    .day-cell.booked  { color: white; }
+    .day-cell.booked   { cursor: pointer; }
+    .day-cell:hover    { filter: brightness(0.92); }
+    .day-cell.weekend  { background: rgba(0,0,0,0.02); }
+    .day-cell.today    { outline: 2px solid #1976d2; outline-offset: -2px; }
+    .day-cell.show-name { overflow: visible; z-index: 1; }
+
+    /* Background blocks with parallelogram clip-path (SKEW = 10px, leans left going down) */
+    .bkg {
+      position: absolute; inset: 0; z-index: 0;
+    }
+    /* checkin: angled left edge — top starts at 10px, bottom at 0 */
+    .bkg-first { clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 0% 100%); }
+    /* checkout: angled right edge — top ends at 100%, bottom ends at calc(100%-10px) */
+    .bkg-last  { clip-path: polygon(0% 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%); }
+    /* single-day: both edges angled */
+    .bkg-only  { clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%); }
+    /* split day: checkout occupies left half, checkin right half, shared diagonal */
+    .bkg-split-co { clip-path: polygon(0% 0%, calc(50% + 10px) 0%, calc(50% - 10px) 100%, 0% 100%); }
+    .bkg-split-ci { clip-path: polygon(calc(50% + 10px) 0%, 100% 0%, 100% 100%, calc(50% - 10px) 100%); }
 
     .guest-chip {
-      position: absolute; left: 0; right: 0; top: 50%;
+      position: absolute; top: 50%;
       transform: translateY(-50%);
       text-align: center;
       font-size: 11px; font-weight: 600;
-      white-space: nowrap; color: white !important;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: white !important;
       text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-      pointer-events: none;
+      pointer-events: none; z-index: 2;
     }
 
     .blackout-cell {
@@ -432,17 +464,8 @@ export class CalendarComponent implements OnInit {
     }
   }
 
-  cellBg(cell: DayCell): string {
-    if (!cell.bookingId) return '';
-    const color = CHANNEL_COLORS[cell.channel ?? ''] ?? '#1976d2';
-    if (cell.splitCheckoutChannel !== undefined) {
-      const coColor = CHANNEL_COLORS[cell.splitCheckoutChannel] ?? '#1976d2';
-      return `linear-gradient(to right, ${coColor} 50%, ${color} 50%)`;
-    }
-    if (cell.isFirstDay && cell.isLastDay) return color;
-    if (cell.isFirstDay) return `linear-gradient(to right, transparent 50%, ${color} 50%)`;
-    if (cell.isLastDay)  return `linear-gradient(to right, ${color} 50%, transparent 50%)`;
-    return color;
+  getColor(channel?: string): string {
+    return CHANNEL_COLORS[channel ?? ''] ?? '#1976d2';
   }
 
   cellTooltip(cell: DayCell): string {
@@ -484,8 +507,10 @@ export class CalendarComponent implements OnInit {
     const bls  = this.blocks();
     const cal  = this.calendarData();
 
-    // Pre-compute midpoint date for each booking's visible span in this month
-    const midDates = new Map<string, string>();
+    // Pre-compute midpoint, span and offset for each booking's visible range in this month
+    const midDates     = new Map<string, string>();
+    const bookingSpans = new Map<string, number>();
+    const midOffsets   = new Map<string, number>();
     bs.forEach(b => {
       const visStart = ds.findIndex(d => d.date >= b.arrival && d.date <= b.departure);
       if (visStart < 0) return;
@@ -493,7 +518,10 @@ export class CalendarComponent implements OnInit {
       for (let i = ds.length - 1; i >= visStart; i--) {
         if (ds[i].date >= b.arrival && ds[i].date <= b.departure) { visEnd = i; break; }
       }
-      midDates.set(b.id, ds[Math.round((visStart + visEnd) / 2)].date);
+      const midIdx = Math.round((visStart + visEnd) / 2);
+      midDates.set(b.id, ds[midIdx].date);
+      bookingSpans.set(b.id, visEnd - visStart + 1);
+      midOffsets.set(b.id, midIdx - visStart);
     });
 
     return this.properties().map(prop => ({
@@ -524,21 +552,33 @@ export class CalendarComponent implements OnInit {
           cell.isFirstDay = true;
           cell.isLastDay  = bookingCI.departure === d.date;
           cell.channel    = bookingCI.channel;
-          cell.showName   = midDates.get(bookingCI.id) === d.date;
+          if (midDates.get(bookingCI.id) === d.date) {
+            cell.showName         = true;
+            cell.bookingSpan      = bookingSpans.get(bookingCI.id) ?? 1;
+            cell.bookingMidOffset = midOffsets.get(bookingCI.id) ?? 0;
+          }
         } else if (bookingCO) {
           cell.bookingId  = bookingCO.id;
           cell.guestName  = bookingCO.guestName.trim() || 'Voyageur';
           cell.isFirstDay = false;
           cell.isLastDay  = true;
           cell.channel    = bookingCO.channel;
-          cell.showName   = midDates.get(bookingCO.id) === d.date;
+          if (midDates.get(bookingCO.id) === d.date) {
+            cell.showName         = true;
+            cell.bookingSpan      = bookingSpans.get(bookingCO.id) ?? 1;
+            cell.bookingMidOffset = midOffsets.get(bookingCO.id) ?? 0;
+          }
         } else if (bookingMid) {
           cell.bookingId  = bookingMid.id;
           cell.guestName  = bookingMid.guestName.trim() || 'Voyageur';
           cell.isFirstDay = false;
           cell.isLastDay  = false;
           cell.channel    = bookingMid.channel;
-          cell.showName   = midDates.get(bookingMid.id) === d.date;
+          if (midDates.get(bookingMid.id) === d.date) {
+            cell.showName         = true;
+            cell.bookingSpan      = bookingSpans.get(bookingMid.id) ?? 1;
+            cell.bookingMidOffset = midOffsets.get(bookingMid.id) ?? 0;
+          }
         }
 
         const block = bls.find(b =>
