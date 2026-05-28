@@ -16,6 +16,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalyticsService {
 
+    private static final List<String> INTERNAL_EMAILS = List.of(
+        "fxpast@gmail.com",
+        "pastouretroger@gmail.com"
+    );
+
     private final AnalyticsEventRepository analyticsRepo;
     private final AppUserRepository userRepo;
 
@@ -29,12 +34,15 @@ public class AnalyticsService {
     }
 
     public SuperAdminStatsDTO buildStats() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now    = LocalDateTime.now();
         LocalDateTime minus7  = now.minusDays(7);
         LocalDateTime minus30 = now.minusDays(30);
 
+        List<Long> excludeIds = userRepo.findIdsByEmailIn(INTERNAL_EMAILS);
+        if (excludeIds.isEmpty()) excludeIds = List.of(-1L);
+
         List<SuperAdminStatsDTO.PageStatDTO> topPages = analyticsRepo
-            .findTopPages(AnalyticsEventType.PAGE_VIEW.name(), minus30, PageRequest.of(0, 10))
+            .findTopPagesExcluding(AnalyticsEventType.PAGE_VIEW.name(), minus30, excludeIds, PageRequest.of(0, 10))
             .stream()
             .map(row -> SuperAdminStatsDTO.PageStatDTO.builder()
                 .page((String) row[0])
@@ -42,7 +50,8 @@ public class AnalyticsService {
                 .build())
             .toList();
 
-        List<SuperAdminStatsDTO.DailyStatDTO> userGrowth = userRepo.findDailyNewUsers(minus30)
+        List<SuperAdminStatsDTO.DailyStatDTO> userGrowth = userRepo
+            .findDailyNewUsersExcluding(minus30, excludeIds)
             .stream()
             .map(row -> SuperAdminStatsDTO.DailyStatDTO.builder()
                 .date(row[0].toString())
@@ -51,7 +60,7 @@ public class AnalyticsService {
             .toList();
 
         List<SuperAdminStatsDTO.DailyStatDTO> loginsChart = analyticsRepo
-            .findDailyStats(AnalyticsEventType.LOGIN.name(), minus30)
+            .findDailyStatsExcluding(AnalyticsEventType.LOGIN.name(), minus30, excludeIds)
             .stream()
             .map(row -> SuperAdminStatsDTO.DailyStatDTO.builder()
                 .date(row[0].toString())
@@ -60,13 +69,15 @@ public class AnalyticsService {
             .toList();
 
         return SuperAdminStatsDTO.builder()
-            .totalUsers(userRepo.count())
-            .newUsersLast7Days(userRepo.countByCreatedAtAfter(minus7))
-            .newUsersLast30Days(userRepo.countByCreatedAtAfter(minus30))
-            .loginsLast7Days(analyticsRepo.countByTypeAndCreatedAtAfter(AnalyticsEventType.LOGIN, minus7))
-            .loginsLast30Days(analyticsRepo.countByTypeAndCreatedAtAfter(AnalyticsEventType.LOGIN, minus30))
-            .clicksLast7Days(analyticsRepo.countByTypeAndCreatedAtAfter(AnalyticsEventType.CLICK, minus7))
-            .clicksLast30Days(analyticsRepo.countByTypeAndCreatedAtAfter(AnalyticsEventType.CLICK, minus30))
+            .totalUsers(userRepo.countExcluding(excludeIds))
+            .newUsersLast7Days(userRepo.countByCreatedAtAfterExcluding(minus7, excludeIds))
+            .newUsersLast30Days(userRepo.countByCreatedAtAfterExcluding(minus30, excludeIds))
+            .loginsLast7Days(analyticsRepo.countByTypeAndCreatedAtAfterExcluding(AnalyticsEventType.LOGIN, minus7, excludeIds))
+            .loginsLast30Days(analyticsRepo.countByTypeAndCreatedAtAfterExcluding(AnalyticsEventType.LOGIN, minus30, excludeIds))
+            .clicksLast7Days(analyticsRepo.countByTypeAndCreatedAtAfterExcluding(AnalyticsEventType.CLICK, minus7, excludeIds))
+            .clicksLast30Days(analyticsRepo.countByTypeAndCreatedAtAfterExcluding(AnalyticsEventType.CLICK, minus30, excludeIds))
+            .anonymousVisitsLast7Days(analyticsRepo.countAnonymousByTypeAndCreatedAtAfter(AnalyticsEventType.PAGE_VIEW, minus7))
+            .anonymousVisitsLast30Days(analyticsRepo.countAnonymousByTypeAndCreatedAtAfter(AnalyticsEventType.PAGE_VIEW, minus30))
             .topPages(topPages)
             .userGrowthLast30Days(userGrowth)
             .loginsChartLast30Days(loginsChart)

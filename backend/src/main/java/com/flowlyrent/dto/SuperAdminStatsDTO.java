@@ -19,6 +19,9 @@ public class SuperAdminStatsDTO {
     private long clicksLast7Days;
     private long clicksLast30Days;
 
+    private long anonymousVisitsLast7Days;
+    private long anonymousVisitsLast30Days;
+
     private List<PageStatDTO> topPages;
     private List<DailyStatDTO> userGrowthLast30Days;
     private List<DailyStatDTO> loginsChartLast30Days;

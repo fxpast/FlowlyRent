@@ -16,6 +16,8 @@ interface Stats {
   loginsLast30Days: number;
   clicksLast7Days: number;
   clicksLast30Days: number;
+  anonymousVisitsLast7Days: number;
+  anonymousVisitsLast30Days: number;
   topPages: { page: string; count: number }[];
   userGrowthLast30Days: { date: string; count: number }[];
   loginsChartLast30Days: { date: string; count: number }[];
@@ -73,7 +75,16 @@ interface Stats {
         </mat-card>
 
         <mat-card class="kpi-card">
-          <div class="kpi-icon purple"><mat-icon>star</mat-icon></div>
+          <div class="kpi-icon purple"><mat-icon>visibility</mat-icon></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ period === '7' ? stats()!.anonymousVisitsLast7Days : stats()!.anonymousVisitsLast30Days }}</div>
+            <div class="kpi-label">Visiteurs anonymes</div>
+            <div class="kpi-sub">flowlyrent.com — {{ period }} jours</div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpi-card">
+          <div class="kpi-icon teal"><mat-icon>star</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ topPageName() }}</div>
             <div class="kpi-label">Page la plus consultée</div>
@@ -152,6 +163,7 @@ interface Stats {
     .kpi-icon.green  { background: #388e3c; }
     .kpi-icon.orange { background: #f57c00; }
     .kpi-icon.purple { background: #7b1fa2; }
+    .kpi-icon.teal   { background: #00695c; }
     .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: #1a1a1a; }
     .kpi-label { font-size: 13px; color: #555; margin-top: 4px; font-weight: 500; }
     .kpi-sub { font-size: 12px; color: #999; margin-top: 2px; }
