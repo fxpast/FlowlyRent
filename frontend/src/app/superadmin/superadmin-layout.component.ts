@@ -3,12 +3,13 @@ import { RouterOutlet, RouterLink } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../core/services/auth.service';
 
 @Component({
   selector: 'app-superadmin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule],
+  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule],
   template: `
     <mat-toolbar color="primary" class="toolbar">
       <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
