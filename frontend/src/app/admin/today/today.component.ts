@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { forkJoin } from 'rxjs';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 
@@ -183,33 +184,35 @@ export class TodayComponent implements OnInit {
 
   constructor(private bookingService: BookingService, private dialog: MatDialog) {}
 
-  ngOnInit(): void {
-    this.bookingService.getPropertyNames().subscribe(m => { this.propNames = m; });
-    this.load();
-  }
+  ngOnInit(): void { this.load(); }
 
   load(): void {
     this.loading.set(true);
-    this.bookingService.getAll().subscribe({
-      next: (bookings: any[]) => {
-        const today = this.today;
-        const active = bookings.filter(b => b.status !== 'cancelled' && b.status !== 'canceled');
-        this.arrivals.set(  active.filter(b => (b.arrival   ?? '').substring(0, 10) === today));
-        this.departures.set(active.filter(b => (b.departure ?? '').substring(0, 10) === today));
-        this.ongoing.set(   active.filter(b =>
-          (b.arrival   ?? '').substring(0, 10) < today &&
-          (b.departure ?? '').substring(0, 10) > today
-        ));
+    forkJoin([
+      this.bookingService.getToday(),
+      this.bookingService.getPropertyNames()
+    ]).subscribe({
+      next: ([today, names]) => {
+        this.departures.set(this.enrich(today.departures, names));
+        this.arrivals.set(  this.enrich(today.arrivals,   names));
+        this.ongoing.set(   this.enrich(today.ongoing,    names));
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
   }
 
+  private enrich(list: any[], names: Record<string, string>): any[] {
+    return (list ?? []).map(b => {
+      const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+      return pid && names[pid] ? { ...b, propName: names[pid] } : b;
+    });
+  }
+
   openBooking(b: any): void {
     const ref = this.dialog.open(BookingDetailDialogComponent, {
       data: { ...b, propName: this.propName(b) },
-      width: '520px'
+      width: '600px'
     });
     ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
   }
@@ -221,6 +224,7 @@ export class TodayComponent implements OnInit {
   }
 
   propName(b: any): string {
+    if (b.propName || b.propertyName) return b.propName || b.propertyName;
     const id = String(b.propertyId ?? b.propId ?? '');
     return this.propNames[id] || id || '—';
   }

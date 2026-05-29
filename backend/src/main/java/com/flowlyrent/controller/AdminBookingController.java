@@ -177,6 +177,43 @@ public class AdminBookingController {
         }
     }
 
+    @GetMapping("/today")
+    public ResponseEntity<?> getToday() {
+        try {
+            Beds24Account account = requireAccount();
+            String token = beds24.tokenFor(account);
+            String today     = LocalDate.now().toString();
+            String yesterday = LocalDate.now().minusDays(1).toString();
+            String pastLimit = LocalDate.now().minusDays(90).toString();
+
+            // Départs du jour
+            List<Map<String, Object>> departures = beds24.getBookings(token,
+                    Map.of("departureFrom", today, "departureTo", today));
+
+            // Arrivées du jour
+            List<Map<String, Object>> arrivals = beds24.getBookings(token,
+                    Map.of("arrivalFrom", today, "arrivalTo", today));
+
+            // En cours : arrivés avant aujourd'hui, pas encore repartis
+            List<Map<String, Object>> recentPast = beds24.getBookings(token,
+                    Map.of("arrivalFrom", pastLimit, "arrivalTo", yesterday));
+            List<Map<String, Object>> ongoing = recentPast.stream()
+                    .filter(b -> {
+                        String dep    = truncateDate(Objects.toString(b.get("departure"), ""));
+                        String status = Objects.toString(b.get("status"), "").toLowerCase();
+                        return dep.compareTo(today) > 0
+                            && (status.equals("new") || status.equals("confirmed"));
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "departures", departures,
+                    "arrivals",   arrivals,
+                    "ongoing",    ongoing
+            ));
+        } catch (Exception e) { return error(e); }
+    }
+
     @GetMapping("/arrivals")
     public ResponseEntity<?> getArrivals(@RequestParam(defaultValue = "") String weekStart) {
         try {

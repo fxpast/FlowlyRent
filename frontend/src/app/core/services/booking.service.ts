@@ -54,6 +54,10 @@ export class BookingService {
     return this.http.post<any>(this.base, [{ id: Number(id), status: 'cancelled' }]);
   }
 
+  getToday(): Observable<{ departures: any[], arrivals: any[], ongoing: any[] }> {
+    return this.http.get<any>(`${this.base}/today`);
+  }
+
   getArrivals(weekStart?: string): Observable<any[]> {
     let params = new HttpParams();
     if (weekStart) params = params.set('weekStart', weekStart);
