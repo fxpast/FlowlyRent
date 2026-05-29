@@ -80,7 +80,7 @@ import { environment } from '../../../environments/environment';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Arrivée</mat-label>
-              <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required>
+              <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required [min]="isEdit() ? null : today">
               <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
               <mat-datepicker #arrivalPicker></mat-datepicker>
             </mat-form-field>
@@ -101,16 +101,11 @@ import { environment } from '../../../environments/environment';
             </mat-form-field>
           </div>
 
-          <!-- Avertissement de chevauchement -->
-          @if (overlapError()?.length) {
+          <!-- Avertissement de chevauchement / date passée -->
+          @if (overlapError()) {
             <div class="overlap-warning">
               <mat-icon>warning_amber</mat-icon>
-              <div>
-                <strong>Chevauchement détecté</strong> avec une réservation existante :
-                @for (b of overlapError()!; track b.id) {
-                  <div class="overlap-item">{{ b.guestName }} · {{ b.arrival }} → {{ b.departure }}</div>
-                }
-              </div>
+              <span>{{ overlapError() }}</span>
             </div>
           }
           @if (checkingOverlap()) {
@@ -166,7 +161,7 @@ import { environment } from '../../../environments/environment';
               </button>
             }
             <button mat-raised-button color="primary" type="submit"
-                    [disabled]="form.invalid || saving() || !!overlapError()?.length">
+                    [disabled]="form.invalid || saving() || !!overlapError()">
               {{ isEdit() ? 'Enregistrer' : 'Créer la réservation' }}
             </button>
           </div>
@@ -216,7 +211,8 @@ export class BookingFormComponent implements OnInit, OnDestroy {
   calculating = signal(false);
   loadingProps = signal(true);
   checkingOverlap = signal(false);
-  overlapError = signal<any[] | null>(null);
+  overlapError = signal<string | null>(null);
+  readonly today = new Date();
   properties = signal<{ id: string; name: string }[]>([]);
   estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number } | null>(null);
   bookingId: string | null = null;
@@ -280,7 +276,7 @@ export class BookingFormComponent implements OnInit, OnDestroy {
       }),
       takeUntil(this.destroy$)
     ).subscribe(conflicts => {
-      this.overlapError.set(conflicts.length > 0 ? conflicts : null);
+      this.overlapError.set(conflicts.length > 0 ? 'Période non disponible.' : null);
       this.checkingOverlap.set(false);
     });
 
@@ -347,6 +343,11 @@ export class BookingFormComponent implements OnInit, OnDestroy {
     const departure = this.toDateStr(v.departure);
     if (!v.propId || !arrival || !departure || arrival >= departure) {
       this.overlapError.set(null);
+      this.overlapTrigger$.next(null);
+      return;
+    }
+    if (!this.isEdit() && arrival < this.toDateStr(this.today)) {
+      this.overlapError.set('La date d\'arrivée ne peut pas être dans le passé.');
       this.overlapTrigger$.next(null);
       return;
     }
