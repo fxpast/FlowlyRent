@@ -146,7 +146,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openDetail(b: any): void {
-    this.dialog.open(BookingDetailDialogComponent, { data: b, width: '520px' });
+    this.dialog.open(BookingDetailDialogComponent, { data: b, width: '600px' });
   }
 
   ngOnInit(): void {

@@ -424,7 +424,7 @@ export class CalendarComponent implements OnInit {
       const booking = this.bookings().find(b => String(b.id) === String(cell.bookingId));
       if (booking) {
         const data = { ...booking, propName: property.name, propCity: property.city };
-        const ref = this.dialog.open(BookingDetailDialogComponent, { data, width: '520px' });
+        const ref = this.dialog.open(BookingDetailDialogComponent, { data, width: '600px' });
         ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
       } else {
         this.router.navigate(['/admin/bookings', cell.bookingId, 'edit']);
