@@ -23,6 +23,7 @@ interface OccupancyStatus {
   color: string;
   bg: string;
   icon: string;
+  sortKey: string;
 }
 
 @Component({
@@ -237,13 +238,27 @@ export class PropertiesComponent implements OnInit {
   codeVisible: Record<string, boolean> = {};
 
   filtered = computed(() => {
-    const q = this.search().toLowerCase().trim();
-    if (!q) return this.properties();
-    return this.properties().filter(p =>
+    const q   = this.search().toLowerCase().trim();
+    const map = this.occupancyMap();
+    const ORDER = { arriving: 0, free: 1, occupied: 2 };
+
+    let list = this.properties();
+    if (q) list = list.filter(p =>
       (p['name']    ?? '').toLowerCase().includes(q) ||
       (p['city']    ?? '').toLowerCase().includes(q) ||
       (p['address'] ?? '').toLowerCase().includes(q)
     );
+
+    return [...list].sort((a, b) => {
+      const oa = map[String(a['id'])];
+      const ob = map[String(b['id'])];
+      if (!oa || !ob) return 0;
+      const diff = ORDER[oa.type] - ORDER[ob.type];
+      if (diff !== 0) return diff;
+      const keyCmp = oa.sortKey.localeCompare(ob.sortKey);
+      if (keyCmp !== 0) return keyCmp;
+      return (a['name'] ?? '').localeCompare(b['name'] ?? '');
+    });
   });
 
   constructor(
@@ -297,7 +312,8 @@ export class PropertiesComponent implements OnInit {
           type: 'occupied',
           label: 'Occupé',
           sublabel: `départ ${days === 1 ? 'demain' : days === 0 ? 'aujourd\'hui' : `dans ${days} j`} · ${depFmt}`,
-          color: '#b71c1c', bg: '#ffebee', icon: 'hotel'
+          color: '#b71c1c', bg: '#ffebee', icon: 'hotel',
+          sortKey: occupied['departure'] ?? ''
         };
         continue;
       }
@@ -317,13 +333,14 @@ export class PropertiesComponent implements OnInit {
             type: 'arriving',
             label: days === 1 ? 'Arrivée demain' : `Arrivée dans ${days} j`,
             sublabel: arrFmt,
-            color, bg, icon: 'login'
+            color, bg, icon: 'login',
+            sortKey: upcoming['arrival'] ?? ''
           };
           continue;
         }
       }
 
-      map[id] = { type: 'free', label: 'Libre', color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle' };
+      map[id] = { type: 'free', label: 'Libre', color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle', sortKey: '' };
     }
     return map;
   });
