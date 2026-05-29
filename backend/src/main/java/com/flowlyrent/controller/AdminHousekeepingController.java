@@ -2,10 +2,12 @@ package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
+import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingStaff;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
+import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingStaffRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +30,7 @@ public class AdminHousekeepingController {
 
     private final HousekeepingTaskRepository taskRepo;
     private final HousekeepingStaffRepository staffRepo;
+    private final HousekeeperProfileRepository housekeeperRepo;
     private final SecurityUtils securityUtils;
 
     // --- Tâches ---
@@ -68,6 +71,12 @@ public class AdminHousekeepingController {
             staffRepo.findById(staffId)
                     .filter(s -> s.getUser().getId().equals(user.getId()))
                     .ifPresent(task::setStaff);
+        }
+
+        if (body.containsKey("housekeeperId")) {
+            Long hkId = Long.parseLong(body.get("housekeeperId").toString());
+            housekeeperRepo.findByIdAndUserId(hkId, user.getId())
+                    .ifPresent(task::setHousekeeper);
         }
 
         return ResponseEntity.ok(taskRepo.save(task));

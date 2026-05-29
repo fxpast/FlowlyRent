@@ -12,7 +12,7 @@ interface LoginResponse {
   lastName: string;
   plan: string;
   publicSiteSlug: string;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'ADMIN' | 'HOUSEKEEPER';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,6 +57,10 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.getCurrentUser()?.role === 'ADMIN';
+  }
+
+  isHousekeeper(): boolean {
+    return this.getCurrentUser()?.role === 'HOUSEKEEPER';
   }
 
   // Rétrocompatibilité : l'intercepteur appellait getCredentials()

@@ -9,6 +9,7 @@ export interface HousekeeperProfile {
   phone?: string;
   email?: string;
   notes?: string;
+  linkedUser?: { id: number; email: string };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,5 +31,13 @@ export class HousekeeperService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  activatePortal(id: number, email: string, password: string): Observable<HousekeeperProfile> {
+    return this.http.post<HousekeeperProfile>(`${this.base}/${id}/activate`, { email, password });
+  }
+
+  deactivatePortal(id: number): Observable<HousekeeperProfile> {
+    return this.http.delete<HousekeeperProfile>(`${this.base}/${id}/deactivate`);
   }
 }

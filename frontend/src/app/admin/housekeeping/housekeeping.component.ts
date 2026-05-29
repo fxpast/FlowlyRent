@@ -25,10 +25,13 @@ interface Task {
   type: string;
   status: string;
   scheduledDate: string;
-  assignedTo?: string;
+  propertyName?: string;
+  beds24PropertyId?: string;
   notes?: string;
   completedAt?: string;
-  property: { id: number; name: string; city?: string };
+  hasIncident?: boolean;
+  housekeeper?: { id: number; name: string; phone?: string; email?: string };
+  property?: { id: number; name: string; city?: string };
   booking?: { id: number; firstName?: string; lastName?: string };
 }
 
@@ -103,10 +106,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                 <div class="form-row">
                   <mat-form-field>
                     <mat-label>Prestataire</mat-label>
-                    <mat-select [(ngModel)]="newTask.assignedTo">
-                      <mat-option value="">— Non assigné —</mat-option>
+                    <mat-select [(ngModel)]="newTask.housekeeperId">
+                      <mat-option [value]="null">— Non assigné —</mat-option>
                       @for (h of housekeepers(); track h.id) {
-                        <mat-option [value]="h.name">{{ h.name }}
+                        <mat-option [value]="h.id">{{ h.name }}
                           @if (h.phone) { <span class="hk-sub"> · {{ h.phone }}</span> }
                         </mat-option>
                       }
@@ -165,24 +168,25 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </div>
                   <div class="task-type">{{ typeLabel(task.type) }}</div>
                   <div class="task-property">
-                    <mat-icon>home</mat-icon> {{ task.property.name }}
+                    <mat-icon>home</mat-icon> {{ task.propertyName ?? task.property?.name ?? task.beds24PropertyId }}
                   </div>
                   @if (task.booking) {
                     <div class="task-guest">
                       <mat-icon>person</mat-icon> {{ task.booking.firstName }} {{ task.booking.lastName }}
                     </div>
                   }
-                  @if (task.assignedTo) {
+                  @if (task.housekeeper) {
                     <div class="task-assigned">
-                      <mat-icon>engineering</mat-icon> {{ task.assignedTo }}
-                      @if (housekeeperByName(task.assignedTo); as hk) {
-                        @if (hk.phone) {
-                          <a [href]="'tel:' + hk.phone" class="hk-phone" (click)="$event.stopPropagation()">
-                            <mat-icon>phone</mat-icon>
-                          </a>
-                        }
+                      <mat-icon>engineering</mat-icon> {{ task.housekeeper.name }}
+                      @if (task.housekeeper.phone) {
+                        <a [href]="'tel:' + task.housekeeper.phone" class="hk-phone" (click)="$event.stopPropagation()">
+                          <mat-icon>phone</mat-icon>
+                        </a>
                       }
                     </div>
+                  }
+                  @if (task.hasIncident) {
+                    <div class="task-incident"><mat-icon>warning</mat-icon> Incident signalé</div>
                   }
                   @if (task.notes) {
                     <div class="task-notes">{{ task.notes }}</div>
@@ -297,6 +301,39 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
+                <!-- Badge portail actif -->
+                @if (h.linkedUser) {
+                  <div class="portal-badge active">
+                    <mat-icon>lock_open</mat-icon> Portail actif — {{ h.linkedUser.email }}
+                    <button mat-icon-button color="warn" (click)="deactivatePortal(h)" matTooltip="Révoquer l'accès">
+                      <mat-icon>no_accounts</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="portal-badge inactive" (click)="toggleActivate(h)">
+                    <mat-icon>lock</mat-icon> Activer le portail ménage
+                    <mat-icon class="expand-icon">{{ activatingHk === h.id ? 'expand_less' : 'chevron_right' }}</mat-icon>
+                  </div>
+                  @if (activatingHk === h.id) {
+                    <div class="activate-form">
+                      <mat-form-field>
+                        <mat-label>Email de connexion</mat-label>
+                        <input matInput [(ngModel)]="activateEmail" type="email" autocomplete="off">
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Mot de passe temporaire</mat-label>
+                        <input matInput [(ngModel)]="activatePassword" type="password" autocomplete="new-password">
+                      </mat-form-field>
+                      <div class="activate-actions">
+                        <button mat-flat-button color="primary" (click)="activatePortal(h)"
+                                [disabled]="!activateEmail.trim() || !activatePassword.trim()">
+                          Créer le compte
+                        </button>
+                        <button mat-button (click)="activatingHk = null">Annuler</button>
+                      </div>
+                    </div>
+                  }
+                }
               </mat-card>
             }
           </div>
@@ -354,6 +391,16 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .hk-sub { color: #888; font-size: 12px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
+    .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
+    .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
+    .portal-badge.inactive { background: #f3f4f6; color: #555; }
+    .portal-badge mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .expand-icon { margin-left: auto; }
+    .activate-form { padding: 12px 0 4px; display: flex; flex-direction: column; gap: 0; }
+    .activate-form mat-form-field { width: 100%; }
+    .activate-actions { display: flex; gap: 8px; }
   `]
 })
 export class HousekeepingComponent implements OnInit {
@@ -371,7 +418,10 @@ export class HousekeepingComponent implements OnInit {
   filterTo   = localDateStr(new Date(Date.now() + 30 * 86400000));
   filterStatus = '';
 
-  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', assignedTo: '', notes: '' };
+  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '' };
+  activatingHk: number | null = null;
+  activateEmail = '';
+  activatePassword = '';
 
   taskTypes = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
   statuses  = Object.entries(STATUS_LABELS).map(([value, { label }]) => ({ value, label }));
@@ -402,9 +452,16 @@ export class HousekeepingComponent implements OnInit {
   }
 
   createTask(): void {
-    this.http.post<Task>(`${this.base}/admin/housekeeping`, this.newTask).subscribe(() => {
+    const payload: Record<string, unknown> = {
+      beds24PropertyId: String(this.newTask.propertyId ?? ''),
+      type: this.newTask.type,
+      scheduledDate: this.newTask.scheduledDate,
+      notes: this.newTask.notes
+    };
+    if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
+    this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
-      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', assignedTo: '', notes: '' };
+      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '' };
       this.load();
     });
   }
@@ -430,6 +487,32 @@ export class HousekeepingComponent implements OnInit {
 
   housekeeperByName(name: string): HousekeeperProfile | undefined {
     return this.housekeepers().find(h => h.name === name);
+  }
+
+  toggleActivate(h: HousekeeperProfile): void {
+    if (this.activatingHk === h.id) { this.activatingHk = null; return; }
+    this.activatingHk = h.id;
+    this.activateEmail = h.email ?? '';
+    this.activatePassword = '';
+  }
+
+  activatePortal(h: HousekeeperProfile): void {
+    this.housekeeperService.activatePortal(h.id, this.activateEmail.trim(), this.activatePassword).subscribe({
+      next: updated => {
+        this.housekeepers.update(all => all.map(x => x.id === updated.id ? updated : x));
+        this.activatingHk = null;
+        this.snack.open('Compte portail créé — ' + this.activateEmail.trim(), '', { duration: 3000 });
+      },
+      error: (err) => this.snack.open(err.error ?? 'Erreur', '', { duration: 3000 })
+    });
+  }
+
+  deactivatePortal(h: HousekeeperProfile): void {
+    if (!confirm(`Révoquer l'accès portail de "${h.name}" ?`)) return;
+    this.housekeeperService.deactivatePortal(h.id).subscribe(updated => {
+      this.housekeepers.update(all => all.map(x => x.id === updated.id ? updated : x));
+      this.snack.open('Accès portail révoqué', '', { duration: 2500 });
+    });
   }
 
   startNewHousekeeper(): void {

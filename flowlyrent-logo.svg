@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" role="img">
+<title>Logo FlowlyRent</title>
+<desc>Logo FlowlyRent avec maison stylisée bleue et vagues de flux</desc>
+
+<rect width="680" height="420" fill="white"/>
+
+<rect x="240" y="30" width="200" height="200" rx="32" fill="#1B6EF3" opacity="0.07"/>
+
+<g transform="translate(340, 148)">
+  <polygon points="0,-68 -58,-22 58,-22" fill="#1447C0"/>
+  <polygon points="0,-68 -46,-28 46,-28" fill="#1B6EF3"/>
+  <rect x="-42" y="-22" width="84" height="64" rx="6" fill="#1B6EF3"/>
+  <rect x="-14" y="10" width="28" height="32" rx="5" fill="white"/>
+  <rect x="-6" y="18" width="12" height="24" rx="3" fill="#1B6EF3"/>
+  <circle cx="-22" cy="-2" r="6" fill="white" opacity="0.9"/>
+  <circle cx="-22" cy="-2" r="3" fill="#1B6EF3"/>
+  <circle cx="22" cy="-2" r="6" fill="white" opacity="0.9"/>
+  <circle cx="22" cy="-2" r="3" fill="#1B6EF3"/>
+</g>
+
+<path d="M270,210 Q288,196 306,210 Q324,224 342,210 Q360,196 378,210 Q396,224 414,210" fill="none" stroke="#1B6EF3" stroke-width="3" stroke-linecap="round"/>
+<path d="M280,228 Q296,216 312,228 Q328,240 344,228 Q360,216 376,228 Q392,240 408,228" fill="none" stroke="#1B6EF3" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+<path d="M292,244 Q306,234 320,244 Q334,254 348,244 Q362,234 376,244" fill="none" stroke="#1B6EF3" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+
+<text x="340" y="302" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="200" letter-spacing="1" fill="#1B6EF3">Flowly<tspan font-weight="700" fill="#1447C0">Rent</tspan></text>
+
+<line x1="240" y1="318" x2="440" y2="318" stroke="#1B6EF3" stroke-width="0.5" opacity="0.25"/>
+
+<text x="340" y="340" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" letter-spacing="4" fill="#1B6EF3" opacity="0.45">PROPERTY MANAGEMENT</text>
+
+</svg>

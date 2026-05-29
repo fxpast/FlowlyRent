@@ -1,5 +1,7 @@
 package com.flowlyrent.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,6 +18,7 @@ public class HousekeeperProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
@@ -29,6 +32,15 @@ public class HousekeeperProfile {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    // Compte portail (HOUSEKEEPER role) — exposé uniquement id + email
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_user_id")
+    @JsonIgnoreProperties({"password","authorities","accountNonExpired","credentialsNonExpired",
+        "accountNonLocked","enabled","publicSiteSlug","stripeCustomerId","stripeSubscriptionId",
+        "planExpiresAt","active","createdAt","updatedAt","plan","role","firstName","lastName",
+        "username","hibernateLazyInitializer","handler"})
+    private AppUser linkedUser;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

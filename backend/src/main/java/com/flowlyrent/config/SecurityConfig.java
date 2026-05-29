@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/analytics/**").permitAll()
                 .requestMatchers("/superadmin/**").hasRole("ADMIN")
+                .requestMatchers("/housekeeper/**").hasAnyRole("ADMIN", "USER", "HOUSEKEEPER")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

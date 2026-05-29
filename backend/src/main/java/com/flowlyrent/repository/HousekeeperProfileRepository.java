@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface HousekeeperProfileRepository extends JpaRepository<HousekeeperProfile, Long> {
     List<HousekeeperProfile> findByUserIdAndActiveTrueOrderByNameAsc(Long userId);
     Optional<HousekeeperProfile> findByIdAndUserId(Long id, Long userId);
+    Optional<HousekeeperProfile> findByLinkedUserId(Long linkedUserId);
 }

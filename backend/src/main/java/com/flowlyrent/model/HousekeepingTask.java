@@ -2,6 +2,8 @@ package com.flowlyrent.model;
 
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -20,13 +22,20 @@ public class HousekeepingTask {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id")
     private HousekeepingStaff staff;
+
+    @JsonIgnoreProperties({"createdAt","updatedAt","active","linkedUser","user"})
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "housekeeper_id")
+    private HousekeeperProfile housekeeper;
 
     // Références Beds24 (pas de FK locale — architecture pass-through)
     @Column(nullable = false)
@@ -51,6 +60,17 @@ public class HousekeepingTask {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    // Rapport prestataire
+    @Column(columnDefinition = "TEXT")
+    private String reportComment;
+
+    private Boolean hasIncident = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String incidentDescription;
+
+    private LocalDateTime reportedAt;
 
     private LocalDateTime completedAt;
 

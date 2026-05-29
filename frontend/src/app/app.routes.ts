@@ -31,6 +31,10 @@ export const routes: Routes = [
     loadChildren: () => import('./superadmin/superadmin.routes').then(m => m.superadminRoutes)
   },
   {
+    path: 'housekeeper',
+    loadChildren: () => import('./housekeeper/housekeeper.routes').then(m => m.housekeeperRoutes)
+  },
+  {
     path: '**',
     redirectTo: '/public/home'
   }
