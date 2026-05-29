@@ -20,6 +20,8 @@ import { BookingService } from '../../core/services/booking.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
+const TPL_PLACEHOLDER = 'Bonjour {{nom}}, votre check-in est le {{arrivee}}…';
+
 const TYPE_LABELS: Record<string, string> = {
   CHECKIN: 'Check-in',
   CHECKOUT: 'Check-out',
@@ -164,7 +166,7 @@ const TYPE_LABELS: Record<string, string> = {
             <mat-form-field appearance="outline" class="full">
               <mat-label>Contenu du message</mat-label>
               <textarea #contentArea matInput [(ngModel)]="editForm.contentFr"
-                        rows="10" placeholder="Bonjour {{nom}}, votre check-in est le {{arrivee}}…"></textarea>
+                        rows="10" [placeholder]="tplPlaceholder"></textarea>
             </mat-form-field>
 
           </div>
@@ -484,6 +486,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   loadingTemplates = signal(false);
   editingTemplate = signal<Partial<MessageTemplate> | null>(null);
   editForm: Partial<MessageTemplate> = {};
+  readonly tplPlaceholder = TPL_PLACEHOLDER;
 
   private wsSubscription?: Subscription;
 
