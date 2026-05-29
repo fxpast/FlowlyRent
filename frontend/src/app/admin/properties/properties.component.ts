@@ -14,6 +14,16 @@ import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin } from 'rxjs';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { localDateStr } from '../../core/utils/date.utils';
+
+interface OccupancyStatus {
+  type: 'occupied' | 'arriving' | 'free';
+  label: string;
+  sublabel?: string;
+  color: string;
+  bg: string;
+  icon: string;
+}
 
 @Component({
   selector: 'app-properties',
@@ -59,6 +69,14 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
                 }
               </mat-card-subtitle>
             </mat-card-header>
+
+            @if (occupancyMap()[p['id']]; as occ) {
+              <div class="occ-banner" [style.background]="occ.bg" [style.color]="occ.color">
+                <mat-icon class="occ-icon">{{ occ.icon }}</mat-icon>
+                <span class="occ-label">{{ occ.label }}</span>
+                @if (occ.sublabel) { <span class="occ-sub">· {{ occ.sublabel }}</span> }
+              </div>
+            }
 
             <mat-card-content>
               <div class="info-rows">
@@ -185,6 +203,15 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
     }
     .prev-code mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
+    .occ-banner {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      padding: 7px 16px; border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+    .occ-icon { font-size: 15px; width: 15px; height: 15px; }
+    .occ-label { font-weight: 700; }
+    .occ-sub { font-weight: 400; opacity: .85; }
+
     .inactive-banner {
       display: flex; align-items: center; gap: 6px;
       background: #fff3e0; color: #e65100; font-size: 12px;
@@ -204,6 +231,7 @@ export class PropertiesComponent implements OnInit {
   search     = signal('');
 
   searchReady  = false;
+  bookings     = signal<any[]>([]);
   codeEdits:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
@@ -226,12 +254,17 @@ export class PropertiesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loading.set(true);
+    const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     forkJoin([
       this.http.get<any[]>(`${environment.apiUrl}/admin/properties`),
-      this.propConfigService.getAll()
+      this.propConfigService.getAll(),
+      this.http.get<any[]>(`${environment.apiUrl}/admin/bookings`, {
+        params: { arrivalFrom: localDateStr(sixMonthsAgo) }
+      })
     ]).subscribe({
-      next: ([props, cfgs]) => {
+      next: ([props, cfgs, bookings]) => {
         this.properties.set(props ?? []);
+        this.bookings.set(bookings ?? []);
         for (const c of cfgs) {
           this.codeEdits[c.beds24PropertyId]  = c.accessCode         ?? '';
           this.prevCodes[c.beds24PropertyId]  = c.previousAccessCode ?? '';
@@ -241,6 +274,59 @@ export class PropertiesComponent implements OnInit {
       error: () => this.loading.set(false)
     });
   }
+
+  occupancyMap = computed((): Record<string, OccupancyStatus> => {
+    const today  = localDateStr();
+    const todayMs = new Date(today + 'T00:00:00').getTime();
+    const active  = new Set(['new', 'confirmed', 'request', 'inquiry']);
+    const map: Record<string, OccupancyStatus> = {};
+
+    for (const p of this.properties()) {
+      const id = String(p['id']);
+      const relevant = this.bookings().filter(b => {
+        const s = (b['status'] ?? '').toLowerCase();
+        return active.has(s) && String(b['propId'] ?? b['propertyId'] ?? '') === id;
+      });
+
+      const occupied = relevant.find(b => (b['arrival'] ?? '') <= today && (b['departure'] ?? '') > today);
+      if (occupied) {
+        const dep  = new Date(occupied['departure'] + 'T00:00:00');
+        const days = Math.round((dep.getTime() - todayMs) / 86400000);
+        const depFmt = dep.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        map[id] = {
+          type: 'occupied',
+          label: 'Occupé',
+          sublabel: `départ ${days === 1 ? 'demain' : days === 0 ? 'aujourd\'hui' : `dans ${days} j`} · ${depFmt}`,
+          color: '#b71c1c', bg: '#ffebee', icon: 'hotel'
+        };
+        continue;
+      }
+
+      const upcoming = relevant
+        .filter(b => (b['arrival'] ?? '') > today)
+        .sort((a, b) => (a['arrival'] ?? '').localeCompare(b['arrival'] ?? ''))[0];
+
+      if (upcoming) {
+        const arr  = new Date(upcoming['arrival'] + 'T00:00:00');
+        const days = Math.round((arr.getTime() - todayMs) / 86400000);
+        if (days <= 30) {
+          const color = days <= 3 ? '#e65100' : '#f57f17';
+          const bg    = days <= 3 ? '#fff3e0' : '#fffde7';
+          const arrFmt = arr.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+          map[id] = {
+            type: 'arriving',
+            label: days === 1 ? 'Arrivée demain' : `Arrivée dans ${days} j`,
+            sublabel: arrFmt,
+            color, bg, icon: 'login'
+          };
+          continue;
+        }
+      }
+
+      map[id] = { type: 'free', label: 'Libre', color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle' };
+    }
+    return map;
+  });
 
   roomCount(p: any): number {
     if (Array.isArray(p['rooms'])) return p['rooms'].length;
