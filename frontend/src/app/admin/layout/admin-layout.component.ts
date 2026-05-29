@@ -107,6 +107,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'today',             label: "Aujourd'hui",      route: 'today' },
     { icon: 'event_available',  label: 'Arrivées',         route: 'arrivals' },
     { icon: 'flight_takeoff',   label: 'Départs',          route: 'departures' },
+    { icon: 'home_work',         label: 'Logements',        route: 'properties' },
     { icon: 'calendar_month',   label: 'Calendrier',       route: 'calendar' },
     { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
     { icon: 'chat',             label: 'Messages',         route: 'messages' },

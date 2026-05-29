@@ -55,6 +55,10 @@ export const adminRoutes: Routes = [
         data: { title: 'Ménage' }
       },
       {
+        path: 'properties',
+        loadComponent: () => import('./properties/properties.component').then(m => m.PropertiesComponent)
+      },
+      {
         path: 'calendar',
         loadComponent: () => import('./calendar/calendar.component').then(m => m.CalendarComponent)
       },
