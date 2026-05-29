@@ -9,9 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserService, UserProfile, Beds24Status } from '../../core/services/user.service';
+import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { BookingService } from '../../core/services/booking.service';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-settings',
@@ -137,6 +140,43 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-actions>
     </mat-card>
 
+    <!-- Codes d'accès par logement -->
+    @if (beds24Status()?.connected) {
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>vpn_key</mat-icon>
+          <mat-card-title>Codes d'accès par logement</mat-card-title>
+          <mat-card-subtitle>Code enregistré utilisé automatiquement dans les modèles de messages ({{'{{'}}code_acces{{'}}'}})</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (loadingConfigs()) {
+            <mat-spinner diameter="28"></mat-spinner>
+          } @else if (propRows().length === 0) {
+            <p class="empty-configs">Aucune propriété synchronisée depuis Beds24.</p>
+          } @else {
+            @for (row of propRows(); track row.propId) {
+              <div class="code-row">
+                <span class="code-prop-name">{{ row.name }}</span>
+                <mat-form-field appearance="outline" class="code-input">
+                  <mat-label>Code d'accès</mat-label>
+                  <input matInput [(ngModel)]="row.code" maxlength="20" placeholder="ex. 1234">
+                  <mat-hint>Laissez vide pour générer aléatoirement à chaque envoi</mat-hint>
+                </mat-form-field>
+                <div class="code-actions">
+                  <button mat-icon-button color="primary" (click)="saveCode(row)" matTooltip="Enregistrer">
+                    <mat-icon>save</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="regenerateCode(row)" matTooltip="Générer un nouveau code aléatoire (4 chiffres)">
+                    <mat-icon>casino</mat-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
     <!-- Changer le mot de passe -->
     <mat-card class="section-card">
       <mat-card-header>
@@ -257,6 +297,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .beds24-banner-text span { font-size: 13px; color: #1565c0; }
     .beds24-banner-arrow { color: #1976d2; font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
     .beds24-highlight { border: 2px solid #1976d2 !important; box-shadow: 0 0 0 4px rgba(25,118,210,0.1); }
+    .code-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .code-prop-name { min-width: 160px; font-weight: 500; font-size: 14px; flex-shrink: 0; }
+    .code-input { flex: 1; min-width: 160px; max-width: 240px; }
+    .code-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .empty-configs { color: #aaa; font-style: italic; padding: 8px 0; }
   `]
 })
 export class SettingsComponent implements OnInit {
@@ -281,7 +326,16 @@ export class SettingsComponent implements OnInit {
   pwdError = signal(false);
   showPwd = signal(false);
 
-  constructor(private userService: UserService, private route: ActivatedRoute, private snackBar: MatSnackBar) {}
+  loadingConfigs = signal(false);
+  propRows = signal<{ propId: string; name: string; code: string }[]>([]);
+
+  constructor(
+    private userService: UserService,
+    private propConfigService: PropertyConfigService,
+    private bookingService: BookingService,
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
+  ) {}
 
   copyWebhookUrl(): void {
     navigator.clipboard.writeText(this.webhookUrl()).then(() =>
@@ -296,6 +350,40 @@ export class SettingsComponent implements OnInit {
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
     this.loadBeds24Status();
+    this.loadPropertyConfigs();
+  }
+
+  loadPropertyConfigs(): void {
+    this.loadingConfigs.set(true);
+    forkJoin([
+      this.bookingService.getPropertyNames(),
+      this.propConfigService.getAll()
+    ]).subscribe({
+      next: ([names, configs]) => {
+        const cfgMap: Record<string, string> = {};
+        for (const c of configs) cfgMap[c.beds24PropertyId] = c.accessCode ?? '';
+        this.propRows.set(
+          Object.entries(names).map(([id, name]) => ({ propId: id, name, code: cfgMap[id] ?? '' }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+        this.loadingConfigs.set(false);
+      },
+      error: () => this.loadingConfigs.set(false)
+    });
+  }
+
+  saveCode(row: { propId: string; name: string; code: string }): void {
+    this.propConfigService.updateAccessCode(row.propId, row.code).subscribe({
+      next: cfg => { row.code = cfg.accessCode ?? ''; this.snackBar.open('Code enregistré', 'OK', { duration: 2000 }); },
+      error: () => this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 })
+    });
+  }
+
+  regenerateCode(row: { propId: string; name: string; code: string }): void {
+    this.propConfigService.regenerate(row.propId).subscribe({
+      next: cfg => { row.code = cfg.accessCode ?? ''; this.snackBar.open(`Nouveau code : ${row.code}`, 'OK', { duration: 3000 }); },
+      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+    });
   }
 
   saveProfile(): void {

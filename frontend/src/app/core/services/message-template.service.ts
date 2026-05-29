@@ -34,20 +34,24 @@ export class MessageTemplateService {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
 
-  /** Substitue les variables du template avec les données de la réservation. */
-  apply(content: string, booking: any): string {
+  /**
+   * Substitue les variables du template avec les données de la réservation.
+   * Si accessCode est fourni (code stocké sur la propriété), il est utilisé pour {{code_acces}}.
+   * Sinon un code aléatoire est généré à la volée.
+   */
+  apply(content: string, booking: any, accessCode?: string): string {
     const first = booking['guestFirstName'] || booking['firstName'] || '';
     const last  = booking['guestLastName']  || booking['lastName']  || '';
     const nom   = (first + ' ' + last).trim() || '—';
     const prop  = booking['propName'] || booking['propertyName'] || '';
     const arr   = this.fmtDate(booking['arrival']);
     const dep   = this.fmtDate(booking['departure']);
-    const code  = this.genCode();
+    const code  = accessCode || this.genCode();
     return content
-      .replace(/\{\{nom\}\}/g,      nom)
-      .replace(/\{\{arrivee\}\}/g,  arr)
-      .replace(/\{\{depart\}\}/g,   dep)
-      .replace(/\{\{logement\}\}/g, prop)
+      .replace(/\{\{nom\}\}/g,        nom)
+      .replace(/\{\{arrivee\}\}/g,    arr)
+      .replace(/\{\{depart\}\}/g,     dep)
+      .replace(/\{\{logement\}\}/g,   prop)
       .replace(/\{\{code_acces\}\}/g, code);
   }
 

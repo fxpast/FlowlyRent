@@ -1,0 +1,30 @@
+package com.flowlyrent.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "property_configs",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "beds24_property_id"}))
+@Data
+public class PropertyConfig {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
+
+    @Column(name = "beds24_property_id", nullable = false)
+    private String beds24PropertyId;
+
+    private String accessCode;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+}

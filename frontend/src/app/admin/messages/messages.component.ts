@@ -18,6 +18,7 @@ import { Subscription, forkJoin } from 'rxjs';
 import { MessageService } from '../../core/services/message.service';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
+import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 const TPL_PLACEHOLDER = 'Bonjour {{nom}}, votre check-in est le {{arrivee}}…';
@@ -482,10 +483,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
   loadingBookings = signal(false);
   loadingMessages = signal(false);
 
-  templates       = signal<MessageTemplate[]>([]);
+  templates        = signal<MessageTemplate[]>([]);
   loadingTemplates = signal(false);
-  editingTemplate = signal<Partial<MessageTemplate> | null>(null);
+  editingTemplate  = signal<Partial<MessageTemplate> | null>(null);
   editForm: Partial<MessageTemplate> = {};
+
+  private propConfigs = signal<PropertyConfig[]>([]);
   readonly tplPlaceholder = TPL_PLACEHOLDER;
 
   private wsSubscription?: Subscription;
@@ -538,12 +541,14 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private messageService: MessageService,
     private bookingService: BookingService,
     private templateService: MessageTemplateService,
+    private propConfigService: PropertyConfigService,
     private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     this.loadBookings();
     this.loadTemplates();
+    this.propConfigService.getAll().subscribe(cfgs => this.propConfigs.set(cfgs));
   }
 
   private loadBookings(): void {
@@ -642,7 +647,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
   applyTemplate(t: MessageTemplate): void {
     const b = this.selectedBooking();
     if (!b || !t.contentFr) return;
-    this.newMessage = this.templateService.apply(t.contentFr, b);
+    const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+    const cfg = this.propConfigs().find(c => c.beds24PropertyId === pid);
+    this.newMessage = this.templateService.apply(t.contentFr, b, cfg?.accessCode);
   }
 
   insertVar(v: string): void {
