@@ -29,7 +29,7 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
       <h1>Logements</h1>
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Rechercher</mat-label>
-        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom, ville…">
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom, ville…" autocomplete="off">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
     </div>
