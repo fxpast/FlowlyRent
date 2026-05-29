@@ -224,7 +224,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
   loadingMessages = signal(false);
   unreadCount = signal(0);
   newMessage = '';
-  sendingMsg = false;
+  sendingMsg = signal(false);
   private shouldScrollToBottom = false;
   private wsSub?: Subscription;
 
@@ -299,17 +299,17 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
 
   sendMessage(): void {
     const content = this.newMessage.trim();
-    if (!content || this.sendingMsg) return;
+    if (!content || this.sendingMsg()) return;
     const bookingId = Number(this.data['id']);
-    this.sendingMsg = true;
+    this.sendingMsg.set(true);
     this.messageService.sendMessage(bookingId, content).subscribe({
       next: msg => {
         this.messages.update(list => [...list, msg]);
         this.newMessage = '';
-        this.sendingMsg = false;
+        this.sendingMsg.set(false);
         this.shouldScrollToBottom = true;
       },
-      error: () => { this.sendingMsg = false; }
+      error: () => { this.sendingMsg.set(false); }
     });
   }
 
