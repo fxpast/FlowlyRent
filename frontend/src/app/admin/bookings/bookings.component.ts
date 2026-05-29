@@ -204,7 +204,10 @@ export class BookingsComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   load(): void {
-    forkJoin([this.bookingService.getAll(), this.bookingService.getPropertyNames()]).subscribe({
+    const from = new Date();
+    from.setFullYear(from.getFullYear() - 1);
+    const arrivalFrom = from.toISOString().split('T')[0];
+    forkJoin([this.bookingService.getAll({ arrivalFrom }), this.bookingService.getPropertyNames()]).subscribe({
       next: ([data, names]) => {
         this.bookings.set((data ?? []).map(b => {
           if (!b['propName'] && !b['propertyName']) {
