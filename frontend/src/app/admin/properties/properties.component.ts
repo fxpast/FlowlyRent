@@ -133,24 +133,31 @@ interface OccupancyStatus {
                 <div class="code-label">
                   <mat-icon>vpn_key</mat-icon>
                   <strong>Code d'accès boîte à clé</strong>
+                  @if (isDirty(p['id'])) {
+                    <span class="unsaved-dot" matTooltip="Modifications non enregistrées"></span>
+                  }
                 </div>
                 <div class="code-row">
                   <mat-form-field appearance="outline" class="code-input">
                     <input matInput
-                           [type]="codeVisible[p['id']] ? 'text' : 'password'"
-                           [(ngModel)]="codeEdits[p['id']]"
+                           type="text"
+                           [class.code-masked]="!codeVisible[p['id']]"
+                           [(ngModel)]="codeDraft[p['id']]"
+                           autocomplete="off"
                            placeholder="Non configuré"
-                           maxlength="20">
-                    <button mat-icon-button matSuffix (click)="toggleVisible(p['id'])"
+                           maxlength="20"
+                           (keydown.enter)="$event.preventDefault()">
+                    <button type="button" mat-icon-button matSuffix (click)="toggleVisible(p['id'])"
                             [matTooltip]="codeVisible[p['id']] ? 'Masquer' : 'Afficher'">
                       <mat-icon>{{ codeVisible[p['id']] ? 'visibility_off' : 'visibility' }}</mat-icon>
                     </button>
                   </mat-form-field>
-                  <button mat-icon-button color="primary" (click)="saveCode(p['id'])"
-                          matTooltip="Enregistrer le code">
+                  <button type="button" mat-icon-button color="primary" (click)="saveCode(p['id'])"
+                          matTooltip="Enregistrer le code"
+                          [disabled]="!isDirty(p['id'])">
                     <mat-icon>save</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="regenerateCode(p['id'])"
+                  <button type="button" mat-icon-button (click)="regenerateCode(p['id'])"
                           matTooltip="Générer un nouveau code 4 chiffres">
                     <mat-icon>casino</mat-icon>
                   </button>
@@ -219,6 +226,13 @@ interface OccupancyStatus {
     .code-row { display: flex; align-items: center; gap: 6px; }
     .code-input { flex: 1; }
 
+    input.code-masked { -webkit-text-security: disc; letter-spacing: 2px; }
+
+    .unsaved-dot {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: #f57c00; margin-left: 6px; vertical-align: middle;
+    }
+
     .prev-code {
       display: flex; align-items: center; gap: 4px;
       font-size: 12px; color: #aaa; margin-top: 2px;
@@ -269,7 +283,8 @@ export class PropertiesComponent implements OnInit {
   searchDraft = '';
   tipsOpen:   Record<string, boolean> = {};
   bookings    = signal<any[]>([]);
-  codeEdits:   Record<string, string>  = {};
+  codeSaved:   Record<string, string>  = {};
+  codeDraft:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
 
@@ -317,8 +332,9 @@ export class PropertiesComponent implements OnInit {
         this.properties.set(props ?? []);
         this.bookings.set(bookings ?? []);
         for (const c of cfgs) {
-          this.codeEdits[c.beds24PropertyId]  = c.accessCode         ?? '';
-          this.prevCodes[c.beds24PropertyId]  = c.previousAccessCode ?? '';
+          this.codeSaved[c.beds24PropertyId] = c.accessCode         ?? '';
+          this.codeDraft[c.beds24PropertyId] = c.accessCode         ?? '';
+          this.prevCodes[c.beds24PropertyId] = c.previousAccessCode ?? '';
         }
         this.loading.set(false);
       },
@@ -430,10 +446,15 @@ export class PropertiesComponent implements OnInit {
     this.codeVisible[id] = !this.codeVisible[id];
   }
 
+  isDirty(propId: string): boolean {
+    return (this.codeDraft[propId] ?? '') !== (this.codeSaved[propId] ?? '');
+  }
+
   saveCode(propId: string): void {
-    this.propConfigService.updateAccessCode(String(propId), this.codeEdits[propId] ?? '').subscribe({
+    this.propConfigService.updateAccessCode(String(propId), this.codeDraft[propId] ?? '').subscribe({
       next: cfg => {
-        this.codeEdits[propId] = cfg.accessCode         ?? '';
+        this.codeSaved[propId] = cfg.accessCode         ?? '';
+        this.codeDraft[propId] = cfg.accessCode         ?? '';
         this.prevCodes[propId] = cfg.previousAccessCode ?? '';
         this.snackBar.open('Code enregistré', 'OK', { duration: 2000 });
       },
@@ -444,8 +465,9 @@ export class PropertiesComponent implements OnInit {
   regenerateCode(propId: string): void {
     this.propConfigService.regenerate(String(propId)).subscribe({
       next: cfg => {
+        this.codeSaved[propId] = cfg.accessCode         ?? '';
+        this.codeDraft[propId] = cfg.accessCode         ?? '';
         this.prevCodes[propId] = cfg.previousAccessCode ?? '';
-        this.codeEdits[propId] = cfg.accessCode         ?? '';
         this.snackBar.open(`Nouveau code : ${cfg.accessCode}`, 'OK', { duration: 3000 });
       },
       error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
