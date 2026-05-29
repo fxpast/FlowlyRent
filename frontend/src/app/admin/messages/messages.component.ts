@@ -282,9 +282,13 @@ const TYPE_LABELS: Record<string, string> = {
         </mat-form-field>
         <mat-form-field appearance="outline" class="search-filter">
           <mat-label>Rechercher</mat-label>
-          <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom du voyageur…"
-                   autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
-          <mat-icon matSuffix>search</mat-icon>
+          <input matInput [(ngModel)]="searchDraft" placeholder="Nom du voyageur…"
+                 autocomplete="off" (keydown.enter)="applySearch()">
+          @if (searchText()) {
+            <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer"><mat-icon>close</mat-icon></button>
+          } @else {
+            <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher"><mat-icon>search</mat-icon></button>
+          }
         </mat-form-field>
       </div>
     </ng-template>
@@ -474,7 +478,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea')   chatArea?:   ElementRef<HTMLDivElement>;
   @ViewChild('contentArea') contentArea?: ElementRef<HTMLTextAreaElement>;
 
-  searchReady     = false;
+  searchDraft     = '';
   allBookings     = signal<any[]>([]);
   messages        = signal<any[]>([]);
   selectedBooking = signal<any | null>(null);
@@ -581,6 +585,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
       error: () => this.loadingTemplates.set(false)
     });
   }
+
+  applySearch(): void { this.searchText.set(this.searchDraft.trim()); }
+  clearSearch(): void  { this.searchDraft = ''; this.searchText.set(''); }
 
   onTabChange(_i: number): void {
     this.wsSubscription?.unsubscribe();

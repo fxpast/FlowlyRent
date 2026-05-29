@@ -40,9 +40,17 @@ interface OccupancyStatus {
       <h1>Logements</h1>
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Rechercher</mat-label>
-        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom, ville…"
-               autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
-        <mat-icon matSuffix>search</mat-icon>
+        <input matInput [(ngModel)]="searchDraft" placeholder="Nom, ville…"
+               autocomplete="off" (keydown.enter)="applySearch()">
+        @if (search()) {
+          <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer">
+            <mat-icon>close</mat-icon>
+          </button>
+        } @else {
+          <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher">
+            <mat-icon>search</mat-icon>
+          </button>
+        }
       </mat-form-field>
     </div>
 
@@ -231,7 +239,7 @@ export class PropertiesComponent implements OnInit {
   loading    = signal(false);
   search     = signal('');
 
-  searchReady  = false;
+  searchDraft  = '';
   bookings     = signal<any[]>([]);
   codeEdits:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
@@ -358,6 +366,9 @@ export class PropertiesComponent implements OnInit {
     }
     return map;
   });
+
+  applySearch(): void { this.search.set(this.searchDraft.trim()); }
+  clearSearch(): void  { this.searchDraft = ''; this.search.set(''); }
 
   roomCount(p: any): number {
     if (Array.isArray(p['rooms'])) return p['rooms'].length;

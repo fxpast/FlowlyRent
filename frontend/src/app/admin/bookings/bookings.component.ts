@@ -42,8 +42,13 @@ import { localDateStr } from '../../core/utils/date.utils';
         <div class="filters">
           <mat-form-field appearance="outline">
             <mat-label>Rechercher</mat-label>
-            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…"
-                   autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
+            <input matInput [(ngModel)]="searchDraft" placeholder="Nom, prénom, id…"
+                   autocomplete="off" (keydown.enter)="applySearch()">
+            @if (searchText()) {
+              <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer"><mat-icon>close</mat-icon></button>
+            } @else {
+              <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher"><mat-icon>search</mat-icon></button>
+            }
             <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
@@ -224,7 +229,7 @@ import { localDateStr } from '../../core/utils/date.utils';
   `]
 })
 export class BookingsComponent implements OnInit {
-  searchReady = false;
+  searchDraft = '';
   bookings = signal<any[]>([]);
   searchText = signal('');
   filterStatus = signal('');
@@ -267,6 +272,9 @@ export class BookingsComponent implements OnInit {
       error: err => this.snackBar.open(err.error?.error ?? 'Erreur chargement', 'Fermer', { duration: 4000 })
     });
   }
+
+  applySearch(): void { this.searchText.set(this.searchDraft.trim()); this.pageIndex.set(0); }
+  clearSearch(): void  { this.searchDraft = ''; this.searchText.set(''); this.pageIndex.set(0); }
 
   onSearch(value: string): void {
     this.searchText.set(value);
