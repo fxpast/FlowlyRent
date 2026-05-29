@@ -1,5 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
-import { Subject, switchMap, debounceTime, of, catchError, takeUntil } from 'rxjs';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -161,8 +160,13 @@ import { environment } from '../../../environments/environment';
               </button>
             }
             <button mat-raised-button color="primary" type="submit"
-                    [disabled]="form.invalid || saving() || !!overlapError()">
-              {{ isEdit() ? 'Enregistrer' : 'Créer la réservation' }}
+                    [disabled]="form.invalid || saving() || checkingOverlap() || !!overlapError()">
+              @if (checkingOverlap()) {
+                <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+                Vérification…
+              } @else {
+                {{ isEdit() ? 'Enregistrer' : 'Créer la réservation' }}
+              }
             </button>
           </div>
         </form>
@@ -202,9 +206,7 @@ import { environment } from '../../../environments/environment';
     }
   `]
 })
-export class BookingFormComponent implements OnInit, OnDestroy {
-  private readonly destroy$ = new Subject<void>();
-  private readonly overlapTrigger$ = new Subject<{ propId: string; arrival: string; departure: string } | null>();
+export class BookingFormComponent implements OnInit {
   form: FormGroup;
   isEdit = signal(false);
   saving = signal(false);
@@ -257,29 +259,7 @@ export class BookingFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
   ngOnInit(): void {
-    this.overlapTrigger$.pipe(
-      debounceTime(400),
-      switchMap(params => {
-        if (!params) { this.checkingOverlap.set(false); return of([]); }
-        this.checkingOverlap.set(true);
-        const httpParams: any = { propId: params.propId, arrival: params.arrival, departure: params.departure };
-        if (this.bookingId) httpParams['excludeId'] = this.bookingId;
-        return this.http.get<any[]>(`${environment.apiUrl}/admin/bookings/overlap`, { params: httpParams }).pipe(
-          catchError(() => of([]))
-        );
-      }),
-      takeUntil(this.destroy$)
-    ).subscribe(conflicts => {
-      this.overlapError.set(conflicts.length > 0 ? 'Période non disponible.' : null);
-      this.checkingOverlap.set(false);
-    });
-
     this.bookingService.getPropertyNames().subscribe({
       next: names => {
         this.properties.set(
@@ -291,16 +271,15 @@ export class BookingFormComponent implements OnInit, OnDestroy {
       error: () => this.loadingProps.set(false)
     });
 
-    // Overlap check on property or date change
-    this.form.get('propId')!.valueChanges.subscribe(() => this.checkOverlap());
+    // Efface le message d'erreur dès que l'utilisateur modifie les dates
+    this.form.get('propId')!.valueChanges.subscribe(() => this.overlapError.set(null));
     this.form.get('arrival')!.valueChanges.subscribe(() => {
-      // Clear departure if it's before or equal to the new arrival
       const arr = this.form.get('arrival')!.value;
       const dep = this.form.get('departure')!.value;
       if (arr && dep && dep <= arr) this.form.get('departure')!.setValue(null);
-      this.checkOverlap();
+      this.overlapError.set(null);
     });
-    this.form.get('departure')!.valueChanges.subscribe(() => this.checkOverlap());
+    this.form.get('departure')!.valueChanges.subscribe(() => this.overlapError.set(null));
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -335,23 +314,6 @@ export class BookingFormComponent implements OnInit, OnDestroy {
     if (!d) return '';
     if (typeof d === 'string') return d.substring(0, 10);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  private checkOverlap(): void {
-    const v = this.form.value;
-    const arrival   = this.toDateStr(v.arrival);
-    const departure = this.toDateStr(v.departure);
-    if (!v.propId || !arrival || !departure || arrival >= departure) {
-      this.overlapError.set(null);
-      this.overlapTrigger$.next(null);
-      return;
-    }
-    if (!this.isEdit() && arrival < this.toDateStr(this.today)) {
-      this.overlapError.set('La date d\'arrivée ne peut pas être dans le passé.');
-      this.overlapTrigger$.next(null);
-      return;
-    }
-    this.overlapTrigger$.next({ propId: String(v.propId), arrival, departure });
   }
 
   calculateEstimate(): void {
@@ -398,14 +360,39 @@ export class BookingFormComponent implements OnInit, OnDestroy {
 
   onSubmit(): void {
     if (this.form.invalid) return;
-    this.saving.set(true);
+    const v    = this.form.value;
+    const arrival   = this.toDateStr(v.arrival);
+    const departure = this.toDateStr(v.departure);
 
-    const v = this.form.value;
-    const payload: any = {
-      ...v,
-      arrival:   this.toDateStr(v.arrival),
-      departure: this.toDateStr(v.departure)
-    };
+    if (!this.isEdit() && arrival < this.toDateStr(this.today)) {
+      this.overlapError.set('La date d\'arrivée ne peut pas être dans le passé.');
+      return;
+    }
+
+    this.checkingOverlap.set(true);
+    this.overlapError.set(null);
+    const params: any = { propId: String(v.propId), arrival, departure };
+    if (this.bookingId) params['excludeId'] = this.bookingId;
+
+    this.http.get<any[]>(`${environment.apiUrl}/admin/bookings/overlap`, { params }).subscribe({
+      next: conflicts => {
+        this.checkingOverlap.set(false);
+        if (conflicts.length > 0) {
+          this.overlapError.set('Période non disponible.');
+          return;
+        }
+        this.doSave(v, arrival, departure);
+      },
+      error: () => {
+        this.checkingOverlap.set(false);
+        this.doSave(v, arrival, departure);
+      }
+    });
+  }
+
+  private doSave(v: any, arrival: string, departure: string): void {
+    this.saving.set(true);
+    const payload: any = { ...v, arrival, departure };
     if (this.bookingId) payload['id'] = this.bookingId;
 
     this.bookingService.save([payload]).subscribe({
