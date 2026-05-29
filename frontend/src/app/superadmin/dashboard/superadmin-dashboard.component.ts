@@ -88,7 +88,7 @@ interface Stats {
           <div class="kpi-body">
             <div class="kpi-value">{{ topPageName() }}</div>
             <div class="kpi-label">Page la plus consultée</div>
-            <div class="kpi-sub">{{ stats()!.topPages[0]?.count || 0 }} vues</div>
+            <div class="kpi-sub">{{ stats()!.topPages[0].count || 0 }} vues</div>
           </div>
         </mat-card>
       </div>

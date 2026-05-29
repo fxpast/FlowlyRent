@@ -147,7 +147,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
             </div>
             <div class="task-type">{{ typeLabel(task.type) }}</div>
             <div class="task-property">
-              <mat-icon>home</mat-icon> {{ task.property?.name }}
+              <mat-icon>home</mat-icon> {{ task.property.name }}
             </div>
             @if (task.booking) {
               <div class="task-guest">
