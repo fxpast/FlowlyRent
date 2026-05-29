@@ -161,7 +161,7 @@ import { forkJoin } from 'rxjs';
 })
 export class ArrivalsComponent implements OnInit {
   arrivals = signal<any[]>([]);
-  weekStart = signal(this.getMonday(new Date()));
+  weekStart = signal(new Date(new Date().toDateString()));
   columns = ['date', 'guest', 'property', 'checkout', 'nights', 'guests', 'channel', 'status', 'actions'];
 
   constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router) {}
@@ -208,7 +208,7 @@ export class ArrivalsComponent implements OnInit {
     const d = new Date(this.weekStart()); d.setDate(d.getDate() + 7);
     this.weekStart.set(d); this.load();
   }
-  goToCurrentWeek(): void { this.weekStart.set(this.getMonday(new Date())); this.load(); }
+  goToCurrentWeek(): void { this.weekStart.set(new Date(new Date().toDateString())); this.load(); }
 
   weekLabel(): string {
     const start = this.weekStart();
