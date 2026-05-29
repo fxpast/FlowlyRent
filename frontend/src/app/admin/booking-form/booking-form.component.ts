@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,12 @@ import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { HttpClient } from '@angular/common/http';
 import { BookingService } from '../../core/services/booking.service';
 import { environment } from '../../../environments/environment';
+
+function requireContact(group: AbstractControl): ValidationErrors | null {
+  const email = (group.get('guestEmail')?.value ?? '').trim();
+  const phone = (group.get('guestPhone')?.value ?? '').trim();
+  return email || phone ? null : { requireContact: true };
+}
 
 @Component({
   selector: 'app-booking-form',
@@ -42,26 +48,38 @@ import { environment } from '../../../environments/environment';
           <h3>Voyageur</h3>
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Prénom</mat-label>
-              <input matInput formControlName="guestFirstName" required>
+              <mat-label>Prénom *</mat-label>
+              <input matInput formControlName="guestFirstName">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Nom</mat-label>
               <input matInput formControlName="guestLastName">
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="guestEmail" type="email">
+            <mat-form-field appearance="outline"
+              [class.contact-required]="submitted && form.hasError('requireContact')">
+              <mat-label>Email <span class="contact-or">*</span></mat-label>
+              <input matInput formControlName="guestEmail" type="email" autocomplete="off">
+              @if (form.get('guestEmail')?.hasError('email') && form.get('guestEmail')?.touched) {
+                <mat-error>Format d'email invalide</mat-error>
+              }
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Téléphone</mat-label>
-              <input matInput formControlName="guestPhone">
+            <mat-form-field appearance="outline"
+              [class.contact-required]="submitted && form.hasError('requireContact')">
+              <mat-label>Téléphone <span class="contact-or">*</span></mat-label>
+              <input matInput formControlName="guestPhone" autocomplete="off">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Pays</mat-label>
               <input matInput formControlName="guestCountry">
             </mat-form-field>
           </div>
+
+          @if (submitted && form.hasError('requireContact')) {
+            <div class="contact-error">
+              <mat-icon>error_outline</mat-icon>
+              Email ou téléphone obligatoire — veuillez renseigner au moins un moyen de contact.
+            </div>
+          }
 
           <h3>Réservation</h3>
           <div class="form-row">
@@ -184,6 +202,20 @@ import { environment } from '../../../environments/environment';
     .actions { display: flex; gap: 16px; justify-content: flex-end; margin-top: 16px; }
     h3 { color: #0288d1; margin: 16px 0 8px; }
 
+    .contact-or { color: #e65100; font-weight: 700; }
+    ::ng-deep .contact-required .mdc-notched-outline__leading,
+    ::ng-deep .contact-required .mdc-notched-outline__notch,
+    ::ng-deep .contact-required .mdc-notched-outline__trailing {
+      border-color: #e65100 !important;
+    }
+    .contact-error {
+      display: flex; align-items: center; gap: 8px;
+      background: #fff3e0; border: 1px solid #f57c00;
+      border-radius: 6px; padding: 10px 14px;
+      margin-bottom: 16px; color: #e65100; font-size: 13px;
+    }
+    .contact-error mat-icon { color: #f57c00; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+
     .overlap-warning {
       display: flex; align-items: flex-start; gap: 10px;
       background: #fff3e0; border: 1px solid #f57c00;
@@ -218,6 +250,7 @@ export class BookingFormComponent implements OnInit {
   properties = signal<{ id: string; name: string }[]>([]);
   estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number } | null>(null);
   bookingId: string | null = null;
+  submitted = false;
 
   get canEstimate(): boolean {
     const arr = this.toDateStr(this.form?.value?.arrival);
@@ -244,7 +277,7 @@ export class BookingFormComponent implements OnInit {
     this.form = this.fb.group({
       guestFirstName: ['', Validators.required],
       guestLastName:  [''],
-      guestEmail:     [''],
+      guestEmail:     ['', Validators.email],
       guestPhone:     [''],
       guestCountry:   [''],
       propId:         ['', Validators.required],
@@ -256,7 +289,7 @@ export class BookingFormComponent implements OnInit {
       taxeSejour:     [0],
       totalPrice:     [null, Validators.required],
       notes:          ['']
-    });
+    }, { validators: requireContact });
   }
 
   ngOnInit(): void {
@@ -359,6 +392,7 @@ export class BookingFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.submitted = true;
     if (this.form.invalid) return;
     const v    = this.form.value;
     const arrival   = this.toDateStr(v.arrival);
