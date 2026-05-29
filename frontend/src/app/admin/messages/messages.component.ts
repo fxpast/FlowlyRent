@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription, forkJoin } from 'rxjs';
@@ -22,19 +23,19 @@ import { localDateStr } from '../../core/utils/date.utils';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    MatCardModule, MatListModule, MatInputModule, MatButtonModule,
+    MatCardModule, MatTabsModule, MatListModule, MatInputModule, MatButtonModule,
     MatIconModule, MatDividerModule, MatSelectModule, MatFormFieldModule,
-    MatChipsModule, MatProgressSpinnerModule, MatTooltipModule
+    MatBadgeModule, MatProgressSpinnerModule, MatTooltipModule
   ],
   template: `
     <h1>Messages</h1>
 
     <div class="messages-layout">
 
-      <!-- Panneau gauche : liste des conversations -->
+      <!-- Panneau gauche -->
       <mat-card class="conversations-panel">
 
-        <!-- Filtre propriété -->
+        <!-- Filtres communs aux deux onglets -->
         <div class="panel-filters">
           <mat-form-field appearance="outline" class="prop-filter">
             <mat-label>Logement</mat-label>
@@ -53,43 +54,95 @@ import { localDateStr } from '../../core/utils/date.utils';
           </mat-form-field>
         </div>
 
-        <mat-divider></mat-divider>
+        <!-- Onglets -->
+        <mat-tab-group animationDuration="150ms" (selectedIndexChange)="onTabChange($event)" class="conv-tabs">
 
-        @if (loadingBookings()) {
-          <div class="center"><mat-spinner diameter="32"></mat-spinner></div>
-        } @else if (filteredBookings().length === 0) {
-          <p class="empty-list">Aucune réservation</p>
-        } @else {
-          <div class="conv-list">
-            @for (b of filteredBookings(); track b['id']) {
-              <div class="conv-item" [class.selected]="selectedBooking()?.['id'] === b['id']"
-                   (click)="selectBooking(b)">
-                <div class="conv-avatar">
-                  <mat-icon>person</mat-icon>
-                </div>
-                <div class="conv-info">
-                  <div class="conv-name">{{ guestName(b) }}</div>
-                  <div class="conv-sub">
-                    <span class="conv-prop">{{ propLabel(b) }}</span>
-                    <span class="conv-dates">{{ b['arrival'] | date:'dd/MM' }} → {{ b['departure'] | date:'dd/MM' }}</span>
+          <!-- Onglet 1 : Plateformes -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">public</mat-icon>
+              Plateformes
+              @if (platformBookings().length) {
+                <span class="tab-count">{{ platformBookings().length }}</span>
+              }
+            </ng-template>
+
+            @if (loadingBookings()) {
+              <div class="center"><mat-spinner diameter="32"></mat-spinner></div>
+            } @else if (platformBookings().length === 0) {
+              <p class="empty-list">Aucune réservation plateforme</p>
+            } @else {
+              <div class="conv-list">
+                @for (b of platformBookings(); track b['id']) {
+                  <div class="conv-item" [class.selected]="selectedBooking()?.['id'] === b['id']"
+                       (click)="selectBooking(b)">
+                    <div class="conv-avatar platform">
+                      <mat-icon>public</mat-icon>
+                    </div>
+                    <div class="conv-info">
+                      <div class="conv-name">{{ guestName(b) }}</div>
+                      <div class="conv-sub">
+                        <span class="conv-prop">{{ propLabel(b) }}</span>
+                        <span class="conv-dates">{{ b['arrival'] | date:'dd/MM' }} → {{ b['departure'] | date:'dd/MM' }}</span>
+                      </div>
+                      <div class="conv-status">
+                        <span class="status-badge status-{{ b['status'] }}">{{ b['status'] }}</span>
+                        <span class="conv-channel">{{ b['channel'] }}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="conv-status">
-                    <span class="status-badge status-{{ b['status'] }}">{{ b['status'] }}</span>
-                    <span class="conv-channel">{{ b['channel'] || 'Direct' }}</span>
-                  </div>
-                </div>
+                }
               </div>
             }
-          </div>
-        }
+            <div class="conv-count">{{ platformBookings().length }} conversation{{ platformBookings().length !== 1 ? 's' : '' }}</div>
+          </mat-tab>
 
-        <div class="conv-count">{{ filteredBookings().length }} conversation{{ filteredBookings().length !== 1 ? 's' : '' }}</div>
+          <!-- Onglet 2 : Réservations directes -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">edit_note</mat-icon>
+              Direct
+              @if (directBookings().length) {
+                <span class="tab-count">{{ directBookings().length }}</span>
+              }
+            </ng-template>
+
+            @if (loadingBookings()) {
+              <div class="center"><mat-spinner diameter="32"></mat-spinner></div>
+            } @else if (directBookings().length === 0) {
+              <p class="empty-list">Aucune réservation directe</p>
+            } @else {
+              <div class="conv-list">
+                @for (b of directBookings(); track b['id']) {
+                  <div class="conv-item" [class.selected]="selectedBooking()?.['id'] === b['id']"
+                       (click)="selectBooking(b)">
+                    <div class="conv-avatar direct">
+                      <mat-icon>person</mat-icon>
+                    </div>
+                    <div class="conv-info">
+                      <div class="conv-name">{{ guestName(b) }}</div>
+                      <div class="conv-sub">
+                        <span class="conv-prop">{{ propLabel(b) }}</span>
+                        <span class="conv-dates">{{ b['arrival'] | date:'dd/MM' }} → {{ b['departure'] | date:'dd/MM' }}</span>
+                      </div>
+                      <div class="conv-status">
+                        <span class="status-badge status-{{ b['status'] }}">{{ b['status'] }}</span>
+                        <span class="conv-channel">Direct</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            <div class="conv-count">{{ directBookings().length }} conversation{{ directBookings().length !== 1 ? 's' : '' }}</div>
+          </mat-tab>
+
+        </mat-tab-group>
       </mat-card>
 
       <!-- Panneau droit : chat -->
       @if (selectedBooking()) {
         <mat-card class="chat-panel">
-
           <div class="chat-header">
             <div class="chat-header-info">
               <div class="chat-guest-name">{{ guestName(selectedBooking()) }}</div>
@@ -166,7 +219,7 @@ import { localDateStr } from '../../core/utils/date.utils';
 
     .messages-layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 340px 1fr;
       gap: 16px;
       height: calc(100vh - 160px);
       min-height: 500px;
@@ -187,8 +240,43 @@ import { localDateStr } from '../../core/utils/date.utils';
       gap: 4px;
     }
     .prop-filter, .search-filter { width: 100%; }
-    ::ng-deep .prop-filter .mat-mdc-form-field-infix,
-    ::ng-deep .search-filter .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; }
+
+    /* Tabs */
+    .conv-tabs {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    ::ng-deep .conv-tabs .mat-mdc-tab-body-wrapper {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    ::ng-deep .conv-tabs .mat-mdc-tab-body-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .tab-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: #0288d1;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
 
     .conv-list {
       flex: 1;
@@ -208,16 +296,16 @@ import { localDateStr } from '../../core/utils/date.utils';
     .conv-item.selected { background: #e3f2fd; border-left: 3px solid #0288d1; }
 
     .conv-avatar {
-      width: 36px;
-      height: 36px;
+      width: 36px; height: 36px;
       border-radius: 50%;
-      background: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .conv-avatar mat-icon { color: #757575; font-size: 20px; width: 20px; height: 20px; }
+    .conv-avatar.platform { background: #e8f5e9; }
+    .conv-avatar.platform mat-icon { color: #2e7d32; }
+    .conv-avatar.direct { background: #e3f2fd; }
+    .conv-avatar.direct mat-icon { color: #0288d1; }
+    .conv-avatar mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .conv-info { flex: 1; min-width: 0; }
     .conv-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -228,11 +316,8 @@ import { localDateStr } from '../../core/utils/date.utils';
     .conv-channel { font-size: 11px; color: #888; }
 
     .status-badge {
-      font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 8px;
-      font-weight: 500;
-      text-transform: capitalize;
+      font-size: 10px; padding: 1px 6px; border-radius: 8px;
+      font-weight: 500; text-transform: capitalize;
     }
     .status-confirmed { background: #e8f5e9; color: #2e7d32; }
     .status-new       { background: #e3f2fd; color: #1565c0; }
@@ -242,74 +327,44 @@ import { localDateStr } from '../../core/utils/date.utils';
     .status-cancelled { background: #ffebee; color: #c62828; }
 
     .conv-count {
-      padding: 6px 14px;
-      font-size: 11px;
-      color: #999;
-      border-top: 1px solid #eee;
-      text-align: right;
+      padding: 5px 14px; font-size: 11px; color: #999;
+      border-top: 1px solid #eee; text-align: right;
     }
 
     .empty-list {
-      text-align: center;
-      padding: 32px;
-      color: #aaa;
-      font-style: italic;
+      text-align: center; padding: 32px; color: #aaa; font-style: italic;
     }
 
     /* --- Panneau chat --- */
     .chat-panel {
-      display: flex;
-      flex-direction: column;
-      padding: 0;
-      overflow: hidden;
+      display: flex; flex-direction: column; padding: 0; overflow: hidden;
     }
 
     .chat-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; flex-shrink: 0;
     }
     .chat-guest-name { font-size: 17px; font-weight: 600; }
     .chat-sub {
-      display: flex;
-      align-items: center;
-      font-size: 12px;
-      color: #666;
-      margin-top: 3px;
-      flex-wrap: wrap;
-      gap: 2px;
+      display: flex; align-items: center; font-size: 12px; color: #666;
+      margin-top: 3px; flex-wrap: wrap; gap: 2px;
     }
     .tiny-icon { font-size: 13px; width: 13px; height: 13px; vertical-align: middle; color: #0288d1; }
 
     .phone-link {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 13px;
-      color: #0288d1;
-      text-decoration: none;
-      flex-shrink: 0;
+      display: flex; align-items: center; gap: 4px; font-size: 13px;
+      color: #0288d1; text-decoration: none; flex-shrink: 0;
     }
     .phone-link mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     .chat-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
     }
 
     .no-messages {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: #bbb;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; color: #bbb;
     }
     .no-messages mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 8px; }
 
@@ -323,26 +378,19 @@ import { localDateStr } from '../../core/utils/date.utils';
     .bubble small { opacity: 0.7; font-size: 11px; }
 
     .reply-box {
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-      padding: 12px 16px;
-      flex-shrink: 0;
+      display: flex; gap: 10px; align-items: flex-end;
+      padding: 12px 16px; flex-shrink: 0;
     }
     .reply-input { flex: 1; }
 
     .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #bbb;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: #bbb;
     }
     .empty-state mat-icon { font-size: 72px; width: 72px; height: 72px; margin-bottom: 16px; }
 
     .center { display: flex; justify-content: center; padding: 32px; }
 
-    /* Mobile */
     @media (max-width: 768px) {
       h1 { font-size: 20px; }
       .messages-layout { grid-template-columns: 1fr; height: auto; }
@@ -354,13 +402,13 @@ import { localDateStr } from '../../core/utils/date.utils';
 export class MessagesComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea') chatArea?: ElementRef<HTMLDivElement>;
 
-  allBookings    = signal<any[]>([]);
-  messages       = signal<any[]>([]);
+  allBookings     = signal<any[]>([]);
+  messages        = signal<any[]>([]);
   selectedBooking = signal<any | null>(null);
-  filterPropId   = signal('');
-  searchText     = signal('');
-  newMessage     = '';
-  sending        = signal(false);
+  filterPropId    = signal('');
+  searchText      = signal('');
+  newMessage      = '';
+  sending         = signal(false);
   loadingBookings = signal(false);
   loadingMessages = signal(false);
 
@@ -377,7 +425,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  filteredBookings = computed(() => {
+  private baseFiltered = computed(() => {
     const today  = localDateStr();
     const propId = this.filterPropId();
     const q      = this.searchText().toLowerCase().trim();
@@ -390,11 +438,25 @@ export class MessagesComponent implements OnInit, OnDestroy {
       const db = b['departure'] ?? '';
       const aFuture = da >= today;
       const bFuture = db >= today;
-      if (aFuture && bFuture) return da.localeCompare(db);   // à venir : départ le plus proche d'abord
-      if (!aFuture && !bFuture) return db.localeCompare(da); // passés : plus récent d'abord
-      return aFuture ? -1 : 1;                               // à venir avant passés
+      if (aFuture && bFuture) return da.localeCompare(db);
+      if (!aFuture && !bFuture) return db.localeCompare(da);
+      return aFuture ? -1 : 1;
     });
   });
+
+  platformBookings = computed(() =>
+    this.baseFiltered().filter(b => {
+      const ch = (b['channel'] ?? '').toLowerCase().trim();
+      return ch !== '' && ch !== 'direct';
+    })
+  );
+
+  directBookings = computed(() =>
+    this.baseFiltered().filter(b => {
+      const ch = (b['channel'] ?? '').toLowerCase().trim();
+      return ch === '' || ch === 'direct';
+    })
+  );
 
   constructor(private messageService: MessageService, private bookingService: BookingService) {}
 
@@ -419,6 +481,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
       },
       error: () => this.loadingBookings.set(false)
     });
+  }
+
+  onTabChange(_index: number): void {
+    this.wsSubscription?.unsubscribe();
+    this.selectedBooking.set(null);
+    this.messages.set([]);
   }
 
   selectBooking(b: any): void {
