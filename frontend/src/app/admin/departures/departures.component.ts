@@ -181,8 +181,12 @@ export class DeparturesComponent implements OnInit {
 
   dayName(dateStr: string): string {
     if (!dateStr) return '';
-    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    return days[new Date(dateStr.substring(0, 10) + 'T12:00:00').getDay()];
+    const d     = new Date(dateStr.substring(0, 10) + 'T12:00:00');
+    const today = new Date(); today.setHours(12, 0, 0, 0);
+    const diff  = Math.round((d.getTime() - today.getTime()) / 86400000);
+    if (diff === 0) return "Aujourd'hui";
+    if (diff === 1) return 'Demain';
+    return ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][d.getDay()];
   }
 
   nights(b: any): number {
