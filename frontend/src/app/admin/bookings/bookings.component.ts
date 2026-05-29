@@ -45,6 +45,18 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
             <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
+            <mat-label>Statut</mat-label>
+            <mat-select [ngModel]="filterStatus()" (ngModelChange)="onStatusFilter($event)">
+              <mat-option value="">Tous</mat-option>
+              <mat-option value="new">Nouveau</mat-option>
+              <mat-option value="confirmed">Confirmé</mat-option>
+              <mat-option value="request">Demande</mat-option>
+              <mat-option value="inquiry">Renseignement</mat-option>
+              <mat-option value="black">Bloqué</mat-option>
+              <mat-option value="cancelled">Annulé</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Canal</mat-label>
             <mat-select [ngModel]="filterChannel()" (ngModelChange)="onChannelFilter($event)">
               <mat-option value="">Tous</mat-option>
@@ -178,6 +190,9 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
     .full-width { width: 100%; }
     .status-new { background: #e3f2fd !important; color: #1565c0 !important; }
     .status-confirmed { background: #e8f5e9 !important; color: #2e7d32 !important; }
+    .status-request { background: #fff8e1 !important; color: #f57f17 !important; }
+    .status-inquiry { background: #f3e5f5 !important; color: #6a1b9a !important; }
+    .status-black { background: #424242 !important; color: #fff !important; }
     .status-cancelled { background: #ffebee !important; color: #c62828 !important; }
     .status-checked-in { background: #fff3e0 !important; color: #e65100 !important; }
     .source-chip { background: #ede7f6 !important; }
@@ -209,6 +224,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
 export class BookingsComponent implements OnInit {
   bookings = signal<any[]>([]);
   searchText = signal('');
+  filterStatus = signal('');
   filterChannel = signal('');
   pageSize = signal(20);
   pageIndex = signal(0);
@@ -254,6 +270,11 @@ export class BookingsComponent implements OnInit {
     this.pageIndex.set(0);
   }
 
+  onStatusFilter(value: string): void {
+    this.filterStatus.set(value);
+    this.pageIndex.set(0);
+  }
+
   onChannelFilter(value: string): void {
     this.filterChannel.set(value);
     this.pageIndex.set(0);
@@ -272,6 +293,7 @@ export class BookingsComponent implements OnInit {
 
   private applyFilters(data: any[]): any[] {
     const q = this.searchText().toLowerCase();
+    const st = this.filterStatus();
     const ch = this.filterChannel();
     if (q) data = data.filter(b =>
       b['guestFirstName']?.toLowerCase().includes(q) ||
@@ -279,6 +301,7 @@ export class BookingsComponent implements OnInit {
       b['guestEmail']?.toLowerCase().includes(q) ||
       String(b['id']).includes(q)
     );
+    if (st) data = data.filter(b => (b['status'] ?? '') === st);
     if (ch) data = data.filter(b => (b['channel'] || 'Direct') === ch);
     return data;
   }
