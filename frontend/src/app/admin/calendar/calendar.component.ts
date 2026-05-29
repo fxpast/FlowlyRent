@@ -307,7 +307,7 @@ const CHANNEL_COLORS: Record<string, string> = {
     .blackout-cell.is-blocked {
       background: repeating-linear-gradient(
         45deg, #f57c00 0px, #f57c00 3px, #ffe0b2 3px, #ffe0b2 9px
-      );
+      ) !important;
     }
     .blackout-cell.block-first { border-radius: 4px 0 0 4px; }
     .blackout-cell.block-last  { border-radius: 0 4px 4px 0; }
