@@ -24,6 +24,7 @@ interface OccupancyStatus {
   bg: string;
   icon: string;
   sortKey: string;
+  tips: string[];
 }
 
 @Component({
@@ -80,11 +81,23 @@ interface OccupancyStatus {
             </mat-card-header>
 
             @if (occupancyMap()[p['id']]; as occ) {
-              <div class="occ-banner" [style.background]="occ.bg" [style.color]="occ.color">
+              <div class="occ-banner" [style.background]="occ.bg" [style.color]="occ.color"
+                   (click)="toggleTip(p['id'])" role="button" style="cursor:pointer">
                 <mat-icon class="occ-icon">{{ occ.icon }}</mat-icon>
                 <span class="occ-label">{{ occ.label }}</span>
                 @if (occ.sublabel) { <span class="occ-sub">· {{ occ.sublabel }}</span> }
+                <mat-icon class="occ-arrow">{{ tipsOpen[p['id']] ? 'expand_less' : 'lightbulb' }}</mat-icon>
               </div>
+              @if (tipsOpen[p['id']]) {
+                <div class="occ-tips" [style.border-left-color]="occ.color">
+                  @for (tip of occ.tips; track $index) {
+                    <div class="tip-row">
+                      <mat-icon class="tip-bullet">chevron_right</mat-icon>
+                      <span>{{ tip }}</span>
+                    </div>
+                  }
+                </div>
+              }
             }
 
             <mat-card-content>
@@ -216,10 +229,24 @@ interface OccupancyStatus {
       display: flex; align-items: center; gap: 6px;
       font-size: 12px; font-weight: 600;
       padding: 7px 16px; border-bottom: 1px solid rgba(0,0,0,.06);
+      user-select: none;
     }
-    .occ-icon { font-size: 15px; width: 15px; height: 15px; }
+    .occ-banner:hover { filter: brightness(.97); }
+    .occ-icon  { font-size: 15px; width: 15px; height: 15px; }
     .occ-label { font-weight: 700; }
-    .occ-sub { font-weight: 400; opacity: .85; }
+    .occ-sub   { font-weight: 400; opacity: .85; flex: 1; }
+    .occ-arrow { font-size: 16px; width: 16px; height: 16px; margin-left: auto; opacity: .7; }
+
+    .occ-tips {
+      padding: 10px 14px 10px 12px;
+      border-left: 3px solid #ccc;
+      margin: 0 12px 4px;
+      background: #fafafa;
+      border-radius: 0 4px 4px 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .tip-row { display: flex; align-items: flex-start; gap: 4px; font-size: 12px; color: #444; }
+    .tip-bullet { font-size: 14px; width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: #888; }
 
     .inactive-banner {
       display: flex; align-items: center; gap: 6px;
@@ -239,8 +266,9 @@ export class PropertiesComponent implements OnInit {
   loading    = signal(false);
   search     = signal('');
 
-  searchDraft  = '';
-  bookings     = signal<any[]>([]);
+  searchDraft = '';
+  tipsOpen:   Record<string, boolean> = {};
+  bookings    = signal<any[]>([]);
   codeEdits:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
@@ -331,9 +359,20 @@ export class PropertiesComponent implements OnInit {
         const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
         const label    = depUrgent ? depLabel : arrLabel;
         const sub      = depUrgent && arrUrgent ? (depLabel + ' · ' + arrLabel) : undefined;
+        const tips = depUrgent && arrUrgent
+          ? ['Journée back-to-back : gérez le départ puis préparez l\'arrivée sans délai.',
+             'Vérifiez que le ménage est planifié entre les deux séjours.',
+             'Confirmez l\'heure d\'arrivée du prochain voyageur.']
+          : depUrgent
+          ? ['Planifiez le ménage dès la sortie du voyageur.',
+             'Vérifiez l\'état du logement et rechargez les consommables (linge, café, etc.).',
+             'Mettez à jour vos disponibilités sur les plateformes si nécessaire.']
+          : ['Envoyez les instructions de check-in si ce n\'est pas encore fait.',
+             'Vérifiez le bon fonctionnement du code d\'accès.',
+             'Confirmez l\'heure d\'arrivée avec le voyageur.'];
         map[id] = { type: 'urgent', label, sublabel: sub,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
-          sortKey: '0_' + (depUrgent ? current!['departure'] : nextBook!['arrival']) };
+          sortKey: '0_' + (depUrgent ? current!['departure'] : nextBook!['arrival']), tips };
         continue;
       }
 
@@ -342,7 +381,10 @@ export class PropertiesComponent implements OnInit {
         map[id] = { type: 'occupied', label: 'Occupé',
           sublabel: `départ ${depDays === 3 ? 'dans 3 j' : `dans ${depDays} j`} · ${fmt(current['departure'])}`,
           color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
-          sortKey: '3_' + current['departure'] };
+          sortKey: '3_' + current['departure'],
+          tips: ['Séjour en cours, rien d\'urgent à faire.',
+                 'Pensez à envoyer un message de mi-séjour pour fidéliser le voyageur.',
+                 'Profitez-en pour vérifier vos prix sur les dates après le départ.'] };
         continue;
       }
 
@@ -352,7 +394,11 @@ export class PropertiesComponent implements OnInit {
         map[id] = { type: 'vacant_long', label: 'Libre 15+ jours',
           sublabel: sub,
           color: '#bf360c', bg: '#fbe9e7', icon: 'trending_down',
-          sortKey: '1_' + (arrDays !== null ? nextBook!['arrival'] : '9999') };
+          sortKey: '1_' + (arrDays !== null ? nextBook!['arrival'] : '9999'),
+          tips: ['Baissez vos tarifs ou lancez une promotion pour ces dates.',
+                 'Réduisez la durée minimum de séjour pour attirer des courts séjours.',
+                 'Activez la visibilité boostée sur vos plateformes (Airbnb, Booking…).',
+                 'Vérifiez que votre calendrier est bien ouvert et à jour.'] };
         continue;
       }
 
@@ -362,11 +408,15 @@ export class PropertiesComponent implements OnInit {
         label: arrDays === 2 ? 'Arrivée après-demain' : `Arrivée dans ${arrDays} j`,
         sublabel: arrFmt,
         color: '#e65100', bg: '#fff3e0', icon: 'event',
-        sortKey: '2_' + nextBook!['arrival'] };
+        sortKey: '2_' + nextBook!['arrival'],
+        tips: ['Vérifiez vos prix pour les nuits encore libres avant cette arrivée.',
+               'Une offre last-minute peut éviter des nuits vides.',
+               'Préparez le logement et confirmez les détails avec le prochain voyageur.'] };
     }
     return map;
   });
 
+  toggleTip(id: string): void { this.tipsOpen[id] = !this.tipsOpen[id]; }
   applySearch(): void { this.search.set(this.searchDraft.trim()); }
   clearSearch(): void  { this.searchDraft = ''; this.search.set(''); }
 
