@@ -163,7 +163,7 @@ export class DeparturesComponent implements OnInit {
             if (pid && names[pid]) return { ...b, propName: names[pid] };
           }
           return b;
-        }).sort((a, b) => (b['departure'] ?? '').localeCompare(a['departure'] ?? '')));
+        }).sort((a, b) => (a['departure'] ?? '').localeCompare(b['departure'] ?? '')));
       },
       error: () => {}
     });
