@@ -17,7 +17,7 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
 import { localDateStr } from '../../core/utils/date.utils';
 
 interface OccupancyStatus {
-  type: 'occupied' | 'arriving' | 'free';
+  type: 'urgent' | 'vacant_long' | 'vacant_short' | 'occupied';
   label: string;
   sublabel?: string;
   color: string;
@@ -240,7 +240,7 @@ export class PropertiesComponent implements OnInit {
   filtered = computed(() => {
     const q   = this.search().toLowerCase().trim();
     const map = this.occupancyMap();
-    const ORDER = { arriving: 0, free: 1, occupied: 2 };
+    const ORDER: Record<string, number> = { urgent: 0, vacant_long: 1, vacant_short: 2, occupied: 3 };
 
     let list = this.properties();
     if (q) list = list.filter(p =>
@@ -291,56 +291,70 @@ export class PropertiesComponent implements OnInit {
   }
 
   occupancyMap = computed((): Record<string, OccupancyStatus> => {
-    const today  = localDateStr();
+    const today   = localDateStr();
     const todayMs = new Date(today + 'T00:00:00').getTime();
     const active  = new Set(['new', 'confirmed', 'request', 'inquiry']);
+    const daysDiff = (iso: string) =>
+      Math.round((new Date(iso + 'T00:00:00').getTime() - todayMs) / 86400000);
+    const fmt = (iso: string) =>
+      new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
     const map: Record<string, OccupancyStatus> = {};
 
     for (const p of this.properties()) {
       const id = String(p['id']);
-      const relevant = this.bookings().filter(b => {
+      const rel = this.bookings().filter(b => {
         const s = (b['status'] ?? '').toLowerCase();
         return active.has(s) && String(b['propId'] ?? b['propertyId'] ?? '') === id;
       });
 
-      const occupied = relevant.find(b => (b['arrival'] ?? '') <= today && (b['departure'] ?? '') > today);
-      if (occupied) {
-        const dep  = new Date(occupied['departure'] + 'T00:00:00');
-        const days = Math.round((dep.getTime() - todayMs) / 86400000);
-        const depFmt = dep.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-        map[id] = {
-          type: 'occupied',
-          label: 'Occupé',
-          sublabel: `départ ${days === 1 ? 'demain' : days === 0 ? 'aujourd\'hui' : `dans ${days} j`} · ${depFmt}`,
-          color: '#b71c1c', bg: '#ffebee', icon: 'hotel',
-          sortKey: occupied['departure'] ?? ''
-        };
-        continue;
-      }
-
-      const upcoming = relevant
+      const current  = rel.find(b => (b['arrival'] ?? '') <= today && (b['departure'] ?? '') > today);
+      const nextBook = rel
         .filter(b => (b['arrival'] ?? '') > today)
         .sort((a, b) => (a['arrival'] ?? '').localeCompare(b['arrival'] ?? ''))[0];
 
-      if (upcoming) {
-        const arr  = new Date(upcoming['arrival'] + 'T00:00:00');
-        const days = Math.round((arr.getTime() - todayMs) / 86400000);
-        if (days <= 30) {
-          const color = days <= 3 ? '#e65100' : '#f57f17';
-          const bg    = days <= 3 ? '#fff3e0' : '#fffde7';
-          const arrFmt = arr.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-          map[id] = {
-            type: 'arriving',
-            label: days === 1 ? 'Arrivée demain' : `Arrivée dans ${days} j`,
-            sublabel: arrFmt,
-            color, bg, icon: 'login',
-            sortKey: upcoming['arrival'] ?? ''
-          };
-          continue;
-        }
+      const depDays = current  ? daysDiff(current['departure']) : null;
+      const arrDays = nextBook ? daysDiff(nextBook['arrival'])   : null;
+
+      // ── Rouge : arrivée ou départ aujourd'hui / demain ──
+      const depUrgent = depDays !== null && depDays <= 1;
+      const arrUrgent = arrDays !== null && arrDays <= 1;
+      if (depUrgent || arrUrgent) {
+        const depLabel = depDays === 0 ? 'Départ aujourd\'hui' : 'Départ demain';
+        const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
+        const label    = depUrgent ? depLabel : arrLabel;
+        const sub      = depUrgent && arrUrgent ? (depLabel + ' · ' + arrLabel) : undefined;
+        map[id] = { type: 'urgent', label, sublabel: sub,
+          color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
+          sortKey: '0_' + (depUrgent ? current!['departure'] : nextBook!['arrival']) };
+        continue;
       }
 
-      map[id] = { type: 'free', label: 'Libre', color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle', sortKey: '' };
+      // ── Vert : occupé, départ dans 3+ jours ──
+      if (current && depDays !== null && depDays >= 3) {
+        map[id] = { type: 'occupied', label: 'Occupé',
+          sublabel: `départ ${depDays === 3 ? 'dans 3 j' : `dans ${depDays} j`} · ${fmt(current['departure'])}`,
+          color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
+          sortKey: '3_' + current['departure'] };
+        continue;
+      }
+
+      // ── Orange foncé : libre 15+ jours ──
+      if (arrDays === null || arrDays >= 15) {
+        const sub = arrDays !== null ? `prochaine arrivée le ${fmt(nextBook!['arrival'])}` : 'aucune réservation à venir';
+        map[id] = { type: 'vacant_long', label: 'Libre 15+ jours',
+          sublabel: sub,
+          color: '#bf360c', bg: '#fbe9e7', icon: 'trending_down',
+          sortKey: '1_' + (arrDays !== null ? nextBook!['arrival'] : '9999') };
+        continue;
+      }
+
+      // ── Orange clair : libre 2-14 jours ──
+      const arrFmt = fmt(nextBook!['arrival']);
+      map[id] = { type: 'vacant_short',
+        label: arrDays === 2 ? 'Arrivée après-demain' : `Arrivée dans ${arrDays} j`,
+        sublabel: arrFmt,
+        color: '#e65100', bg: '#fff3e0', icon: 'event',
+        sortKey: '2_' + nextBook!['arrival'] };
     }
     return map;
   });
