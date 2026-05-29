@@ -252,11 +252,37 @@ const TYPE_LABELS: Record<string, string> = {
                         rows="2"
                         (keydown.enter)="onEnter($event)"></textarea>
             </mat-form-field>
-            <button mat-fab color="primary" (click)="send()"
-                    [disabled]="!newMessage.trim() || sending()"
-                    matTooltip="Envoyer">
-              <mat-icon>send</mat-icon>
-            </button>
+
+            @if (isDirect(selectedBooking())) {
+              <!-- Réservation directe : envoi via canal externe -->
+              <div class="ext-channels">
+                <button mat-icon-button class="ch-email"
+                        [disabled]="!newMessage.trim() || !guestEmail(selectedBooking())"
+                        [matTooltip]="guestEmail(selectedBooking()) ? 'Envoyer par email' : 'Email non renseigné'"
+                        (click)="sendVia('email')">
+                  <mat-icon>email</mat-icon>
+                </button>
+                <button mat-icon-button class="ch-whatsapp"
+                        [disabled]="!newMessage.trim() || !guestPhone(selectedBooking())"
+                        [matTooltip]="guestPhone(selectedBooking()) ? 'Envoyer via WhatsApp' : 'Téléphone non renseigné'"
+                        (click)="sendVia('whatsapp')">
+                  <mat-icon>chat</mat-icon>
+                </button>
+                <button mat-icon-button class="ch-sms"
+                        [disabled]="!newMessage.trim() || !guestPhone(selectedBooking())"
+                        [matTooltip]="guestPhone(selectedBooking()) ? 'Envoyer par SMS' : 'Téléphone non renseigné'"
+                        (click)="sendVia('sms')">
+                  <mat-icon>sms</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <!-- Réservation plateforme : envoi interne -->
+              <button mat-fab color="primary" (click)="send()"
+                      [disabled]="!newMessage.trim() || sending()"
+                      matTooltip="Envoyer">
+                <mat-icon>send</mat-icon>
+              </button>
+            }
           </div>
         </mat-card>
 
@@ -460,6 +486,14 @@ const TYPE_LABELS: Record<string, string> = {
     .reply-box { display: flex; gap: 8px; align-items: flex-end; padding: 10px 14px; flex-shrink: 0; }
     .reply-input { flex: 1; }
 
+    .ext-channels { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+    .ch-email    { color: #1565c0 !important; }
+    .ch-whatsapp { color: #2e7d32 !important; }
+    .ch-sms      { color: #6a1b9a !important; }
+    .ch-email:not([disabled]):hover    { background: #e3f2fd; border-radius: 50%; }
+    .ch-whatsapp:not([disabled]):hover { background: #e8f5e9; border-radius: 50%; }
+    .ch-sms:not([disabled]):hover      { background: #f3e5f5; border-radius: 50%; }
+
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #bbb; }
     .empty-state mat-icon { font-size: 72px; width: 72px; height: 72px; margin-bottom: 16px; }
 
@@ -584,6 +618,45 @@ export class MessagesComponent implements OnInit, OnDestroy {
       next: t => { this.templates.set(t); this.loadingTemplates.set(false); },
       error: () => this.loadingTemplates.set(false)
     });
+  }
+
+  isDirect(b: any): boolean {
+    const c = (b?.['channel'] ?? '').toLowerCase().trim();
+    return c === '' || c === 'direct';
+  }
+
+  guestEmail(b: any): string { return (b?.['guestEmail'] || b?.['email'] || '').trim(); }
+  guestPhone(b: any): string { return (b?.['guestPhone'] || b?.['phone'] || '').trim(); }
+
+  sendVia(channel: 'email' | 'whatsapp' | 'sms'): void {
+    const b    = this.selectedBooking();
+    const text = this.newMessage.trim();
+    if (!b || !text) return;
+
+    const email = this.guestEmail(b);
+    const phone = this.guestPhone(b).replace(/[\s\-(). ]/g, '');
+    const prop  = this.propLabel(b);
+    const guest = this.guestName(b);
+
+    let url = '';
+    switch (channel) {
+      case 'email': {
+        const subject = encodeURIComponent(`Votre séjour — ${prop}`);
+        url = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(text)}`;
+        break;
+      }
+      case 'whatsapp':
+        url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+        break;
+      case 'sms':
+        url = `sms:${phone}${/iPhone|iPad|Macintosh/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(text)}`;
+        break;
+    }
+
+    if (url) {
+      window.open(url, '_blank');
+      this.newMessage = '';
+    }
   }
 
   applySearch(): void { this.searchText.set(this.searchDraft.trim()); }
