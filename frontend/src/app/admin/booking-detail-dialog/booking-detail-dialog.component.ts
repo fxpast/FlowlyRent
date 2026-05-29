@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -214,7 +214,7 @@ import { Subscription } from 'rxjs';
     }
   `]
 })
-export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea') chatArea?: ElementRef<HTMLDivElement>;
 
   saving = signal(false);
@@ -225,7 +225,6 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
   unreadCount = signal(0);
   newMessage = '';
   sendingMsg = signal(false);
-  private shouldScrollToBottom = false;
   private wsSub?: Subscription;
 
   constructor(
@@ -260,20 +259,13 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
     if (!bookingId) return;
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
-      this.shouldScrollToBottom = true;
       if (msg.sender === 'GUEST') this.unreadCount.update(n => n + 1);
+      setTimeout(() => this.scrollToBottom());
     });
   }
 
   ngOnDestroy(): void {
     this.wsSub?.unsubscribe();
-  }
-
-  ngAfterViewChecked(): void {
-    if (this.shouldScrollToBottom) {
-      this.scrollToBottom();
-      this.shouldScrollToBottom = false;
-    }
   }
 
   onTabChange(index: number): void {
@@ -291,7 +283,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
         this.messages.set(msgs ?? []);
         this.unreadCount.set(0);
         this.loadingMessages.set(false);
-        this.shouldScrollToBottom = true;
+        setTimeout(() => this.scrollToBottom(), 50);
       },
       error: () => this.loadingMessages.set(false)
     });
@@ -307,7 +299,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy, AfterVie
         this.messages.update(list => [...list, msg]);
         this.newMessage = '';
         this.sendingMsg.set(false);
-        this.shouldScrollToBottom = true;
+        setTimeout(() => this.scrollToBottom());
       },
       error: () => { this.sendingMsg.set(false); }
     });
