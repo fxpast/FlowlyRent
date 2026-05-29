@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -23,7 +24,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatDialogModule,
-    MatTableModule, MatButtonModule, MatIconModule, MatChipsModule,
+    MatTableModule, MatSortModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatInputModule, MatSelectModule, MatCardModule, MatSnackBarModule, MatFormFieldModule,
     MatTooltipModule, MatPaginatorModule
   ],
@@ -52,7 +53,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
               <mat-option value="Direct">Direct</mat-option>
             </mat-select>
           </mat-form-field>
-          <span class="total-count">{{ filtered().length }} réservation(s)</span>
+          <span class="total-count">{{ sortedFiltered().length }} réservation(s)</span>
         </div>
 
         <!-- Cartes mobile -->
@@ -84,11 +85,11 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
               </div>
             </mat-card>
           }
-          @if (filtered().length === 0) {
+          @if (sortedFiltered().length === 0) {
             <p class="empty">Aucune réservation trouvée</p>
           }
           <mat-paginator
-            [length]="filtered().length"
+            [length]="sortedFiltered().length"
             [pageSize]="pageSize()"
             [pageIndex]="pageIndex()"
             [pageSizeOptions]="[10, 20, 50]"
@@ -99,43 +100,43 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
 
         <!-- Tableau desktop -->
         <div class="desktop-table">
-          <table mat-table [dataSource]="paged()" class="full-width">
+          <table mat-table [dataSource]="paged()" matSort (matSortChange)="onSortChange($event)" class="full-width">
             <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
               <td mat-cell *matCellDef="let b">{{ b['id'] }}</td>
             </ng-container>
             <ng-container matColumnDef="guest">
-              <th mat-header-cell *matHeaderCellDef>Voyageur</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Voyageur</th>
               <td mat-cell *matCellDef="let b">
                 {{ guestName(b) }}<br>
                 <small>{{ b['guestEmail'] || b['email'] }}</small>
               </td>
             </ng-container>
             <ng-container matColumnDef="property">
-              <th mat-header-cell *matHeaderCellDef>Logement</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Logement</th>
               <td mat-cell *matCellDef="let b">{{ propLabel(b) }}</td>
             </ng-container>
             <ng-container matColumnDef="dates">
-              <th mat-header-cell *matHeaderCellDef>Dates</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Dates</th>
               <td mat-cell *matCellDef="let b">
                 {{ b['arrival'] | date:'dd/MM/yy' }} → {{ b['departure'] | date:'dd/MM/yy' }}<br>
                 <small>{{ nights(b) }} nuit(s)</small>
               </td>
             </ng-container>
             <ng-container matColumnDef="channel">
-              <th mat-header-cell *matHeaderCellDef>Canal</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Canal</th>
               <td mat-cell *matCellDef="let b">
                 <mat-chip class="source-chip">{{ b['channel'] || 'Direct' }}</mat-chip>
               </td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Statut</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
               <td mat-cell *matCellDef="let b">
                 <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
               </td>
             </ng-container>
             <ng-container matColumnDef="amount">
-              <th mat-header-cell *matHeaderCellDef>Montant</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Montant</th>
               <td mat-cell *matCellDef="let b">{{ b['totalPrice'] | currency:'EUR':'symbol':'1.0-0' }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
@@ -153,11 +154,11 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
             <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openDetail(row)"></tr>
           </table>
-          @if (filtered().length === 0) {
+          @if (sortedFiltered().length === 0) {
             <p class="empty">Aucune réservation trouvée</p>
           }
           <mat-paginator
-            [length]="filtered().length"
+            [length]="sortedFiltered().length"
             [pageSize]="pageSize()"
             [pageIndex]="pageIndex()"
             [pageSizeOptions]="[10, 20, 50]"
@@ -211,12 +212,14 @@ export class BookingsComponent implements OnInit {
   filterChannel = signal('');
   pageSize = signal(20);
   pageIndex = signal(0);
+  sortColumn = signal('');
+  sortDir = signal<'asc' | 'desc'>('asc');
   columns = ['id', 'guest', 'property', 'dates', 'channel', 'status', 'amount', 'actions'];
 
-  filtered = computed(() => this.applyFilters(this.bookings()));
+  sortedFiltered = computed(() => this.sortData(this.applyFilters(this.bookings())));
   paged = computed(() => {
     const start = this.pageIndex() * this.pageSize();
-    return this.filtered().slice(start, start + this.pageSize());
+    return this.sortedFiltered().slice(start, start + this.pageSize());
   });
 
   constructor(
@@ -261,6 +264,12 @@ export class BookingsComponent implements OnInit {
     this.pageIndex.set(event.pageIndex);
   }
 
+  onSortChange(sort: Sort): void {
+    this.sortColumn.set(sort.active);
+    this.sortDir.set((sort.direction || 'asc') as 'asc' | 'desc');
+    this.pageIndex.set(0);
+  }
+
   private applyFilters(data: any[]): any[] {
     const q = this.searchText().toLowerCase();
     const ch = this.filterChannel();
@@ -272,6 +281,28 @@ export class BookingsComponent implements OnInit {
     );
     if (ch) data = data.filter(b => (b['channel'] || 'Direct') === ch);
     return data;
+  }
+
+  private sortData(data: any[]): any[] {
+    const col = this.sortColumn();
+    const dir = this.sortDir();
+    if (!col) return data;
+    return [...data].sort((a, b) => {
+      let va: any, vb: any;
+      switch (col) {
+        case 'id':       va = Number(a['id'] ?? 0);           vb = Number(b['id'] ?? 0); break;
+        case 'guest':    va = this.guestName(a);               vb = this.guestName(b); break;
+        case 'property': va = this.propLabel(a);               vb = this.propLabel(b); break;
+        case 'dates':    va = a['arrival'] ?? '';              vb = b['arrival'] ?? ''; break;
+        case 'channel':  va = a['channel'] ?? 'Direct';        vb = b['channel'] ?? 'Direct'; break;
+        case 'status':   va = a['status'] ?? '';               vb = b['status'] ?? ''; break;
+        case 'amount':   va = Number(a['totalPrice'] ?? 0);    vb = Number(b['totalPrice'] ?? 0); break;
+        default: return 0;
+      }
+      if (typeof va === 'number') return dir === 'asc' ? va - vb : vb - va;
+      const cmp = String(va).localeCompare(String(vb), 'fr');
+      return dir === 'asc' ? cmp : -cmp;
+    });
   }
 
   guestName(b: any): string {
