@@ -13,6 +13,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { BookingService } from '../../core/services/booking.service';
 import { forkJoin } from 'rxjs';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
@@ -24,7 +25,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatTableModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatInputModule, MatSelectModule, MatCardModule, MatSnackBarModule, MatFormFieldModule,
-    MatTooltipModule
+    MatTooltipModule, MatPaginatorModule
   ],
   template: `
     <div class="header">
@@ -39,23 +40,24 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
         <div class="filters">
           <mat-form-field appearance="outline">
             <mat-label>Rechercher</mat-label>
-            <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom, prénom, id…">
+            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…">
             <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Canal</mat-label>
-            <mat-select [ngModel]="filterChannel()" (ngModelChange)="filterChannel.set($event)">
+            <mat-select [ngModel]="filterChannel()" (ngModelChange)="onChannelFilter($event)">
               <mat-option value="">Tous</mat-option>
               <mat-option value="Airbnb">Airbnb</mat-option>
               <mat-option value="Booking.com">Booking.com</mat-option>
               <mat-option value="Direct">Direct</mat-option>
             </mat-select>
           </mat-form-field>
+          <span class="total-count">{{ filtered().length }} réservation(s)</span>
         </div>
 
         <!-- Cartes mobile -->
         <div class="mobile-list">
-          @for (b of filtered(); track b['id']) {
+          @for (b of paged(); track b['id']) {
             <mat-card class="mobile-card">
               <div class="mc-top">
                 <div>
@@ -85,11 +87,19 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
           @if (filtered().length === 0) {
             <p class="empty">Aucune réservation trouvée</p>
           }
+          <mat-paginator
+            [length]="filtered().length"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="[10, 20, 50]"
+            (page)="onPage($event)"
+            showFirstLastButtons>
+          </mat-paginator>
         </div>
 
         <!-- Tableau desktop -->
         <div class="desktop-table">
-          <table mat-table [dataSource]="filtered()" class="full-width">
+          <table mat-table [dataSource]="paged()" class="full-width">
             <ng-container matColumnDef="id">
               <th mat-header-cell *matHeaderCellDef>ID</th>
               <td mat-cell *matCellDef="let b">{{ b['id'] }}</td>
@@ -146,6 +156,14 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
           @if (filtered().length === 0) {
             <p class="empty">Aucune réservation trouvée</p>
           }
+          <mat-paginator
+            [length]="filtered().length"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="[10, 20, 50]"
+            (page)="onPage($event)"
+            showFirstLastButtons>
+          </mat-paginator>
         </div>
 
       </mat-card-content>
@@ -153,8 +171,9 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
   `,
   styles: [`
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .filters { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
     .filters mat-form-field { min-width: 200px; flex: 1; }
+    .total-count { color: #666; font-size: 13px; white-space: nowrap; }
     .full-width { width: 100%; }
     .status-new { background: #e3f2fd !important; color: #1565c0 !important; }
     .status-confirmed { background: #e8f5e9 !important; color: #2e7d32 !important; }
@@ -190,9 +209,15 @@ export class BookingsComponent implements OnInit {
   bookings = signal<any[]>([]);
   searchText = signal('');
   filterChannel = signal('');
+  pageSize = signal(20);
+  pageIndex = signal(0);
   columns = ['id', 'guest', 'property', 'dates', 'channel', 'status', 'amount', 'actions'];
 
   filtered = computed(() => this.applyFilters(this.bookings()));
+  paged = computed(() => {
+    const start = this.pageIndex() * this.pageSize();
+    return this.filtered().slice(start, start + this.pageSize());
+  });
 
   constructor(
     private bookingService: BookingService,
@@ -219,6 +244,21 @@ export class BookingsComponent implements OnInit {
       },
       error: err => this.snackBar.open(err.error?.error ?? 'Erreur chargement', 'Fermer', { duration: 4000 })
     });
+  }
+
+  onSearch(value: string): void {
+    this.searchText.set(value);
+    this.pageIndex.set(0);
+  }
+
+  onChannelFilter(value: string): void {
+    this.filterChannel.set(value);
+    this.pageIndex.set(0);
+  }
+
+  onPage(event: PageEvent): void {
+    this.pageSize.set(event.pageSize);
+    this.pageIndex.set(event.pageIndex);
   }
 
   private applyFilters(data: any[]): any[] {

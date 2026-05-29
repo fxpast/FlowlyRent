@@ -54,6 +54,16 @@ public class Beds24ApiClient {
         return fetchAll("/bookings", token, params);
     }
 
+    public List<Map<String, Object>> getBookingsAllStatuses(String token, Map<String, String> params) throws Exception {
+        List<String> statuses = List.of("confirmed", "request", "new", "black", "inquiry", "cancelled");
+        String baseUrl = buildUrl(BASE + "/bookings", params);
+        String statusQuery = statuses.stream()
+                .map(s -> "status=" + URLEncoder.encode(s, StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
+        String url = baseUrl.contains("?") ? baseUrl + "&" + statusQuery : baseUrl + "?" + statusQuery;
+        return fetchAllFromUrl(url, token);
+    }
+
     public List<Map<String, Object>> saveBookings(String token, List<Map<String, Object>> payload) throws Exception {
         String body = objectMapper.writeValueAsString(payload);
         log.info("[Beds24] saveBookings payload: {}", body);
@@ -121,10 +131,14 @@ public class Beds24ApiClient {
     // Pagination automatique
     // -------------------------------------------------------------------------
 
-    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> fetchAll(String endpoint, String token, Map<String, String> params) throws Exception {
+        return fetchAllFromUrl(buildUrl(BASE + endpoint, params), token);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fetchAllFromUrl(String initialUrl, String token) throws Exception {
         List<Map<String, Object>> result = new ArrayList<>();
-        String url = buildUrl(BASE + endpoint, params);
+        String url = initialUrl;
 
         while (url != null) {
             String body = get(url, token);

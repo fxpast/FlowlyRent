@@ -160,7 +160,7 @@ public class AdminBookingController {
     public ResponseEntity<?> getBookings(@RequestParam Map<String, String> params) {
         try {
             Beds24Account account = requireAccount();
-            return ResponseEntity.ok(beds24.getBookings(beds24.tokenFor(account), params));
+            return ResponseEntity.ok(beds24.getBookingsAllStatuses(beds24.tokenFor(account), params));
         } catch (Exception e) {
             return error(e);
         }
