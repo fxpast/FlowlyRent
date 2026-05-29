@@ -25,6 +25,8 @@ public class PropertyConfig {
 
     private String accessCode;
 
+    private String previousAccessCode;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

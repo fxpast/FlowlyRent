@@ -7,6 +7,7 @@ export interface PropertyConfig {
   id?: number;
   beds24PropertyId: string;
   accessCode?: string;
+  previousAccessCode?: string;
   updatedAt?: string;
 }
 

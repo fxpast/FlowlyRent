@@ -170,6 +170,11 @@ import { forkJoin } from 'rxjs';
                     <mat-icon>casino</mat-icon>
                   </button>
                 </div>
+                @if (row.prevCode) {
+                  <span class="prev-code" matTooltip="Code précédent (avant le dernier changement)">
+                    <mat-icon class="prev-icon">history</mat-icon> Précédent : {{ row.prevCode }}
+                  </span>
+                }
               </div>
             }
           }
@@ -302,6 +307,8 @@ import { forkJoin } from 'rxjs';
     .code-input { flex: 1; min-width: 160px; max-width: 240px; }
     .code-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .empty-configs { color: #aaa; font-style: italic; padding: 8px 0; }
+    .prev-code { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; margin-left: 4px; white-space: nowrap; }
+    .prev-icon { font-size: 14px; width: 14px; height: 14px; }
   `]
 })
 export class SettingsComponent implements OnInit {
@@ -327,7 +334,7 @@ export class SettingsComponent implements OnInit {
   showPwd = signal(false);
 
   loadingConfigs = signal(false);
-  propRows = signal<{ propId: string; name: string; code: string }[]>([]);
+  propRows = signal<{ propId: string; name: string; code: string; prevCode: string }[]>([]);
 
   constructor(
     private userService: UserService,
@@ -360,11 +367,14 @@ export class SettingsComponent implements OnInit {
       this.propConfigService.getAll()
     ]).subscribe({
       next: ([names, configs]) => {
-        const cfgMap: Record<string, string> = {};
-        for (const c of configs) cfgMap[c.beds24PropertyId] = c.accessCode ?? '';
+        const cfgMap: Record<string, PropertyConfig> = {};
+        for (const c of configs) cfgMap[c.beds24PropertyId] = c;
         this.propRows.set(
-          Object.entries(names).map(([id, name]) => ({ propId: id, name, code: cfgMap[id] ?? '' }))
-            .sort((a, b) => a.name.localeCompare(b.name))
+          Object.entries(names).map(([id, name]) => ({
+            propId: id, name,
+            code:     cfgMap[id]?.accessCode         ?? '',
+            prevCode: cfgMap[id]?.previousAccessCode ?? ''
+          })).sort((a, b) => a.name.localeCompare(b.name))
         );
         this.loadingConfigs.set(false);
       },
@@ -372,16 +382,24 @@ export class SettingsComponent implements OnInit {
     });
   }
 
-  saveCode(row: { propId: string; name: string; code: string }): void {
+  saveCode(row: { propId: string; name: string; code: string; prevCode: string }): void {
     this.propConfigService.updateAccessCode(row.propId, row.code).subscribe({
-      next: cfg => { row.code = cfg.accessCode ?? ''; this.snackBar.open('Code enregistré', 'OK', { duration: 2000 }); },
+      next: cfg => {
+        row.code     = cfg.accessCode         ?? '';
+        row.prevCode = cfg.previousAccessCode ?? '';
+        this.snackBar.open('Code enregistré', 'OK', { duration: 2000 });
+      },
       error: () => this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 })
     });
   }
 
-  regenerateCode(row: { propId: string; name: string; code: string }): void {
+  regenerateCode(row: { propId: string; name: string; code: string; prevCode: string }): void {
     this.propConfigService.regenerate(row.propId).subscribe({
-      next: cfg => { row.code = cfg.accessCode ?? ''; this.snackBar.open(`Nouveau code : ${row.code}`, 'OK', { duration: 3000 }); },
+      next: cfg => {
+        row.prevCode = cfg.previousAccessCode ?? '';
+        row.code     = cfg.accessCode         ?? '';
+        this.snackBar.open(`Nouveau code : ${row.code}`, 'OK', { duration: 3000 });
+      },
       error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
     });
   }

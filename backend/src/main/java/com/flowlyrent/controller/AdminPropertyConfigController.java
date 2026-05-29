@@ -35,7 +35,11 @@ public class AdminPropertyConfigController {
         AppUser user = securityUtils.getCurrentUser();
         PropertyConfig cfg = repo.findByUserIdAndBeds24PropertyId(user.getId(), beds24PropertyId)
                 .orElseGet(() -> { PropertyConfig c = new PropertyConfig(); c.setUser(user); c.setBeds24PropertyId(beds24PropertyId); return c; });
-        if (body.containsKey("accessCode")) cfg.setAccessCode(body.get("accessCode"));
+        if (body.containsKey("accessCode")) {
+            if (cfg.getAccessCode() != null && !cfg.getAccessCode().equals(body.get("accessCode")))
+                cfg.setPreviousAccessCode(cfg.getAccessCode());
+            cfg.setAccessCode(body.get("accessCode"));
+        }
         return ResponseEntity.ok(repo.save(cfg));
     }
 
@@ -44,6 +48,7 @@ public class AdminPropertyConfigController {
         AppUser user = securityUtils.getCurrentUser();
         PropertyConfig cfg = repo.findByUserIdAndBeds24PropertyId(user.getId(), beds24PropertyId)
                 .orElseGet(() -> { PropertyConfig c = new PropertyConfig(); c.setUser(user); c.setBeds24PropertyId(beds24PropertyId); return c; });
+        if (cfg.getAccessCode() != null) cfg.setPreviousAccessCode(cfg.getAccessCode());
         cfg.setAccessCode(String.format("%04d", random.nextInt(10000)));
         return ResponseEntity.ok(repo.save(cfg));
     }
