@@ -178,7 +178,7 @@ export class ArrivalsComponent implements OnInit {
             if (pid && names[pid]) return { ...b, propName: names[pid] };
           }
           return b;
-        }));
+        }).sort((a, b) => (b['arrival'] ?? '').localeCompare(a['arrival'] ?? '')));
       },
       error: () => {}
     });
