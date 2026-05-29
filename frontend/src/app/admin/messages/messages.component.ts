@@ -446,8 +446,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
     });
   }
 
-  onEnter(event: KeyboardEvent): void {
-    if (!event.shiftKey) { event.preventDefault(); this.send(); }
+  onEnter(event: Event): void {
+    const ke = event as KeyboardEvent;
+    if (!ke.shiftKey) { ke.preventDefault(); this.send(); }
   }
 
   guestName(b: any): string {
