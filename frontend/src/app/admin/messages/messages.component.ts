@@ -378,12 +378,22 @@ export class MessagesComponent implements OnInit, OnDestroy {
   });
 
   filteredBookings = computed(() => {
-    let list = this.allBookings();
+    const today  = localDateStr();
     const propId = this.filterPropId();
     const q      = this.searchText().toLowerCase().trim();
+    let list = this.allBookings()
+      .filter(b => { const s = (b['status'] ?? '').toLowerCase(); return s === 'new' || s === 'confirmed'; });
     if (propId) list = list.filter(b => String(b['propId'] ?? b['propertyId'] ?? '') === propId);
     if (q)      list = list.filter(b => this.guestName(b).toLowerCase().includes(q));
-    return list;
+    return list.sort((a, b) => {
+      const da = a['departure'] ?? '';
+      const db = b['departure'] ?? '';
+      const aFuture = da >= today;
+      const bFuture = db >= today;
+      if (aFuture && bFuture) return da.localeCompare(db);   // à venir : départ le plus proche d'abord
+      if (!aFuture && !bFuture) return db.localeCompare(da); // passés : plus récent d'abord
+      return aFuture ? -1 : 1;                               // à venir avant passés
+    });
   });
 
   constructor(private messageService: MessageService, private bookingService: BookingService) {}
@@ -403,7 +413,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             if (pid && names[pid]) return { ...b, propName: names[pid] };
           }
           return b;
-        }).sort((a: any, b: any) => (b['departure'] ?? b['arrival'] ?? '').localeCompare(a['departure'] ?? a['arrival'] ?? ''));
+        });
         this.allBookings.set(enriched);
         this.loadingBookings.set(false);
       },
