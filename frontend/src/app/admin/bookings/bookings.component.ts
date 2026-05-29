@@ -42,7 +42,7 @@ import { localDateStr } from '../../core/utils/date.utils';
         <div class="filters">
           <mat-form-field appearance="outline">
             <mat-label>Rechercher</mat-label>
-            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…" autocomplete="off">
+            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…" autocomplete="new-password" type="search">
             <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">

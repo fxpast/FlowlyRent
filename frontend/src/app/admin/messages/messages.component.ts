@@ -282,7 +282,7 @@ const TYPE_LABELS: Record<string, string> = {
         </mat-form-field>
         <mat-form-field appearance="outline" class="search-filter">
           <mat-label>Rechercher</mat-label>
-          <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom du voyageur…" autocomplete="off">
+          <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom du voyageur…" autocomplete="new-password" type="search">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </div>
