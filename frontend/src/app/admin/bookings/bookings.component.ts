@@ -18,6 +18,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { BookingService } from '../../core/services/booking.service';
 import { forkJoin } from 'rxjs';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
   selector: 'app-bookings',
@@ -250,7 +251,7 @@ export class BookingsComponent implements OnInit {
   load(): void {
     const from = new Date();
     from.setFullYear(from.getFullYear() - 1);
-    const arrivalFrom = from.toISOString().split('T')[0];
+    const arrivalFrom = localDateStr(from);
     forkJoin([this.bookingService.getAll({ arrivalFrom }), this.bookingService.getPropertyNames()]).subscribe({
       next: ([data, names]) => {
         this.bookings.set((data ?? []).map(b => {

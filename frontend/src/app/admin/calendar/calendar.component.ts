@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { environment } from '@env/environment';
+import { localDateStr } from '../../core/utils/date.utils';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { BlackoutDialogComponent, BlackoutDialogResult } from '../blackout-dialog/blackout-dialog.component';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
@@ -481,7 +482,7 @@ export class CalendarComponent implements OnInit {
   }
 
   private buildDays(year: number, month: number): DayCell[] {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const count = new Date(year, month, 0).getDate();
     return Array.from({ length: count }, (_, i) => {
       const d = i + 1;
@@ -492,7 +493,7 @@ export class CalendarComponent implements OnInit {
   }
 
   private scrollToToday(): void {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const dayIndex = this.days().findIndex(d => d.date === today);
     if (dayIndex < 0 || !this.calWrapper?.nativeElement) return;
     const colWidth = 38;

@@ -10,6 +10,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
   selector: 'app-today',
@@ -172,7 +173,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
   `]
 })
 export class TodayComponent implements OnInit {
-  today = new Date().toISOString().split('T')[0];
+  today = localDateStr();
   todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   loading    = signal(false);

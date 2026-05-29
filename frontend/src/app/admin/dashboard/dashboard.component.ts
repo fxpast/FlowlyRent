@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
   selector: 'app-dashboard',
@@ -152,7 +153,7 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     this.bookingService.getArrivals().subscribe({
       next: data => {
         this.weekArrivals.set(data);

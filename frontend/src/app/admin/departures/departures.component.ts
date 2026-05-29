@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { forkJoin } from 'rxjs';
+import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
   selector: 'app-departures',
@@ -154,7 +155,7 @@ export class DeparturesComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   load(): void {
-    const ws = this.weekStart().toISOString().split('T')[0];
+    const ws = localDateStr(this.weekStart());
     forkJoin([this.bookingService.getDepartures(ws), this.bookingService.getPropertyNames()]).subscribe({
       next: ([data, names]) => {
         this.departures.set((data ?? []).map(b => {

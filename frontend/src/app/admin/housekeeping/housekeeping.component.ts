@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { environment } from '@env/environment';
+import { localDateStr } from '../../core/utils/date.utils';
 
 interface Task {
   id: number;
@@ -231,8 +232,8 @@ export class HousekeepingComponent implements OnInit {
   loading = signal(false);
   showForm = false;
 
-  filterFrom = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  filterTo   = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+  filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
+  filterTo   = localDateStr(new Date(Date.now() + 30 * 86400000));
   filterStatus = '';
 
   newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', assignedTo: '', notes: '' };
