@@ -37,8 +37,8 @@ import { forkJoin } from 'rxjs';
           </div>
           <div class="mc-meta">
             <span><mat-icon>home</mat-icon>{{ propLabel(b) }}</span>
-            <span><mat-icon>login</mat-icon>{{ b['arrival'] | date:'dd/MM' }}</span>
-            <span><mat-icon>logout</mat-icon>{{ b['departure'] | date:'dd/MM' }}</span>
+            <span><mat-icon>login</mat-icon>{{ dayName(b['arrival']) }} {{ b['arrival'] | date:'dd/MM' }}</span>
+            <span><mat-icon>logout</mat-icon>{{ dayName(b['departure']) }} {{ b['departure'] | date:'dd/MM' }}</span>
             <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} nuit(s)</span>
             <span><mat-icon>sell</mat-icon>{{ b['channel'] || 'Direct' }}</span>
           </div>
@@ -63,7 +63,7 @@ import { forkJoin } from 'rxjs';
         <table mat-table [dataSource]="departures()" class="full-width">
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef>Date de départ</th>
-            <td mat-cell *matCellDef="let b">{{ b['departure'] | date:'EEE dd/MM' }}</td>
+            <td mat-cell *matCellDef="let b">{{ dayName(b['departure']) }} {{ b['departure'] | date:'dd/MM' }}</td>
           </ng-container>
           <ng-container matColumnDef="guest">
             <th mat-header-cell *matHeaderCellDef>Voyageur</th>
@@ -75,7 +75,7 @@ import { forkJoin } from 'rxjs';
           </ng-container>
           <ng-container matColumnDef="checkin">
             <th mat-header-cell *matHeaderCellDef>Arrivée</th>
-            <td mat-cell *matCellDef="let b">{{ b['arrival'] | date:'dd/MM/yyyy' }}</td>
+            <td mat-cell *matCellDef="let b">{{ dayName(b['arrival']) }} {{ b['arrival'] | date:'dd/MM' }}</td>
           </ng-container>
           <ng-container matColumnDef="nights">
             <th mat-header-cell *matHeaderCellDef>Nuits</th>
@@ -177,6 +177,12 @@ export class DeparturesComponent implements OnInit {
 
   propLabel(b: any): string {
     return b['propName'] || b['propertyName'] || (b['propId'] ? '#' + b['propId'] : '—');
+  }
+
+  dayName(dateStr: string): string {
+    if (!dateStr) return '';
+    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    return days[new Date(dateStr.substring(0, 10) + 'T12:00:00').getDay()];
   }
 
   nights(b: any): number {
