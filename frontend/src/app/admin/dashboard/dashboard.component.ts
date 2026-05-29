@@ -18,28 +18,28 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
     <h1>Tableau de bord</h1>
 
     <div class="stats-grid">
-      <mat-card class="stat-card primary">
+      <mat-card class="stat-card primary clickable-card" routerLink="/admin/today">
         <mat-card-content>
           <mat-icon>event_available</mat-icon>
           <div class="stat-value">{{ arrivalsToday().length }}</div>
           <div class="stat-label">Arrivées aujourd'hui</div>
         </mat-card-content>
       </mat-card>
-      <mat-card class="stat-card accent">
+      <mat-card class="stat-card accent clickable-card" routerLink="/admin/today">
         <mat-card-content>
           <mat-icon>flight_takeoff</mat-icon>
           <div class="stat-value">{{ departuresToday().length }}</div>
           <div class="stat-label">Départs aujourd'hui</div>
         </mat-card-content>
       </mat-card>
-      <mat-card class="stat-card warn">
+      <mat-card class="stat-card warn clickable-card" routerLink="/admin/messages">
         <mat-card-content>
           <mat-icon>chat</mat-icon>
           <div class="stat-value">{{ unreadMessages() }}</div>
           <div class="stat-label">Messages non lus</div>
         </mat-card-content>
       </mat-card>
-      <mat-card class="stat-card success">
+      <mat-card class="stat-card success clickable-card" routerLink="/admin/arrivals">
         <mat-card-content>
           <mat-icon>book_online</mat-icon>
           <div class="stat-value">{{ weekArrivals().length }}</div>
@@ -105,6 +105,8 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
     .stat-card.accent { background: #00796b; color: white; }
     .stat-card.warn { background: #e65100; color: white; }
     .stat-card.success { background: #2e7d32; color: white; }
+    .clickable-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+    .clickable-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important; }
     .section-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .list-card mat-card-header { display: flex; justify-content: space-between; align-items: center; }
     .booking-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; gap: 8px; cursor: pointer; border-radius: 4px; }
