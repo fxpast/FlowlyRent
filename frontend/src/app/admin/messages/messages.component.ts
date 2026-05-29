@@ -403,7 +403,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             if (pid && names[pid]) return { ...b, propName: names[pid] };
           }
           return b;
-        }).sort((a: any, b: any) => (b['arrival'] ?? '').localeCompare(a['arrival'] ?? ''));
+        }).sort((a: any, b: any) => (b['departure'] ?? b['arrival'] ?? '').localeCompare(a['departure'] ?? a['arrival'] ?? ''));
         this.allBookings.set(enriched);
         this.loadingBookings.set(false);
       },
