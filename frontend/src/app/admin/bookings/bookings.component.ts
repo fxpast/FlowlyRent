@@ -17,8 +17,6 @@ import { BookingService } from '../../core/services/booking.service';
 import { forkJoin } from 'rxjs';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 
-const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
-
 @Component({
   selector: 'app-bookings',
   standalone: true,
@@ -55,9 +53,9 @@ const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
           </mat-form-field>
         </div>
 
-        <!-- Cartes mobile — actives -->
+        <!-- Cartes mobile -->
         <div class="mobile-list">
-          @for (b of filteredActive(); track b['id']) {
+          @for (b of filtered(); track b['id']) {
             <mat-card class="mobile-card">
               <div class="mc-top">
                 <div>
@@ -84,14 +82,14 @@ const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
               </div>
             </mat-card>
           }
-          @if (filteredActive().length === 0) {
-            <p class="empty">Aucune réservation active trouvée</p>
+          @if (filtered().length === 0) {
+            <p class="empty">Aucune réservation trouvée</p>
           }
         </div>
 
-        <!-- Tableau desktop — actives -->
+        <!-- Tableau desktop -->
         <div class="desktop-table">
-          <table mat-table [dataSource]="filteredActive()" class="full-width">
+          <table mat-table [dataSource]="filtered()" class="full-width">
             <ng-container matColumnDef="id">
               <th mat-header-cell *matHeaderCellDef>ID</th>
               <td mat-cell *matCellDef="let b">{{ b['id'] }}</td>
@@ -145,86 +143,10 @@ const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
             <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openDetail(row)"></tr>
           </table>
-          @if (filteredActive().length === 0) {
-            <p class="empty">Aucune réservation active trouvée</p>
+          @if (filtered().length === 0) {
+            <p class="empty">Aucune réservation trouvée</p>
           }
         </div>
-
-        <!-- Section historique -->
-        @if (filteredHistory().length > 0) {
-          <div class="history-header" (click)="historyOpen.set(!historyOpen())">
-            <mat-icon>{{ historyOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-            <span>Historique — {{ filteredHistory().length }} réservation(s) terminée(s) / annulée(s)</span>
-          </div>
-          @if (historyOpen()) {
-            <!-- Mobile -->
-            <div class="mobile-list">
-              @for (b of filteredHistory(); track b['id']) {
-                <mat-card class="mobile-card history-card">
-                  <div class="mc-top">
-                    <strong>{{ guestName(b) }}</strong>
-                    <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
-                  </div>
-                  <div class="mc-meta">
-                    <span><mat-icon>home</mat-icon>{{ propLabel(b) }}</span>
-                    <span><mat-icon>login</mat-icon>{{ b['arrival'] | date:'dd/MM/yy' }}</span>
-                    <span><mat-icon>logout</mat-icon>{{ b['departure'] | date:'dd/MM/yy' }}</span>
-                    <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} nuit(s)</span>
-                  </div>
-                  <div class="mc-actions">
-                    <button mat-stroked-button (click)="openDetail(b)"><mat-icon>info</mat-icon> Détail</button>
-                  </div>
-                </mat-card>
-              }
-            </div>
-            <!-- Desktop -->
-            <div class="desktop-table">
-              <table mat-table [dataSource]="filteredHistory()" class="full-width history-table">
-                <ng-container matColumnDef="id">
-                  <th mat-header-cell *matHeaderCellDef>ID</th>
-                  <td mat-cell *matCellDef="let b">{{ b['id'] }}</td>
-                </ng-container>
-                <ng-container matColumnDef="guest">
-                  <th mat-header-cell *matHeaderCellDef>Voyageur</th>
-                  <td mat-cell *matCellDef="let b">{{ guestName(b) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="property">
-                  <th mat-header-cell *matHeaderCellDef>Logement</th>
-                  <td mat-cell *matCellDef="let b">{{ propLabel(b) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="dates">
-                  <th mat-header-cell *matHeaderCellDef>Dates</th>
-                  <td mat-cell *matCellDef="let b">
-                    {{ b['arrival'] | date:'dd/MM/yy' }} → {{ b['departure'] | date:'dd/MM/yy' }}
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="channel">
-                  <th mat-header-cell *matHeaderCellDef>Canal</th>
-                  <td mat-cell *matCellDef="let b">
-                    <mat-chip class="source-chip">{{ b['channel'] || 'Direct' }}</mat-chip>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Statut</th>
-                  <td mat-cell *matCellDef="let b">
-                    <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="amount">
-                  <th mat-header-cell *matHeaderCellDef>Montant</th>
-                  <td mat-cell *matCellDef="let b">{{ b['totalPrice'] | currency:'EUR':'symbol':'1.0-0' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let b" class="actions-cell"></td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="columns"></tr>
-                <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openDetail(row)"></tr>
-              </table>
-            </div>
-          }
-        }
 
       </mat-card-content>
     </mat-card>
@@ -246,17 +168,6 @@ const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
     .clickable-row { cursor: pointer; }
     .clickable-row:hover { background: #f5f5f5; }
 
-    .history-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; margin-top: 24px;
-      background: #f5f5f5; border-radius: 6px;
-      cursor: pointer; font-weight: 500; color: #555;
-      user-select: none;
-    }
-    .history-header:hover { background: #eeeeee; }
-    .history-table { opacity: 0.75; }
-    .history-card { opacity: 0.8; }
-
     /* Mobile */
     .mobile-list { display: none; flex-direction: column; gap: 10px; }
     .mobile-card { padding: 14px 16px; }
@@ -277,18 +188,11 @@ const ACTIVE_STATUSES = new Set(['new', 'confirmed']);
 })
 export class BookingsComponent implements OnInit {
   bookings = signal<any[]>([]);
-  historyOpen = signal(false);
   searchText = signal('');
   filterChannel = signal('');
   columns = ['id', 'guest', 'property', 'dates', 'channel', 'status', 'amount', 'actions'];
 
-  filteredActive = computed(() => this.applyFilters(
-    this.bookings().filter(b => ACTIVE_STATUSES.has((b['status'] ?? '').toLowerCase()))
-  ));
-
-  filteredHistory = computed(() => this.applyFilters(
-    this.bookings().filter(b => !ACTIVE_STATUSES.has((b['status'] ?? '').toLowerCase()))
-  ));
+  filtered = computed(() => this.applyFilters(this.bookings()));
 
   constructor(
     private bookingService: BookingService,
