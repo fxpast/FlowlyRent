@@ -37,13 +37,11 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'messages',
-        component: ComingSoonComponent,
-        data: { title: 'Messages' }
+        loadComponent: () => import('./messages/messages.component').then(m => m.MessagesComponent)
       },
       {
         path: 'payments',
-        component: ComingSoonComponent,
-        data: { title: 'Paiements' }
+        loadComponent: () => import('./payments/payments.component').then(m => m.PaymentsComponent)
       },
       {
         path: 'sync',
@@ -52,8 +50,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'housekeeping',
-        component: ComingSoonComponent,
-        data: { title: 'Ménage' }
+        loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent)
       },
       {
         path: 'calendar',
