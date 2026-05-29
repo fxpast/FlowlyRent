@@ -41,7 +41,8 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'payments',
-        loadComponent: () => import('./payments/payments.component').then(m => m.PaymentsComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Paiements' }
       },
       {
         path: 'sync',
@@ -50,7 +51,8 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'housekeeping',
-        loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent)
+        component: ComingSoonComponent,
+        data: { title: 'Ménage' }
       },
       {
         path: 'calendar',
