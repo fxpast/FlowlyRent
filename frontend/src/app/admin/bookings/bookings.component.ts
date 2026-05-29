@@ -42,7 +42,8 @@ import { localDateStr } from '../../core/utils/date.utils';
         <div class="filters">
           <mat-form-field appearance="outline">
             <mat-label>Rechercher</mat-label>
-            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…" autocomplete="new-password" type="search">
+            <input matInput [ngModel]="searchText()" (ngModelChange)="onSearch($event)" placeholder="Nom, prénom, id…"
+                   autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
             <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
@@ -223,6 +224,7 @@ import { localDateStr } from '../../core/utils/date.utils';
   `]
 })
 export class BookingsComponent implements OnInit {
+  searchReady = false;
   bookings = signal<any[]>([]);
   searchText = signal('');
   filterStatus = signal('');

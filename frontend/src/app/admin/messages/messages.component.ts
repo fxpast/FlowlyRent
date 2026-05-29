@@ -282,7 +282,8 @@ const TYPE_LABELS: Record<string, string> = {
         </mat-form-field>
         <mat-form-field appearance="outline" class="search-filter">
           <mat-label>Rechercher</mat-label>
-          <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom du voyageur…" autocomplete="new-password" type="search">
+          <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Nom du voyageur…"
+                   autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </div>
@@ -473,6 +474,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea')   chatArea?:   ElementRef<HTMLDivElement>;
   @ViewChild('contentArea') contentArea?: ElementRef<HTMLTextAreaElement>;
 
+  searchReady     = false;
   allBookings     = signal<any[]>([]);
   messages        = signal<any[]>([]);
   selectedBooking = signal<any | null>(null);

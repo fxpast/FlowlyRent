@@ -29,7 +29,8 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
       <h1>Logements</h1>
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Rechercher</mat-label>
-        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom, ville…" autocomplete="new-password" type="search">
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nom, ville…"
+               autocomplete="off" [attr.readonly]="searchReady ? null : true" (focus)="searchReady = true">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
     </div>
@@ -202,6 +203,7 @@ export class PropertiesComponent implements OnInit {
   loading    = signal(false);
   search     = signal('');
 
+  searchReady  = false;
   codeEdits:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
