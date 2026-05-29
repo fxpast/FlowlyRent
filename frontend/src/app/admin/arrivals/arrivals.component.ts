@@ -24,7 +24,7 @@ import { forkJoin } from 'rxjs';
       <button mat-icon-button (click)="prevWeek()"><mat-icon>chevron_left</mat-icon></button>
       <span class="week-label">{{ weekLabel() }}</span>
       <button mat-icon-button (click)="nextWeek()"><mat-icon>chevron_right</mat-icon></button>
-      <button mat-button (click)="goToCurrentWeek()">Cette semaine</button>
+      <button mat-button (click)="goToCurrentWeek()">Aujourd'hui</button>
     </div>
 
     <!-- Cartes mobile -->
@@ -212,8 +212,12 @@ export class ArrivalsComponent implements OnInit {
 
   weekLabel(): string {
     const start = this.weekStart();
-    const end = new Date(start); end.setDate(end.getDate() + 6);
-    return `${start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} — ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    const today = new Date(new Date().toDateString());
+    const end   = new Date(start); end.setDate(end.getDate() + 6);
+    const startStr = start.getTime() === today.getTime()
+      ? "Aujourd'hui"
+      : start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    return `${startStr} — ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   }
 
   openDetail(b: any): void {

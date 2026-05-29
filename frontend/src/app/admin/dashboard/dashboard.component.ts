@@ -43,7 +43,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
         <mat-card-content>
           <mat-icon>book_online</mat-icon>
           <div class="stat-value">{{ weekArrivals().length }}</div>
-          <div class="stat-label">Arrivées cette semaine</div>
+          <div class="stat-label">Arrivées sur 7 jours</div>
         </mat-card-content>
       </mat-card>
     </div>
@@ -51,7 +51,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
     <div class="section-row">
       <mat-card class="list-card">
         <mat-card-header>
-          <mat-card-title>Arrivées cette semaine</mat-card-title>
+          <mat-card-title>Arrivées sur 7 jours</mat-card-title>
           <a mat-button color="primary" routerLink="/admin/arrivals">Voir tout</a>
         </mat-card-header>
         <mat-card-content>
@@ -66,14 +66,14 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
             </div>
           }
           @empty {
-            <p class="empty">Aucune arrivée cette semaine</p>
+            <p class="empty">Aucune arrivée sur 7 jours</p>
           }
         </mat-card-content>
       </mat-card>
 
       <mat-card class="list-card">
         <mat-card-header>
-          <mat-card-title>Départs cette semaine</mat-card-title>
+          <mat-card-title>Départs sur 7 jours</mat-card-title>
           <a mat-button color="primary" routerLink="/admin/departures">Voir tout</a>
         </mat-card-header>
         <mat-card-content>
@@ -88,7 +88,7 @@ import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-d
             </div>
           }
           @empty {
-            <p class="empty">Aucun départ cette semaine</p>
+            <p class="empty">Aucun départ sur 7 jours</p>
           }
         </mat-card-content>
       </mat-card>
