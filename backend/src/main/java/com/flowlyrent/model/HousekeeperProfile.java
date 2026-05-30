@@ -34,7 +34,7 @@ public class HousekeeperProfile {
     private boolean active = true;
 
     // Compte portail (HOUSEKEEPER role) — exposé uniquement id + email
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "linked_user_id")
     @JsonIgnoreProperties({"password","authorities","accountNonExpired","credentialsNonExpired",
         "accountNonLocked","enabled","publicSiteSlug","stripeCustomerId","stripeSubscriptionId",

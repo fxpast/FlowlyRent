@@ -6,6 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 export interface PriceDialogData {
   propertyName: string;
@@ -27,7 +29,8 @@ export interface PriceDialogResult {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule,
-    MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule,
+    MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="dialog-header">
@@ -42,11 +45,15 @@ export interface PriceDialogResult {
       <div class="row-2">
         <mat-form-field appearance="outline">
           <mat-label>Date début</mat-label>
-          <input matInput type="date" [(ngModel)]="from">
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDateVal" (ngModelChange)="from = fromDate($event)">
+          <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Date fin</mat-label>
-          <input matInput type="date" [(ngModel)]="to">
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDateVal" (ngModelChange)="to = fromDate($event)">
+          <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
         </mat-form-field>
       </div>
       @if (data.field === 'price') {
@@ -86,6 +93,8 @@ export interface PriceDialogResult {
 export class PriceDialogComponent {
   from: string;
   to: string;
+  fromDateVal: Date | null;
+  toDateVal: Date | null;
   price: number | null;
   minStay: number | null;
 
@@ -95,6 +104,8 @@ export class PriceDialogComponent {
   ) {
     this.from    = data.date;
     this.to      = data.date;
+    this.fromDateVal = this.toDate(data.date);
+    this.toDateVal   = this.toDate(data.date);
     this.price   = data.price   ?? null;
     this.minStay = data.minStay ?? null;
   }
@@ -104,5 +115,11 @@ export class PriceDialogComponent {
       from: this.from, to: this.to,
       price: this.price, minStay: this.minStay
     } as PriceDialogResult);
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }

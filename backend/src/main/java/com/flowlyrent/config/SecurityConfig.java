@@ -44,10 +44,13 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/analytics/**").permitAll()
                 .requestMatchers("/superadmin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/sync/**", "/user/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/housekeeper/**").hasAnyRole("ADMIN", "USER", "HOUSEKEEPER")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) -> res.sendError(401, "Non authentifié"))
                 .accessDeniedHandler((req, res, e) -> res.sendError(403, "Accès refusé"))
             )
             .authenticationProvider(authenticationProvider())

@@ -12,6 +12,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { Message } from '../../core/models/message.model';
@@ -24,7 +26,8 @@ import { Subscription } from 'rxjs';
     CommonModule, FormsModule, MatDialogModule,
     MatButtonModule, MatIconModule, MatChipsModule, MatDividerModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatTabsModule, MatBadgeModule
+    MatTabsModule, MatBadgeModule,
+    MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="dialog-header">
@@ -84,11 +87,15 @@ import { Subscription } from 'rxjs';
             <div class="row-2">
               <mat-form-field appearance="outline">
                 <mat-label>Arrivée</mat-label>
-                <input matInput type="date" [(ngModel)]="draft['arrival']">
+                <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate" (ngModelChange)="draft['arrival'] = fromDate($event)">
+                <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
+                <mat-datepicker #arrivalPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Départ</mat-label>
-                <input matInput type="date" [(ngModel)]="draft['departure']">
+                <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate" (ngModelChange)="draft['departure'] = fromDate($event)">
+                <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
+                <mat-datepicker #departurePicker></mat-datepicker>
               </mat-form-field>
             </div>
             <div class="row-3">
@@ -225,6 +232,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   unreadCount = signal(0);
   newMessage = '';
   sendingMsg = signal(false);
+  arrivalDate: Date | null = null;
+  departureDate: Date | null = null;
   private wsSub?: Subscription;
 
   constructor(
@@ -252,6 +261,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       d['guestLastName']  = parts.slice(1).join(' ') || '';
     }
     this.draft = d;
+    this.arrivalDate   = this.toDate(d['arrival']);
+    this.departureDate = this.toDate(d['departure']);
   }
 
   ngOnInit(): void {
@@ -344,5 +355,11 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.saving.set(false);
       }
     });
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }

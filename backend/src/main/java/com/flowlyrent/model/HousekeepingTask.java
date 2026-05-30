@@ -33,7 +33,7 @@ public class HousekeepingTask {
     private HousekeepingStaff staff;
 
     @JsonIgnoreProperties({"createdAt","updatedAt","active","linkedUser","user"})
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "housekeeper_id")
     private HousekeeperProfile housekeeper;
 

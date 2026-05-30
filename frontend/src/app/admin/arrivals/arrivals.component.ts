@@ -11,7 +11,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
-import { forkJoin } from 'rxjs';
 import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
@@ -171,15 +170,18 @@ export class ArrivalsComponent implements OnInit {
 
   load(): void {
     const ws = localDateStr(this.weekStart());
-    forkJoin([this.bookingService.getArrivals(ws), this.bookingService.getPropertyNames()]).subscribe({
-      next: ([data, names]) => {
-        this.arrivals.set((data ?? []).map(b => {
-          if (!b['propName'] && !b['propertyName']) {
-            const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-            if (pid && names[pid]) return { ...b, propName: names[pid] };
-          }
-          return b;
-        }).sort((a, b) => (a['arrival'] ?? '').localeCompare(b['arrival'] ?? '')));
+    this.bookingService.getArrivals(ws).subscribe({
+      next: data => {
+        this.arrivals.set((data ?? []).sort((a, b) => (a['arrival'] ?? '').localeCompare(b['arrival'] ?? '')));
+        this.bookingService.getPropertyNames().subscribe(names => {
+          this.arrivals.update(list => list.map(b => {
+            if (!b['propName'] && !b['propertyName']) {
+              const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+              if (pid && names[pid]) return { ...b, propName: names[pid] };
+            }
+            return b;
+          }));
+        });
       },
       error: () => {}
     });

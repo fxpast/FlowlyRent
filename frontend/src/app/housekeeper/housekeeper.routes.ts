@@ -11,6 +11,10 @@ export const housekeeperRoutes: Routes = [
       {
         path: 'tasks',
         loadComponent: () => import('./tasks/housekeeper-tasks.component').then(m => m.HousekeeperTasksComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./reports/housekeeper-reports.component').then(m => m.HousekeeperReportsComponent)
       }
     ]
   }

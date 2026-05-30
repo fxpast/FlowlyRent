@@ -7,6 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 export interface BlackoutDialogData {
   propertyName: string;
@@ -25,7 +27,8 @@ export interface BlackoutDialogResult {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule,
-    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule,
+    MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="dialog-header">
@@ -38,11 +41,15 @@ export interface BlackoutDialogResult {
       <div class="row-2">
         <mat-form-field appearance="outline">
           <mat-label>Date début</mat-label>
-          <input matInput type="date" [(ngModel)]="from">
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDateVal" (ngModelChange)="from = fromDate($event)">
+          <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Date fin</mat-label>
-          <input matInput type="date" [(ngModel)]="to">
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDateVal" (ngModelChange)="to = fromDate($event)">
+          <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
         </mat-form-field>
       </div>
       <mat-form-field appearance="outline" class="full">
@@ -76,6 +83,8 @@ export interface BlackoutDialogResult {
 export class BlackoutDialogComponent {
   from: string;
   to: string;
+  fromDateVal: Date | null;
+  toDateVal: Date | null;
   override = 'blackout';
 
   constructor(
@@ -84,9 +93,17 @@ export class BlackoutDialogComponent {
   ) {
     this.from = data.startDate;
     this.to   = data.endDate;
+    this.fromDateVal = this.toDate(data.startDate);
+    this.toDateVal   = this.toDate(data.endDate);
   }
 
   save(): void {
     this.dialogRef.close({ from: this.from, to: this.to, override: this.override } as BlackoutDialogResult);
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }

@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { PublicService } from '../../core/services/public.service';
 import { Property } from '../../core/models/booking.model';
 
@@ -18,7 +20,8 @@ import { Property } from '../../core/models/booking.model';
   imports: [
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatInputModule, MatFormFieldModule, MatSnackBarModule, MatProgressSpinnerModule
+    MatInputModule, MatFormFieldModule, MatSnackBarModule, MatProgressSpinnerModule,
+    MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="navbar">
@@ -53,11 +56,15 @@ import { Property } from '../../core/models/booking.model';
             <div class="form-row">
               <mat-form-field appearance="outline">
                 <mat-label>Arrivée</mat-label>
-                <input matInput type="date" [(ngModel)]="checkIn" (change)="checkAvailability()">
+                <input matInput [matDatepicker]="checkInPicker" [(ngModel)]="checkInDate" (ngModelChange)="checkIn = fromDate($event); checkAvailability()">
+                <mat-datepicker-toggle matIconSuffix [for]="checkInPicker"></mat-datepicker-toggle>
+                <mat-datepicker #checkInPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Départ</mat-label>
-                <input matInput type="date" [(ngModel)]="checkOut" (change)="checkAvailability()">
+                <input matInput [matDatepicker]="checkOutPicker" [(ngModel)]="checkOutDate" (ngModelChange)="checkOut = fromDate($event); checkAvailability()">
+                <mat-datepicker-toggle matIconSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
+                <mat-datepicker #checkOutPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Voyageurs</mat-label>
@@ -136,6 +143,8 @@ export class PropertyDetailComponent implements OnInit {
   property = signal<Property | null>(null);
   checkIn = '';
   checkOut = '';
+  checkInDate: Date | null = null;
+  checkOutDate: Date | null = null;
   guestCount = 1;
   isAvailable = signal(false);
   availabilityChecked = signal(false);
@@ -210,5 +219,11 @@ export class PropertyDetailComponent implements OnInit {
         this.booking.set(false);
       }
     });
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }

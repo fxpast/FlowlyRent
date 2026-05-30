@@ -14,6 +14,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { environment } from '../../../environments/environment';
 
 interface ReportDef {
@@ -47,7 +49,8 @@ interface ReportResult {
     MatCardModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatFormFieldModule, MatInputModule,
     MatTableModule, MatProgressBarModule, MatSnackBarModule,
-    MatTabsModule, MatChipsModule, MatTooltipModule
+    MatTabsModule, MatChipsModule, MatTooltipModule,
+    MatDatepickerModule, MatNativeDateModule
   ],
   template: `
     <div class="page-header">
@@ -105,7 +108,9 @@ interface ReportResult {
               @if (param.type === 'date') {
                 <mat-form-field appearance="outline">
                   <mat-label>{{ param.label }}</mat-label>
-                  <input matInput type="date" [(ngModel)]="paramValues[param.key]">
+                  <input matInput [matDatepicker]="datePicker" [(ngModel)]="paramDates[param.key]" (ngModelChange)="paramValues[param.key] = fromDate($event)">
+                  <mat-datepicker-toggle matIconSuffix [for]="datePicker"></mat-datepicker-toggle>
+                  <mat-datepicker #datePicker></mat-datepicker>
                 </mat-form-field>
               }
               @if (param.type === 'year') {
@@ -244,6 +249,7 @@ export class ReportsComponent {
   result = signal<ReportResult | null>(null);
   selectedReport = signal<ReportDef | null>(null);
   paramValues: Record<string, any> = {};
+  paramDates: Record<string, Date | null> = {};
 
   years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
@@ -372,7 +378,7 @@ export class ReportsComponent {
   selectReport(def: ReportDef): void {
     this.selectedReport.set(def);
     this.result.set(null);
-    // Pre-fill year default
+    this.paramDates = {};
     if (!this.paramValues['year']) {
       this.paramValues['year'] = new Date().getFullYear();
     }
@@ -436,5 +442,11 @@ export class ReportsComponent {
       out[p.key] = String(val);
     }
     return out;
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }

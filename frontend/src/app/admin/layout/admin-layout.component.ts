@@ -111,13 +111,13 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'calendar_month',   label: 'Calendrier',       route: 'calendar' },
     { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
     { icon: 'chat',             label: 'Messages',         route: 'messages' },
+    { icon: 'cleaning_services',label: 'Ménage',           route: 'housekeeping' },
+    { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
+    { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
     { icon: 'payment',          label: 'Paiements',        route: 'payments' },
     { icon: 'sync',             label: 'Synchronisation',  route: 'sync' },
-    { icon: 'cleaning_services',label: 'Ménage',           route: 'housekeeping' },
     { icon: 'bar_chart',        label: 'Revenus',          route: 'stats' },
-    { icon: 'assessment',       label: 'Rapports',         route: 'reports' },
-    { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
-    { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' }
+    { icon: 'assessment',       label: 'Rapports',         route: 'reports' }
   ];
 
   constructor(public auth: AuthService, private messageService: MessageService) {}

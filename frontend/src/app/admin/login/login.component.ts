@@ -81,6 +81,10 @@ export class LoginComponent {
           this.router.navigate(['/superadmin/dashboard']);
           return;
         }
+        if (this.auth.isHousekeeper()) {
+          this.router.navigate(['/housekeeper/tasks']);
+          return;
+        }
         this.userService.getBeds24Status().subscribe({
           next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
           error: () => this.router.navigate(['/admin/dashboard'])

@@ -36,11 +36,11 @@ public class SuperAdminController {
         List<Map<String, Object>> users = userRepository.findAll().stream()
             .map(u -> Map.<String, Object>of(
                 "id", u.getId(),
-                "email", u.getEmail(),
+                "email", u.getEmail() != null ? u.getEmail() : "",
                 "firstName", u.getFirstName() != null ? u.getFirstName() : "",
                 "lastName", u.getLastName() != null ? u.getLastName() : "",
-                "plan", u.getPlan().name(),
-                "role", u.getRole().name(),
+                "plan", u.getPlan() != null ? u.getPlan().name() : "FREE",
+                "role", u.getRole() != null ? u.getRole().name() : "USER",
                 "active", u.isActive(),
                 "createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : ""
             ))

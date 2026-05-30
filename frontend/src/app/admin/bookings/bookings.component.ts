@@ -49,7 +49,6 @@ import { localDateStr } from '../../core/utils/date.utils';
             } @else {
               <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher"><mat-icon>search</mat-icon></button>
             }
-            <mat-icon matSuffix>search</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Statut</mat-label>
