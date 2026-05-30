@@ -125,7 +125,7 @@ interface ReportDraft {
                 <div class="photo-row">
                   @for (p of task.photos; track p.id) {
                     <div class="photo-thumb" [class.before]="p.photoType === 'BEFORE'" [class.incident]="p.photoType === 'INCIDENT'">
-                      <img [src]="p.data" [alt]="p.caption || p.photoType" (click)="openPhoto(p)">
+                      <img [src]="p.url ?? p.data" [alt]="p.caption || p.photoType" (click)="openPhoto(p)">
                       <span class="photo-label">{{ photoTypeLabel(p.photoType) }}</span>
                       <button class="photo-del" (click)="deletePhoto(task, p)" title="Supprimer">
                         <mat-icon>close</mat-icon>
@@ -205,7 +205,7 @@ interface ReportDraft {
     <!-- Lightbox -->
     @if (lightboxPhoto()) {
       <div class="lightbox" (click)="lightboxPhoto.set(null)">
-        <img [src]="lightboxPhoto()!.data" [alt]="lightboxPhoto()!.caption || ''">
+        <img [src]="lightboxPhoto()!.url ?? lightboxPhoto()!.data" [alt]="lightboxPhoto()!.caption || ''">
         <button class="lightbox-close" (click)="lightboxPhoto.set(null)"><mat-icon>close</mat-icon></button>
       </div>
     }

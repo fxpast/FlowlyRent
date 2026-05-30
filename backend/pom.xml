@@ -127,6 +127,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Cloudinary (stockage photos tâches ménage) -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http45</artifactId>
+            <version>1.38.0</version>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

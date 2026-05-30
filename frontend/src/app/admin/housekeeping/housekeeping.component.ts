@@ -41,7 +41,8 @@ interface Task {
 interface TaskPhoto {
   id: number;
   photoType: string;
-  data: string;
+  url?: string;   // Cloudinary (nouveaux uploads)
+  data?: string;  // base64 legacy
   caption?: string;
   uploadedAt: string;
 }
@@ -415,7 +416,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               <div class="rphotos-grid">
                 @for (photo of reportPanel()!.photos; track photo.id) {
                   <div class="rphoto-item">
-                    <img [src]="photo.data" [alt]="photo.caption || photo.photoType" (click)="openFullscreen(photo.data)">
+                    <img [src]="photo.url ?? photo.data" [alt]="photo.caption || photo.photoType" (click)="openFullscreen(photo.url ?? photo.data ?? '')">
                     <div class="rphoto-badge" [class.incident]="photo.photoType === 'INCIDENT'">{{ photoTypeLabel(photo.photoType) }}</div>
                     @if (photo.caption) { <div class="rphoto-caption">{{ photo.caption }}</div> }
                   </div>

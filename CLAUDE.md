@@ -5,8 +5,23 @@
 FlowlyRent est une plateforme SaaS multi-tenant de gestion de location saisonnière (MVP).
 Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pour centraliser automatiquement ses propriétés et réservations, gérer des réservations directes, et proposer un site de réservation public personnalisé.
 
-**Dépôt GitHub :** `fxpast/flowlyrent`
+**Dépôt GitHub :** `fxpast/flowlyrent` — ⚠️ **REPO PUBLIC**
 **Domaine production :** `flowlyrent.com`
+
+---
+
+## ⚠️ Sécurité — Repo public
+
+Le dépôt GitHub est **public**. Règles absolues :
+
+- **Ne jamais committer de secrets** dans aucun fichier versionné (`application.yml`, `environment.ts`, etc.)
+- Toutes les valeurs sensibles passent **uniquement par des variables d'environnement** (Railway en prod, `.env` local gitignored)
+- Dans `application.yml`, la syntaxe `${MA_VAR}` sans valeur par défaut est obligatoire pour les secrets — si la variable n'est pas définie, le backend refuse de démarrer (comportement voulu)
+- La syntaxe `${MA_VAR:valeur_par_defaut}` n'est acceptable **que pour les valeurs non-sensibles** (cloud name, api key publique, URLs)
+- Les valeurs non-sensibles autorisées en défaut : `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` (inutilisables sans le secret)
+- Secrets qui **ne doivent jamais apparaître** dans le code : `CLOUDINARY_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `DB_PASSWORD`
+
+---
 
 ## Workflow Git
 
@@ -35,6 +50,7 @@ Elle permet à chaque hôte de connecter son compte Beds24 (channel manager) pou
 | Paiement | Stripe (Checkout Session + Payment Intent + Webhooks) |
 | Messagerie temps réel | WebSocket (STOMP via SockJS) |
 | Synchronisation plateformes | Beds24 API v2 (principal) + iCal (legacy) |
+| Stockage photos | Cloudinary (`cloudinary-http45` 1.38.0) — cloud name `dlixzbkue` |
 | Infrastructure dev | Docker Compose / XAMPP local |
 | Infrastructure prod | Netlify (frontend) + Railway (backend + MySQL) |
 | API docs | Springdoc OpenAPI (Swagger UI) |
@@ -70,10 +86,12 @@ FlowlyRent/
 │   └── src/main/java/com/flowlyrent/
 │       ├── FlowlyRentApplication.java
 │       ├── config/
-│       │   ├── SecurityConfig.java        # JWT + routes publiques/admin
+│       │   ├── SecurityConfig.java        # JWT + routes publiques/admin/housekeeper
 │       │   ├── JwtTokenProvider.java      # Génération / validation JWT
 │       │   ├── JwtAuthenticationFilter.java  # Filter Bearer token
 │       │   ├── SecurityUtils.java         # getCurrentUser(), getCurrentUserId()
+│       │   ├── AdminBootstrap.java        # Auto-création compte ADMIN au démarrage (env vars)
+│       │   ├── CloudinaryConfig.java      # Bean Cloudinary (cloud_name, api_key, api_secret)
 │       │   ├── WebConfig.java             # CORS (localhost:4200)
 │       │   └── WebSocketConfig.java       # STOMP /ws endpoint
 │       ├── model/
@@ -87,12 +105,14 @@ FlowlyRent/
 │       │   ├── Payment.java          # Paiement Stripe
 │       │   ├── Channel.java          # Canal iCal (legacy)
 │       │   ├── AvailabilityBlock.java # Blocage manuel de dates
-│       │   ├── HousekeepingTask.java  # Tâche ménage/maintenance
+│       │   ├── HousekeepingTask.java  # Tâche ménage — housekeeper FK, report, hasIncident
+│       │   ├── HousekeeperProfile.java # Prestataire ménage — linkedUser (AppUser HOUSEKEEPER)
+│       │   ├── TaskPhoto.java         # Photo tâche — url (Cloudinary) + publicId + data (legacy base64)
 │       │   ├── AnalyticsEvent.java    # Événement analytics (PAGE_VIEW, LOGIN, CLICK)
 │       │   ├── Feedback.java          # Feedback utilisateur (catégorie + message + statut)
 │       │   └── enums/
 │       │       ├── SubscriptionPlan.java  # FREE, STARTER, PRO, AGENCE
-│       │       ├── UserRole.java          # USER, ADMIN
+│       │       ├── UserRole.java          # USER, ADMIN, HOUSEKEEPER
 │       │       ├── AnalyticsEventType.java # PAGE_VIEW, LOGIN, CLICK
 │       │       ├── BookingStatus.java     # PENDING, CONFIRMED, CANCELLED, COMPLETED
 │       │       ├── BookingSource.java     # DIRECT, AIRBNB, BOOKING_COM, ABRITEL, BEDS24
@@ -107,6 +127,7 @@ FlowlyRent/
 │       ├── service/
 │       │   ├── Beds24SyncService.java # Sync Beds24 API v2 (propriétés, chambres, réservations)
 │       │   ├── BookingService.java    # CRUD + arrivées/départs par semaine (scopé par user)
+│       │   ├── CloudinaryService.java # Upload base64 → Cloudinary + suppression par publicId
 │       │   ├── ICalSyncService.java   # Sync iCal automatique (cron toutes les 2h)
 │       │   ├── MessageService.java    # Messagerie + push WebSocket
 │       │   ├── PaymentService.java    # Stripe Checkout + webhooks
@@ -118,6 +139,9 @@ FlowlyRent/
 │       │   ├── AdminBookingController.java  # /admin/bookings/**
 │       │   ├── AdminMessageController.java  # /admin/messages/**
 │       │   ├── AdminPaymentController.java  # /admin/payments/**
+│       │   ├── AdminHousekeeperController.java  # /admin/housekeepers/** (CRUD + activate/deactivate portal)
+│       │   ├── AdminHousekeepingController.java # /admin/housekeeping/** (tâches + GET /{id}/photos)
+│       │   ├── HousekeeperPortalController.java # /housekeeper/** (espace prestataire — ROLE_HOUSEKEEPER)
 │       │   ├── SyncController.java          # /sync/channels/** (iCal uniquement)
 │       │   ├── PublicBookingController.java # /public/{slug}/** + /public/**
 │       │   ├── StripeWebhookController.java # /webhooks/stripe
@@ -142,7 +166,7 @@ FlowlyRent/
 │   └── src/
 │       ├── main.ts
 │       ├── index.html
-│       ├── styles.scss               # Global styles + Angular Material theme
+│       ├── styles.scss               # Global styles + Angular Material theme + styles dialog photos
 │       ├── environments/
 │       │   ├── environment.ts        # apiUrl, wsUrl, stripePublishableKey
 │       │   └── environment.prod.ts
@@ -153,22 +177,25 @@ FlowlyRent/
 │           ├── core/
 │           │   ├── models/           # booking.model.ts, message.model.ts, payment.model.ts
 │           │   ├── services/
-│           │   │   ├── auth.service.ts      # Login JWT, localStorage (stocke role USER/ADMIN)
+│           │   │   ├── auth.service.ts      # Login JWT, localStorage — role USER/ADMIN/HOUSEKEEPER
 │           │   │   ├── booking.service.ts   # Appels API admin réservations
 │           │   │   ├── message.service.ts   # Appels API + WebSocket STOMP
 │           │   │   ├── payment.service.ts   # Appels API paiements Stripe
 │           │   │   ├── sync.service.ts      # Appels API synchronisation iCal
 │           │   │   ├── public.service.ts    # Appels API site public
 │           │   │   ├── analytics.service.ts # Auto-tracking PAGE_VIEW (tous visiteurs, auth ou non)
-│           │   │   └── user.service.ts      # Profil, Beds24, mot de passe
+│           │   │   ├── user.service.ts      # Profil, Beds24, mot de passe
+│           │   │   ├── housekeeper.service.ts        # Admin — CRUD prestataires + activate/deactivate portal
+│           │   │   └── housekeeper-portal.service.ts # Portail — me, tasks, status, report, photos
 │           │   ├── guards/
-│           │   │   ├── auth.guard.ts        # Redirige vers /admin/login ou /superadmin/dashboard selon rôle
-│           │   │   └── superadmin.guard.ts  # Vérifie isAdmin() — protège /superadmin/**
+│           │   │   ├── auth.guard.ts        # Redirige selon rôle : USER→/admin, ADMIN→/superadmin, HOUSEKEEPER→/housekeeper
+│           │   │   ├── superadmin.guard.ts  # Vérifie isAdmin() — protège /superadmin/**
+│           │   │   └── housekeeper.guard.ts # Vérifie isHousekeeper() — protège /housekeeper/**
 │           │   └── interceptors/
-│           │       └── auth.interceptor.ts  # Bearer token sur /admin, /sync, /user, /superadmin, /analytics
+│           │       └── auth.interceptor.ts  # Bearer token sur /admin, /sync, /user, /superadmin, /analytics, /housekeeper
 │           ├── admin/
 │           │   ├── admin.routes.ts          # Lazy loading des pages admin
-│           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar
+│           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar (mat-sidenav-container)
 │           │   ├── login/login.component.ts           # Redirige ADMIN → /superadmin/dashboard
 │           │   ├── dashboard/dashboard.component.ts  # Stats du jour + listes semaine
 │           │   ├── arrivals/arrivals.component.ts    # Arrivées avec navigation semaine
@@ -178,14 +205,19 @@ FlowlyRent/
 │           │   ├── messages/messages.component.ts    # Chat temps réel
 │           │   ├── payments/payments.component.ts    # Génération liens Stripe
 │           │   ├── sync/sync.component.ts            # Gestion canaux iCal
+│           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Prestataires + viewer rapport/photos
 │           │   ├── settings/settings.component.ts    # Beds24 + Profil + Mot de passe
 │           │   └── feedback/feedback.component.ts    # Formulaire feedback MVP
 │           ├── superadmin/                           # Accessible uniquement ROLE_ADMIN
 │           │   ├── superadmin.routes.ts
 │           │   ├── superadmin-layout.component.ts
 │           │   ├── dashboard/superadmin-dashboard.component.ts  # KPIs (users, logins, clics, visiteurs anonymes)
-│           │   ├── users/superadmin-users.component.ts          # Liste users + reset mot de passe
+│           │   ├── users/superadmin-users.component.ts          # Liste users + reset mdp + suppression
 │           │   └── feedbacks/superadmin-feedbacks.component.ts  # Feedbacks + gestion statut
+│           ├── housekeeper/                          # Portail prestataire — ROLE_HOUSEKEEPER uniquement
+│           │   ├── housekeeper.routes.ts             # Route racine avec housekeeperGuard
+│           │   ├── layout/housekeeper-layout.component.ts  # Toolbar simple + nom + logout
+│           │   └── tasks/housekeeper-tasks.component.ts    # Missions groupées par date, rapport, photos
 │           └── public/
 │               ├── public.routes.ts
 │               ├── home/home.component.ts            # Page d'accueil (bandeau bêta MVP)
@@ -216,9 +248,35 @@ FlowlyRent/
 | `messages` | Message | Messages hôte ↔ voyageur |
 | `channels` | Channel | Canaux iCal (legacy — Beds24 géré via beds24_accounts) |
 | `availability_blocks` | AvailabilityBlock | Blocages manuels de dates (entretien, séjour proprio, etc.) |
-| `housekeeping_tasks` | HousekeepingTask | Tâches ménage/maintenance — auto-créées sur checkout de chaque réservation |
+| `housekeeping_tasks` | HousekeepingTask | Tâches ménage — housekeeper_id FK, reportComment, hasIncident, incidentDescription |
+| `housekeeper_profiles` | HousekeeperProfile | Prestataires — nom, téléphone, linked_user_id (AppUser HOUSEKEEPER, nullable) |
+| `task_photos` | TaskPhoto | Photos tâche — `url` VARCHAR(500) Cloudinary + `public_id` VARCHAR(200) + `data` LONGTEXT (legacy base64) |
 | `analytics_events` | AnalyticsEvent | Événements PAGE_VIEW / LOGIN / CLICK — userId NULL pour visiteurs anonymes |
 | `feedbacks` | Feedback | Feedbacks utilisateurs — catégorie, message, statut (NEW/IN_PROGRESS/DONE/REJECTED) |
+
+---
+
+## Stockage des photos (Cloudinary)
+
+Les photos de tâches ménage sont stockées sur **Cloudinary** (cloud `dlixzbkue`).
+
+### Flux upload
+1. La prestataire prend une photo sur mobile → le frontend lit le fichier en base64 (`FileReader`)
+2. Le base64 est envoyé au backend via `POST /housekeeper/tasks/{id}/photos`
+3. Le backend uploade vers Cloudinary via `CloudinaryService.uploadBase64()` dans le dossier `flowlyrent/tasks/{taskId}/`
+4. Cloudinary retourne `secure_url` et `public_id` → stockés dans `task_photos.url` et `task_photos.public_id`
+5. Le champ `data` (LONGTEXT) reste null pour les nouveaux uploads
+
+### Fallback base64
+Si l'upload Cloudinary échoue, la photo est sauvegardée en base64 dans le champ `data` (comportement legacy). L'affichage utilise `url ?? data` partout.
+
+### Suppression
+Quand une photo est supprimée, `CloudinaryService.delete(publicId)` est appelé avant `photoRepo.deleteById()`.
+
+### Affichage côté admin
+Le menu Ménage affiche un bouton `photo_library` sur chaque carte de tâche assignée à un prestataire. Clic → `MatDialog` (CDK overlay, hors du `mat-sidenav-container`) affichant rapport + photos groupées par type (Avant / Après / Incident). Clic sur une photo → plein écran dans un nouvel onglet.
+
+> **Note technique** : les dialogs utilisent `MatDialog` et non un overlay `position:fixed` inline, car `mat-sidenav-container` applique des transforms CSS qui cassent `position:fixed` à l'intérieur du sidenav.
 
 ---
 
@@ -262,9 +320,16 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | POST | `/admin/payments/checkout-session` | Créer un lien Stripe Checkout |
 | POST | `/admin/payments/payment-intent` | Créer un Payment Intent Stripe |
 | GET | `/admin/housekeeping?from=&to=` | Tâches ménage (filtrées par date) |
-| POST | `/admin/housekeeping` | Créer une tâche manuelle |
+| POST | `/admin/housekeeping` | Créer une tâche manuelle (accepte `housekeeperId`) |
 | PATCH | `/admin/housekeeping/{id}/status` | Changer le statut d'une tâche |
+| GET | `/admin/housekeeping/{id}/photos` | Photos d'une tâche (vérifié par user_id) |
 | DELETE | `/admin/housekeeping/{id}` | Supprimer une tâche |
+| GET | `/admin/housekeepers` | Liste des prestataires (scopé user) |
+| POST | `/admin/housekeepers` | Créer un prestataire |
+| PUT | `/admin/housekeepers/{id}` | Modifier un prestataire |
+| DELETE | `/admin/housekeepers/{id}` | Supprimer un prestataire (soft delete) |
+| POST | `/admin/housekeepers/{id}/activate` | Créer compte portail (AppUser HOUSEKEEPER) + lier au profil |
+| DELETE | `/admin/housekeepers/{id}/deactivate` | Désactiver compte portail (active=false, unlink) |
 | GET | `/admin/availability/calendar?from=&to=` | Données calendrier (propriétés, réservations, blocages) |
 | POST | `/admin/availability/blocks` | Créer un blocage de dates |
 | DELETE | `/admin/availability/blocks/{id}` | Supprimer un blocage |
@@ -291,11 +356,23 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 |---------|-------|-------------|
 | POST | `/analytics/track` | Enregistrer un événement `{type, page}` — userId null si non connecté |
 
+### Portail prestataire (ROLE_HOUSEKEEPER requis)
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/housekeeper/me` | Profil du prestataire connecté |
+| GET | `/housekeeper/tasks?from=YYYY-MM-DD` | Tâches assignées à partir d'une date |
+| PATCH | `/housekeeper/tasks/{id}/status` | Changer le statut (PENDING/IN_PROGRESS/DONE/SKIPPED) |
+| POST | `/housekeeper/tasks/{id}/report` | Sauvegarder rapport (commentaire + incident) |
+| GET | `/housekeeper/tasks/{id}/photos` | Lister les photos d'une tâche |
+| POST | `/housekeeper/tasks/{id}/photos` | Ajouter une photo (base64 → Cloudinary, fallback base64) |
+| DELETE | `/housekeeper/tasks/{id}/photos/{photoId}` | Supprimer une photo (+ suppression Cloudinary) |
+
 ### Superadmin (ROLE_ADMIN requis)
 | Méthode | Route | Description |
 |---------|-------|-------------|
 | GET | `/superadmin/stats` | KPIs (users, logins, clics, visiteurs anonymes) |
 | GET | `/superadmin/users` | Liste de tous les utilisateurs |
+| DELETE | `/superadmin/users/{id}` | Supprimer définitivement un compte |
 | PATCH | `/superadmin/users/{id}/password` | Réinitialiser le mot de passe d'un user |
 | GET | `/superadmin/feedbacks` | Liste des feedbacks |
 | PATCH | `/superadmin/feedbacks/{id}/status` | Changer le statut d'un feedback |
@@ -378,19 +455,33 @@ Lire ce fichier pour tester l'API Beds24 sans passer par le flux d'authentificat
 
 ## Variables d'environnement
 
-Copier `.env.example` en `.env` et remplir :
+⚠️ **Repo public** : aucune valeur sensible ne doit apparaître dans le code ou les fichiers versionnés.
+
+Copier `.env.example` en `.env` (gitignored) et remplir :
 
 ```bash
-# Backend
+# Base de données
 DB_USERNAME=flowlyrent
 DB_PASSWORD=flowlyrent
+
+# JWT
 JWT_SECRET=<base64 32+ bytes>
 JWT_EXPIRATION=604800000
+
+# Stripe
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Frontend (environments/environment.ts)
+# Cloudinary (stockage photos ménage)
+CLOUDINARY_SECRET=<api_secret Cloudinary>
+# CLOUDINARY_CLOUD_NAME et CLOUDINARY_API_KEY ont des défauts non-sensibles dans application.yml
+
+# Compte superadmin auto-créé au démarrage (AdminBootstrap)
+ADMIN_USERNAME=admin@flowlyrent.com
+ADMIN_PASSWORD=<mot de passe sécurisé>
+
+# Frontend (environments/environment.ts — ne pas committer les clés live)
 stripePublishableKey: 'pk_test_...'
 ```
 
@@ -404,8 +495,8 @@ stripePublishableKey: 'pk_test_...'
 # Créer la base :
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS flowlyrent CHARACTER SET utf8mb4;"
 
-# Backend (depuis /backend)
-./mvnw spring-boot:run
+# Backend (depuis /backend) — pas de fichier mvnw, utiliser mvn directement
+mvn spring-boot:run
 
 # Frontend (depuis /frontend)
 npm install
@@ -452,7 +543,11 @@ Ne jamais les committer dans git.
   JWT_SECRET=<clé base64 32+ octets>
   STRIPE_SECRET_KEY=sk_live_...
   STRIPE_WEBHOOK_SECRET=whsec_...
+  CLOUDINARY_SECRET=<api_secret Cloudinary — régénérer si compromis>
   CORS_ALLOWED_ORIGINS=https://flowlyrent.com,https://www.flowlyrent.com,https://flowlyrent.netlify.app
+  ADMIN_USERNAME=admin@flowlyrent.com
+  ADMIN_PASSWORD=<mot de passe sécurisé>
+  ANALYTICS_INTERNAL_EMAILS=<emails internes séparés par virgule>
   ```
   Les variables `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`
   sont injectées automatiquement par Railway depuis le plugin MySQL.
@@ -485,11 +580,19 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - [x] Interface admin — calendrier des disponibilités
 - [x] Notifications email (confirmation réservation, reçu paiement, rappel J-1)
 - [x] Tableau de bord revenus / statistiques
-- [x] Rôles utilisateurs (USER / ADMIN) — JWT claim "role"
+- [x] Rôles utilisateurs (USER / ADMIN / HOUSEKEEPER) — JWT claim "role"
 - [x] Dashboard superadmin — KPIs filtrés (utilisateurs, connexions, clics, visiteurs anonymes)
 - [x] Tracking analytique automatique (PAGE_VIEW tous visiteurs + LOGIN)
 - [x] Feedback utilisateurs — formulaire + gestion superadmin
 - [x] Changement de mot de passe — auto (paramètres) + admin (superadmin)
+- [x] Suppression compte utilisateur (superadmin)
+- [x] Auto-création compte ADMIN au démarrage (AdminBootstrap + env vars)
+- [x] Prestataires ménage — CRUD admin + onglet dédié dans housekeeping
+- [x] Portail prestataire — espace personnel `/housekeeper/tasks` (rôle HOUSEKEEPER)
+- [x] Activation portail prestataire — création compte AppUser lié au profil
+- [x] Rapport de tâche — commentaire + signalement incident
+- [x] Photos tâche — avant/après/incident (caméra mobile → Cloudinary)
+- [x] Consultation photos prestataire depuis le menu Ménage admin (MatDialog)
 - [x] Logo SVG + favicon maison bleue
 - [x] Domaine personnalisé flowlyrent.com
 
@@ -500,6 +603,8 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - **Backend** : package `com.flowlyrent`, Lombok (`@Data`), DTOs séparés des entités
 - **Frontend** : composants standalone Angular 17, signals (`signal()`), syntaxe `@for` / `@if`
 - **Multi-tenant** : toujours filtrer par `getCurrentUserId()` dans les contrôleurs admin
+- **Dialogs admin** : utiliser `MatDialog` (CDK overlay) et non `position:fixed` inline — le `mat-sidenav-container` applique des transforms qui cassent `position:fixed`
 - **Langue de l'interface** : Français
 - **Pas de commentaires inutiles** — le code se lit tout seul
+- **Sécurité repo public** : aucune valeur sensible en dur dans le code — tout passe par `${ENV_VAR}` sans défaut
 - **Git** : travailler sur `dev`, ne jamais toucher à `master`

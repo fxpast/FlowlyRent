@@ -58,6 +58,11 @@ admin:
   username: ${ADMIN_USERNAME:}
   password: ${ADMIN_PASSWORD:}
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dlixzbkue}
+  api-key: ${CLOUDINARY_API_KEY:636556719395733}
+  api-secret: ${CLOUDINARY_SECRET}
+
 sync:
   ical:
     cron: "0 0 */2 * * *"

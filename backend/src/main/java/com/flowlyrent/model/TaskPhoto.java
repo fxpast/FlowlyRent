@@ -24,8 +24,16 @@ public class TaskPhoto {
     @Column(nullable = false)
     private String photoType; // BEFORE, AFTER, INCIDENT
 
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
-    private String data; // base64 data URI
+    // Cloudinary (nouveaux uploads)
+    @Column(length = 500)
+    private String url;
+
+    @Column(length = 200)
+    private String publicId;
+
+    // Base64 legacy (anciennes photos avant migration Cloudinary)
+    @Column(columnDefinition = "LONGTEXT")
+    private String data;
 
     private String caption;
 

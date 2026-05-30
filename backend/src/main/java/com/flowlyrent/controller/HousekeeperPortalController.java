@@ -8,8 +8,10 @@ import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
+import com.flowlyrent.service.CloudinaryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,12 +24,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/housekeeper")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Portail prestataire")
 public class HousekeeperPortalController {
 
     private final HousekeeperProfileRepository profileRepo;
     private final HousekeepingTaskRepository taskRepo;
     private final TaskPhotoRepository photoRepo;
+    private final CloudinaryService cloudinaryService;
     private final SecurityUtils securityUtils;
 
     private HousekeeperProfile myProfile() {
@@ -105,8 +109,22 @@ public class HousekeeperPortalController {
         TaskPhoto photo = new TaskPhoto();
         photo.setTask(task);
         photo.setPhotoType(body.getOrDefault("photoType", "AFTER"));
-        photo.setData(body.get("data"));
         photo.setCaption(body.get("caption"));
+
+        String base64Data = body.get("data");
+        if (base64Data != null && !base64Data.isBlank()) {
+            try {
+                java.util.Map<?, ?> result = cloudinaryService.uploadBase64(
+                    base64Data, "flowlyrent/tasks/" + task.getId()
+                );
+                photo.setUrl(result.get("secure_url").toString());
+                photo.setPublicId(result.get("public_id").toString());
+            } catch (Exception e) {
+                log.warn("Cloudinary upload failed, falling back to base64: {}", e.getMessage());
+                photo.setData(base64Data);
+            }
+        }
+
         return ResponseEntity.ok(photoRepo.save(photo));
     }
 
@@ -116,6 +134,9 @@ public class HousekeeperPortalController {
         taskRepo.findById(id)
                 .filter(t -> t.getHousekeeper() != null && t.getHousekeeper().getId().equals(profile.getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+        photoRepo.findById(photoId).ifPresent(photo -> {
+            if (photo.getPublicId() != null) cloudinaryService.delete(photo.getPublicId());
+        });
         photoRepo.deleteById(photoId);
         return ResponseEntity.noContent().build();
     }

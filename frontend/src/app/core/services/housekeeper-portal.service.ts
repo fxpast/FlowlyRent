@@ -22,7 +22,8 @@ export interface PortalTask {
 export interface TaskPhoto {
   id: number;
   photoType: string;
-  data: string;
+  url?: string;   // Cloudinary (nouveaux uploads)
+  data?: string;  // base64 legacy
   caption?: string;
   uploadedAt: string;
 }
@@ -37,8 +38,9 @@ export class HousekeeperPortalService {
     return this.http.get<any>(`${this.base}/me`);
   }
 
-  getTasks(): Observable<PortalTask[]> {
-    return this.http.get<PortalTask[]>(`${this.base}/tasks`);
+  getTasks(from?: string): Observable<PortalTask[]> {
+    const params = from ? `?from=${from}` : '';
+    return this.http.get<PortalTask[]>(`${this.base}/tasks${params}`);
   }
 
   updateStatus(taskId: number, status: string): Observable<PortalTask> {
