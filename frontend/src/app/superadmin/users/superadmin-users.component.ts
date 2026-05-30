@@ -38,6 +38,10 @@ interface UserRow {
 
     @if (loading()) {
       <div class="loading"><mat-spinner diameter="40" /></div>
+    } @else if (errorMsg()) {
+      <div class="error-box">
+        <mat-icon>error_outline</mat-icon> {{ errorMsg() }}
+      </div>
     } @else {
       <mat-card>
         <mat-card-content>
@@ -131,11 +135,13 @@ interface UserRow {
     .pwd-msg { font-size: 12px; margin: 0 0 4px; color: #d32f2f; }
     .pwd-msg.success { color: #2e7d32; }
     .action-row { display: flex; align-items: center; gap: 4px; }
+    .error-box { display: flex; align-items: center; gap: 8px; padding: 16px; background: #fdecea; color: #b71c1c; border-radius: 8px; }
   `]
 })
 export class SuperadminUsersComponent implements OnInit {
   users = signal<UserRow[]>([]);
   loading = signal(true);
+  errorMsg = signal('');
   columns = ['id', 'email', 'name', 'plan', 'role', 'createdAt', 'actions'];
 
   editingId = signal<number | null>(null);
@@ -150,7 +156,10 @@ export class SuperadminUsersComponent implements OnInit {
   ngOnInit(): void {
     this.http.get<UserRow[]>(`${environment.apiUrl}/superadmin/users`).subscribe({
       next: u => { this.users.set(u); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      error: err => {
+        this.errorMsg.set(`Erreur ${err.status} — ${err.error?.message ?? err.message ?? 'impossible de charger les utilisateurs'}`);
+        this.loading.set(false);
+      }
     });
   }
 
