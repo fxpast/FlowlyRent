@@ -51,8 +51,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'housekeeping',
-        component: ComingSoonComponent,
-        data: { title: 'Ménage' }
+        loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent)
       },
       {
         path: 'properties',
