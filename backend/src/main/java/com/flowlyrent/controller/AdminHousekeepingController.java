@@ -5,11 +5,13 @@ import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingStaff;
 import com.flowlyrent.model.HousekeepingTask;
+import com.flowlyrent.model.TaskPhoto;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingStaffRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
+import com.flowlyrent.repository.TaskPhotoRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,6 +33,7 @@ public class AdminHousekeepingController {
     private final HousekeepingTaskRepository taskRepo;
     private final HousekeepingStaffRepository staffRepo;
     private final HousekeeperProfileRepository housekeeperRepo;
+    private final TaskPhotoRepository photoRepo;
     private final SecurityUtils securityUtils;
 
     // --- Tâches ---
@@ -93,6 +96,15 @@ public class AdminHousekeepingController {
         task.setStatus(status);
         if (status == TaskStatus.DONE) task.setCompletedAt(LocalDateTime.now());
         return ResponseEntity.ok(taskRepo.save(task));
+    }
+
+    @GetMapping("/{id}/photos")
+    public ResponseEntity<List<TaskPhoto>> getPhotos(@PathVariable Long id) {
+        Long userId = securityUtils.getCurrentUserId();
+        taskRepo.findById(id)
+                .filter(t -> t.getUser().getId().equals(userId))
+                .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+        return ResponseEntity.ok(photoRepo.findByTaskIdOrderByUploadedAtAsc(id));
     }
 
     @DeleteMapping("/{id}")

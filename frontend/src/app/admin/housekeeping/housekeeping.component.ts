@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -30,9 +30,32 @@ interface Task {
   notes?: string;
   completedAt?: string;
   hasIncident?: boolean;
+  reportComment?: string;
+  incidentDescription?: string;
+  reportedAt?: string;
   housekeeper?: { id: number; name: string; phone?: string; email?: string };
   property?: { id: number; name: string; city?: string };
   booking?: { id: number; firstName?: string; lastName?: string };
+}
+
+interface TaskPhoto {
+  id: number;
+  photoType: string;
+  data: string;
+  caption?: string;
+  uploadedAt: string;
+}
+
+interface ReportPanel {
+  taskId: number;
+  taskLabel: string;
+  propertyName: string;
+  scheduledDate: string;
+  reportComment?: string;
+  hasIncident?: boolean;
+  incidentDescription?: string;
+  photos: TaskPhoto[];
+  loading: boolean;
 }
 
 interface Property { id: number; name: string; city?: string; }
@@ -100,7 +123,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </mat-form-field>
                   <mat-form-field>
                     <mat-label>Date</mat-label>
-                    <input matInput type="date" [(ngModel)]="newTask.scheduledDate" />
+                    <input matInput [matDatepicker]="schedPicker" [(ngModel)]="newTaskDate" (ngModelChange)="newTask.scheduledDate = fromDate($event)">
+                    <mat-datepicker-toggle matIconSuffix [for]="schedPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #schedPicker></mat-datepicker>
                   </mat-form-field>
                 </div>
                 <div class="form-row">
@@ -134,11 +159,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <div class="filters">
       <mat-form-field>
         <mat-label>Du</mat-label>
-        <input matInput type="date" [(ngModel)]="filterFrom" (change)="load()" />
+        <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (ngModelChange)="filterFrom = fromDate($event); load()">
+        <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+        <mat-datepicker #fromPicker></mat-datepicker>
       </mat-form-field>
       <mat-form-field>
         <mat-label>Au</mat-label>
-        <input matInput type="date" [(ngModel)]="filterTo" (change)="load()" />
+        <input matInput [matDatepicker]="toPicker" [(ngModel)]="filterToDate" (ngModelChange)="filterTo = fromDate($event); load()">
+        <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+        <mat-datepicker #toPicker></mat-datepicker>
       </mat-form-field>
       <mat-form-field>
         <mat-label>Statut</mat-label>
@@ -188,6 +217,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   @if (task.hasIncident) {
                     <div class="task-incident"><mat-icon>warning</mat-icon> Incident signalé</div>
                   }
+                  @if (task.reportComment) {
+                    <div class="task-report-preview">{{ task.reportComment }}</div>
+                  }
                   @if (task.notes) {
                     <div class="task-notes">{{ task.notes }}</div>
                   }
@@ -210,6 +242,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       <span class="completed-at">
                         Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
                       </span>
+                    }
+                    @if (task.housekeeper) {
+                      <button mat-icon-button (click)="openReport(task)" title="Rapport & photos"
+                              [style.color]="task.hasIncident ? '#e65100' : '#1976d2'">
+                        <mat-icon>photo_library</mat-icon>
+                      </button>
                     }
                   </div>
                 </mat-card>
@@ -341,6 +379,53 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
       </mat-tab>
 
     </mat-tab-group>
+
+    <!-- ══════════════ DIALOG RAPPORT & PHOTOS ══════════════ -->
+    <ng-template #reportDialogTpl>
+      @if (reportPanel()) {
+        <div class="rdialog-header">
+          <div>
+            <div class="rdialog-title">{{ reportPanel()!.taskLabel }}</div>
+            <div class="rdialog-sub">{{ reportPanel()!.propertyName }} &mdash; {{ reportPanel()!.scheduledDate | date:'dd/MM/yyyy' }}</div>
+          </div>
+          <button mat-icon-button (click)="closeReport()"><mat-icon>close</mat-icon></button>
+        </div>
+        <mat-dialog-content class="rdialog-content">
+          @if (reportPanel()!.reportComment) {
+            <div class="rsection">
+              <div class="rsection-label"><mat-icon>description</mat-icon> Rapport</div>
+              <div class="rcomment-text">{{ reportPanel()!.reportComment }}</div>
+            </div>
+          }
+          @if (reportPanel()!.hasIncident) {
+            <div class="rsection rincident">
+              <div class="rsection-label"><mat-icon>warning</mat-icon> Incident signalé</div>
+              @if (reportPanel()!.incidentDescription) {
+                <div class="rcomment-text">{{ reportPanel()!.incidentDescription }}</div>
+              }
+            </div>
+          }
+          @if (reportPanel()!.loading) {
+            <div class="rcenter"><mat-spinner diameter="36" /></div>
+          } @else if (reportPanel()!.photos.length === 0) {
+            <p class="rno-photos">Aucune photo déposée par le prestataire.</p>
+          } @else {
+            <div class="rsection">
+              <div class="rsection-label"><mat-icon>photo_library</mat-icon> Photos ({{ reportPanel()!.photos.length }})</div>
+              <div class="rphotos-grid">
+                @for (photo of reportPanel()!.photos; track photo.id) {
+                  <div class="rphoto-item">
+                    <img [src]="photo.data" [alt]="photo.caption || photo.photoType" (click)="openFullscreen(photo.data)">
+                    <div class="rphoto-badge" [class.incident]="photo.photoType === 'INCIDENT'">{{ photoTypeLabel(photo.photoType) }}</div>
+                    @if (photo.caption) { <div class="rphoto-caption">{{ photo.caption }}</div> }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </mat-dialog-content>
+      }
+    </ng-template>
   `,
   styles: [`
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
@@ -393,6 +478,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
     .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .task-report-preview { font-size: 12px; color: #555; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+    /* dialog styles in global styles.scss (bypass ViewEncapsulation for CDK overlay) */
     .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
     .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
     .portal-badge.inactive { background: #f3f4f6; color: #555; }
@@ -406,19 +493,26 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export class HousekeepingComponent implements OnInit {
   private base = environment.apiUrl;
 
+  @ViewChild('reportDialogTpl') reportDialogTpl!: TemplateRef<unknown>;
+  private dialogRef?: MatDialogRef<unknown>;
+
   tasks = signal<Task[]>([]);
   filteredTasks = signal<Task[]>([]);
   properties = signal<Property[]>([]);
   housekeepers = signal<HousekeeperProfile[]>([]);
   loading = signal(false);
+  reportPanel = signal<ReportPanel | null>(null);
   showForm = false;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
   filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
   filterTo   = localDateStr(new Date(Date.now() + 30 * 86400000));
+  filterFromDate: Date = new Date(Date.now() - 7 * 86400000);
+  filterToDate: Date   = new Date(Date.now() + 30 * 86400000);
   filterStatus = '';
 
   newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '' };
+  newTaskDate: Date | null = null;
   activatingHk: number | null = null;
   activateEmail = '';
   activatePassword = '';
@@ -426,7 +520,12 @@ export class HousekeepingComponent implements OnInit {
   taskTypes = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
   statuses  = Object.entries(STATUS_LABELS).map(([value, { label }]) => ({ value, label }));
 
-  constructor(private http: HttpClient, private housekeeperService: HousekeeperService, private snack: MatSnackBar) {}
+  constructor(
+    private http: HttpClient,
+    private housekeeperService: HousekeeperService,
+    private snack: MatSnackBar,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
     this.http.get<Property[]>(`${this.base}/admin/properties`).subscribe(p => this.properties.set(p));
@@ -462,6 +561,7 @@ export class HousekeepingComponent implements OnInit {
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
       this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '' };
+      this.newTaskDate = null;
       this.load();
     });
   }
@@ -484,6 +584,47 @@ export class HousekeepingComponent implements OnInit {
   typeLabel(type: string): string   { return TYPE_LABELS[type] ?? type; }
   statusLabel(s: string): string    { return STATUS_LABELS[s]?.label ?? s; }
   statusColor(s: string): string    { return STATUS_LABELS[s]?.color ?? '#888'; }
+
+  photoTypeLabel(type: string): string {
+    const labels: Record<string, string> = { BEFORE: 'Avant', AFTER: 'Après', INCIDENT: 'Incident' };
+    return labels[type] ?? type;
+  }
+
+  openReport(task: Task): void {
+    const propName = task.propertyName ?? task.property?.name ?? task.beds24PropertyId ?? '';
+    this.reportPanel.set({
+      taskId: task.id,
+      taskLabel: this.typeLabel(task.type),
+      propertyName: propName,
+      scheduledDate: task.scheduledDate,
+      reportComment: task.reportComment,
+      hasIncident: task.hasIncident,
+      incidentDescription: task.incidentDescription,
+      photos: [],
+      loading: true
+    });
+    this.dialogRef = this.dialog.open(this.reportDialogTpl, {
+      width: '720px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false
+    });
+    this.dialogRef.afterClosed().subscribe(() => this.reportPanel.set(null));
+    this.http.get<TaskPhoto[]>(`${this.base}/admin/housekeeping/${task.id}/photos`).subscribe({
+      next: photos => this.reportPanel.update(p => p ? { ...p, photos, loading: false } : null),
+      error: () => this.reportPanel.update(p => p ? { ...p, loading: false } : null)
+    });
+  }
+
+  closeReport(): void { this.dialogRef?.close(); }
+
+  openFullscreen(dataUri: string): void {
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${dataUri}" style="max-width:100%;max-height:100vh"></body></html>`);
+      win.document.close();
+    }
+  }
 
   housekeeperByName(name: string): HousekeeperProfile | undefined {
     return this.housekeepers().find(h => h.name === name);
@@ -547,5 +688,11 @@ export class HousekeepingComponent implements OnInit {
       this.housekeepers.update(all => all.filter(x => x.id !== h.id));
       this.snack.open('Prestataire supprimé', '', { duration: 2500 });
     });
+  }
+
+  toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  fromDate(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 }
