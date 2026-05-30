@@ -48,6 +48,14 @@ public class SuperAdminController {
         return ResponseEntity.ok(users);
     }
 
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
+        return userRepository.findById(id).map(user -> {
+            userRepository.delete(user);
+            return ResponseEntity.ok(Map.of("status", "Compte supprimé"));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @PatchMapping("/users/{id}/password")
     public ResponseEntity<Map<String, String>> resetUserPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPassword = body.get("newPassword");

@@ -98,9 +98,14 @@ interface UserRow {
                     <p class="pwd-msg" [class.success]="!pwdError()">{{ pwdMsg() }}</p>
                   }
                 } @else {
-                  <button mat-icon-button (click)="startEdit(u.id)" matTooltip="Changer le mot de passe">
-                    <mat-icon>lock_reset</mat-icon>
-                  </button>
+                  <div class="action-row">
+                    <button mat-icon-button (click)="startEdit(u.id)" matTooltip="Changer le mot de passe">
+                      <mat-icon>lock_reset</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteUser(u)" matTooltip="Supprimer le compte">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
                 }
               </td>
             </ng-container>
@@ -125,6 +130,7 @@ interface UserRow {
     .pwd-field { width: 220px; }
     .pwd-msg { font-size: 12px; margin: 0 0 4px; color: #d32f2f; }
     .pwd-msg.success { color: #2e7d32; }
+    .action-row { display: flex; align-items: center; gap: 4px; }
   `]
 })
 export class SuperadminUsersComponent implements OnInit {
@@ -159,6 +165,14 @@ export class SuperadminUsersComponent implements OnInit {
     this.editingId.set(null);
     this.newPwd = '';
     this.pwdMsg.set('');
+  }
+
+  deleteUser(u: UserRow): void {
+    if (!confirm(`Supprimer définitivement le compte "${u.email}" ? Cette action est irréversible.`)) return;
+    this.http.delete(`${environment.apiUrl}/superadmin/users/${u.id}`).subscribe({
+      next: () => this.users.update(all => all.filter(x => x.id !== u.id)),
+      error: err => alert('Erreur : ' + (err.error?.message ?? 'suppression impossible (contraintes FK)'))
+    });
   }
 
   savePassword(id: number): void {
