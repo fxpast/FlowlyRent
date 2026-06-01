@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -96,7 +96,8 @@ const CHANNEL_COLORS: Record<string, string> = {
         <span class="leg"><span class="dot" style="background:#1976d2"></span> Direct</span>
         <span class="leg"><span class="dot" style="background:#FF5A5F"></span> Airbnb</span>
         <span class="leg"><span class="dot" style="background:#003580"></span> Booking</span>
-        <span class="leg"><span class="dot stripe-dot"></span> Blackout</span>
+        <span class="leg"><span class="dot" style="background:#E8572A"></span> Abritel</span>
+        <span class="leg"><span class="dot blackout-dot"></span> Blackout</span>
       </div>
     </div>
 
@@ -105,11 +106,19 @@ const CHANNEL_COLORS: Record<string, string> = {
     } @else {
 
     <!-- Grille calendrier -->
-    <div class="cal-wrapper" #calWrapper>
+    <div class="cal-wrapper" [class.sidebar-collapsed]="sidebarCollapsed()" #calWrapper>
       <table class="cal-table">
         <thead>
           <tr>
-            <th class="prop-col">Logement</th>
+            <th class="prop-col">
+              <div class="prop-col-head">
+                <span class="prop-col-label">Logement</span>
+                <button class="toggle-sidebar-btn" (click)="sidebarCollapsed.set(!sidebarCollapsed())"
+                        [title]="sidebarCollapsed() ? 'Afficher les logements' : 'Réduire'">
+                  <mat-icon>{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+                </button>
+              </div>
+            </th>
             <th class="type-col"></th>
             @for (d of days(); track d.date) {
               <th class="day-th" [class.weekend]="d.isWeekend" [class.today]="d.isToday">
@@ -136,9 +145,11 @@ const CHANNEL_COLORS: Record<string, string> = {
                     [class.is-blocked]="!!cell.blockId"
                     [class.block-first]="cell.isBlockFirst"
                     [class.block-last]="cell.isBlockLast"
-                    [class.clickable]="!!cell.blockId"
-                    [title]="cell.blockId ? cellTooltip(cell) : ''"
-                    (click)="onCellClick(row.property, cell, 'blackout')">
+                    [class.in-drag]="isDragRange(row.property.id, cell.date)"
+                    [title]="cell.blockId ? cellTooltip(cell) : 'Cliquer-glisser pour bloquer des dates'"
+                    (mousedown)="onBlackoutMouseDown(row.property, cell, $event)"
+                    (mouseenter)="onBlackoutMouseEnter(row.property, cell)"
+                    (mouseup)="onBlackoutMouseUp(row.property, cell)">
                   @if (cell.isBlockFirst) {
                     <span class="block-chip-small">{{ blockLabel(cell.blockType!) }}</span>
                   }
@@ -224,7 +235,7 @@ const CHANNEL_COLORS: Record<string, string> = {
     .legend { display: flex; gap: 16px; font-size: 12px; }
     .leg { display: flex; align-items: center; gap: 4px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .stripe-dot { border-radius: 2px; background: repeating-linear-gradient(45deg,#f57c00 0,#f57c00 3px,#ffe0b2 3px,#ffe0b2 7px); }
+    .blackout-dot { border-radius: 2px; background: repeating-linear-gradient(45deg,#546e7a 0,#546e7a 3px,#b0bec5 3px,#b0bec5 7px); }
 
     .center { display: flex; justify-content: center; padding: 60px; }
 
@@ -233,6 +244,26 @@ const CHANNEL_COLORS: Record<string, string> = {
 
     .prop-col { width: 150px; min-width: 150px; background: #f5f5f5; position: sticky; left: 0; z-index: 2; border-right: 1px solid #ddd; }
     .type-col { width: 36px; min-width: 36px; background: #f5f5f5; position: sticky; left: 150px; z-index: 2; border-right: 2px solid #ddd; }
+
+    /* ── Sidebar collapse ── */
+    .prop-col-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 2px; }
+    .prop-col-label { font-size: 11px; color: #888; font-weight: 500; }
+    .toggle-sidebar-btn {
+      background: none; border: none; cursor: pointer; padding: 2px;
+      color: #888; display: flex; align-items: center; border-radius: 4px;
+      transition: background .15s, color .15s; flex-shrink: 0;
+    }
+    .toggle-sidebar-btn:hover { background: #e0e0e0; color: #333; }
+    .toggle-sidebar-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .sidebar-collapsed th.prop-col { width: 32px !important; min-width: 32px !important; padding: 0 !important; }
+    .sidebar-collapsed td.prop-cell { width: 32px !important; min-width: 32px !important; padding: 0 !important; overflow: hidden; }
+    .sidebar-collapsed .prop-name,
+    .sidebar-collapsed .prop-city,
+    .sidebar-collapsed .prop-col-label { display: none !important; }
+    .sidebar-collapsed .toggle-sidebar-btn { margin: 0 auto; }
+    .sidebar-collapsed th.type-col,
+    .sidebar-collapsed td.type-cell { left: 32px !important; }
     .day-th { width: 38px; min-width: 38px; text-align: center; padding: 4px 0; background: #fafafa; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #f0f0f0; }
     .day-th.weekend { background: #f3e5f5; }
     .day-th.today { background: #e3f2fd; }
@@ -304,22 +335,27 @@ const CHANNEL_COLORS: Record<string, string> = {
       height: 18px; min-width: 38px;
       border-right: 1px solid #f0f0f0;
       vertical-align: middle; position: relative; overflow: hidden;
+      cursor: crosshair; user-select: none;
     }
     .blackout-cell.is-blocked {
       background: repeating-linear-gradient(
-        45deg, #f57c00 0px, #f57c00 3px, #ffe0b2 3px, #ffe0b2 9px
+        45deg, #546e7a 0px, #546e7a 3px, #b0bec5 3px, #b0bec5 9px
       ) !important;
+    }
+    .blackout-cell.in-drag {
+      background: rgba(84, 110, 122, 0.35) !important;
+      outline: 1px solid #546e7a;
     }
     .blackout-cell.block-first { border-radius: 4px 0 0 4px; }
     .blackout-cell.block-last  { border-radius: 0 4px 4px 0; }
     .block-chip-small {
       position: absolute; left: 3px; top: 50%;
       transform: translateY(-50%);
-      font-size: 9px; font-weight: 600; color: #bf360c;
+      font-size: 9px; font-weight: 600; color: #263238;
       white-space: nowrap; pointer-events: none;
-      text-shadow: 0 0 2px #fff;
+      text-shadow: 0 0 3px #eceff1;
     }
-    .type-block { color: #f57c00; }
+    .type-block { color: #546e7a; }
 
     .info-row td { border-bottom: 1px solid #efefef; }
     .last-subrow td { border-bottom: 2px solid #ddd; }
@@ -358,6 +394,12 @@ export class CalendarComponent implements OnInit {
   days = computed(() => this.buildDays(this.year(), this.month()));
   grid = signal<{ property: CalProperty; cells: DayCell[] }[]>([]);
 
+  sidebarCollapsed = signal(false);
+
+  private dragging = false;
+  private dragPropId = signal<string | null>(null);
+  private dragFrom   = signal<string | null>(null);
+  private dragTo     = signal<string | null>(null);
   selectedPropertyId = signal<string>('all');
   filteredGrid = computed(() => {
     const id = this.selectedPropertyId();
@@ -419,7 +461,7 @@ export class CalendarComponent implements OnInit {
     });
   }
 
-  onCellClick(property: CalProperty, cell: DayCell, rowType: 'booking' | 'blackout' | 'price' | 'minstay' = 'booking'): void {
+  onCellClick(property: CalProperty, cell: DayCell, rowType: 'booking' | 'price' | 'minstay' = 'booking'): void {
     if (rowType === 'booking') {
       if (!cell.bookingId) return;
       const booking = this.bookings().find(b => String(b.id) === String(cell.bookingId));
@@ -430,20 +472,6 @@ export class CalendarComponent implements OnInit {
       } else {
         this.router.navigate(['/admin/bookings', cell.bookingId, 'edit']);
       }
-    } else if (rowType === 'blackout') {
-      const block = this.blocks().find(b => b.id === cell.blockId);
-      const startDate = block?.startDate ?? cell.date;
-      const endDate   = block?.endDate   ?? cell.date;
-      const ref = this.dialog.open(BlackoutDialogComponent, {
-        data: { propertyName: property.name, startDate, endDate },
-        width: '400px'
-      });
-      ref.afterClosed().subscribe((result: BlackoutDialogResult | undefined) => {
-        if (!result) return;
-        this.http.post(`${this.base}/admin/availability/blackout`, null, {
-          params: { propertyId: property.id, from: result.from, to: result.to, override: result.override }
-        }).subscribe({ next: () => this.load(), error: (e) => console.error('[Calendar] blackout error', e) });
-      });
     } else if (rowType === 'price' || rowType === 'minstay') {
       const field = rowType === 'price' ? 'price' : 'minStay';
       const ref = this.dialog.open(PriceDialogComponent, {
@@ -463,6 +491,71 @@ export class CalendarComponent implements OnInit {
         });
       });
     }
+  }
+
+  isDragRange(propId: string, date: string): boolean {
+    if (this.dragPropId() !== propId) return false;
+    const from = this.dragFrom();
+    const to   = this.dragTo();
+    if (!from || !to) return false;
+    const [a, b] = from <= to ? [from, to] : [to, from];
+    return date >= a && date <= b;
+  }
+
+  onBlackoutMouseDown(prop: CalProperty, cell: DayCell, e: MouseEvent): void {
+    e.preventDefault();
+    this.dragging = true;
+    this.dragPropId.set(prop.id);
+    this.dragFrom.set(cell.date);
+    this.dragTo.set(cell.date);
+  }
+
+  onBlackoutMouseEnter(prop: CalProperty, cell: DayCell): void {
+    if (!this.dragging || this.dragPropId() !== prop.id) return;
+    this.dragTo.set(cell.date);
+  }
+
+  onBlackoutMouseUp(prop: CalProperty, cell: DayCell): void {
+    if (!this.dragging) return;
+    this.dragging = false;
+    const rawFrom = this.dragFrom()!;
+    const rawTo   = cell.date;
+    this.dragPropId.set(null);
+    this.dragFrom.set(null);
+    this.dragTo.set(null);
+
+    let startDate: string, endDate: string;
+    if (rawFrom === rawTo) {
+      const block = this.blocks().find(b => b.id === cell.blockId);
+      startDate = block?.startDate ?? cell.date;
+      endDate   = block?.endDate   ?? cell.date;
+    } else {
+      [startDate, endDate] = rawFrom <= rawTo ? [rawFrom, rawTo] : [rawTo, rawFrom];
+    }
+    this.openBlackoutDialog(prop, startDate, endDate);
+  }
+
+  @HostListener('document:mouseup')
+  onDocumentMouseUp(): void {
+    if (this.dragging) {
+      this.dragging = false;
+      this.dragPropId.set(null);
+      this.dragFrom.set(null);
+      this.dragTo.set(null);
+    }
+  }
+
+  private openBlackoutDialog(prop: CalProperty, startDate: string, endDate: string): void {
+    const ref = this.dialog.open(BlackoutDialogComponent, {
+      data: { propertyName: prop.name, startDate, endDate },
+      width: '400px'
+    });
+    ref.afterClosed().subscribe((result: BlackoutDialogResult | undefined) => {
+      if (!result) return;
+      this.http.post(`${this.base}/admin/availability/blackout`, null, {
+        params: { propertyId: prop.id, from: result.from, to: result.to, override: result.override }
+      }).subscribe({ next: () => this.load(), error: (e) => console.error('[Calendar] blackout error', e) });
+    });
   }
 
   getColor(channel?: string): string {
@@ -585,7 +678,7 @@ export class CalendarComponent implements OnInit {
         const block = bls.find(b =>
           b.propertyId === prop.id && b.startDate <= d.date && b.endDate >= d.date
         );
-        if (block && !cell.bookingId) {
+        if (block) {
           cell.blockId      = block.id;
           cell.blockType    = block.type;
           cell.blockNotes   = block.notes;

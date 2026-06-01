@@ -73,7 +73,7 @@ export interface BlackoutDialogResult {
       display: flex; align-items: center; gap: 10px;
       padding: 20px 24px 8px; font-size: 18px; font-weight: 600;
     }
-    .header-icon { color: #f57c00; }
+    .header-icon { color: #546e7a; }
     mat-dialog-content { min-width: 340px; padding-top: 8px; }
     .prop-label { font-size: 13px; font-weight: 500; color: #555; margin-bottom: 16px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

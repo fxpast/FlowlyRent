@@ -219,7 +219,7 @@ export class DeparturesComponent implements OnInit {
   }
 
   openDetail(b: any): void {
-    const ref = this.dialog.open(BookingDetailDialogComponent, { data: b, width: '600px' });
+    const ref = this.dialog.open(BookingDetailDialogComponent, { data: { ...b, templateContext: 'checkout' }, width: '600px' });
     ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
   }
 

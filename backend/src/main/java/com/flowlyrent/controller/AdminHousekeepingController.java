@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/admin/housekeeping")
@@ -37,6 +38,30 @@ public class AdminHousekeepingController {
     private final SecurityUtils securityUtils;
 
     // --- Tâches ---
+
+    @GetMapping("/by-booking/{bookingId}")
+    public ResponseEntity<HousekeepingTask> getByBooking(
+            @PathVariable String bookingId,
+            @RequestParam(required = false) String propertyId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate scheduledDate) {
+        Long userId = securityUtils.getCurrentUserId();
+
+        // 1. Cherche par beds24BookingId (tâches créées via webhook ou dialog)
+        Optional<HousekeepingTask> byId = taskRepo.findByBeds24BookingId(bookingId)
+                .filter(t -> t.getUser().getId().equals(userId));
+        if (byId.isPresent()) return ResponseEntity.ok(byId.get());
+
+        // 2. Fallback : tâche manuelle sans bookingId — cherche par propriété + date
+        if (propertyId != null && scheduledDate != null) {
+            return taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                            userId, propertyId, scheduledDate, scheduledDate)
+                    .stream().findFirst()
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        }
+
+        return ResponseEntity.notFound().build();
+    }
 
     @GetMapping
     public List<HousekeepingTask> getTasks(
