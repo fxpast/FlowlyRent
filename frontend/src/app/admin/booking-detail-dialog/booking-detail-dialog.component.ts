@@ -689,7 +689,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   applyTemplate(t: MessageTemplate | null): void {
     if (!t?.contentFr) return;
-    this.newMessage = this.templateService.apply(t.contentFr, this.draft);
+    this.newMessage = this.templateService.apply(t.contentFr, this.draft, undefined, this.arrivalTime, this.departureTime);
     this.selectedTemplate = null;
   }
 

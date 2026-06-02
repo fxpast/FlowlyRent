@@ -20,6 +20,7 @@ import { MessageService } from '../../core/services/message.service';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { BookingTimeOverrideService } from '../../core/services/booking-time-override.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 const TPL_PLACEHOLDER = 'Bonjour {{nom}}, votre check-in est le {{arrivee}}…';
@@ -160,6 +161,8 @@ const TYPE_LABELS: Record<string, string> = {
               <code (click)="insertVar('{{depart}}')">{{'{{'}}depart{{'}}'}}</code>
               <code (click)="insertVar('{{logement}}')">{{'{{'}}logement{{'}}'}}</code>
               <code (click)="insertVar('{{code_acces}}')">{{'{{'}}code_acces{{'}}'}}</code>
+              <code (click)="insertVar('{{heure_checkin}}')" matTooltip="Heure d'arrivée (standard ou arrangement particulier)">{{'{{'}}heure_checkin{{'}}'}}</code>
+              <code (click)="insertVar('{{heure_checkout}}')" matTooltip="Heure de départ (standard ou arrangement particulier)">{{'{{'}}heure_checkout{{'}}'}}</code>
               <button mat-icon-button (click)="insertVar(genCode())" matTooltip="Générer un code 4 chiffres et l'insérer">
                 <mat-icon>casino</mat-icon>
               </button>
@@ -529,6 +532,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
   editingTemplate  = signal<Partial<MessageTemplate> | null>(null);
   editForm: Partial<MessageTemplate> = {};
 
+  selectedBookingTimes = signal<{ checkin: string; checkout: string }>({ checkin: '16:00', checkout: '11:00' });
+
   private propConfigs = signal<PropertyConfig[]>([]);
   readonly tplPlaceholder = TPL_PLACEHOLDER;
 
@@ -583,6 +588,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private bookingService: BookingService,
     private templateService: MessageTemplateService,
     private propConfigService: PropertyConfigService,
+    private timeOverrideService: BookingTimeOverrideService,
     private snackBar: MatSnackBar
   ) {}
 
@@ -676,6 +682,20 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.selectedBooking.set(b);
     this.messages.set([]);
     this.loadingMessages.set(true);
+    // Heures par défaut extraites du champ arrival/departure (si l'API retourne un datetime)
+    const defaultCheckin  = (b['arrival']   || '').toString().substring(11, 16)  || '16:00';
+    const defaultCheckout = (b['departure'] || '').toString().substring(11, 16) || '11:00';
+    this.selectedBookingTimes.set({ checkin: defaultCheckin, checkout: defaultCheckout });
+    // Charger l'override éventuel
+    this.timeOverrideService.get(String(b['id'])).subscribe({
+      next: ov => {
+        this.selectedBookingTimes.set({
+          checkin:  ov.checkinTime  || defaultCheckin,
+          checkout: ov.checkoutTime || defaultCheckout
+        });
+      },
+      error: () => {} // 404 = pas d'override, on garde les valeurs par défaut
+    });
     const id = String(b['id']);
     this.messageService.getMessages(+id).subscribe({
       next: msgs => { this.messages.set(msgs); this.loadingMessages.set(false); setTimeout(() => this.scrollToBottom(), 50); },
@@ -730,9 +750,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
   applyTemplate(t: MessageTemplate): void {
     const b = this.selectedBooking();
     if (!b || !t.contentFr) return;
-    const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-    const cfg = this.propConfigs().find(c => c.beds24PropertyId === pid);
-    this.newMessage = this.templateService.apply(t.contentFr, b, cfg?.accessCode);
+    const pid   = String(b['propId'] ?? b['propertyId'] ?? '');
+    const cfg   = this.propConfigs().find(c => c.beds24PropertyId === pid);
+    const times = this.selectedBookingTimes();
+    this.newMessage = this.templateService.apply(t.contentFr, b, cfg?.accessCode, times.checkin, times.checkout);
   }
 
   insertVar(v: string): void {
