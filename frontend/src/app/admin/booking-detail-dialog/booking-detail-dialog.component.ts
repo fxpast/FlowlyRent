@@ -22,6 +22,7 @@ import { MessageService } from '../../core/services/message.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
 import { HousekeepingService } from '../../core/services/housekeeping.service';
+import { BookingTimeOverrideService } from '../../core/services/booking-time-override.service';
 import { Message } from '../../core/models/message.model';
 import { environment } from '@env/environment';
 import { Subscription } from 'rxjs';
@@ -92,33 +93,70 @@ import { Subscription } from 'rxjs';
             </div>
             <mat-divider/>
             <div class="row-2">
-              <div class="datetime-pair">
-                <mat-form-field appearance="outline" class="date-part">
-                  <mat-label>Arrivée</mat-label>
-                  <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate"
-                         (ngModelChange)="draft['arrival'] = fromDate($event)">
-                  <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
-                  <mat-datepicker #arrivalPicker></mat-datepicker>
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="time-part">
-                  <mat-label>Heure</mat-label>
-                  <input matInput type="time" [(ngModel)]="arrivalTime">
-                </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Arrivée</mat-label>
+                <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate"
+                       (ngModelChange)="draft['arrival'] = fromDate($event)">
+                <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
+                <mat-datepicker #arrivalPicker></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Départ</mat-label>
+                <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate"
+                       (ngModelChange)="draft['departure'] = fromDate($event)">
+                <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
+                <mat-datepicker #departurePicker></mat-datepicker>
+              </mat-form-field>
+            </div>
+            <!-- ── Section horaires personnalisés ── -->
+            <div class="horaires-section">
+              <div class="horaires-header">
+                <mat-icon class="h-icon">schedule</mat-icon>
+                <span class="h-title">Horaires</span>
+                @if (hasCustomTimes) {
+                  <span class="arrangement-badge">Arrangement particulier</span>
+                }
               </div>
-              <div class="datetime-pair">
-                <mat-form-field appearance="outline" class="date-part">
-                  <mat-label>Départ</mat-label>
-                  <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate"
-                         (ngModelChange)="draft['departure'] = fromDate($event)">
-                  <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
-                  <mat-datepicker #departurePicker></mat-datepicker>
+              <div class="horaires-chips">
+                <div class="horaire-chip" [class.custom]="hasCustomCheckin">
+                  <mat-icon>login</mat-icon>
+                  <span class="h-label">Check-in</span>
+                  <input type="time" [(ngModel)]="arrivalTime" class="time-chip-input">
+                  @if (hasCustomCheckin) {
+                    <span class="h-default">standard {{ DEFAULT_CHECKIN }}</span>
+                  }
+                </div>
+                <div class="horaire-chip" [class.custom]="hasCustomCheckout">
+                  <mat-icon>logout</mat-icon>
+                  <span class="h-label">Check-out</span>
+                  <input type="time" [(ngModel)]="departureTime" class="time-chip-input">
+                  @if (hasCustomCheckout) {
+                    <span class="h-default">standard {{ DEFAULT_CHECKOUT }}</span>
+                  }
+                </div>
+              </div>
+              @if (hasCustomTimes) {
+                <mat-form-field appearance="outline" class="full motif-field">
+                  <mat-label>Motif de l'arrangement</mat-label>
+                  <input matInput [(ngModel)]="customTimeComment"
+                         placeholder="Ex : Early check-in accordé — vol à 10h, départ tardif souhaité…">
+                  <mat-icon matPrefix>chat_bubble_outline</mat-icon>
                 </mat-form-field>
-                <mat-form-field appearance="outline" class="time-part">
-                  <mat-label>Heure</mat-label>
-                  <input matInput type="time" [(ngModel)]="departureTime">
-                </mat-form-field>
+              }
+              <div class="horaires-actions">
+                @if (hasCustomTimes) {
+                  <button mat-flat-button color="accent" (click)="confirmTimes()" [disabled]="savingTimes()">
+                    <mat-icon>check</mat-icon> {{ savingTimes() ? 'Enregistrement…' : 'Confirmer les horaires' }}
+                  </button>
+                  <button mat-stroked-button (click)="resetTimes()" [disabled]="savingTimes()">
+                    <mat-icon>restart_alt</mat-icon> Réinitialiser
+                  </button>
+                } @else {
+                  <span class="h-standard">Horaires standard</span>
+                }
               </div>
             </div>
+
             <div class="row-3">
               <mat-form-field appearance="outline">
                 <mat-label>Adultes</mat-label>
@@ -415,6 +453,26 @@ import { Subscription } from 'rxjs';
     .time-part { width: 110px; flex-shrink: 0; }
     .full { width: 100%; }
     mat-divider { margin: 4px 0 12px; }
+    .horaires-section { margin: 4px 0 12px; padding: 10px 12px; background: #f9f9f9; border-radius: 8px; border: 1px solid #e8e8e8; }
+    .horaires-header { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .h-icon { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
+    .h-title { font-size: 13px; font-weight: 600; color: #333; flex: 1; }
+    .arrangement-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+    .horaires-chips { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .horaire-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+      border-radius: 8px; background: #e8f5e9; border: 1px solid #c8e6c9; font-size: 13px; min-width: 160px; }
+    .horaire-chip.custom { background: #fff8e1; border-color: #ffe082; }
+    .horaire-chip mat-icon { font-size: 16px; width: 16px; height: 16px; color: #388e3c; }
+    .horaire-chip.custom mat-icon { color: #f57c00; }
+    .h-label { font-weight: 600; color: #333; min-width: 60px; }
+    .time-chip-input { border: none; background: transparent; font-size: 14px; font-weight: 600;
+      color: #1b5e20; width: 72px; outline: none; cursor: pointer; }
+    .horaire-chip.custom .time-chip-input { color: #e65100; }
+    .h-default { font-size: 11px; color: #888; margin-left: 4px; }
+    .motif-field { margin-top: 4px; }
+    .horaires-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .h-standard { font-size: 12px; color: #888; font-style: italic; }
 
     /* Messages */
     .channel-banner {
@@ -502,6 +560,15 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   departureDate: Date | null = null;
   arrivalTime   = '16:00';
   departureTime = '11:00';
+  customTimeComment = '';
+  savingTimes = signal(false);
+
+  readonly DEFAULT_CHECKIN  = '16:00';
+  readonly DEFAULT_CHECKOUT = '11:00';
+
+  get hasCustomCheckin():  boolean { return this.arrivalTime   !== this.DEFAULT_CHECKIN;  }
+  get hasCustomCheckout(): boolean { return this.departureTime !== this.DEFAULT_CHECKOUT; }
+  get hasCustomTimes():    boolean { return this.hasCustomCheckin || this.hasCustomCheckout; }
 
   templates = signal<MessageTemplate[]>([]);
   selectedTemplate: MessageTemplate | null = null;
@@ -531,6 +598,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private templateService: MessageTemplateService,
     private housekeeperService: HousekeeperService,
     private housekeepingService: HousekeepingService,
+    private timeOverrideService: BookingTimeOverrideService,
     private http: HttpClient,
     private snackBar: MatSnackBar
   ) {
@@ -555,6 +623,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       d['guestFirstName'] = parts[0] || '';
       d['guestLastName']  = parts.slice(1).join(' ') || '';
     }
+    // Nettoyage legacy : supprimer les anciens encodages 🕐 dans les notes
+    const notes: string = d['notes'] || '';
+    const motifMatch = notes.match(/^🕐 (.+?)(?:\n|$)/m);
+    if (motifMatch) d['notes'] = notes.replace(/^🕐 .+?\n?/m, '').trim();
     this.draft = d;
     this.arrivalDate   = this.toDate(d['arrival']);
     this.departureDate = this.toDate(d['departure']);
@@ -566,6 +638,16 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const bookingId = Number(this.data['id']);
     if (!bookingId) return;
+    // Charger l'override d'horaires depuis la base locale
+    this.timeOverrideService.get(String(this.data['id'])).subscribe({
+      next: ov => {
+        if (ov.checkinTime)  this.arrivalTime   = ov.checkinTime;
+        if (ov.checkoutTime) this.departureTime = ov.checkoutTime;
+        if (ov.note)         this.customTimeComment = ov.note;
+        this.taskTime = this.departureTime;
+      },
+      error: () => {} // 404 = pas d'override, heures par défaut
+    });
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
       if (msg.sender === 'GUEST') this.unreadCount.update(n => n + 1);
@@ -695,8 +777,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   save(): void {
     this.saving.set(true);
     const payload = { ...this.draft };
-    if (payload['arrival'])   payload['arrival']   = payload['arrival'].substring(0, 10)   + 'T' + this.arrivalTime;
-    if (payload['departure']) payload['departure'] = payload['departure'].substring(0, 10) + 'T' + this.departureTime;
+    if (payload['arrival'])   payload['arrival']   = payload['arrival'].substring(0, 10)   + 'T' + this.DEFAULT_CHECKIN;
+    if (payload['departure']) payload['departure'] = payload['departure'].substring(0, 10) + 'T' + this.DEFAULT_CHECKOUT;
     this.bookingService.save([payload]).subscribe({
       next: () => {
         this.snackBar.open('Réservation mise à jour', 'OK', { duration: 3000 });
@@ -803,6 +885,39 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       SKIPPED:     'Ignorée',
     };
     return labels[status] ?? status;
+  }
+
+  confirmTimes(): void {
+    const bookingId = String(this.data['id'] ?? '');
+    if (!bookingId) return;
+    this.savingTimes.set(true);
+    this.timeOverrideService.upsert(bookingId, {
+      checkinTime:  this.arrivalTime,
+      checkoutTime: this.departureTime,
+      note:         this.customTimeComment.trim() || null
+    }).subscribe({
+      next: () => {
+        this.savingTimes.set(false);
+        this.snackBar.open('Horaires enregistrés', 'OK', { duration: 2000 });
+      },
+      error: () => {
+        this.savingTimes.set(false);
+        this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 });
+      }
+    });
+  }
+
+  resetTimes(): void {
+    const bookingId = String(this.data['id'] ?? '');
+    this.arrivalTime        = this.DEFAULT_CHECKIN;
+    this.departureTime      = this.DEFAULT_CHECKOUT;
+    this.customTimeComment  = '';
+    this.taskTime           = this.DEFAULT_CHECKOUT;
+    if (!bookingId) return;
+    this.timeOverrideService.delete(bookingId).subscribe({
+      next: () => this.snackBar.open('Horaires réinitialisés', '', { duration: 2000 }),
+      error: () => {}
+    });
   }
 
   private get channel(): string {

@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -14,6 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin } from 'rxjs';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 interface OccupancyStatus {
@@ -33,7 +35,7 @@ interface OccupancyStatus {
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule,
     MatTooltipModule, MatSnackBarModule, MatDividerModule
   ],
   template: `
@@ -196,6 +198,89 @@ interface OccupancyStatus {
                   </button>
                 </div>
               </div>
+              <mat-divider class="divider"></mat-divider>
+
+              <!-- Inventaire & Équipements -->
+              <div class="inventory-section">
+                <div class="inventory-header" (click)="toggleInventory(p['id'])">
+                  <mat-icon class="inv-icon">inventory_2</mat-icon>
+                  <strong>Inventaire & Équipements</strong>
+                  @if (inventoryMap()[p['id']]?.length) {
+                    <span class="inv-count">
+                      {{ inventoryMap()[p['id']].length }} article{{ inventoryMap()[p['id']].length > 1 ? 's' : '' }}
+                    </span>
+                  }
+                  <mat-icon class="inv-toggle">{{ inventoryOpen()[p['id']] ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </div>
+
+                @if (inventoryOpen()[p['id']]) {
+                  <!-- Liste des articles groupés par catégorie -->
+                  @if (!inventoryLoading()[p['id']] && inventoryMap()[p['id']]?.length) {
+                    @for (cat of usedCategories(p['id']); track cat) {
+                      <div class="inv-category">
+                        <div class="inv-cat-label">
+                          <mat-icon>{{ catIcon(cat) }}</mat-icon>{{ catLabel(cat) }}
+                        </div>
+                        @for (item of itemsByCategory(p['id'], cat); track item.id) {
+                          <div class="inv-item">
+                            <span class="inv-qty">×{{ item.quantity }}</span>
+                            <span class="inv-label">{{ item.label }}</span>
+                            @if (item.details) {
+                              <span class="inv-details">{{ item.details }}</span>
+                            }
+                            <button mat-icon-button class="inv-del" (click)="deleteItem(p['id'], item)" matTooltip="Supprimer">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
+                  @if (inventoryLoading()[p['id']]) {
+                    <div class="inv-loading"><mat-spinner diameter="20"/></div>
+                  }
+
+                  <!-- Ajout rapide -->
+                  <div class="inv-quick-title">Ajout rapide</div>
+                  <div class="inv-quick-list">
+                    @for (s of quickSuggestions(); track s.label + s.details) {
+                      <button mat-stroked-button class="inv-quick-btn" (click)="quickAdd(p['id'], s)">
+                        + {{ s.label }} @if (s.details) { <span class="inv-q-detail">{{ s.details }}</span> }
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Formulaire ajout personnalisé -->
+                  @if (newItemMap()[p['id']]; as ni) {
+                    <div class="inv-custom-form">
+                      <mat-form-field appearance="outline" class="inv-cat-field">
+                        <mat-label>Catégorie</mat-label>
+                        <mat-select [(ngModel)]="ni.category">
+                          @for (c of categories; track c.value) {
+                            <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" class="inv-label-field">
+                        <mat-label>Équipement</mat-label>
+                        <input matInput [(ngModel)]="ni.label" placeholder="Nom…">
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" class="inv-detail-field">
+                        <mat-label>Détails</mat-label>
+                        <input matInput [(ngModel)]="ni.details" placeholder="160x200, 55″…">
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" class="inv-qty-field">
+                        <mat-label>Qté</mat-label>
+                        <input matInput type="number" min="1" [(ngModel)]="ni.quantity">
+                      </mat-form-field>
+                      <button mat-flat-button color="primary" (click)="addItem(p['id'])"
+                              [disabled]="!ni.label?.trim()">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
             </mat-card-content>
 
             @if (p['active'] === false) {
@@ -299,6 +384,42 @@ interface OccupancyStatus {
     .tip-row { display: flex; align-items: flex-start; gap: 4px; font-size: 12px; color: #444; }
     .tip-bullet { font-size: 14px; width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: #888; }
 
+    /* Inventaire */
+    .inventory-section { margin-top: 12px; }
+    .inventory-header { display: flex; align-items: center; gap: 6px; cursor: pointer;
+      padding: 4px 0; user-select: none; }
+    .inv-icon { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
+    .inventory-header strong { font-size: 13px; flex: 1; }
+    .inv-count { font-size: 11px; background: #e3f2fd; color: #0277bd;
+      padding: 1px 6px; border-radius: 10px; }
+    .inv-toggle { font-size: 18px; width: 18px; height: 18px; color: #aaa; }
+    .inv-category { margin: 8px 0 4px; }
+    .inv-cat-label { display: flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 4px; }
+    .inv-cat-label mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .inv-item { display: flex; align-items: center; gap: 6px; padding: 3px 0;
+      font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+    .inv-qty { font-weight: 700; color: #546e7a; min-width: 24px; }
+    .inv-label { flex: 1; }
+    .inv-details { font-size: 12px; color: #888; background: #f5f5f5;
+      padding: 1px 6px; border-radius: 6px; }
+    .inv-del { width: 24px !important; height: 24px !important; line-height: 24px !important;
+      color: #ccc; flex-shrink: 0; }
+    .inv-del mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .inv-loading { display: flex; justify-content: center; padding: 8px; }
+    .inv-quick-title { font-size: 11px; color: #aaa; margin: 8px 0 4px;
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .inv-quick-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .inv-quick-btn { font-size: 11px !important; height: 28px !important;
+      padding: 0 8px !important; color: #546e7a !important; border-color: #b0bec5 !important; }
+    .inv-q-detail { color: #999; margin-left: 2px; }
+    .inv-custom-form { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; margin-top: 4px; }
+    .inv-cat-field { width: 120px; flex-shrink: 0; }
+    .inv-label-field { flex: 2; min-width: 100px; }
+    .inv-detail-field { flex: 1; min-width: 80px; }
+    .inv-qty-field { width: 60px; flex-shrink: 0; }
+
     .inactive-banner {
       display: flex; align-items: center; gap: 6px;
       background: #fff3e0; color: #e65100; font-size: 12px;
@@ -351,9 +472,98 @@ export class PropertiesComponent implements OnInit {
     });
   });
 
+  // ── Inventaire ──────────────────────────────────────────────────────
+  readonly categories   = INVENTORY_CATEGORIES;
+  readonly allQuickItems = QUICK_ITEMS;
+  inventoryOpen    = signal<Record<string, boolean>>({});
+  inventoryLoading = signal<Record<string, boolean>>({});
+  inventoryMap     = signal<Record<string, InventoryItem[]>>({});
+  newItemMap       = signal<Record<string, Partial<InventoryItem> & { quantity: number }>>({});
+
+  toggleInventory(propId: string): void {
+    const open = !this.inventoryOpen()[propId];
+    this.inventoryOpen.update(m => ({ ...m, [propId]: open }));
+    if (open && !this.inventoryMap()[propId]) this.loadInventory(propId);
+    if (!this.newItemMap()[propId]) {
+      this.newItemMap.update(m => ({ ...m, [propId]: { category: 'BEDS', label: '', details: '', quantity: 1 } }));
+    }
+  }
+
+  private loadInventory(propId: string): void {
+    this.inventoryLoading.update(m => ({ ...m, [propId]: true }));
+    this.inventoryService.getAll(String(propId)).subscribe({
+      next: items => {
+        this.inventoryMap.update(m => ({ ...m, [propId]: items }));
+        this.inventoryLoading.update(m => ({ ...m, [propId]: false }));
+      },
+      error: () => {
+        this.inventoryMap.update(m => ({ ...m, [propId]: [] }));
+        this.inventoryLoading.update(m => ({ ...m, [propId]: false }));
+      }
+    });
+  }
+
+  usedCategories(propId: string): string[] {
+    const items = this.inventoryMap()[propId] ?? [];
+    return [...new Set(items.map(i => i.category))];
+  }
+
+  itemsByCategory(propId: string, cat: string): InventoryItem[] {
+    return (this.inventoryMap()[propId] ?? []).filter(i => i.category === cat);
+  }
+
+  catLabel(cat: string): string { return this.categories.find(c => c.value === cat)?.label ?? cat; }
+  catIcon(cat: string):  string { return this.categories.find(c => c.value === cat)?.icon  ?? 'category'; }
+
+  quickSuggestions(): typeof QUICK_ITEMS { return this.allQuickItems; }
+
+  quickAdd(propId: string, s: { category: string; label: string; details?: string }): void {
+    const key      = s.label + (s.details ?? '');
+    const existing = (this.inventoryMap()[propId] ?? [])
+      .find(i => (i.label + (i.details ?? '')) === key);
+    if (existing?.id) {
+      this.inventoryService.update(existing.id, { quantity: existing.quantity + 1 }).subscribe(updated => {
+        this.inventoryMap.update(m => ({
+          ...m, [propId]: (m[propId] ?? []).map(i => i.id === updated.id ? updated : i)
+        }));
+      });
+    } else {
+      this.inventoryService.create({
+        beds24PropertyId: String(propId), category: s.category,
+        label: s.label, details: s.details ?? null, quantity: 1
+      }).subscribe(item => {
+        this.inventoryMap.update(m => ({ ...m, [propId]: [...(m[propId] ?? []), item] }));
+      });
+    }
+  }
+
+  addItem(propId: string): void {
+    const form = this.newItemMap()[propId];
+    if (!form?.label?.trim()) return;
+    this.inventoryService.create({
+      beds24PropertyId: String(propId),
+      category: form.category ?? 'OTHER',
+      label:    form.label.trim(),
+      details:  form.details?.trim() || null,
+      quantity: form.quantity ?? 1
+    }).subscribe(item => {
+      this.inventoryMap.update(m => ({ ...m, [propId]: [...(m[propId] ?? []), item] }));
+      this.newItemMap.update(m => ({ ...m, [propId]: { category: form.category, label: '', details: '', quantity: 1 } }));
+      this.snackBar.open('Équipement ajouté', '', { duration: 1500 });
+    });
+  }
+
+  deleteItem(propId: string, item: InventoryItem): void {
+    if (!item.id) return;
+    this.inventoryService.delete(item.id).subscribe(() => {
+      this.inventoryMap.update(m => ({ ...m, [propId]: (m[propId] ?? []).filter(i => i.id !== item.id) }));
+    });
+  }
+
   constructor(
     private http: HttpClient,
     private propConfigService: PropertyConfigService,
+    private inventoryService: PropertyInventoryService,
     private snackBar: MatSnackBar
   ) {}
 
