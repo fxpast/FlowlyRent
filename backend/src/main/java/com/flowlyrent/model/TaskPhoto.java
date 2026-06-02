@@ -32,7 +32,7 @@ public class TaskPhoto {
     private String publicId;
 
     // Base64 legacy (anciennes photos avant migration Cloudinary)
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "LONGTEXT NULL")
     private String data;
 
     private String caption;

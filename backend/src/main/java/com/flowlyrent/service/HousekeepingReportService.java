@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -26,7 +27,8 @@ public class HousekeepingReportService {
 
     public ReportResult monthByStaff(Long userId, LocalDate from, LocalDate to) {
         List<HousekeepingTask> tasks = taskRepo
-                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(userId, from, to);
+                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                        userId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
 
         List<List<Object>> rows = tasks.stream().map(t -> List.<Object>of(
                 t.getScheduledDate().toString(),
@@ -58,7 +60,8 @@ public class HousekeepingReportService {
         LocalDate from = LocalDate.of(year, 1, 1);
         LocalDate to = LocalDate.of(year, 12, 31);
         List<HousekeepingTask> tasks = taskRepo
-                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(userId, from, to);
+                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                        userId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
 
         Map<String, List<HousekeepingTask>> byProp = tasks.stream()
                 .collect(Collectors.groupingBy(t ->
@@ -96,7 +99,8 @@ public class HousekeepingReportService {
         LocalDate from = LocalDate.of(year, 1, 1);
         LocalDate to = LocalDate.of(year, 12, 31);
         List<HousekeepingTask> tasks = taskRepo
-                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(userId, from, to);
+                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                        userId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
 
         List<List<Object>> rows = tasks.stream().map(t -> List.<Object>of(
                 t.getScheduledDate().toString(),
@@ -125,7 +129,8 @@ public class HousekeepingReportService {
 
     public ReportResult byStaff(Long userId, Long staffId, LocalDate from, LocalDate to) {
         List<HousekeepingTask> tasks = taskRepo
-                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(userId, from, to)
+                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                        userId, from.atStartOfDay(), to.atTime(LocalTime.MAX))
                 .stream()
                 .filter(t -> t.getStaff() != null && t.getStaff().getId().equals(staffId))
                 .collect(Collectors.toList());
@@ -164,7 +169,7 @@ public class HousekeepingReportService {
     public ReportResult byProperty(Long userId, String beds24PropertyId, LocalDate from, LocalDate to) {
         List<HousekeepingTask> tasks = taskRepo
                 .findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
-                        userId, beds24PropertyId, from, to);
+                        userId, beds24PropertyId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
 
         List<List<Object>> rows = tasks.stream().map(t -> List.<Object>of(
                 t.getScheduledDate().toString(),

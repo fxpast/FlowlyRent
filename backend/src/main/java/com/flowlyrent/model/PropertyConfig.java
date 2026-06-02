@@ -27,6 +27,8 @@ public class PropertyConfig {
 
     private String previousAccessCode;
 
+    private Float cleaningHours;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

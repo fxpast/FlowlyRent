@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -60,7 +61,9 @@ public class Beds24WebhookController {
             task.setBeds24PropertyId(propertyId);
             task.setType(TaskType.CHECKOUT_CLEANING);
             task.setStatus(TaskStatus.PENDING);
-            task.setScheduledDate(departureStr != null ? LocalDate.parse(departureStr) : LocalDate.now());
+            task.setScheduledDate(departureStr != null
+                    ? LocalDate.parse(departureStr).atTime(9, 0)
+                    : LocalDateTime.now().withHour(9).withMinute(0).withSecond(0));
             taskRepo.save(task);
 
             log.info("[Webhook Beds24] Tâche ménage créée — booking={} propriété={}", bookingId, propertyId);

@@ -3,22 +3,22 @@ package com.flowlyrent.repository;
 import com.flowlyrent.model.HousekeepingTask;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface HousekeepingTaskRepository extends JpaRepository<HousekeepingTask, Long> {
 
     List<HousekeepingTask> findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
-            Long userId, LocalDate from, LocalDate to);
+            Long userId, LocalDateTime from, LocalDateTime to);
 
     List<HousekeepingTask> findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
-            Long userId, String beds24PropertyId, LocalDate from, LocalDate to);
+            Long userId, String beds24PropertyId, LocalDateTime from, LocalDateTime to);
 
     List<HousekeepingTask> findByUserIdAndStaff_IdOrderByScheduledDateAsc(Long userId, Long staffId);
 
     List<HousekeepingTask> findByHousekeeper_IdAndScheduledDateGreaterThanEqualOrderByScheduledDateAsc(
-            Long housekeeperId, java.time.LocalDate from);
+            Long housekeeperId, LocalDateTime from);
 
     Optional<HousekeepingTask> findByBeds24BookingId(String beds24BookingId);
 

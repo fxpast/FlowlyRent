@@ -10,7 +10,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -49,7 +48,7 @@ public class HousekeepingTask {
     private TaskType type = TaskType.CHECKOUT_CLEANING;
 
     @Column(nullable = false)
-    private LocalDate scheduledDate;
+    private LocalDateTime scheduledDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

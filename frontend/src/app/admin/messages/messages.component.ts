@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { Subscription, forkJoin } from 'rxjs';
 import { MessageService } from '../../core/services/message.service';
 import { BookingService } from '../../core/services/booking.service';
@@ -36,7 +37,7 @@ const TYPE_LABELS: Record<string, string> = {
     CommonModule, FormsModule,
     MatCardModule, MatTabsModule, MatListModule, MatInputModule, MatButtonModule,
     MatIconModule, MatDividerModule, MatSelectModule, MatFormFieldModule,
-    MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatSnackBarModule
+    MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatSnackBarModule, TextFieldModule
   ],
   template: `
     <h1>Messages</h1>
@@ -247,9 +248,9 @@ const TYPE_LABELS: Record<string, string> = {
             </mat-menu>
 
             <mat-form-field appearance="outline" class="reply-input">
-              <textarea matInput [(ngModel)]="newMessage"
-                        placeholder="Écrire un message…"
-                        rows="2"
+              <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="8"
+                        [(ngModel)]="newMessage"
+                        placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
                         (keydown.enter)="onEnter($event)"></textarea>
             </mat-form-field>
 

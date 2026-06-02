@@ -95,19 +95,31 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
                 }
               </mat-select>
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Arrivée</mat-label>
-              <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required [min]="isEdit() ? null : today">
-              <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
-              <mat-datepicker #arrivalPicker></mat-datepicker>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Départ</mat-label>
-              <input matInput [matDatepicker]="departurePicker" formControlName="departure"
-                     required [min]="minDeparture">
-              <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
-              <mat-datepicker #departurePicker [startAt]="form.get('arrival')?.value"></mat-datepicker>
-            </mat-form-field>
+            <div class="datetime-pair">
+              <mat-form-field appearance="outline" class="date-part">
+                <mat-label>Arrivée</mat-label>
+                <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required [min]="isEdit() ? null : today">
+                <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
+                <mat-datepicker #arrivalPicker></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="time-part">
+                <mat-label>Heure</mat-label>
+                <input matInput type="time" [(ngModel)]="arrivalTime" [ngModelOptions]="{standalone: true}">
+              </mat-form-field>
+            </div>
+            <div class="datetime-pair">
+              <mat-form-field appearance="outline" class="date-part">
+                <mat-label>Départ</mat-label>
+                <input matInput [matDatepicker]="departurePicker" formControlName="departure"
+                       required [min]="minDeparture">
+                <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
+                <mat-datepicker #departurePicker [startAt]="form.get('arrival')?.value"></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="time-part">
+                <mat-label>Heure</mat-label>
+                <input matInput type="time" [(ngModel)]="departureTime" [ngModelOptions]="{standalone: true}">
+              </mat-form-field>
+            </div>
             <mat-form-field appearance="outline">
               <mat-label>Adultes</mat-label>
               <input matInput formControlName="numAdult" type="number" min="1">
@@ -194,6 +206,9 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
   styles: [`
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 8px; }
     .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+    .datetime-pair { display: flex; gap: 8px; align-items: flex-start; }
+    .date-part { flex: 1; }
+    .time-part { width: 110px; flex-shrink: 0; }
     .pricing-row { grid-template-columns: 1fr 1fr auto 1fr; align-items: start; }
     .calc-col { display: flex; align-items: center; padding-top: 8px; }
     .calc-col button { height: 56px; }
@@ -251,6 +266,8 @@ export class BookingFormComponent implements OnInit {
   estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number } | null>(null);
   bookingId: string | null = null;
   submitted = false;
+  arrivalTime   = '16:00';
+  departureTime = '11:00';
 
   get canEstimate(): boolean {
     const arr = this.toDateStr(this.form?.value?.arrival);
@@ -331,10 +348,14 @@ export class BookingFormComponent implements OnInit {
   }
 
   private patchBooking(b: any): void {
+    const rawArr = (b.arrival   || '').toString();
+    const rawDep = (b.departure || '').toString();
+    if (rawArr.includes('T')) this.arrivalTime   = rawArr.substring(11, 16) || '16:00';
+    if (rawDep.includes('T')) this.departureTime = rawDep.substring(11, 16) || '11:00';
     this.form.patchValue({
       ...b,
-      arrival:   this.parseDate(b.arrival),
-      departure: this.parseDate(b.departure)
+      arrival:   this.parseDate(rawArr),
+      departure: this.parseDate(rawDep)
     });
   }
 
@@ -426,7 +447,11 @@ export class BookingFormComponent implements OnInit {
 
   private doSave(v: any, arrival: string, departure: string): void {
     this.saving.set(true);
-    const payload: any = { ...v, arrival, departure };
+    const payload: any = {
+      ...v,
+      arrival:   arrival   + 'T' + this.arrivalTime,
+      departure: departure + 'T' + this.departureTime
+    };
     if (this.bookingId) payload['id'] = this.bookingId;
 
     this.bookingService.save([payload]).subscribe({

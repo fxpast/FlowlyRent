@@ -16,10 +16,12 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
+import { HousekeepingService } from '../../core/services/housekeeping.service';
 import { Message } from '../../core/models/message.model';
 import { environment } from '@env/environment';
 import { Subscription } from 'rxjs';
@@ -32,7 +34,7 @@ import { Subscription } from 'rxjs';
     MatButtonModule, MatIconModule, MatChipsModule, MatDividerModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule,
     MatTabsModule, MatBadgeModule, MatProgressSpinnerModule,
-    MatDatepickerModule, MatNativeDateModule
+    MatDatepickerModule, MatNativeDateModule, TextFieldModule
   ],
   template: `
     <div class="dialog-header">
@@ -90,18 +92,32 @@ import { Subscription } from 'rxjs';
             </div>
             <mat-divider/>
             <div class="row-2">
-              <mat-form-field appearance="outline">
-                <mat-label>Arrivée</mat-label>
-                <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate" (ngModelChange)="draft['arrival'] = fromDate($event)">
-                <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
-                <mat-datepicker #arrivalPicker></mat-datepicker>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Départ</mat-label>
-                <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate" (ngModelChange)="draft['departure'] = fromDate($event)">
-                <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
-                <mat-datepicker #departurePicker></mat-datepicker>
-              </mat-form-field>
+              <div class="datetime-pair">
+                <mat-form-field appearance="outline" class="date-part">
+                  <mat-label>Arrivée</mat-label>
+                  <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate"
+                         (ngModelChange)="draft['arrival'] = fromDate($event)">
+                  <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #arrivalPicker></mat-datepicker>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="time-part">
+                  <mat-label>Heure</mat-label>
+                  <input matInput type="time" [(ngModel)]="arrivalTime">
+                </mat-form-field>
+              </div>
+              <div class="datetime-pair">
+                <mat-form-field appearance="outline" class="date-part">
+                  <mat-label>Départ</mat-label>
+                  <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate"
+                         (ngModelChange)="draft['departure'] = fromDate($event)">
+                  <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
+                  <mat-datepicker #departurePicker></mat-datepicker>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="time-part">
+                  <mat-label>Heure</mat-label>
+                  <input matInput type="time" [(ngModel)]="departureTime">
+                </mat-form-field>
+              </div>
             </div>
             <div class="row-3">
               <mat-form-field appearance="outline">
@@ -191,8 +207,9 @@ import { Subscription } from 'rxjs';
 
         <div class="chat-input-bar">
           <mat-form-field appearance="outline" class="chat-field">
-            <textarea matInput [(ngModel)]="newMessage" placeholder="Écrire un message…"
-                      rows="2" (keydown.enter)="onEnterSend($event)"></textarea>
+            <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="8"
+                      [(ngModel)]="newMessage" placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
+                      (keydown.enter)="onEnterSend($event)"></textarea>
           </mat-form-field>
           @if (isDirect()) {
             <div class="direct-btns">
@@ -222,8 +239,8 @@ import { Subscription } from 'rxjs';
         </mat-dialog-actions>
       </mat-tab>
 
-      <!-- ── Onglet Ménage ──────────────────────────────────────── -->
-      <mat-tab label="Ménage">
+      <!-- ── Onglet Entretien ────────────────────────────────────── -->
+      <mat-tab label="Entretien">
         <mat-dialog-content class="menage-content">
 
           @if (loadingTask()) {
@@ -232,8 +249,8 @@ import { Subscription } from 'rxjs';
             <!-- Mission existante -->
             <div class="task-card">
               <div class="task-header">
-                <mat-icon class="task-icon">cleaning_services</mat-icon>
-                <span class="task-title">Mission ménage</span>
+                <mat-icon class="task-icon">home_repair_service</mat-icon>
+                <span class="task-title">Intervention</span>
                 <span class="task-status" [class]="'status-' + existingTask()!.status.toLowerCase()">
                   {{ taskStatusLabel(existingTask()!.status) }}
                 </span>
@@ -246,12 +263,30 @@ import { Subscription } from 'rxjs';
                 </div>
                 <div class="ti-row">
                   <mat-icon>calendar_today</mat-icon>
-                  <span>{{ existingTask()!.scheduledDate | date:'dd/MM/yyyy' }}</span>
+                  <span>{{ existingTask()!.scheduledDate | date:'dd/MM/yyyy HH:mm' }}</span>
                 </div>
                 <div class="ti-row">
                   <mat-icon>person</mat-icon>
                   <span>{{ existingTask()!.housekeeper?.name || 'Non assigné' }}</span>
+                  @if (existingTask()!.housekeeper?.hourlyRate != null) {
+                    <span class="ti-badge green">{{ existingTask()!.housekeeper!.hourlyRate | number:'1.2-2' }} €/h</span>
+                  }
                 </div>
+                @if (existingTask()!.extraHours != null) {
+                  <div class="ti-row">
+                    <mat-icon>schedule</mat-icon>
+                    <span>{{ existingTask()!.extraHours }} h prévues</span>
+                    @if (existingTask()!.hourlyRate != null) {
+                      <span class="ti-badge green">= {{ existingTask()!.extraHours * existingTask()!.hourlyRate | number:'1.2-2' }} €</span>
+                    }
+                  </div>
+                }
+                @if (existingTask()!.hourlyRate != null && existingTask()!.extraHours == null) {
+                  <div class="ti-row">
+                    <mat-icon>payments</mat-icon>
+                    <span>{{ existingTask()!.hourlyRate | number:'1.2-2' }} €/h</span>
+                  </div>
+                }
                 @if (existingTask()!.notes) {
                   <div class="ti-row">
                     <mat-icon>notes</mat-icon>
@@ -287,10 +322,18 @@ import { Subscription } from 'rxjs';
                 Aucune mission créée pour ce départ. Remplissez les informations ci-dessous.
               </p>
               <div class="row-2">
-                <mat-form-field appearance="outline">
-                  <mat-label>Date planifiée</mat-label>
-                  <input matInput [(ngModel)]="taskForm.scheduledDate" type="date">
-                </mat-form-field>
+                <div class="datetime-pair">
+                  <mat-form-field appearance="outline" class="date-part">
+                    <mat-label>Date</mat-label>
+                    <input matInput [matDatepicker]="taskPicker" [(ngModel)]="taskDate">
+                    <mat-datepicker-toggle matIconSuffix [for]="taskPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #taskPicker></mat-datepicker>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="time-part">
+                    <mat-label>Heure</mat-label>
+                    <input matInput type="time" [(ngModel)]="taskTime">
+                  </mat-form-field>
+                </div>
                 <mat-form-field appearance="outline">
                   <mat-label>Type</mat-label>
                   <mat-select [(ngModel)]="taskForm.type">
@@ -304,13 +347,33 @@ import { Subscription } from 'rxjs';
               </div>
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Prestataire</mat-label>
-                <mat-select [(ngModel)]="taskForm.housekeeperId">
+                <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
                   <mat-option [value]="null">— Non assigné —</mat-option>
                   @for (h of housekeepers(); track h.id) {
                     <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
+              <div class="row-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Heures d'intervention</mat-label>
+                  <input matInput type="number" min="0" step="0.5" [(ngModel)]="taskForm.extraHours"
+                         placeholder="Ex : 3">
+                  <span matTextSuffix>h</span>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Taux horaire</mat-label>
+                  <input matInput type="number" min="0" step="0.5" [(ngModel)]="taskForm.hourlyRate"
+                         placeholder="Ex : 15">
+                  <span matTextSuffix>€/h</span>
+                </mat-form-field>
+              </div>
+              @if (taskForm.extraHours && taskForm.hourlyRate) {
+                <div class="task-total">
+                  <mat-icon>calculate</mat-icon>
+                  Total estimé : <strong>{{ +taskForm.extraHours * +taskForm.hourlyRate | number:'1.2-2' }} €</strong>
+                </div>
+              }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notes</mat-label>
                 <textarea matInput rows="2" [(ngModel)]="taskForm.notes"
@@ -347,6 +410,9 @@ import { Subscription } from 'rxjs';
     .prop-row mat-icon { color: #0288d1; font-size: 20px; width: 20px; height: 20px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .datetime-pair { display: flex; gap: 8px; align-items: flex-start; }
+    .date-part { flex: 1; }
+    .time-part { width: 110px; flex-shrink: 0; }
     .full { width: 100%; }
     mat-divider { margin: 4px 0 12px; }
 
@@ -397,8 +463,13 @@ import { Subscription } from 'rxjs';
     .status-done        { background: #e8f5e9; color: #2e7d32; }
     .status-skipped     { background: #f5f5f5; color: #757575; }
     .task-info-grid { display: flex; flex-direction: column; gap: 8px; }
-    .ti-row { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #333; }
-    .ti-row mat-icon { font-size: 18px; width: 18px; height: 18px; color: #888; flex-shrink: 0; margin-top: 1px; }
+    .ti-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #333; flex-wrap: wrap; }
+    .ti-row mat-icon { font-size: 18px; width: 18px; height: 18px; color: #888; flex-shrink: 0; }
+    .ti-badge { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
+    .ti-badge.green { background: #e8f5e9; color: #2e7d32; }
+    .task-total { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1565c0;
+      background: #e3f2fd; padding: 6px 12px; border-radius: 8px; margin-bottom: 4px; }
+    .task-total mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .task-report { display: flex; flex-direction: column; gap: 6px; }
     .report-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: #555; }
     .incident-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600;
@@ -429,6 +500,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   sendingMsg = signal(false);
   arrivalDate: Date | null = null;
   departureDate: Date | null = null;
+  arrivalTime   = '16:00';
+  departureTime = '11:00';
 
   templates = signal<MessageTemplate[]>([]);
   selectedTemplate: MessageTemplate | null = null;
@@ -437,12 +510,15 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   savingTask   = signal(false);
   existingTask = signal<any>(null);
   housekeepers = signal<HousekeeperProfile[]>([]);
-  taskForm: { scheduledDate: string; type: string; housekeeperId: number | null; notes: string } = {
-    scheduledDate: '',
+  taskForm: { type: string; housekeeperId: number | null; notes: string; extraHours: string; hourlyRate: string } = {
     type: 'CHECKOUT_CLEANING',
     housekeeperId: null,
-    notes: ''
+    notes: '',
+    extraHours: '',
+    hourlyRate: ''
   };
+  taskDate: Date | null = null;
+  taskTime = '09:00';
 
   private wsSub?: Subscription;
   private readonly apiBase = environment.apiUrl;
@@ -454,6 +530,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private messageService: MessageService,
     private templateService: MessageTemplateService,
     private housekeeperService: HousekeeperService,
+    private housekeepingService: HousekeepingService,
     private http: HttpClient,
     private snackBar: MatSnackBar
   ) {
@@ -467,8 +544,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     d['propName']       = d['propName']       || d['propertyName'] || '';
     d['totalPrice']     = d['totalPrice']     ?? d['price']     ?? null;
     d['notes']          = d['notes']          || d['internalNotes'] || '';
-    d['arrival']        = (d['arrival']    || '').toString().substring(0, 10);
-    d['departure']      = (d['departure']  || '').toString().substring(0, 10);
+    const rawArr = (d['arrival']   || '').toString();
+    const rawDep = (d['departure'] || '').toString();
+    d['arrival']   = rawArr.substring(0, 10);
+    d['departure'] = rawDep.substring(0, 10);
+    if (rawArr.includes('T')) this.arrivalTime   = rawArr.substring(11, 16) || '16:00';
+    if (rawDep.includes('T')) this.departureTime = rawDep.substring(11, 16) || '11:00';
     if (!d['guestFirstName'] && !d['guestLastName'] && d['guestName']) {
       const parts = (d['guestName'] as string).split(' ');
       d['guestFirstName'] = parts[0] || '';
@@ -477,7 +558,9 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.draft = d;
     this.arrivalDate   = this.toDate(d['arrival']);
     this.departureDate = this.toDate(d['departure']);
-    this.taskForm.scheduledDate = (d['departure'] || '').toString().substring(0, 10);
+    const dep = (d['departure'] || '').toString().substring(0, 10);
+    this.taskDate = dep ? new Date(dep + 'T12:00:00') : null;
+    this.taskTime = this.departureTime;
   }
 
   ngOnInit(): void {
@@ -502,6 +585,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (index === 2) {
       this.loadHousekeepingTask();
       if (this.housekeepers().length === 0) this.loadHousekeepers();
+      this.loadPropertyCleaningHours();
     }
   }
 
@@ -610,7 +694,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   save(): void {
     this.saving.set(true);
-    this.bookingService.save([this.draft]).subscribe({
+    const payload = { ...this.draft };
+    if (payload['arrival'])   payload['arrival']   = payload['arrival'].substring(0, 10)   + 'T' + this.arrivalTime;
+    if (payload['departure']) payload['departure'] = payload['departure'].substring(0, 10) + 'T' + this.departureTime;
+    this.bookingService.save([payload]).subscribe({
       next: () => {
         this.snackBar.open('Réservation mise à jour', 'OK', { duration: 3000 });
         this.dialogRef.close({ updated: true });
@@ -643,10 +730,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const departure  = (this.draft['departure'] || '').toString().substring(0, 10);
     if (!bookingId) return;
     this.loadingTask.set(true);
-    const params: Record<string, string> = {};
-    if (propertyId) params['propertyId']   = propertyId;
-    if (departure)  params['scheduledDate'] = departure;
-    this.http.get<any>(`${this.apiBase}/admin/housekeeping/by-booking/${bookingId}`, { params }).subscribe({
+    this.housekeepingService.getByBooking(bookingId, propertyId || undefined, departure || undefined).subscribe({
       next: task => { this.existingTask.set(task); this.loadingTask.set(false); },
       error: ()  => { this.existingTask.set(null); this.loadingTask.set(false); }
     });
@@ -659,24 +743,46 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadPropertyCleaningHours(): void {
+    if (this.taskForm.extraHours) return;
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    if (!pid) return;
+    this.housekeepingService.getPropertyConfigs().subscribe({
+      next: cfgs => {
+        const cfg = cfgs.find((c: any) => c.beds24PropertyId === pid);
+        if (cfg?.cleaningHours != null) this.taskForm.extraHours = String(cfg.cleaningHours);
+      },
+      error: () => {}
+    });
+  }
+
+  onHousekeeperChange(id: number | null): void {
+    this.taskForm.housekeeperId = id;
+    const hk = this.housekeepers().find(h => h.id === id);
+    this.taskForm.hourlyRate = hk?.hourlyRate != null ? String(hk.hourlyRate) : '';
+  }
+
   createTask(): void {
     if (this.savingTask()) return;
     const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
-    if (!pid || !this.taskForm.scheduledDate) {
+    if (!pid || !this.taskDate) {
       this.snackBar.open('Propriété ou date manquante', 'Fermer', { duration: 3000 });
       return;
     }
     this.savingTask.set(true);
+    const dateStr = this.fromDate(this.taskDate);
     const body: Record<string, any> = {
       beds24PropertyId: pid,
       propertyName:     this.draft['propName'] || this.draft['propertyName'] || '',
       beds24BookingId:  String(this.data['id'] ?? ''),
-      scheduledDate:    this.taskForm.scheduledDate,
+      scheduledDate:    `${dateStr}T${this.taskTime}:00`,
       type:             this.taskForm.type,
       notes:            this.taskForm.notes || '',
     };
     if (this.taskForm.housekeeperId) body['housekeeperId'] = this.taskForm.housekeeperId;
-    this.http.post<any>(`${this.apiBase}/admin/housekeeping`, body).subscribe({
+    if (this.taskForm.extraHours)   body['extraHours']   = this.taskForm.extraHours;
+    if (this.taskForm.hourlyRate)   body['hourlyRate']   = this.taskForm.hourlyRate;
+    this.housekeepingService.createTask(body).subscribe({
       next: task => {
         this.existingTask.set(task);
         this.savingTask.set(false);

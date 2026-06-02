@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
+import { AuthService } from './auth.service';
 
 export interface PortalTask {
   id: number;
@@ -11,6 +12,7 @@ export interface PortalTask {
   propertyName?: string;
   beds24PropertyId?: string;
   notes?: string;
+  extraHours?: number | null;
   reportComment?: string;
   hasIncident?: boolean;
   incidentDescription?: string;
@@ -32,7 +34,14 @@ export interface TaskPhoto {
 export class HousekeeperPortalService {
   private base = `${environment.apiUrl}/housekeeper`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auth: AuthService) {}
+
+  token(): string | null { return this.auth.getToken(); }
+
+  private authHeaders(): HttpHeaders {
+    const t = this.auth.getToken();
+    return t ? new HttpHeaders({ Authorization: `Bearer ${t}` }) : new HttpHeaders();
+  }
 
   getMe(): Observable<{ id: number; name: string; email?: string; phone?: string }> {
     return this.http.get<any>(`${this.base}/me`);
@@ -56,10 +65,17 @@ export class HousekeeperPortalService {
   }
 
   addPhoto(taskId: number, photoType: string, data: string, caption: string): Observable<TaskPhoto> {
-    return this.http.post<TaskPhoto>(`${this.base}/tasks/${taskId}/photos`, { photoType, data, caption });
+    return this.http.post<TaskPhoto>(
+      `${this.base}/tasks/${taskId}/photos`,
+      { photoType, data, caption },
+      { headers: this.authHeaders() }
+    );
   }
 
   deletePhoto(taskId: number, photoId: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/tasks/${taskId}/photos/${photoId}`);
+    return this.http.delete<void>(
+      `${this.base}/tasks/${taskId}/photos/${photoId}`,
+      { headers: this.authHeaders() }
+    );
   }
 }

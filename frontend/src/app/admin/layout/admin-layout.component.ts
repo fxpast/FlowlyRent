@@ -111,7 +111,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'calendar_month',   label: 'Calendrier',       route: 'calendar' },
     { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
     { icon: 'chat',             label: 'Messages',         route: 'messages' },
-    { icon: 'cleaning_services',label: 'Ménage',           route: 'housekeeping' },
+    { icon: 'home_repair_service', label: 'Entretien',        route: 'housekeeping' },
     { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
     { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
     { icon: 'payment',          label: 'Paiements',        route: 'payments' },

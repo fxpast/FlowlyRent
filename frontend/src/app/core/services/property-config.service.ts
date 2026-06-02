@@ -8,6 +8,7 @@ export interface PropertyConfig {
   beds24PropertyId: string;
   accessCode?: string;
   previousAccessCode?: string;
+  cleaningHours?: number | null;
   updatedAt?: string;
 }
 
@@ -23,6 +24,10 @@ export class PropertyConfigService {
 
   updateAccessCode(propId: string, code: string): Observable<PropertyConfig> {
     return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { accessCode: code });
+  }
+
+  updateCleaningHours(propId: string, hours: string): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { cleaningHours: hours });
   }
 
   regenerate(propId: string): Observable<PropertyConfig> {

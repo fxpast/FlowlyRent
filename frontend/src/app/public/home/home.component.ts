@@ -21,8 +21,9 @@ import { MatIconModule } from '@angular/material/icon';
         <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
         <div class="hero-actions">
           <a mat-raised-button routerLink="/admin/login" class="btn-login">
-            <mat-icon>login</mat-icon> Espace hôte
+            <mat-icon>login</mat-icon> Se connecter
           </a>
+          <p class="login-hint">Hôtes · Prestataires · Administrateurs</p>
         </div>
       </div>
     </div>
@@ -67,7 +68,8 @@ import { MatIconModule } from '@angular/material/icon';
     }
     .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
     .hero p { font-size: 20px; opacity: 0.85; margin: 0 0 40px; }
-    .hero-actions { display: flex; gap: 16px; justify-content: center; }
+    .hero-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .login-hint { margin: 0; font-size: 13px; opacity: 0.7; letter-spacing: 0.5px; }
     .btn-login {
       background: white !important;
       color: #0288d1 !important;

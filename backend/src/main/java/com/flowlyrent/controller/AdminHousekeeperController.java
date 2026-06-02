@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 import java.util.List;
 import java.util.Map;
 
@@ -103,9 +105,13 @@ public class AdminHousekeeperController {
     }
 
     private void applyBody(HousekeeperProfile h, Map<String, String> body) {
-        if (body.containsKey("name"))  h.setName(body.get("name"));
-        if (body.containsKey("phone")) h.setPhone(body.get("phone"));
-        if (body.containsKey("email")) h.setEmail(body.get("email"));
-        if (body.containsKey("notes")) h.setNotes(body.get("notes"));
+        if (body.containsKey("name"))       h.setName(body.get("name"));
+        if (body.containsKey("phone"))      h.setPhone(body.get("phone"));
+        if (body.containsKey("email"))      h.setEmail(body.get("email"));
+        if (body.containsKey("notes"))      h.setNotes(body.get("notes"));
+        if (body.containsKey("hourlyRate")) {
+            String v = body.get("hourlyRate");
+            h.setHourlyRate(v != null && !v.isBlank() ? new BigDecimal(v) : null);
+        }
     }
 }

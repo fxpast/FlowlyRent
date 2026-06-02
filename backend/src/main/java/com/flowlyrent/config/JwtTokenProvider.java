@@ -5,6 +5,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +16,15 @@ import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
+
+    @PostConstruct
+    public void init() {
+        log.info("[JWT] Secret configuré : {} premiers chars = '{}'",
+                jwtSecret.length(),
+                jwtSecret.substring(0, Math.min(8, jwtSecret.length())));
+    }
 
     @Value("${jwt.secret}")
     private String jwtSecret;

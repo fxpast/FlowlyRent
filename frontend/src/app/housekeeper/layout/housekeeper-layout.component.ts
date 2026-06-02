@@ -63,7 +63,10 @@ export class HousekeeperLayoutComponent implements OnInit {
   constructor(private auth: AuthService, private portalService: HousekeeperPortalService) {}
 
   ngOnInit(): void {
-    this.portalService.getMe().subscribe(p => this.name.set(p.name));
+    this.portalService.getMe().subscribe({
+      next: p => this.name.set(p.name),
+      error: err => { if (err?.status === 401) this.auth.logout(); }
+    });
   }
 
   logout(): void {

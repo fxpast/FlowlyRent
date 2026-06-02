@@ -7,6 +7,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,6 +30,9 @@ public class HousekeeperProfile {
     private String phone;
     private String email;
     private String notes;
+
+    @Column(precision = 8, scale = 2)
+    private BigDecimal hourlyRate;
 
     @Column(nullable = false)
     private boolean active = true;

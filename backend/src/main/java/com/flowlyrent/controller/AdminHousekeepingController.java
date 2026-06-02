@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,7 +56,9 @@ public class AdminHousekeepingController {
         // 2. Fallback : tâche manuelle sans bookingId — cherche par propriété + date
         if (propertyId != null && scheduledDate != null) {
             return taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
-                            userId, propertyId, scheduledDate, scheduledDate)
+                            userId, propertyId,
+                            scheduledDate.atStartOfDay(),
+                            scheduledDate.atTime(LocalTime.MAX))
                     .stream().findFirst()
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
@@ -69,8 +73,8 @@ public class AdminHousekeepingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String propertyId) {
         Long userId = securityUtils.getCurrentUserId();
-        LocalDate start = from != null ? from : LocalDate.now().minusDays(7);
-        LocalDate end   = to   != null ? to   : LocalDate.now().plusDays(30);
+        LocalDateTime start = (from != null ? from : LocalDate.now().minusDays(7)).atStartOfDay();
+        LocalDateTime end   = (to   != null ? to   : LocalDate.now().plusDays(30)).atTime(LocalTime.MAX);
         if (propertyId != null && !propertyId.isBlank()) {
             return taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
                     userId, propertyId, start, end);
@@ -86,7 +90,7 @@ public class AdminHousekeepingController {
         task.setUser(user);
         task.setBeds24PropertyId(body.get("beds24PropertyId").toString());
         task.setPropertyName(body.containsKey("propertyName") ? body.get("propertyName").toString() : null);
-        task.setScheduledDate(LocalDate.parse(body.get("scheduledDate").toString()));
+        task.setScheduledDate(parseScheduledDate(body.get("scheduledDate").toString()));
 
         if (body.containsKey("type"))         task.setType(TaskType.valueOf(body.get("type").toString()));
         if (body.containsKey("notes"))        task.setNotes(body.get("notes").toString());
@@ -175,5 +179,16 @@ public class AdminHousekeepingController {
         if (body.containsKey("hourlyRate")) staff.setHourlyRate(new BigDecimal(body.get("hourlyRate").toString()));
         if (body.containsKey("active"))     staff.setActive(Boolean.parseBoolean(body.get("active").toString()));
         return ResponseEntity.ok(staffRepo.save(staff));
+    }
+
+    private static final DateTimeFormatter FMT_HHMM = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+    private LocalDateTime parseScheduledDate(String raw) {
+        if (!raw.contains("T")) return LocalDate.parse(raw).atTime(9, 0);
+        try {
+            return LocalDateTime.parse(raw);                   // HH:mm:ss ou ISO complet
+        } catch (Exception e) {
+            return LocalDateTime.parse(raw, FMT_HHMM);        // HH:mm sans secondes (datetime-local)
+        }
     }
 }

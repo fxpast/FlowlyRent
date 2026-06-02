@@ -33,7 +33,7 @@ interface Task {
   reportComment?: string;
   incidentDescription?: string;
   reportedAt?: string;
-  housekeeper?: { id: number; name: string; phone?: string; email?: string };
+  housekeeper?: { id: number; name: string; phone?: string; email?: string; hourlyRate?: number | null };
   property?: { id: number; name: string; city?: string };
   booking?: { id: number; firstName?: string; lastName?: string };
 }
@@ -90,12 +90,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     <mat-tab-group animationDuration="150ms">
 
       <!-- ══════════════ ONGLET TÂCHES ══════════════ -->
-      <mat-tab label="Tâches ménage">
+      <mat-tab label="Tâches">
         <div class="tab-content">
 
           <div class="header-row">
             <span></span>
-            <button mat-flat-button color="primary" (click)="showForm = !showForm">
+            <button mat-flat-button color="primary" (click)="openNewTaskForm()">
               <mat-icon>add</mat-icon> Nouvelle tâche
             </button>
           </div>
@@ -122,12 +122,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       }
                     </mat-select>
                   </mat-form-field>
-                  <mat-form-field>
-                    <mat-label>Date</mat-label>
-                    <input matInput [matDatepicker]="schedPicker" [(ngModel)]="newTaskDate" (ngModelChange)="newTask.scheduledDate = fromDate($event)">
-                    <mat-datepicker-toggle matIconSuffix [for]="schedPicker"></mat-datepicker-toggle>
-                    <mat-datepicker #schedPicker></mat-datepicker>
-                  </mat-form-field>
+                  <div class="hk-datetime-pair">
+                    <mat-form-field>
+                      <mat-label>Date</mat-label>
+                      <input matInput [matDatepicker]="schedPicker" [(ngModel)]="newTaskDate"
+                             (ngModelChange)="newTask.scheduledDate = fromDate($event)">
+                      <mat-datepicker-toggle matIconSuffix [for]="schedPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #schedPicker></mat-datepicker>
+                    </mat-form-field>
+                    <mat-form-field class="hk-time-field">
+                      <mat-label>Heure</mat-label>
+                      <input matInput type="time" [(ngModel)]="newTaskTime">
+                    </mat-form-field>
+                  </div>
                 </div>
                 <div class="form-row">
                   <mat-form-field>
@@ -148,10 +155,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                 </div>
               </mat-card-content>
               <mat-card-actions>
-                <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTask.scheduledDate">
+                <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
                   Créer
                 </button>
-                <button mat-button (click)="showForm = false">Annuler</button>
+                <button mat-button (click)="showForm = false; newTask.scheduledDate = ''">Annuler</button>
               </mat-card-actions>
             </mat-card>
     }
@@ -191,14 +198,14 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               @for (task of filteredTasks(); track task.id) {
                 <mat-card class="task-card" [class.done]="task.status === 'DONE'" [class.in-progress]="task.status === 'IN_PROGRESS'">
                   <div class="task-header">
-                    <div class="task-date">{{ task.scheduledDate | date:'EEE dd/MM' : '' : 'fr-FR' }}</div>
+                    <div class="task-date">{{ task.scheduledDate | date:'EEE dd/MM · HH:mm' : '' : 'fr-FR' }}</div>
                     <span class="status-chip" [style.background]="statusColor(task.status)">
                       {{ statusLabel(task.status) }}
                     </span>
                   </div>
                   <div class="task-type">{{ typeLabel(task.type) }}</div>
                   <div class="task-property">
-                    <mat-icon>home</mat-icon> {{ task.propertyName ?? task.property?.name ?? task.beds24PropertyId }}
+                    <mat-icon>home</mat-icon> {{ task.propertyName ?? task.property?.name ?? resolvePropertyName(task.beds24PropertyId) ?? task.beds24PropertyId }}
                   </div>
                   @if (task.booking) {
                     <div class="task-guest">
@@ -208,6 +215,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   @if (task.housekeeper) {
                     <div class="task-assigned">
                       <mat-icon>engineering</mat-icon> {{ task.housekeeper.name }}
+                      @if (task.housekeeper.hourlyRate != null) {
+                        <span class="task-rate">{{ task.housekeeper.hourlyRate | number:'1.2-2' }} €/h</span>
+                      }
                       @if (task.housekeeper.phone) {
                         <a [href]="'tel:' + task.housekeeper.phone" class="hk-phone" (click)="$event.stopPropagation()">
                           <mat-icon>phone</mat-icon>
@@ -294,6 +304,11 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     <mat-label>Email</mat-label>
                     <input matInput [(ngModel)]="editingHk.email" type="email" autocomplete="off">
                   </mat-form-field>
+                  <mat-form-field>
+                    <mat-label>Taux horaire (€/h)</mat-label>
+                    <input matInput [(ngModel)]="editingHk.hourlyRate" type="number" min="0" step="0.50" placeholder="15">
+                    <span matTextSuffix>€/h</span>
+                  </mat-form-field>
                 </div>
                 <mat-form-field style="width:100%">
                   <mat-label>Notes</mat-label>
@@ -328,6 +343,11 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       <mat-icon>email</mat-icon> {{ h.email }}
                     </a>
                   }
+                  @if (h.hourlyRate != null) {
+                    <div class="hk-rate">
+                      <mat-icon>payments</mat-icon> {{ h.hourlyRate | number:'1.2-2' }} €/h
+                    </div>
+                  }
                   @if (h.notes) {
                     <div class="hk-notes">{{ h.notes }}</div>
                   }
@@ -350,7 +370,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </div>
                 } @else {
                   <div class="portal-badge inactive" (click)="toggleActivate(h)">
-                    <mat-icon>lock</mat-icon> Activer le portail ménage
+                    <mat-icon>lock</mat-icon> Activer le portail prestataire
                     <mat-icon class="expand-icon">{{ activatingHk === h.id ? 'expand_less' : 'chevron_right' }}</mat-icon>
                   </div>
                   @if (activatingHk === h.id) {
@@ -387,7 +407,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
         <div class="rdialog-header">
           <div>
             <div class="rdialog-title">{{ reportPanel()!.taskLabel }}</div>
-            <div class="rdialog-sub">{{ reportPanel()!.propertyName }} &mdash; {{ reportPanel()!.scheduledDate | date:'dd/MM/yyyy' }}</div>
+            <div class="rdialog-sub">{{ reportPanel()!.propertyName }} &mdash; {{ reportPanel()!.scheduledDate | date:'dd/MM/yyyy HH:mm' }}</div>
           </div>
           <button mat-icon-button (click)="closeReport()"><mat-icon>close</mat-icon></button>
         </div>
@@ -472,9 +492,14 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .hk-detail { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #555; text-decoration: none; margin-bottom: 2px; }
     .hk-detail mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .hk-detail:hover { color: #1976d2; }
+    .hk-rate  { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #2e7d32; font-weight: 500; margin-bottom: 2px; }
+    .hk-rate mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .hk-notes { font-size: 12px; color: #888; font-style: italic; margin-top: 4px; }
     .hk-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
     .hk-sub { color: #888; font-size: 12px; }
+    .hk-datetime-pair { display: flex; gap: 8px; align-items: flex-start; }
+    .hk-time-field { width: 110px; flex-shrink: 0; }
+    .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
@@ -514,6 +539,7 @@ export class HousekeepingComponent implements OnInit {
 
   newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '' };
   newTaskDate: Date | null = null;
+  newTaskTime = '09:00';
   activatingHk: number | null = null;
   activateEmail = '';
   activatePassword = '';
@@ -544,25 +570,37 @@ export class HousekeepingComponent implements OnInit {
     });
   }
 
+  openNewTaskForm(): void {
+    this.newTaskDate = new Date();
+    this.newTaskTime = '09:00';
+    this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '' };
+    this.showForm = true;
+  }
+
   applyFilter(): void {
     const all = this.tasks();
+    const filtered = this.filterStatus ? all.filter(t => t.status === this.filterStatus) : all;
     this.filteredTasks.set(
-      this.filterStatus ? all.filter(t => t.status === this.filterStatus) : all
+      [...filtered].sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
     );
   }
 
   createTask(): void {
+    const dateStr = this.fromDate(this.newTaskDate);
+    const pid = String(this.newTask.propertyId ?? '');
+    const prop = this.properties().find(p => String(p.id) === pid);
     const payload: Record<string, unknown> = {
-      beds24PropertyId: String(this.newTask.propertyId ?? ''),
-      type: this.newTask.type,
-      scheduledDate: this.newTask.scheduledDate,
-      notes: this.newTask.notes
+      beds24PropertyId: pid,
+      propertyName:     prop ? (prop['name'] ?? '') : '',
+      type:             this.newTask.type,
+      scheduledDate:    dateStr ? `${dateStr}T${this.newTaskTime}:00` : '',
+      notes:            this.newTask.notes
     };
     if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
       this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '' };
-      this.newTaskDate = null;
+      this.showForm = false;
       this.load();
     });
   }
@@ -580,6 +618,12 @@ export class HousekeepingComponent implements OnInit {
       this.tasks.update(all => all.filter(t => t.id !== task.id));
       this.applyFilter();
     });
+  }
+
+  resolvePropertyName(beds24PropertyId?: string): string | undefined {
+    if (!beds24PropertyId) return undefined;
+    const p = this.properties().find(x => String(x.id) === beds24PropertyId);
+    return p?.name ?? undefined;
   }
 
   typeLabel(type: string): string   { return TYPE_LABELS[type] ?? type; }
@@ -658,7 +702,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   startNewHousekeeper(): void {
-    this.editingHk = { name: '', phone: '', email: '', notes: '' };
+    this.editingHk = { name: '', phone: '', email: '', notes: '', hourlyRate: null };
   }
 
   editHousekeeper(h: HousekeeperProfile): void {
@@ -667,7 +711,13 @@ export class HousekeepingComponent implements OnInit {
 
   saveHousekeeper(): void {
     if (!this.editingHk?.name?.trim()) return;
-    const data = { name: this.editingHk.name!.trim(), phone: this.editingHk.phone ?? '', email: this.editingHk.email ?? '', notes: this.editingHk.notes ?? '' };
+    const data: Record<string, string> = {
+      name:  this.editingHk.name!.trim(),
+      phone: this.editingHk.phone ?? '',
+      email: this.editingHk.email ?? '',
+      notes: this.editingHk.notes ?? '',
+      hourlyRate: this.editingHk.hourlyRate != null ? String(this.editingHk.hourlyRate) : ''
+    };
     if (this.editingHk.id) {
       this.housekeeperService.update(this.editingHk.id, data).subscribe(updated => {
         this.housekeepers.update(all => all.map(h => h.id === updated.id ? updated : h));

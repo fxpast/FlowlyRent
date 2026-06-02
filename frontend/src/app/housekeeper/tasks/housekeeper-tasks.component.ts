@@ -1,4 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, NgZone, signal, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { HousekeeperPortalService, PortalTask, TaskPhoto } from '../../core/services/housekeeper-portal.service';
+import { RouterModule } from '@angular/router';
 
 const TYPE_LABELS: Record<string, string> = {
   CHECKOUT_CLEANING: 'Nettoyage départ',
@@ -42,7 +45,7 @@ interface ReportDraft {
   selector: 'app-housekeeper-tasks',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, RouterModule,
     MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatProgressSpinnerModule, MatSnackBarModule, MatSlideToggleModule,
     MatFormFieldModule, MatInputModule
@@ -66,7 +69,7 @@ interface ReportDraft {
               <div class="task-head">
                 <div class="task-date-type">
                   <div class="task-type">{{ typeLabel(task.type) }}</div>
-                  <div class="task-date">{{ task.scheduledDate | date:'EEEE dd MMMM':'':'fr-FR' }}</div>
+                  <div class="task-date">{{ task.scheduledDate | date:'EEEE dd MMMM · HH:mm':'':'fr-FR' }}</div>
                 </div>
                 <span class="status-badge" [style.background]="statusColor(task.status)">
                   <mat-icon>{{ statusIcon(task.status) }}</mat-icon>
@@ -79,6 +82,13 @@ interface ReportDraft {
                 <mat-icon>home</mat-icon>
                 {{ task.propertyName ?? task.beds24PropertyId }}
               </div>
+
+              @if (task.extraHours != null) {
+                <div class="task-hours">
+                  <mat-icon>schedule</mat-icon>
+                  Durée prévue : <strong>{{ task.extraHours }} h</strong>
+                </div>
+              }
 
               @if (task.notes) {
                 <div class="task-notes">{{ task.notes }}</div>
@@ -170,19 +180,26 @@ interface ReportDraft {
                   <!-- Photos -->
                   <div class="photo-section">
                     <div class="photo-section-title">Photos</div>
-                    <div class="photo-type-row">
-                      <button mat-stroked-button type="button" (click)="triggerPhoto('BEFORE')">
-                        <mat-icon>photo_camera</mat-icon> Avant
-                      </button>
-                      <button mat-stroked-button type="button" (click)="triggerPhoto('AFTER')">
-                        <mat-icon>photo_camera</mat-icon> Après
-                      </button>
-                      <button mat-stroked-button color="warn" type="button" (click)="triggerPhoto('INCIDENT')">
-                        <mat-icon>warning</mat-icon> Incident
-                      </button>
-                    </div>
-                    <input #photoInput type="file" accept="image/*" capture="environment" style="display:none"
-                           (change)="onPhotoSelected($event, task)">
+                    @if (uploadingPhoto()) {
+                      <div class="upload-progress">
+                        <mat-spinner diameter="24"></mat-spinner>
+                        <span>Envoi en cours…</span>
+                      </div>
+                    } @else {
+                      <div class="photo-type-row">
+                        <button mat-stroked-button type="button" (click)="triggerPhoto('BEFORE', photoInput)">
+                          <mat-icon>photo_camera</mat-icon> Avant
+                        </button>
+                        <button mat-stroked-button type="button" (click)="triggerPhoto('AFTER', photoInput)">
+                          <mat-icon>photo_camera</mat-icon> Après
+                        </button>
+                        <button mat-stroked-button color="warn" type="button" (click)="triggerPhoto('INCIDENT', photoInput)">
+                          <mat-icon>warning</mat-icon> Incident
+                        </button>
+                      </div>
+                      <input #photoInput type="file" accept="image/*,image/heic,image/heif"
+                             style="display:none" (change)="onPhotoSelected($event, task)">
+                    }
                   </div>
 
                   <!-- Boutons rapport -->
@@ -224,8 +241,11 @@ interface ReportDraft {
     .task-date { font-size: 13px; color: #666; margin-top: 2px; }
     .status-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: white; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
     .status-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .task-prop { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #444; margin-bottom: 6px; }
+    .task-prop { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #444; margin-bottom: 4px; }
     .task-prop mat-icon { font-size: 18px; width: 18px; height: 18px; color: #888; }
+    .task-hours { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1565c0;
+      background: #e3f2fd; padding: 4px 10px; border-radius: 8px; margin-bottom: 6px; width: fit-content; }
+    .task-hours mat-icon { font-size: 15px; width: 15px; height: 15px; }
     .task-notes { font-size: 13px; color: #777; font-style: italic; margin-bottom: 8px; }
     .task-actions { display: flex; gap: 8px; margin: 12px 0 8px; }
     .done-btn { background: #2e7d32 !important; color: white !important; }
@@ -250,6 +270,7 @@ interface ReportDraft {
     .photo-section { margin: 12px 0; }
     .photo-section-title { font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500; }
     .photo-type-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .upload-progress { display: flex; align-items: center; gap: 10px; color: #555; font-size: 13px; padding: 4px 0; }
     .report-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
     .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     .lightbox img { max-width: 95vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
@@ -263,6 +284,7 @@ export class HousekeeperTasksComponent implements OnInit {
   savingReport = signal(false);
   lightboxPhoto = signal<TaskPhoto | null>(null);
   currentPhotoType = 'AFTER';
+  uploadingPhoto = signal(false);
 
   draft: ReportDraft = { comment: '', hasIncident: false, incidentDesc: '' };
 
@@ -294,7 +316,14 @@ export class HousekeeperTasksComponent implements OnInit {
     return groups;
   });
 
-  constructor(private svc: HousekeeperPortalService, private snack: MatSnackBar) {}
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
+  constructor(
+    private svc: HousekeeperPortalService,
+    private snack: MatSnackBar,
+    private zone: NgZone
+  ) {}
 
   ngOnInit(): void {
     this.svc.getTasks().subscribe({
@@ -353,27 +382,77 @@ export class HousekeeperTasksComponent implements OnInit {
     });
   }
 
-  triggerPhoto(type: string): void {
+  triggerPhoto(type: string, input: HTMLInputElement): void {
     this.currentPhotoType = type;
-    const input = document.querySelector('input[type=file]') as HTMLInputElement;
-    if (input) { input.value = ''; input.click(); }
+    input.value = '';
+    input.click();
   }
 
   onPhotoSelected(event: Event, task: TaskWithPhotos): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = reader.result as string;
-      this.svc.addPhoto(task.id, this.currentPhotoType, data, '').subscribe(photo => {
-        this.tasks.update(all => all.map(t => {
-          if (t.id !== task.id) return t;
-          return { ...t, photos: [...(t.photos ?? []), photo], photosLoaded: true };
-        }));
-        this.snack.open('Photo ajoutée', '', { duration: 1500 });
+    this.uploadingPhoto.set(true);
+    this.compressImage(file).then(base64 => {
+      const token = this.svc.token();
+      console.log('[Photo] token:', token ? `${token.substring(0, 20)}... (${token.length} chars)` : 'NULL', '| tâche:', task.id);
+      fetch(`/api/housekeeper/tasks/${task.id}/photos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ photoType: this.currentPhotoType, data: base64, caption: '' })
+      }).then(r => {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json() as Promise<any>;
+      }).then(photo => {
+        this.zone.run(() => {
+          this.tasks.update(all => all.map(t =>
+            t.id !== task.id ? t : { ...t, photos: [...(t.photos ?? []), photo], photosLoaded: true }
+          ));
+          this.uploadingPhoto.set(false);
+          this.snack.open('Photo ajoutée', '', { duration: 2000 });
+        });
+      }).catch((err: Error) => {
+        this.zone.run(() => {
+          this.uploadingPhoto.set(false);
+          const status = err.message;
+          if (status === '401') {
+            this.auth.logout();
+            return;
+          }
+          const msg = status === '413' ? 'Image trop lourde' : `Erreur upload (${status})`;
+          this.snack.open(msg, 'Fermer', { duration: 5000 });
+        });
       });
-    };
-    reader.readAsDataURL(file);
+    }).catch(() => {
+      this.zone.run(() => {
+        this.uploadingPhoto.set(false);
+        this.snack.open('Impossible de lire l\'image', 'Fermer', { duration: 3000 });
+      });
+    });
+  }
+
+  private compressImage(file: File, maxPx = 1200, quality = 0.82): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   deletePhoto(task: TaskWithPhotos, photo: TaskPhoto): void {

@@ -40,6 +40,10 @@ public class AdminPropertyConfigController {
                 cfg.setPreviousAccessCode(cfg.getAccessCode());
             cfg.setAccessCode(body.get("accessCode"));
         }
+        if (body.containsKey("cleaningHours")) {
+            String v = body.get("cleaningHours");
+            cfg.setCleaningHours(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
+        }
         return ResponseEntity.ok(repo.save(cfg));
     }
 

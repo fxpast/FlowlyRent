@@ -168,6 +168,34 @@ interface OccupancyStatus {
                   </div>
                 }
               </div>
+
+              <mat-divider class="divider"></mat-divider>
+
+              <!-- Durée ménage standard -->
+              <div class="cleaning-section">
+                <div class="cleaning-label">
+                  <mat-icon>cleaning_services</mat-icon>
+                  <strong>Durée ménage standard</strong>
+                  @if (isCleaningDirty(p['id'])) {
+                    <span class="unsaved-dot" matTooltip="Modifications non enregistrées"></span>
+                  }
+                </div>
+                <div class="cleaning-row">
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <input matInput type="number" min="0" step="0.5"
+                           [(ngModel)]="cleaningDraft[p['id']]"
+                           placeholder="Ex : 3"
+                           (keydown.enter)="saveCleaning(p['id'])">
+                    <span matTextSuffix>h</span>
+                  </mat-form-field>
+                  <button type="button" mat-icon-button color="primary"
+                          (click)="saveCleaning(p['id'])"
+                          matTooltip="Enregistrer la durée"
+                          [disabled]="!isCleaningDirty(p['id'])">
+                    <mat-icon>save</mat-icon>
+                  </button>
+                </div>
+              </div>
             </mat-card-content>
 
             @if (p['active'] === false) {
@@ -239,6 +267,15 @@ interface OccupancyStatus {
     }
     .prev-code mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
+    .cleaning-section { margin-top: 12px; }
+    .cleaning-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; margin-bottom: 8px;
+    }
+    .cleaning-label mat-icon { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
+    .cleaning-row { display: flex; align-items: center; gap: 6px; }
+    .cleaning-input { width: 120px; }
+
     .occ-banner {
       display: flex; align-items: center; gap: 6px;
       font-size: 12px; font-weight: 600;
@@ -287,6 +324,8 @@ export class PropertiesComponent implements OnInit {
   codeDraft:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
+  cleaningDraft: Record<string, string> = {};
+  cleaningSaved: Record<string, string> = {};
 
   filtered = computed(() => {
     const q   = this.search().toLowerCase().trim();
@@ -332,9 +371,12 @@ export class PropertiesComponent implements OnInit {
         this.properties.set(props ?? []);
         this.bookings.set(bookings ?? []);
         for (const c of cfgs) {
-          this.codeSaved[c.beds24PropertyId] = c.accessCode         ?? '';
-          this.codeDraft[c.beds24PropertyId] = c.accessCode         ?? '';
-          this.prevCodes[c.beds24PropertyId] = c.previousAccessCode ?? '';
+          this.codeSaved[c.beds24PropertyId]     = c.accessCode         ?? '';
+          this.codeDraft[c.beds24PropertyId]     = c.accessCode         ?? '';
+          this.prevCodes[c.beds24PropertyId]     = c.previousAccessCode ?? '';
+          const ch = c.cleaningHours != null ? String(c.cleaningHours) : '';
+          this.cleaningSaved[c.beds24PropertyId] = ch;
+          this.cleaningDraft[c.beds24PropertyId] = ch;
         }
         this.loading.set(false);
       },
@@ -352,22 +394,31 @@ export class PropertiesComponent implements OnInit {
       new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
     const map: Record<string, OccupancyStatus> = {};
 
+    const normId = (v: any): string => {
+      if (v == null) return '';
+      const n = Number(v);
+      return isNaN(n) ? String(v) : String(Math.floor(n));
+    };
+
     for (const p of this.properties()) {
-      const id = String(p['id']);
+      const id = normId(p['id']);
       const rel = this.bookings().filter(b => {
         const s = (b['status'] ?? '').toLowerCase();
-        return active.has(s) && String(b['propId'] ?? b['propertyId'] ?? '') === id;
+        const bId = normId(b['propId'] ?? b['propertyId']);
+        return active.has(s) && bId === id;
       });
 
-      const current  = rel.find(b => (b['arrival'] ?? '') <= today && (b['departure'] ?? '') > today);
+      const d10 = (s: string) => (s ?? '').substring(0, 10);
+      // Fix 1 : inclure le jour de départ (>= au lieu de >)
+      const current  = rel.find(b => d10(b['arrival']) <= today && d10(b['departure']) >= today);
       const nextBook = rel
-        .filter(b => (b['arrival'] ?? '') > today)
-        .sort((a, b) => (a['arrival'] ?? '').localeCompare(b['arrival'] ?? ''))[0];
+        .filter(b => d10(b['arrival']) > today)
+        .sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])))[0];
 
-      const depDays = current  ? daysDiff(current['departure']) : null;
-      const arrDays = nextBook ? daysDiff(nextBook['arrival'])   : null;
+      const depDays = current  ? daysDiff(d10(current['departure'])) : null;
+      const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
 
-      // ── Rouge : arrivée ou départ aujourd'hui / demain ──
+      // ── Rouge : départ ou arrivée dans <= 1 jour ──
       const depUrgent = depDays !== null && depDays <= 1;
       const arrUrgent = arrDays !== null && arrDays <= 1;
       if (depUrgent || arrUrgent) {
@@ -388,16 +439,21 @@ export class PropertiesComponent implements OnInit {
              'Confirmez l\'heure d\'arrivée avec le voyageur.'];
         map[id] = { type: 'urgent', label, sublabel: sub,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
-          sortKey: '0_' + (depUrgent ? current!['departure'] : nextBook!['arrival']), tips };
+          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips };
         continue;
       }
 
-      // ── Vert : occupé, départ dans 3+ jours ──
-      if (current && depDays !== null && depDays >= 3) {
+      // ── Vert : occupé, départ dans 2+ jours ──
+      // Fix 2 : >= 2 au lieu de >= 3 (départ dans 2 jours = toujours occupé)
+      // Fix 3 : si current existe, toujours afficher "Occupé" même si depDays hors-norme
+      if (current) {
+        const depLabel = depDays !== null && depDays > 0
+          ? `départ dans ${depDays} j · ${fmt(d10(current['departure']))}`
+          : `départ le ${fmt(d10(current['departure']))}`;
         map[id] = { type: 'occupied', label: 'Occupé',
-          sublabel: `départ ${depDays === 3 ? 'dans 3 j' : `dans ${depDays} j`} · ${fmt(current['departure'])}`,
+          sublabel: depLabel,
           color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
-          sortKey: '3_' + current['departure'],
+          sortKey: '3_' + d10(current['departure']),
           tips: ['Séjour en cours, rien d\'urgent à faire.',
                  'Pensez à envoyer un message de mi-séjour pour fidéliser le voyageur.',
                  'Profitez-en pour vérifier vos prix sur les dates après le départ.'] };
@@ -406,11 +462,11 @@ export class PropertiesComponent implements OnInit {
 
       // ── Orange foncé : libre 15+ jours ──
       if (arrDays === null || arrDays >= 15) {
-        const sub = arrDays !== null ? `prochaine arrivée le ${fmt(nextBook!['arrival'])}` : 'aucune réservation à venir';
+        const sub = arrDays !== null ? `prochaine arrivée le ${fmt(d10(nextBook!['arrival']))}` : 'aucune réservation à venir';
         map[id] = { type: 'vacant_long', label: 'Libre 15+ jours',
           sublabel: sub,
           color: '#bf360c', bg: '#fbe9e7', icon: 'trending_down',
-          sortKey: '1_' + (arrDays !== null ? nextBook!['arrival'] : '9999'),
+          sortKey: '1_' + (arrDays !== null ? d10(nextBook!['arrival']) : '9999'),
           tips: ['Baissez vos tarifs ou lancez une promotion pour ces dates.',
                  'Réduisez la durée minimum de séjour pour attirer des courts séjours.',
                  'Activez la visibilité boostée sur vos plateformes (Airbnb, Booking…).',
@@ -419,12 +475,12 @@ export class PropertiesComponent implements OnInit {
       }
 
       // ── Orange clair : libre 2-14 jours ──
-      const arrFmt = fmt(nextBook!['arrival']);
+      const arrFmt = fmt(d10(nextBook!['arrival']));
       map[id] = { type: 'vacant_short',
         label: arrDays === 2 ? 'Arrivée après-demain' : `Arrivée dans ${arrDays} j`,
         sublabel: arrFmt,
         color: '#e65100', bg: '#fff3e0', icon: 'event',
-        sortKey: '2_' + nextBook!['arrival'],
+        sortKey: '2_' + d10(nextBook!['arrival']),
         tips: ['Vérifiez vos prix pour les nuits encore libres avant cette arrivée.',
                'Une offre last-minute peut éviter des nuits vides.',
                'Préparez le logement et confirmez les détails avec le prochain voyageur.'] };
@@ -457,6 +513,22 @@ export class PropertiesComponent implements OnInit {
         this.codeDraft[propId] = cfg.accessCode         ?? '';
         this.prevCodes[propId] = cfg.previousAccessCode ?? '';
         this.snackBar.open('Code enregistré', 'OK', { duration: 2000 });
+      },
+      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+    });
+  }
+
+  isCleaningDirty(propId: string): boolean {
+    return (this.cleaningDraft[propId] ?? '') !== (this.cleaningSaved[propId] ?? '');
+  }
+
+  saveCleaning(propId: string): void {
+    this.propConfigService.updateCleaningHours(String(propId), this.cleaningDraft[propId] ?? '').subscribe({
+      next: cfg => {
+        const v = cfg.cleaningHours != null ? String(cfg.cleaningHours) : '';
+        this.cleaningSaved[propId] = v;
+        this.cleaningDraft[propId] = v;
+        this.snackBar.open('Durée ménage enregistrée', 'OK', { duration: 2000 });
       },
       error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
     });

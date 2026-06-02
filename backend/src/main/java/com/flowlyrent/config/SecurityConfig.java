@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/analytics/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/superadmin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/sync/**", "/user/**").hasAnyRole("ADMIN", "USER")

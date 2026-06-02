@@ -9,6 +9,7 @@ export interface HousekeeperProfile {
   phone?: string;
   email?: string;
   notes?: string;
+  hourlyRate?: number | null;
   linkedUser?: { id: number; email: string };
 }
 

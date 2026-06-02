@@ -49,7 +49,7 @@ public class HousekeeperPortalController {
     public ResponseEntity<List<HousekeepingTask>> myTasks(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from) {
         HousekeeperProfile profile = myProfile();
-        LocalDate start = from != null ? from : LocalDate.now().minusDays(1);
+        LocalDateTime start = (from != null ? from : LocalDate.now().minusDays(1)).atStartOfDay();
         return ResponseEntity.ok(
             taskRepo.findByHousekeeper_IdAndScheduledDateGreaterThanEqualOrderByScheduledDateAsc(
                     profile.getId(), start)
@@ -112,6 +112,7 @@ public class HousekeeperPortalController {
         photo.setCaption(body.get("caption"));
 
         String base64Data = body.get("data");
+        photo.setData(""); // évite la contrainte NOT NULL legacy pendant la migration
         if (base64Data != null && !base64Data.isBlank()) {
             try {
                 java.util.Map<?, ?> result = cloudinaryService.uploadBase64(
@@ -119,6 +120,7 @@ public class HousekeeperPortalController {
                 );
                 photo.setUrl(result.get("secure_url").toString());
                 photo.setPublicId(result.get("public_id").toString());
+                photo.setData(null); // Cloudinary OK → pas besoin de base64
             } catch (Exception e) {
                 log.warn("Cloudinary upload failed, falling back to base64: {}", e.getMessage());
                 photo.setData(base64Data);
