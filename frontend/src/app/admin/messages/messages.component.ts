@@ -102,6 +102,9 @@ const TYPE_LABELS: Record<string, string> = {
                     </div>
                     <p class="tpl-preview">{{ t.contentFr }}</p>
                     <div class="tpl-actions">
+                      <button mat-icon-button (click)="duplicateTemplate(t)" matTooltip="Dupliquer">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
                       <button mat-icon-button color="primary" (click)="editTemplate(t)" matTooltip="Modifier">
                         <mat-icon>edit</mat-icon>
                       </button>
@@ -789,6 +792,20 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.templateService.save(this.editForm).subscribe({
       next: () => { this.loadTemplates(); this.editingTemplate.set(null); this.snackBar.open('Modèle enregistré', 'OK', { duration: 2500 }); },
       error: () => this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 })
+    });
+  }
+
+  duplicateTemplate(t: MessageTemplate): void {
+    const copy: Partial<MessageTemplate> = {
+      name:             t.name + ' (copie)',
+      type:             t.type,
+      beds24PropertyId: t.beds24PropertyId,
+      contentFr:        t.contentFr,
+      contentEn:        t.contentEn,
+      channel:          t.channel
+    };
+    this.templateService.save(copy).subscribe({
+      next: () => { this.loadTemplates(); this.snackBar.open('Modèle dupliqué', '', { duration: 1500 }); }
     });
   }
 
