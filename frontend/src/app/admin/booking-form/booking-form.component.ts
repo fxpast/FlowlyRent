@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -36,9 +37,9 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
   template: `
     <div class="header">
       <h1>{{ isEdit() ? 'Modifier la réservation' : 'Nouvelle réservation directe' }}</h1>
-      <a mat-button routerLink="/admin/bookings">
+      <button mat-button type="button" (click)="goBack()">
         <mat-icon>arrow_back</mat-icon> Retour
-      </a>
+      </button>
     </div>
 
     <mat-card>
@@ -183,7 +184,7 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
           </mat-form-field>
 
           <div class="actions">
-            <button mat-button type="button" routerLink="/admin/bookings">Retour</button>
+            <button mat-button type="button" (click)="goBack()">Retour</button>
             @if (isEdit()) {
               <button mat-stroked-button color="warn" type="button" (click)="cancelBooking()" [disabled]="saving()">
                 <mat-icon>cancel</mat-icon> Annuler la réservation
@@ -289,6 +290,7 @@ export class BookingFormComponent implements OnInit {
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
+    private location: Location,
     private snackBar: MatSnackBar,
   ) {
     this.form = this.fb.group({
@@ -396,6 +398,8 @@ export class BookingFormComponent implements OnInit {
     });
   }
 
+  goBack(): void { this.location.back(); }
+
   cancelBooking(): void {
     const name = `${this.form.value.guestFirstName} ${this.form.value.guestLastName}`.trim();
     if (!confirm(`Annuler la réservation de ${name || 'ce voyageur'} ?`)) return;
@@ -403,7 +407,7 @@ export class BookingFormComponent implements OnInit {
     this.bookingService.cancel(this.bookingId!).subscribe({
       next: () => {
         this.snackBar.open('Réservation annulée', 'OK', { duration: 3000 });
-        this.router.navigate(['/admin/bookings']);
+        this.goBack();
       },
       error: err => {
         this.snackBar.open(err.error?.error ?? 'Erreur lors de l\'annulation', 'Fermer', { duration: 4000 });
@@ -457,7 +461,7 @@ export class BookingFormComponent implements OnInit {
     this.bookingService.save([payload]).subscribe({
       next: () => {
         this.snackBar.open(this.isEdit() ? 'Réservation modifiée' : 'Réservation créée', 'OK', { duration: 3000 });
-        this.router.navigate(['/admin/bookings']);
+        this.goBack();
       },
       error: (err: any) => {
         this.snackBar.open(err.error?.error || 'Erreur lors de la sauvegarde', 'OK', { duration: 5000 });
