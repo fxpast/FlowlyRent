@@ -35,6 +35,10 @@ public class AdminPropertyConfigController {
         AppUser user = securityUtils.getCurrentUser();
         PropertyConfig cfg = repo.findByUserIdAndBeds24PropertyId(user.getId(), beds24PropertyId)
                 .orElseGet(() -> { PropertyConfig c = new PropertyConfig(); c.setUser(user); c.setBeds24PropertyId(beds24PropertyId); return c; });
+        if (body.containsKey("shortName")) {
+            String sn = body.get("shortName");
+            cfg.setShortName(sn != null && !sn.isBlank() ? sn.trim() : null);
+        }
         if (body.containsKey("accessCode")) {
             if (cfg.getAccessCode() != null && !cfg.getAccessCode().equals(body.get("accessCode")))
                 cfg.setPreviousAccessCode(cfg.getAccessCode());

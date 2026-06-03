@@ -15,6 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin } from 'rxjs';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { BookingService } from '../../core/services/booking.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
@@ -73,7 +74,12 @@ interface OccupancyStatus {
               <div class="prop-avatar" mat-card-avatar>
                 <mat-icon>home</mat-icon>
               </div>
-              <mat-card-title>{{ p['name'] || '—' }}</mat-card-title>
+              <mat-card-title>
+                {{ displayName(p) || '—' }}
+                @if (shortNameSaved[p['id']]) {
+                  <span class="short-name-badge">{{ p['name'] }}</span>
+                }
+              </mat-card-title>
               <mat-card-subtitle class="sub">
                 @if (p['city']) {
                   <mat-icon class="sub-icon">location_on</mat-icon>{{ p['city'] }}
@@ -126,6 +132,28 @@ interface OccupancyStatus {
                   <mat-icon>tag</mat-icon>
                   <span class="prop-id">ID Beds24 : {{ p['id'] }}</span>
                 </div>
+              </div>
+
+              <mat-divider class="divider"></mat-divider>
+
+              <!-- Nom court -->
+              <div class="code-section">
+                <div class="code-label">
+                  <mat-icon>label</mat-icon>
+                  <strong>Nom court</strong>
+                  @if (isShortNameDirty(p['id'])) {
+                    <button mat-flat-button color="primary" class="save-btn"
+                            (click)="saveShortName(p['id'])">
+                      <mat-icon>save</mat-icon> Enregistrer
+                    </button>
+                  }
+                </div>
+                <mat-form-field appearance="outline" class="code-field">
+                  <input matInput [(ngModel)]="shortNameDraft[p['id']]"
+                         placeholder="Ex : Appt Centre-Ville, Studio Mer…"
+                         (ngModelChange)="shortNameDraft[p['id']] = $event">
+                  <mat-hint>Remplace le nom Beds24 dans toute l'application si renseigné</mat-hint>
+                </mat-form-field>
               </div>
 
               <mat-divider class="divider"></mat-divider>
@@ -336,6 +364,8 @@ interface OccupancyStatus {
       font-size: 13px; margin-bottom: 8px;
     }
     .code-label mat-icon { font-size: 16px; width: 16px; height: 16px; color: #0288d1; }
+    .short-name-badge { font-size: 11px; font-weight: 400; color: #888; margin-left: 8px;
+      background: #f5f5f5; padding: 1px 6px; border-radius: 8px; }
     .code-row { display: flex; align-items: center; gap: 6px; }
     .code-input { flex: 1; }
 
@@ -441,6 +471,8 @@ export class PropertiesComponent implements OnInit {
   searchDraft = '';
   tipsOpen:   Record<string, boolean> = {};
   bookings    = signal<any[]>([]);
+  shortNameSaved: Record<string, string> = {};
+  shortNameDraft: Record<string, string> = {};
   codeSaved:   Record<string, string>  = {};
   codeDraft:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
@@ -563,6 +595,7 @@ export class PropertiesComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private propConfigService: PropertyConfigService,
+    private bookingService: BookingService,
     private inventoryService: PropertyInventoryService,
     private snackBar: MatSnackBar
   ) {}
@@ -581,6 +614,8 @@ export class PropertiesComponent implements OnInit {
         this.properties.set(props ?? []);
         this.bookings.set(bookings ?? []);
         for (const c of cfgs) {
+          this.shortNameSaved[c.beds24PropertyId] = c.shortName ?? '';
+          this.shortNameDraft[c.beds24PropertyId] = c.shortName ?? '';
           this.codeSaved[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.codeDraft[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.prevCodes[c.beds24PropertyId]     = c.previousAccessCode ?? '';
@@ -710,6 +745,27 @@ export class PropertiesComponent implements OnInit {
 
   toggleVisible(id: string): void {
     this.codeVisible[id] = !this.codeVisible[id];
+  }
+
+  displayName(p: any): string {
+    const id = String(p['id'] ?? '');
+    return this.shortNameSaved[id] || p['name'] || '';
+  }
+
+  isShortNameDirty(propId: string): boolean {
+    return (this.shortNameDraft[propId] ?? '') !== (this.shortNameSaved[propId] ?? '');
+  }
+
+  saveShortName(propId: string): void {
+    this.propConfigService.updateShortName(String(propId), this.shortNameDraft[propId] ?? '').subscribe({
+      next: cfg => {
+        this.shortNameSaved[propId] = cfg.shortName ?? '';
+        this.shortNameDraft[propId] = cfg.shortName ?? '';
+        this.bookingService.clearPropsCache();
+        this.snackBar.open('Nom court enregistré', 'OK', { duration: 2000 });
+      },
+      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+    });
   }
 
   isDirty(propId: string): boolean {

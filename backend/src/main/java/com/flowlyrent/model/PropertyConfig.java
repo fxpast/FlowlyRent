@@ -23,6 +23,8 @@ public class PropertyConfig {
     @Column(name = "beds24_property_id", nullable = false)
     private String beds24PropertyId;
 
+    private String shortName;
+
     private String accessCode;
 
     private String previousAccessCode;

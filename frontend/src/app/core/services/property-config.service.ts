@@ -6,6 +6,7 @@ import { environment } from '@env/environment';
 export interface PropertyConfig {
   id?: number;
   beds24PropertyId: string;
+  shortName?: string | null;
   accessCode?: string;
   previousAccessCode?: string;
   cleaningHours?: number | null;
@@ -20,6 +21,10 @@ export class PropertyConfigService {
 
   getAll(): Observable<PropertyConfig[]> {
     return this.http.get<PropertyConfig[]>(this.base);
+  }
+
+  updateShortName(propId: string, shortName: string): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { shortName });
   }
 
   updateAccessCode(propId: string, code: string): Observable<PropertyConfig> {

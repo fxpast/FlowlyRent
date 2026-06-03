@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, forkJoin } from 'rxjs';
 import { map, tap } from 'rxjs';
 import { environment } from '@env/environment';
 
@@ -11,14 +11,23 @@ export class BookingService {
 
   constructor(private http: HttpClient) {}
 
+  clearPropsCache(): void { this.propsCache = null; }
+
   getPropertyNames(): Observable<Record<string, string>> {
     if (this.propsCache) return of(this.propsCache);
-    return this.http.get<any[]>(`${environment.apiUrl}/admin/properties`).pipe(
-      map(props => {
+    return forkJoin([
+      this.http.get<any[]>(`${environment.apiUrl}/admin/properties`),
+      this.http.get<any[]>(`${environment.apiUrl}/admin/property-configs`)
+    ]).pipe(
+      map(([props, cfgs]) => {
+        const shortNames: Record<string, string> = {};
+        for (const c of cfgs ?? []) {
+          if (c.beds24PropertyId && c.shortName) shortNames[String(c.beds24PropertyId)] = c.shortName;
+        }
         const m: Record<string, string> = {};
         for (const p of props ?? []) {
           const id = String(p['id'] ?? p['propId'] ?? '');
-          if (id) m[id] = p['name'] ?? '';
+          if (id) m[id] = shortNames[id] || p['name'] || '';
         }
         return m;
       }),
