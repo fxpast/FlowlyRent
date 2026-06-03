@@ -30,7 +30,7 @@ import { localDateStr } from '../../core/utils/date.utils';
     <!-- Cartes mobile -->
     <div class="mobile-list">
       @for (b of departures(); track b['id']) {
-        <mat-card class="mobile-card">
+        <mat-card class="mobile-card clickable-card" (click)="openDetail(b)">
           <div class="mc-top">
             <strong>{{ guestName(b) }}</strong>
             <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
@@ -41,14 +41,6 @@ import { localDateStr } from '../../core/utils/date.utils';
             <span><mat-icon>logout</mat-icon>{{ dayName(b['departure']) }} {{ b['departure'] | date:'dd/MM' }}</span>
             <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} nuit(s)</span>
             <span><mat-icon>sell</mat-icon>{{ b['channel'] || 'Direct' }}</span>
-          </div>
-          <div class="mc-actions">
-            <button mat-stroked-button (click)="openDetail(b)">
-              <mat-icon>info</mat-icon> Détail
-            </button>
-            <button mat-stroked-button (click)="editBooking(b)">
-              <mat-icon>edit</mat-icon> Modifier
-            </button>
           </div>
         </mat-card>
       }
@@ -94,9 +86,6 @@ import { localDateStr } from '../../core/utils/date.utils';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
-              <button mat-icon-button color="primary" (click)="editBooking(b)" matTooltip="Modifier">
-                <mat-icon>edit</mat-icon>
-              </button>
               @if (b['status'] !== 'cancelled') {
                 <button mat-icon-button color="warn" (click)="cancelBooking(b)" matTooltip="Annuler">
                   <mat-icon>cancel</mat-icon>
@@ -134,7 +123,8 @@ import { localDateStr } from '../../core/utils/date.utils';
     .mc-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; }
     .mc-meta span { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #555; }
     .mc-meta mat-icon { font-size: 15px; width: 15px; height: 15px; color: #0288d1; }
-    .mc-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .clickable-card { cursor: pointer; transition: box-shadow 0.15s; }
+    .clickable-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
 
     @media (max-width: 768px) {
       .mobile-list { display: flex; }
