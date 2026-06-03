@@ -604,12 +604,17 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.baseFiltered().filter(b => { const c = (b['channel'] ?? '').toLowerCase().trim(); return c === '' || c === 'direct'; })
   );
 
-  /** Modèles applicables à la réservation sélectionnée (propriété ou tous). */
+  /** Modèles applicables à la réservation sélectionnée (propriété + langue). */
   bookingTemplates = computed(() => {
-    const b = this.selectedBooking();
+    const b    = this.selectedBooking();
+    const lang = this.templateLang();
     if (!b) return this.templates();
     const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-    return this.templates().filter(t => !t.beds24PropertyId || t.beds24PropertyId === pid);
+    return this.templates().filter(t => {
+      if (t.beds24PropertyId && t.beds24PropertyId !== pid) return false;
+      if (lang === 'en' && !t.contentEn) return false;
+      return true;
+    });
   });
 
   constructor(
@@ -711,6 +716,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.selectedBooking.set(b);
     this.messages.set([]);
     this.loadingMessages.set(true);
+    // Langue : non-FR → template EN
+    const bookingLang = (b['lang'] || '').toLowerCase();
+    this.templateLang.set(!bookingLang || bookingLang === 'fr' ? 'fr' : 'en');
     // Heures par défaut extraites du champ arrival/departure (si l'API retourne un datetime)
     const defaultCheckin  = (b['arrival']   || '').toString().substring(11, 16)  || '16:00';
     const defaultCheckout = (b['departure'] || '').toString().substring(11, 16) || '11:00';

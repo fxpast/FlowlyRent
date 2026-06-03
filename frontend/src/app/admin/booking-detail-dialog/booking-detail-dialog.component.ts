@@ -633,6 +633,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     d['guestPhone']     = d['guestPhone']     || d['phone']     || d['guestMobile'] || '';
     d['guestCountry']   = d['guestCountry']   || '';
     d['lang']           = d['lang']           || '';
+    const bl = (d['lang'] || '').toLowerCase();
+    this.templateLang.set(!bl || bl === 'fr' ? 'fr' : 'en');
     d['propId']         = d['propId']         || d['propertyId'] || '';
     d['propName']       = d['propName']       || d['propertyName'] || '';
     d['totalPrice']     = d['totalPrice']     ?? d['price']     ?? null;
@@ -701,10 +703,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       next: tpls => {
         const pid     = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
         const context = this.data['templateContext'] as 'checkin' | 'checkout' | undefined;
+        const lang    = this.templateLang();
         this.templates.set(tpls.filter(t => {
           if (t.beds24PropertyId && t.beds24PropertyId !== pid) return false;
           if (context === 'checkin'  && t.type === 'CHECKOUT') return false;
           if (context === 'checkout' && t.type === 'CHECKIN')  return false;
+          if (lang === 'en' && !t.contentEn) return false;
           return true;
         }));
       },
