@@ -42,6 +42,26 @@ import { Subscription } from 'rxjs';
     <div class="dialog-header">
       <div class="guest-name">{{ guestName() }}</div>
       <span class="booking-id">#{{ draft['id'] }}</span>
+      <div class="header-actions">
+        @if (activeTab() === 0 && draft['status'] !== 'cancelled') {
+          <button mat-icon-button color="warn" (click)="cancelBooking()" [disabled]="saving()" matTooltip="Annuler la réservation">
+            <mat-icon>cancel</mat-icon>
+          </button>
+        }
+        @if (activeTab() === 0) {
+          <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
+            <mat-icon>save</mat-icon> {{ saving() ? '…' : 'Enregistrer' }}
+          </button>
+        }
+        @if (activeTab() === 2 && !existingTask() && !loadingTask()) {
+          <button mat-flat-button color="primary" (click)="createTask()" [disabled]="savingTask()">
+            <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : 'Créer' }}
+          </button>
+        }
+        <button mat-icon-button mat-dialog-close [disabled]="saving()" matTooltip="Fermer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
     </div>
 
     <mat-tab-group animationDuration="150ms" (selectedIndexChange)="onTabChange($event)">
@@ -193,17 +213,6 @@ import { Subscription } from 'rxjs';
           </div>
         </mat-dialog-content>
 
-        <mat-dialog-actions align="end">
-          <button mat-button mat-dialog-close [disabled]="saving()">Fermer</button>
-          @if (draft['status'] !== 'cancelled') {
-            <button mat-stroked-button color="warn" (click)="cancelBooking()" [disabled]="saving()">
-              <mat-icon>cancel</mat-icon> Annuler résa
-            </button>
-          }
-          <button mat-raised-button color="primary" (click)="save()" [disabled]="saving()">
-            <mat-icon>save</mat-icon> {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
-          </button>
-        </mat-dialog-actions>
       </mat-tab>
 
       <!-- ── Onglet Messages ─────────────────────────────────────── -->
@@ -292,9 +301,6 @@ import { Subscription } from 'rxjs';
           }
         </div>
 
-        <mat-dialog-actions align="end">
-          <button mat-button mat-dialog-close>Fermer</button>
-        </mat-dialog-actions>
       </mat-tab>
 
       <!-- ── Onglet Entretien ────────────────────────────────────── -->
@@ -442,22 +448,15 @@ import { Subscription } from 'rxjs';
 
         </mat-dialog-content>
 
-        <mat-dialog-actions align="end">
-          <button mat-button mat-dialog-close>Fermer</button>
-          @if (!existingTask() && !loadingTask()) {
-            <button mat-raised-button color="primary" (click)="createTask()" [disabled]="savingTask()">
-              <mat-icon>add_task</mat-icon> {{ savingTask() ? 'Création…' : 'Créer la mission' }}
-            </button>
-          }
-        </mat-dialog-actions>
       </mat-tab>
 
     </mat-tab-group>
   `,
   styles: [`
-    .dialog-header { display: flex; align-items: baseline; gap: 12px; padding: 20px 24px 8px; }
-    .guest-name { font-size: 20px; font-weight: 600; flex: 1; }
-    .booking-id { font-size: 12px; color: #aaa; }
+    .dialog-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
+    .guest-name { font-size: 18px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .booking-id { font-size: 12px; color: #aaa; flex-shrink: 0; }
+    .header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; }
     .msg-badge { background: #e53935; color: #fff; font-size: 11px; font-weight: 700;
       border-radius: 10px; padding: 1px 6px; margin-left: 6px; }
 
@@ -571,7 +570,8 @@ import { Subscription } from 'rxjs';
 export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea') chatArea?: ElementRef<HTMLDivElement>;
 
-  saving = signal(false);
+  saving    = signal(false);
+  activeTab = signal(0);
   draft: Record<string, any>;
 
   messages = signal<Message[]>([]);
@@ -687,6 +687,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   onTabChange(index: number): void {
+    this.activeTab.set(index);
     if (index === 1) {
       if (this.messages().length === 0) this.loadMessages();
       if (this.templates().length === 0) this.loadTemplates();
