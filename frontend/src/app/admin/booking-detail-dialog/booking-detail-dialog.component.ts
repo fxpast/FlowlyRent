@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, OnDestroy, signal, ViewChild, ElementRef } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -596,7 +596,19 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   get hasCustomCheckout(): boolean { return this.departureTime !== this.DEFAULT_CHECKOUT; }
   get hasCustomTimes():    boolean { return this.hasCustomCheckin || this.hasCustomCheckout; }
 
-  templates = signal<MessageTemplate[]>([]);
+  private allTemplates = signal<MessageTemplate[]>([]);
+  templates = computed(() => {
+    const pid     = String(this.draft?.['propId'] ?? this.draft?.['propertyId'] ?? '');
+    const context = this.data?.['templateContext'] as 'checkin' | 'checkout' | undefined;
+    const lang    = this.templateLang();
+    return this.allTemplates().filter(t => {
+      if (t.beds24PropertyId && t.beds24PropertyId !== pid) return false;
+      if (context === 'checkin'  && t.type === 'CHECKOUT') return false;
+      if (context === 'checkout' && t.type === 'CHECKIN')  return false;
+      if (lang === 'en' && !t.contentEn) return false;
+      return true;
+    });
+  });
   selectedTemplate: MessageTemplate | null = null;
 
   loadingTask  = signal(false);
@@ -693,7 +705,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.activeTab.set(index);
     if (index === 1) {
       if (this.messages().length === 0) this.loadMessages();
-      if (this.templates().length === 0) this.loadTemplates();
+      if (this.allTemplates().length === 0) this.loadTemplates();
     }
     if (index === 2) {
       this.loadHousekeepingTask();
@@ -714,18 +726,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       });
     }
     this.templateService.getAll().subscribe({
-      next: tpls => {
-        const pid     = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
-        const context = this.data['templateContext'] as 'checkin' | 'checkout' | undefined;
-        const lang    = this.templateLang();
-        this.templates.set(tpls.filter(t => {
-          if (t.beds24PropertyId && t.beds24PropertyId !== pid) return false;
-          if (context === 'checkin'  && t.type === 'CHECKOUT') return false;
-          if (context === 'checkout' && t.type === 'CHECKIN')  return false;
-          if (lang === 'en' && !t.contentEn) return false;
-          return true;
-        }));
-      },
+      next: tpls => this.allTemplates.set(tpls),
       error: () => {}
     });
   }
