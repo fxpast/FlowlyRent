@@ -1,15 +1,19 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink } from '@angular/router';
+import { Component, OnInit, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, NavigationEnd, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../core/services/auth.service';
+import { environment } from '../../environments/environment';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-superadmin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, MatBadgeModule],
   template: `
     <mat-toolbar color="primary" class="toolbar">
       <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
@@ -21,7 +25,8 @@ import { AuthService } from '../core/services/auth.service';
       <button mat-icon-button routerLink="/superadmin/users" matTooltip="Utilisateurs">
         <mat-icon>group</mat-icon>
       </button>
-      <button mat-icon-button routerLink="/superadmin/feedbacks" matTooltip="Feedbacks">
+      <button mat-icon-button routerLink="/superadmin/feedbacks" matTooltip="Feedbacks"
+              [matBadge]="newFeedbackCount() || null" matBadgeColor="warn" matBadgeSize="small">
         <mat-icon>rate_review</mat-icon>
       </button>
       <button mat-stroked-button (click)="logout()" style="margin-left:16px;color:white;border-color:rgba(255,255,255,.5)">
@@ -44,7 +49,25 @@ import { AuthService } from '../core/services/auth.service';
     .content { padding: 32px; max-width: 1200px; margin: 0 auto; }
   `]
 })
-export class SuperadminLayoutComponent {
-  constructor(private auth: AuthService) {}
+export class SuperadminLayoutComponent implements OnInit {
+  newFeedbackCount = signal<number>(0);
+
+  constructor(private auth: AuthService, private http: HttpClient, private router: Router) {}
+
+  ngOnInit(): void {
+    this.loadFeedbackCount();
+    // Recharger le count quand on quitte la page feedbacks
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
+      if (!e.url.includes('/feedbacks')) this.loadFeedbackCount();
+    });
+  }
+
+  private loadFeedbackCount(): void {
+    this.http.get<any[]>(`${environment.apiUrl}/superadmin/feedbacks`).subscribe({
+      next: list => this.newFeedbackCount.set(list.filter(f => f.status === 'NEW').length),
+      error: () => {}
+    });
+  }
+
   logout(): void { this.auth.logout(); }
 }
