@@ -92,6 +92,7 @@ const TYPE_LABELS: Record<string, string> = {
                       <span class="tpl-name">{{ t.name }}</span>
                       <div class="tpl-badges">
                         <span class="type-badge type-{{ t.type }}">{{ typeLabel(t.type) }}</span>
+                        @if (t.contentEn) { <span class="lang-badge">EN</span> }
                         @if (t.beds24PropertyId) {
                           <span class="prop-badge">{{ propNameById(t.beds24PropertyId) }}</span>
                         } @else {
@@ -168,10 +169,20 @@ const TYPE_LABELS: Record<string, string> = {
               </button>
             </div>
 
+            <div class="lang-tabs">
+              <button mat-button [class.lang-active]="editorLang() === 'fr'" (click)="editorLang.set('fr')">
+                FR — Français
+              </button>
+              <button mat-button [class.lang-active]="editorLang() === 'en'" (click)="editorLang.set('en')">
+                EN — English
+              </button>
+            </div>
+
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Contenu du message</mat-label>
-              <textarea #contentArea matInput [(ngModel)]="editForm.contentFr"
-                        rows="10" [placeholder]="tplPlaceholder"></textarea>
+              <mat-label>Contenu du message ({{ editorLang() === 'fr' ? 'Français' : 'English' }})</mat-label>
+              <textarea #contentArea matInput
+                        [ngModel]="activeContent" (ngModelChange)="setActiveContent($event)"
+                        rows="10" [placeholder]="editorLang() === 'fr' ? tplPlaceholder : 'Hello {{nom}}, your check-in is on {{arrivee}}…'"></textarea>
             </mat-form-field>
 
           </div>
@@ -246,9 +257,16 @@ const TYPE_LABELS: Record<string, string> = {
                 <button mat-menu-item (click)="applyTemplate(t)">
                   <span class="type-badge type-{{ t.type }} menu-badge">{{ typeLabel(t.type) }}</span>
                   {{ t.name }}
+                  @if (t.contentEn) { <span class="lang-badge menu-lang">EN</span> }
                 </button>
               }
             </mat-menu>
+            <!-- Toggle langue -->
+            <button mat-stroked-button class="lang-btn"
+                    (click)="templateLang.update(l => l === 'fr' ? 'en' : 'fr')"
+                    [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
+              {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
+            </button>
 
             <mat-form-field appearance="outline" class="reply-input">
               <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="8"
@@ -456,6 +474,14 @@ const TYPE_LABELS: Record<string, string> = {
     }
     .var-hint code:hover { background: #bbdefb; }
     .var-hint mat-icon-button { width: 28px; height: 28px; line-height: 28px; }
+    .lang-badge { font-size: 10px; padding: 1px 5px; border-radius: 6px;
+      background: #e8f5e9; color: #2e7d32; font-weight: 700; }
+    .menu-lang { margin-left: 6px; }
+    .lang-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
+    .lang-tabs button { font-size: 13px; border-radius: 6px 6px 0 0; opacity: 0.6; }
+    .lang-tabs button.lang-active { opacity: 1; font-weight: 600; background: #e3f2fd; color: #1565c0; }
+    .lang-btn { font-size: 11px !important; font-weight: 700 !important; min-width: 40px !important;
+      height: 36px !important; padding: 0 8px !important; flex-shrink: 0; }
 
     /* Chat */
     .chat-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
@@ -515,6 +541,9 @@ const TYPE_LABELS: Record<string, string> = {
 export class MessagesComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea')   chatArea?:   ElementRef<HTMLDivElement>;
   @ViewChild('contentArea') contentArea?: ElementRef<HTMLTextAreaElement>;
+
+  editorLang   = signal<'fr' | 'en'>('fr');
+  templateLang = signal<'fr' | 'en'>('fr');
 
   searchDraft     = '';
   allBookings     = signal<any[]>([]);
@@ -723,13 +752,24 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   /* ── Templates ── */
+  get activeContent(): string {
+    return this.editorLang() === 'en' ? (this.editForm.contentEn ?? '') : (this.editForm.contentFr ?? '');
+  }
+
+  setActiveContent(v: string): void {
+    if (this.editorLang() === 'en') this.editForm.contentEn = v;
+    else this.editForm.contentFr = v;
+  }
+
   newTemplate(): void {
-    this.editForm = { name: '', type: 'CHECKIN', contentFr: '', beds24PropertyId: '' };
+    this.editForm = { name: '', type: 'CHECKIN', contentFr: '', contentEn: '', beds24PropertyId: '' };
+    this.editorLang.set('fr');
     this.editingTemplate.set(this.editForm);
   }
 
   editTemplate(t: MessageTemplate): void {
     this.editForm = { ...t };
+    this.editorLang.set('fr');
     this.editingTemplate.set(this.editForm);
   }
 
@@ -749,19 +789,21 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   applyTemplate(t: MessageTemplate): void {
     const b = this.selectedBooking();
-    if (!b || !t.contentFr) return;
-    const pid   = String(b['propId'] ?? b['propertyId'] ?? '');
-    const cfg   = this.propConfigs().find(c => c.beds24PropertyId === pid);
-    const times = this.selectedBookingTimes();
-    this.newMessage = this.templateService.apply(t.contentFr, b, cfg?.accessCode, times.checkin, times.checkout);
+    if (!b) return;
+    const pid     = String(b['propId'] ?? b['propertyId'] ?? '');
+    const cfg     = this.propConfigs().find(c => c.beds24PropertyId === pid);
+    const times   = this.selectedBookingTimes();
+    const content = this.templateLang() === 'en' && t.contentEn ? t.contentEn : t.contentFr;
+    if (!content) return;
+    this.newMessage = this.templateService.apply(content, b, cfg?.accessCode, times.checkin, times.checkout);
   }
 
   insertVar(v: string): void {
     const el = this.contentArea?.nativeElement;
-    if (!el) { this.editForm.contentFr = (this.editForm.contentFr ?? '') + v; return; }
+    if (!el) { this.setActiveContent(this.activeContent + v); return; }
     const start = el.selectionStart ?? el.value.length;
     const end   = el.selectionEnd   ?? el.value.length;
-    this.editForm.contentFr = el.value.substring(0, start) + v + el.value.substring(end);
+    this.setActiveContent(el.value.substring(0, start) + v + el.value.substring(end));
     setTimeout(() => { el.selectionStart = el.selectionEnd = start + v.length; el.focus(); });
   }
 

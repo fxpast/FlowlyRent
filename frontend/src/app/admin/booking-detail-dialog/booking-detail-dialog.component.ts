@@ -236,10 +236,15 @@ import { Subscription } from 'rxjs';
               <mat-select [(ngModel)]="selectedTemplate" (ngModelChange)="applyTemplate($event)">
                 <mat-option [value]="null">— Aucun modèle —</mat-option>
                 @for (t of templates(); track t.id) {
-                  <mat-option [value]="t">{{ t.name }}</mat-option>
+                  <mat-option [value]="t">{{ t.name }}@if (t.contentEn) { &nbsp;·&nbsp;EN }</mat-option>
                 }
               </mat-select>
             </mat-form-field>
+            <button mat-stroked-button class="tpl-lang-btn"
+                    (click)="templateLang.update(l => l === 'fr' ? 'en' : 'fr')"
+                    [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
+              {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
+            </button>
           </div>
         }
 
@@ -497,7 +502,9 @@ import { Subscription } from 'rxjs';
       border-bottom-left-radius: 2px; }
     .bubble-text { font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
     .bubble-time { font-size: 10px; opacity: 0.65; align-self: flex-end; }
-    .template-bar { padding: 6px 16px 0; border-top: 1px solid #e8e8e8; background: #fafafa; }
+    .template-bar { padding: 6px 16px 0; border-top: 1px solid #e8e8e8; background: #fafafa; display: flex; align-items: flex-start; gap: 8px; }
+    .tpl-select { flex: 1; }
+    .tpl-lang-btn { font-size: 11px !important; font-weight: 700 !important; min-width: 40px !important; height: 36px !important; padding: 0 8px !important; margin-top: 4px; flex-shrink: 0; }
     .tpl-select { width: 100%; }
     .tpl-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; margin-right: 4px; }
     .chat-input-bar { display: flex; align-items: flex-end; gap: 4px;
@@ -554,8 +561,9 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   messages = signal<Message[]>([]);
   loadingMessages = signal(false);
   unreadCount = signal(0);
-  newMessage = '';
-  sendingMsg = signal(false);
+  newMessage   = '';
+  templateLang = signal<'fr' | 'en'>('fr');
+  sendingMsg   = signal(false);
   arrivalDate: Date | null = null;
   departureDate: Date | null = null;
   arrivalTime   = '16:00';
@@ -688,8 +696,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   applyTemplate(t: MessageTemplate | null): void {
-    if (!t?.contentFr) return;
-    this.newMessage = this.templateService.apply(t.contentFr, this.draft, undefined, this.arrivalTime, this.departureTime);
+    if (!t) return;
+    const content = this.templateLang() === 'en' && t.contentEn ? t.contentEn : t.contentFr;
+    if (!content) return;
+    this.newMessage = this.templateService.apply(content, this.draft, undefined, this.arrivalTime, this.departureTime);
     this.selectedTemplate = null;
   }
 
