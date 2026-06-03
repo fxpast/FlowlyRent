@@ -139,7 +139,7 @@ interface OccupancyStatus {
               <!-- Nom court -->
               <div class="code-section">
                 <div class="code-label">
-                  <mat-icon>label</mat-icon>
+                  <mat-icon matTooltip="Remplace le nom Beds24 dans toute l'application si renseigné">label</mat-icon>
                   <strong>Nom court</strong>
                   @if (isShortNameDirty(p['id'])) {
                     <button mat-flat-button color="primary" class="save-btn"
@@ -152,7 +152,6 @@ interface OccupancyStatus {
                   <input matInput [(ngModel)]="shortNameDraft[p['id']]"
                          placeholder="Ex : Appt Centre-Ville, Studio Mer…"
                          (ngModelChange)="shortNameDraft[p['id']] = $event">
-                  <mat-hint>Remplace le nom Beds24 dans toute l'application si renseigné</mat-hint>
                 </mat-form-field>
               </div>
 
