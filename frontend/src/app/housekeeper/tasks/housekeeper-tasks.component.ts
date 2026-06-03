@@ -395,7 +395,7 @@ export class HousekeeperTasksComponent implements OnInit {
     this.compressImage(file).then(base64 => {
       const token = this.svc.token();
       console.log('[Photo] token:', token ? `${token.substring(0, 20)}... (${token.length} chars)` : 'NULL', '| tâche:', task.id);
-      fetch(`/api/housekeeper/tasks/${task.id}/photos`, {
+      fetch(`${this.svc.baseUrl}/tasks/${task.id}/photos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

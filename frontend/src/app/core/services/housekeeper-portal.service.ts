@@ -32,7 +32,8 @@ export interface TaskPhoto {
 
 @Injectable({ providedIn: 'root' })
 export class HousekeeperPortalService {
-  private base = `${environment.apiUrl}/housekeeper`;
+  readonly baseUrl = `${environment.apiUrl}/housekeeper`;
+  private base = this.baseUrl;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
