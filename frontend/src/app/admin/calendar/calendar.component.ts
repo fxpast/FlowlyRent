@@ -13,6 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { BookingService } from '../../core/services/booking.service';
 import { BlackoutDialogComponent, BlackoutDialogResult } from '../blackout-dialog/blackout-dialog.component';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 
@@ -411,7 +412,7 @@ export class CalendarComponent implements OnInit {
     return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   });
 
-  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog) {}
+  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -449,7 +450,8 @@ export class CalendarComponent implements OnInit {
       `${this.base}/admin/availability/calendar`, { params: { from, to } }
     ).subscribe({
       next: r => {
-        this.properties.set(r.properties ?? []);
+        const rawProps = r.properties ?? [];
+        this.bookingService.applyDisplayNames(rawProps).subscribe(mapped => this.properties.set(mapped));
         this.bookings.set(r.bookings ?? []);
         this.blocks.set(r.blocks ?? []);
         this.calendarData.set(r.calendarData ?? {});

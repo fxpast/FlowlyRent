@@ -13,6 +13,29 @@ export class BookingService {
 
   clearPropsCache(): void { this.propsCache = null; }
 
+  /** Retourne les propriétés Beds24 avec le nom court substitué si défini. */
+  getPropertiesWithDisplayNames(): Observable<any[]> {
+    return forkJoin([
+      this.http.get<any[]>(`${environment.apiUrl}/admin/properties`),
+      this.getPropertyNames()
+    ]).pipe(
+      map(([props, names]) => (props ?? []).map(p => {
+        const id = String(p['id'] ?? p['propId'] ?? '');
+        return names[id] ? { ...p, name: names[id] } : p;
+      }))
+    );
+  }
+
+  /** Applique les noms courts sur une liste de propriétés déjà chargée. */
+  applyDisplayNames<T extends Record<string, any>>(items: T[]): Observable<T[]> {
+    return this.getPropertyNames().pipe(
+      map(names => items.map(p => {
+        const id = String(p['id'] ?? p['propId'] ?? '');
+        return names[id] ? { ...p, name: names[id] } : p;
+      }))
+    );
+  }
+
   getPropertyNames(): Observable<Record<string, string>> {
     if (this.propsCache) return of(this.propsCache);
     return forkJoin([

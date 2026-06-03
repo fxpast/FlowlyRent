@@ -255,10 +255,8 @@ export class BookingsComponent implements OnInit {
     forkJoin([this.bookingService.getAll({ arrivalFrom }), this.bookingService.getPropertyNames()]).subscribe({
       next: ([data, names]) => {
         this.bookings.set((data ?? []).map(b => {
-          if (!b['propName'] && !b['propertyName']) {
-            const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-            if (pid && names[pid]) return { ...b, propName: names[pid] };
-          }
+          const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+          if (pid && names[pid]) return { ...b, propName: names[pid] };
           return b;
         }));
       },

@@ -644,10 +644,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
     ]).subscribe({
       next: ([data, names]) => {
         this.allBookings.set((data ?? []).map(b => {
-          if (!b['propName'] && !b['propertyName']) {
-            const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-            if (pid && names[pid]) return { ...b, propName: names[pid] };
-          }
+          const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+          if (pid && names[pid]) return { ...b, propName: names[pid] };
           return b;
         }));
         this.loadingBookings.set(false);

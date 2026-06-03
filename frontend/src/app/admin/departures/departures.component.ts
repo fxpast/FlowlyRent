@@ -150,10 +150,8 @@ export class DeparturesComponent implements OnInit {
         this.departures.set((data ?? []).sort((a, b) => (a['departure'] ?? '').localeCompare(b['departure'] ?? '')));
         this.bookingService.getPropertyNames().subscribe(names => {
           this.departures.update(list => list.map(b => {
-            if (!b['propName'] && !b['propertyName']) {
-              const pid = String(b['propId'] ?? b['propertyId'] ?? '');
-              if (pid && names[pid]) return { ...b, propName: names[pid] };
-            }
+            const pid = String(b['propId'] ?? b['propertyId'] ?? '');
+            if (pid && names[pid]) return { ...b, propName: names[pid] };
             return b;
           }));
         });

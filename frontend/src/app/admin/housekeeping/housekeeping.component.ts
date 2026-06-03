@@ -19,6 +19,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
+import { BookingService } from '../../core/services/booking.service';
 
 interface Task {
   id: number;
@@ -550,12 +551,13 @@ export class HousekeepingComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private housekeeperService: HousekeeperService,
+    private bookingService: BookingService,
     private snack: MatSnackBar,
     private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    this.http.get<Property[]>(`${this.base}/admin/properties`).subscribe(p => this.properties.set(p));
+    this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
     this.load();
   }
