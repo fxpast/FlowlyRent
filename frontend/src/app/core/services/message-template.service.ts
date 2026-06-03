@@ -46,7 +46,7 @@ export class MessageTemplateService {
     const prop    = booking['propName'] || booking['propertyName'] || '';
     const arr     = this.fmtDate(booking['arrival']);
     const dep     = this.fmtDate(booking['departure']);
-    const code    = accessCode || this.genCode();
+    const code    = accessCode ?? '';
     const checkin  = checkinTime  || '16:00';
     const checkout = checkoutTime || '11:00';
     return content

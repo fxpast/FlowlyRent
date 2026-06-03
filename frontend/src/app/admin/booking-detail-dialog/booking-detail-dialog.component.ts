@@ -24,6 +24,7 @@ import { MessageTemplateService, MessageTemplate } from '../../core/services/mes
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
 import { HousekeepingService } from '../../core/services/housekeeping.service';
 import { BookingTimeOverrideService } from '../../core/services/booking-time-override.service';
+import { PropertyConfigService } from '../../core/services/property-config.service';
 import { Message } from '../../core/models/message.model';
 import { environment } from '@env/environment';
 import { Subscription } from 'rxjs';
@@ -570,8 +571,9 @@ import { Subscription } from 'rxjs';
 export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   @ViewChild('chatArea') chatArea?: ElementRef<HTMLDivElement>;
 
-  saving    = signal(false);
-  activeTab = signal(0);
+  saving         = signal(false);
+  activeTab      = signal(0);
+  propAccessCode = signal<string | undefined>(undefined);
   draft: Record<string, any>;
 
   messages = signal<Message[]>([]);
@@ -623,6 +625,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private housekeeperService: HousekeeperService,
     private housekeepingService: HousekeepingService,
     private timeOverrideService: BookingTimeOverrideService,
+    private propConfigService: PropertyConfigService,
     private http: HttpClient,
     private snackBar: MatSnackBar
   ) {
@@ -700,6 +703,16 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   private loadTemplates(): void {
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    if (pid && this.propAccessCode() === undefined) {
+      this.propConfigService.getAll().subscribe({
+        next: cfgs => {
+          const cfg = cfgs.find(c => c.beds24PropertyId === pid);
+          this.propAccessCode.set(cfg?.accessCode ?? '');
+        },
+        error: () => this.propAccessCode.set('')
+      });
+    }
     this.templateService.getAll().subscribe({
       next: tpls => {
         const pid     = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
@@ -721,7 +734,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (!t) return;
     const content = this.templateLang() === 'en' && t.contentEn ? t.contentEn : t.contentFr;
     if (!content) return;
-    this.newMessage = this.templateService.apply(content, this.draft, undefined, this.arrivalTime, this.departureTime);
+    this.newMessage = this.templateService.apply(content, this.draft, this.propAccessCode() || undefined, this.arrivalTime, this.departureTime);
     this.selectedTemplate = null;
   }
 
