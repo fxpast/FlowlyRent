@@ -75,10 +75,24 @@ import { Subscription } from 'rxjs';
                 <input matInput [(ngModel)]="draft['guestPhone']">
               </mat-form-field>
             </div>
-            <div class="row-2">
+            <div class="row-3">
               <mat-form-field appearance="outline">
                 <mat-label>Pays</mat-label>
                 <input matInput [(ngModel)]="draft['guestCountry']">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Langue</mat-label>
+                <mat-select [(ngModel)]="draft['lang']">
+                  <mat-option value="">—</mat-option>
+                  <mat-option value="fr">Français</mat-option>
+                  <mat-option value="en">English</mat-option>
+                  <mat-option value="de">Deutsch</mat-option>
+                  <mat-option value="nl">Nederlands</mat-option>
+                  <mat-option value="es">Español</mat-option>
+                  <mat-option value="it">Italiano</mat-option>
+                  <mat-option value="pt">Português</mat-option>
+                  <mat-option value="ru">Русский</mat-option>
+                </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Statut</mat-label>
@@ -454,6 +468,7 @@ import { Subscription } from 'rxjs';
     .prop-row mat-icon { color: #0288d1; font-size: 20px; width: 20px; height: 20px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .datetime-pair { display: flex; gap: 8px; align-items: flex-start; }
     .date-part { flex: 1; }
     .time-part { width: 110px; flex-shrink: 0; }
@@ -617,6 +632,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     d['guestEmail']     = d['guestEmail']     || d['email']     || '';
     d['guestPhone']     = d['guestPhone']     || d['phone']     || d['guestMobile'] || '';
     d['guestCountry']   = d['guestCountry']   || '';
+    d['lang']           = d['lang']           || '';
     d['propId']         = d['propId']         || d['propertyId'] || '';
     d['propName']       = d['propName']       || d['propertyName'] || '';
     d['totalPrice']     = d['totalPrice']     ?? d['price']     ?? null;
