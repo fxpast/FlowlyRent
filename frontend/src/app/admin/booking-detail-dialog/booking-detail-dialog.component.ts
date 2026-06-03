@@ -241,7 +241,7 @@ import { Subscription } from 'rxjs';
               </mat-select>
             </mat-form-field>
             <button mat-stroked-button class="tpl-lang-btn"
-                    (click)="templateLang.update(l => l === 'fr' ? 'en' : 'fr')"
+                    (click)="toggleTemplateLang()"
                     [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
               {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
             </button>
@@ -896,6 +896,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     };
     return labels[status] ?? status;
   }
+
+  toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }
 
   confirmTimes(): void {
     const bookingId = String(this.data['id'] ?? '');

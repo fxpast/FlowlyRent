@@ -263,7 +263,7 @@ const TYPE_LABELS: Record<string, string> = {
             </mat-menu>
             <!-- Toggle langue -->
             <button mat-stroked-button class="lang-btn"
-                    (click)="templateLang.update(l => l === 'fr' ? 'en' : 'fr')"
+                    (click)="toggleTemplateLang()"
                     [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
               {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
             </button>
@@ -752,6 +752,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   /* ── Templates ── */
+  toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }
+
   get activeContent(): string {
     return this.editorLang() === 'en' ? (this.editForm.contentEn ?? '') : (this.editForm.contentFr ?? '');
   }
