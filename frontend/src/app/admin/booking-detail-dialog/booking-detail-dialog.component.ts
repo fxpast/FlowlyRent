@@ -16,6 +16,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
@@ -34,7 +35,7 @@ import { Subscription } from 'rxjs';
     CommonModule, FormsModule, MatDialogModule,
     MatButtonModule, MatIconModule, MatChipsModule, MatDividerModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatTabsModule, MatBadgeModule, MatProgressSpinnerModule,
+    MatTabsModule, MatBadgeModule, MatProgressSpinnerModule, MatTooltipModule,
     MatDatepickerModule, MatNativeDateModule, TextFieldModule
   ],
   template: `
