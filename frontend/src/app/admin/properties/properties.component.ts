@@ -668,6 +668,29 @@ export class PropertiesComponent implements OnInit {
       const depDays = current  ? daysDiff(d10(current['departure'])) : null;
       const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
 
+      const gName = (b: any) => {
+        const f = (b['guestFirstName'] || b['firstName'] || '').trim().toLowerCase();
+        const l = (b['guestLastName']  || b['lastName']  || '').trim().toLowerCase();
+        return (f + ' ' + l).trim();
+      };
+
+      // ── Vert : même voyageur checkout + checkin aujourd'hui (prolongation) ──
+      if (depDays === 0 && arrDays === 0 && current && nextBook) {
+        const n1 = gName(current), n2 = gName(nextBook);
+        if (n1 && n2 && n1 === n2) {
+          const nextDep = d10(nextBook['departure']);
+          const depLabel = daysDiff(nextDep) > 0
+            ? `départ dans ${daysDiff(nextDep)} j · ${fmt(nextDep)}`
+            : `départ le ${fmt(nextDep)}`;
+          map[id] = { type: 'occupied', label: 'Occupé', sublabel: depLabel,
+            color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
+            sortKey: '3_' + nextDep,
+            tips: ['Le même voyageur prolonge son séjour.',
+                   'Pensez à mettre à jour les dates dans Beds24 si nécessaire.'] };
+          continue;
+        }
+      }
+
       // ── Rouge : départ ou arrivée dans <= 1 jour ──
       const depUrgent = depDays !== null && depDays <= 1;
       const arrUrgent = arrDays !== null && arrDays <= 1;
