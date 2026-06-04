@@ -28,8 +28,6 @@ interface OccupancyStatus {
   icon: string;
   sortKey: string;
   tips: string[];
-  backToBack?: boolean;
-  backToBackDate?: string;
 }
 
 @Component({
@@ -96,11 +94,6 @@ interface OccupancyStatus {
                 <mat-icon class="occ-icon">{{ occ.icon }}</mat-icon>
                 <span class="occ-label">{{ occ.label }}</span>
                 @if (occ.sublabel) { <span class="occ-sub">· {{ occ.sublabel }}</span> }
-                @if (occ.backToBack) {
-                  <span class="btb-badge" [matTooltip]="'Back-to-back le ' + (occ.backToBackDate | date:'dd/MM')">
-                    <mat-icon class="btb-icon">swap_horiz</mat-icon> Back-to-back
-                  </span>
-                }
                 <mat-icon class="occ-arrow">{{ tipsOpen[p['id']] ? 'expand_less' : 'lightbulb' }}</mat-icon>
               </div>
               @if (tipsOpen[p['id']]) {
@@ -408,9 +401,6 @@ interface OccupancyStatus {
     .occ-label { font-weight: 700; }
     .occ-sub   { font-weight: 400; opacity: .85; flex: 1; }
     .occ-arrow { font-size: 16px; width: 16px; height: 16px; margin-left: auto; opacity: .7; }
-    .btb-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700;
-      background: rgba(0,0,0,.12); padding: 1px 6px; border-radius: 10px; white-space: nowrap; cursor: help; }
-    .btb-icon { font-size: 13px; width: 13px; height: 13px; }
 
     .occ-tips {
       padding: 10px 14px 10px 12px;
@@ -672,57 +662,27 @@ export class PropertiesComponent implements OnInit {
       const depDays = current  ? daysDiff(d10(current['departure'])) : null;
       const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
 
-      // Back-to-back : chercher parmi toutes les paires consécutives triées par arrivée
-      const sorted = [...rel].sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])));
-      let btb = false;
-      let btbDate: string | undefined;
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const dep = d10(sorted[i]['departure']);
-        const arr = d10(sorted[i + 1]['arrival']);
-        if (dep === arr && dep >= today) { btb = true; btbDate = dep; break; }
-      }
-
-      const guestName = (b: any) => {
-        const f = b['guestFirstName'] || b['firstName'] || '';
-        const l = b['guestLastName']  || b['lastName']  || '';
-        return (f + ' ' + l).trim() || b['guestName'] || '—';
-      };
-
-      // ── Back-to-back AUJOURD'HUI : départ + arrivée le même jour ──
+      // ── Rouge : départ ou arrivée dans <= 1 jour ──
       const depUrgent = depDays !== null && depDays <= 1;
       const arrUrgent = arrDays !== null && arrDays <= 1;
-      if (depDays === 0 && arrDays === 0 && d10(current!['departure']) === d10(nextBook!['arrival'])) {
-        const depName = guestName(current!);
-        const arrName = guestName(nextBook!);
-        map[id] = { type: 'urgent',
-          label: 'Back-to-back aujourd\'hui',
-          sublabel: `Départ : ${depName} · Arrivée : ${arrName}`,
-          color: '#e65100', bg: '#fff3e0', icon: 'swap_horiz',
-          sortKey: '00_btb',
-          tips: ['Gérez le départ puis préparez l\'arrivée sans délai.',
-                 'Vérifiez que le ménage est planifié entre les deux séjours.',
-                 'Confirmez l\'heure d\'arrivée avec le prochain voyageur.'],
-          backToBack: true, backToBackDate: today };
-        continue;
-      }
-
-      // ── Rouge : départ ou arrivée dans <= 1 jour ──
       if (depUrgent || arrUrgent) {
         const depLabel = depDays === 0 ? 'Départ aujourd\'hui' : 'Départ demain';
         const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
-        const label    = depUrgent ? depLabel : arrLabel;
-        const sub      = depUrgent && arrUrgent ? (depLabel + ' · ' + arrLabel) : undefined;
-        const tips = depUrgent
+        const label    = (depUrgent && arrUrgent) ? (depLabel + ' · ' + arrLabel) : (depUrgent ? depLabel : arrLabel);
+        const tips = (depUrgent && arrUrgent)
+          ? ['Gérez le départ puis préparez l\'arrivée.',
+             'Vérifiez que le ménage est planifié entre les deux séjours.',
+             'Confirmez l\'heure d\'arrivée avec le prochain voyageur.']
+          : depUrgent
           ? ['Planifiez le ménage dès la sortie du voyageur.',
              'Vérifiez l\'état du logement et rechargez les consommables (linge, café, etc.).',
              'Mettez à jour vos disponibilités sur les plateformes si nécessaire.']
           : ['Envoyez les instructions de check-in si ce n\'est pas encore fait.',
              'Vérifiez le bon fonctionnement du code d\'accès.',
              'Confirmez l\'heure d\'arrivée avec le voyageur.'];
-        map[id] = { type: 'urgent', label, sublabel: sub,
+        map[id] = { type: 'urgent', label,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
-          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips,
-          backToBack: !!btb, backToBackDate: btbDate };
+          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips };
         continue;
       }
 
@@ -738,7 +698,7 @@ export class PropertiesComponent implements OnInit {
           tips: ['Séjour en cours, rien d\'urgent à faire.',
                  'Pensez à envoyer un message de mi-séjour pour fidéliser le voyageur.',
                  'Profitez-en pour vérifier vos prix sur les dates après le départ.'],
-          backToBack: !!btb, backToBackDate: btbDate };
+          };
         continue;
       }
 
@@ -753,7 +713,7 @@ export class PropertiesComponent implements OnInit {
                  'Réduisez la durée minimum de séjour pour attirer des courts séjours.',
                  'Activez la visibilité boostée sur vos plateformes (Airbnb, Booking…).',
                  'Vérifiez que votre calendrier est bien ouvert et à jour.'],
-          backToBack: !!btb, backToBackDate: btbDate };
+          };
         continue;
       }
 
