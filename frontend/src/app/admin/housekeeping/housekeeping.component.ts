@@ -582,8 +582,14 @@ export class HousekeepingComponent implements OnInit {
   applyFilter(): void {
     const all = this.tasks();
     const filtered = this.filterStatus ? all.filter(t => t.status === this.filterStatus) : all;
+    const done = new Set(['DONE', 'SKIPPED']);
     this.filteredTasks.set(
-      [...filtered].sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
+      [...filtered].sort((a, b) => {
+        const aD = done.has(a.status) ? 1 : 0;
+        const bD = done.has(b.status) ? 1 : 0;
+        if (aD !== bD) return aD - bD;
+        return b.scheduledDate.localeCompare(a.scheduledDate);
+      })
     );
   }
 
