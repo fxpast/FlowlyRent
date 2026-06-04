@@ -28,6 +28,8 @@ interface OccupancyStatus {
   icon: string;
   sortKey: string;
   tips: string[];
+  backToBack?: boolean;
+  backToBackDate?: string;
 }
 
 @Component({
@@ -94,6 +96,11 @@ interface OccupancyStatus {
                 <mat-icon class="occ-icon">{{ occ.icon }}</mat-icon>
                 <span class="occ-label">{{ occ.label }}</span>
                 @if (occ.sublabel) { <span class="occ-sub">· {{ occ.sublabel }}</span> }
+                @if (occ.backToBack) {
+                  <span class="btb-badge" [matTooltip]="'Back-to-back le ' + (occ.backToBackDate | date:'dd/MM')">
+                    <mat-icon class="btb-icon">swap_horiz</mat-icon> Back-to-back
+                  </span>
+                }
                 <mat-icon class="occ-arrow">{{ tipsOpen[p['id']] ? 'expand_less' : 'lightbulb' }}</mat-icon>
               </div>
               @if (tipsOpen[p['id']]) {
@@ -401,6 +408,9 @@ interface OccupancyStatus {
     .occ-label { font-weight: 700; }
     .occ-sub   { font-weight: 400; opacity: .85; flex: 1; }
     .occ-arrow { font-size: 16px; width: 16px; height: 16px; margin-left: auto; opacity: .7; }
+    .btb-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700;
+      background: rgba(0,0,0,.12); padding: 1px 6px; border-radius: 10px; white-space: nowrap; cursor: help; }
+    .btb-icon { font-size: 13px; width: 13px; height: 13px; }
 
     .occ-tips {
       padding: 10px 14px 10px 12px;
@@ -662,6 +672,10 @@ export class PropertiesComponent implements OnInit {
       const depDays = current  ? daysDiff(d10(current['departure'])) : null;
       const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
 
+      // Back-to-back : départ d'un séjour = arrivée du suivant le même jour
+      const btb = current && nextBook && d10(current['departure']) === d10(nextBook['arrival']);
+      const btbDate = btb ? d10(current!['departure']) : undefined;
+
       // ── Rouge : départ ou arrivée dans <= 1 jour ──
       const depUrgent = depDays !== null && depDays <= 1;
       const arrUrgent = arrDays !== null && arrDays <= 1;
@@ -683,13 +697,12 @@ export class PropertiesComponent implements OnInit {
              'Confirmez l\'heure d\'arrivée avec le voyageur.'];
         map[id] = { type: 'urgent', label, sublabel: sub,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
-          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips };
+          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips,
+          backToBack: !!btb, backToBackDate: btbDate };
         continue;
       }
 
       // ── Vert : occupé, départ dans 2+ jours ──
-      // Fix 2 : >= 2 au lieu de >= 3 (départ dans 2 jours = toujours occupé)
-      // Fix 3 : si current existe, toujours afficher "Occupé" même si depDays hors-norme
       if (current) {
         const depLabel = depDays !== null && depDays > 0
           ? `départ dans ${depDays} j · ${fmt(d10(current['departure']))}`
@@ -700,7 +713,8 @@ export class PropertiesComponent implements OnInit {
           sortKey: '3_' + d10(current['departure']),
           tips: ['Séjour en cours, rien d\'urgent à faire.',
                  'Pensez à envoyer un message de mi-séjour pour fidéliser le voyageur.',
-                 'Profitez-en pour vérifier vos prix sur les dates après le départ.'] };
+                 'Profitez-en pour vérifier vos prix sur les dates après le départ.'],
+          backToBack: !!btb, backToBackDate: btbDate };
         continue;
       }
 
@@ -714,7 +728,8 @@ export class PropertiesComponent implements OnInit {
           tips: ['Baissez vos tarifs ou lancez une promotion pour ces dates.',
                  'Réduisez la durée minimum de séjour pour attirer des courts séjours.',
                  'Activez la visibilité boostée sur vos plateformes (Airbnb, Booking…).',
-                 'Vérifiez que votre calendrier est bien ouvert et à jour.'] };
+                 'Vérifiez que votre calendrier est bien ouvert et à jour.'],
+          backToBack: !!btb, backToBackDate: btbDate };
         continue;
       }
 
@@ -727,7 +742,8 @@ export class PropertiesComponent implements OnInit {
         sortKey: '2_' + d10(nextBook!['arrival']),
         tips: ['Vérifiez vos prix pour les nuits encore libres avant cette arrivée.',
                'Une offre last-minute peut éviter des nuits vides.',
-               'Préparez le logement et confirmez les détails avec le prochain voyageur.'] };
+               'Préparez le logement et confirmez les détails avec le prochain voyageur.'],
+        backToBack: !!btb, backToBackDate: btbDate };
     }
     return map;
   });
