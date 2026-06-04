@@ -7,9 +7,11 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { MessageReminderService } from '../../core/services/message-reminder.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
@@ -17,7 +19,8 @@ import { localDateStr } from '../../core/utils/date.utils';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatIconModule, MatButtonModule,
-    MatChipsModule, MatProgressSpinnerModule, MatDividerModule, MatDialogModule
+    MatChipsModule, MatProgressSpinnerModule, MatDividerModule, MatDialogModule,
+    MatTooltipModule
   ],
   template: `
     <div class="page-header">
@@ -50,7 +53,12 @@ import { localDateStr } from '../../core/utils/date.utils';
                 <div class="booking-row" (click)="openBooking(b)">
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
-                    <span class="nights">{{ nights(b) }}n</span>
+                    <span style="display:flex;align-items:center;gap:4px">
+                      @if (!reminder.hasSentToday(b.id)) {
+                        <mat-icon class="msg-reminder" matTooltip="Message check-out non envoyé">mark_email_unread</mat-icon>
+                      }
+                      <span class="nights">{{ nights(b) }}n</span>
+                    </span>
                   </div>
                   <div class="row-sub">
                     <span class="prop">{{ propName(b) }}</span>
@@ -82,7 +90,12 @@ import { localDateStr } from '../../core/utils/date.utils';
                 <div class="booking-row" (click)="openBooking(b)">
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
-                    <span class="nights">{{ nights(b) }}n</span>
+                    <span style="display:flex;align-items:center;gap:4px">
+                      @if (!reminder.hasSentToday(b.id)) {
+                        <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
+                      }
+                      <span class="nights">{{ nights(b) }}n</span>
+                    </span>
                   </div>
                   <div class="row-sub">
                     <span class="prop">{{ propName(b) }}</span>
@@ -161,6 +174,7 @@ import { localDateStr } from '../../core/utils/date.utils';
     .row-main { display: flex; justify-content: space-between; align-items: baseline; }
     .guest  { font-weight: 600; font-size: 14px; }
     .nights { font-size: 12px; color: #888; }
+    .msg-reminder { font-size: 16px; width: 16px; height: 16px; color: #f57c00; cursor: help; }
 
     .row-sub { display: flex; justify-content: space-between; margin-top: 2px; }
     .prop  { font-size: 12px; color: #555; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -183,7 +197,7 @@ export class TodayComponent implements OnInit {
 
   private propNames: Record<string, string> = {};
 
-  constructor(private bookingService: BookingService, private dialog: MatDialog) {}
+  constructor(private bookingService: BookingService, private dialog: MatDialog, readonly reminder: MessageReminderService) {}
 
   ngOnInit(): void { this.load(); }
 

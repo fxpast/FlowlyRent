@@ -25,6 +25,7 @@ import { HousekeeperService, HousekeeperProfile } from '../../core/services/hous
 import { HousekeepingService } from '../../core/services/housekeeping.service';
 import { BookingTimeOverrideService } from '../../core/services/booking-time-override.service';
 import { PropertyConfigService } from '../../core/services/property-config.service';
+import { MessageReminderService } from '../../core/services/message-reminder.service';
 import { Message } from '../../core/models/message.model';
 import { environment } from '@env/environment';
 import { Subscription } from 'rxjs';
@@ -639,6 +640,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private housekeepingService: HousekeepingService,
     private timeOverrideService: BookingTimeOverrideService,
     private propConfigService: PropertyConfigService,
+    private reminderService: MessageReminderService,
     private http: HttpClient,
     private snackBar: MatSnackBar
   ) {
@@ -779,6 +781,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       const wa = phone.startsWith('+') ? phone.slice(1) : phone;
       window.open(`https://wa.me/${wa}?text=${body}`, '_blank');
     }
+    this.reminderService.markSent(this.data['id']);
 
     const bookingId = Number(this.data['id']);
     if (bookingId) {
@@ -787,6 +790,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
           this.messages.update(list => [...list, msg]);
           this.newMessage = '';
           this.selectedTemplate = null;
+          this.reminderService.markSent(bookingId);
           setTimeout(() => this.scrollToBottom(), 80);
         },
         error: () => { this.newMessage = ''; }
@@ -806,6 +810,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.messages.update(list => [...list, msg]);
         this.newMessage = '';
         this.sendingMsg.set(false);
+        this.reminderService.markSent(bookingId);
         setTimeout(() => this.scrollToBottom(), 80);
       },
       error: () => { this.sendingMsg.set(false); }

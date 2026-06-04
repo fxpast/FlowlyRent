@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
+import { MessageReminderService } from '../../core/services/message-reminder.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 @Component({
@@ -33,7 +34,12 @@ import { localDateStr } from '../../core/utils/date.utils';
         <mat-card class="mobile-card clickable-card" (click)="openDetail(b)">
           <div class="mc-top">
             <strong>{{ guestName(b) }}</strong>
-            <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+            <div style="display:flex;align-items:center;gap:6px">
+              @if (isToday(b['departure']) && !reminder.hasSentToday(b['id'])) {
+                <mat-icon class="msg-reminder" matTooltip="Message check-out non envoyé">mark_email_unread</mat-icon>
+              }
+              <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+            </div>
           </div>
           <div class="mc-meta">
             <span><mat-icon>home</mat-icon>{{ propLabel(b) }}</span>
@@ -86,6 +92,9 @@ import { localDateStr } from '../../core/utils/date.utils';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
+              @if (isToday(b['departure']) && !reminder.hasSentToday(b['id'])) {
+                <mat-icon class="msg-reminder" matTooltip="Message check-out non envoyé">mark_email_unread</mat-icon>
+              }
               @if (b['status'] !== 'cancelled') {
                 <button mat-icon-button color="warn" (click)="cancelBooking(b)" matTooltip="Annuler">
                   <mat-icon>cancel</mat-icon>
@@ -125,6 +134,7 @@ import { localDateStr } from '../../core/utils/date.utils';
     .mc-meta mat-icon { font-size: 15px; width: 15px; height: 15px; color: #0288d1; }
     .clickable-card { cursor: pointer; transition: box-shadow 0.15s; }
     .clickable-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .msg-reminder { font-size: 18px; width: 18px; height: 18px; color: #f57c00; flex-shrink: 0; cursor: help; }
 
     @media (max-width: 768px) {
       .mobile-list { display: flex; }
@@ -139,7 +149,7 @@ export class DeparturesComponent implements OnInit {
   weekStart = signal(new Date(new Date().toDateString()));
   columns = ['date', 'guest', 'property', 'checkin', 'nights', 'channel', 'status', 'actions'];
 
-  constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router) {}
+  constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router, readonly reminder: MessageReminderService) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -159,6 +169,8 @@ export class DeparturesComponent implements OnInit {
       error: () => {}
     });
   }
+
+  isToday(date: string): boolean { return (date ?? '').substring(0, 10) === localDateStr(); }
 
   guestName(b: any): string {
     const first = b['guestFirstName'] || b['firstName'] || '';
