@@ -694,7 +694,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
       if (msg.sender === 'GUEST') this.unreadCount.update(n => n + 1);
-      setTimeout(() => this.scrollToBottom());
+      setTimeout(() => this.scrollToBottom(), 80);
     });
   }
 
@@ -752,10 +752,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.loadingMessages.set(true);
     this.messageService.getMessages(bookingId).subscribe({
       next: msgs => {
-        this.messages.set(msgs ?? []);
+        const sorted = (msgs ?? []).slice().sort((a, b) =>
+          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+        this.messages.set(sorted);
         this.unreadCount.set(0);
         this.loadingMessages.set(false);
-        setTimeout(() => this.scrollToBottom(), 50);
+        setTimeout(() => this.scrollToBottom(), 100);
       },
       error: () => this.loadingMessages.set(false)
     });
@@ -785,7 +787,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
           this.messages.update(list => [...list, msg]);
           this.newMessage = '';
           this.selectedTemplate = null;
-          setTimeout(() => this.scrollToBottom());
+          setTimeout(() => this.scrollToBottom(), 80);
         },
         error: () => { this.newMessage = ''; }
       });
@@ -804,7 +806,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.messages.update(list => [...list, msg]);
         this.newMessage = '';
         this.sendingMsg.set(false);
-        setTimeout(() => this.scrollToBottom());
+        setTimeout(() => this.scrollToBottom(), 80);
       },
       error: () => { this.sendingMsg.set(false); }
     });

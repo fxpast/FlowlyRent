@@ -737,12 +737,18 @@ export class MessagesComponent implements OnInit, OnDestroy {
     });
     const id = String(b['id']);
     this.messageService.getMessages(+id).subscribe({
-      next: msgs => { this.messages.set(msgs); this.loadingMessages.set(false); setTimeout(() => this.scrollToBottom(), 50); },
+      next: msgs => {
+        const sorted = (msgs ?? []).slice().sort((a: any, b: any) =>
+          new Date(a['createdAt'] || a['time'] || 0).getTime() - new Date(b['createdAt'] || b['time'] || 0).getTime());
+        this.messages.set(sorted);
+        this.loadingMessages.set(false);
+        setTimeout(() => this.scrollToBottom(), 100);
+      },
       error: () => this.loadingMessages.set(false)
     });
     this.wsSubscription = this.messageService.watchMessages(+id).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
-      setTimeout(() => this.scrollToBottom());
+      setTimeout(() => this.scrollToBottom(), 80);
     });
   }
 
@@ -751,7 +757,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     if (!b || !this.newMessage.trim() || this.sending()) return;
     this.sending.set(true);
     this.messageService.sendMessage(+b['id'], this.newMessage.trim()).subscribe({
-      next: msg => { this.messages.update(l => [...l, msg]); this.newMessage = ''; this.sending.set(false); setTimeout(() => this.scrollToBottom()); },
+      next: msg => { this.messages.update(l => [...l, msg]); this.newMessage = ''; this.sending.set(false); setTimeout(() => this.scrollToBottom(), 80); },
       error: () => this.sending.set(false)
     });
   }
