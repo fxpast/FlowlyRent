@@ -654,12 +654,16 @@ export class PropertiesComponent implements OnInit {
 
       const d10 = (s: string) => (s ?? '').substring(0, 10);
       // Fix 1 : inclure le jour de départ (>= au lieu de >)
-      const current  = rel.find(b => d10(b['arrival']) <= today && d10(b['departure']) >= today);
-      // nextBook : première réservation dont l'arrivée est APRÈS celle de current
-      // (permet d'inclure les arrivées aujourd'hui même quand current part aujourd'hui)
+      // current = séjour qui couvre aujourd'hui avec l'arrivée la plus ancienne
+      // (si départ aujourd'hui + arrivée aujourd'hui coexistent, on prend celui qui part)
+      const current = rel
+        .filter(b => d10(b['arrival']) <= today && d10(b['departure']) >= today)
+        .sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])))[0] ?? null;
+
+      // nextBook : première réservation après l'arrivée de current
       const nextBook = rel
         .filter(b => d10(b['arrival']) > d10(current ? current['arrival'] : today))
-        .sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])))[0];
+        .sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])))[0] ?? null;
 
       const depDays = current  ? daysDiff(d10(current['departure'])) : null;
       const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
