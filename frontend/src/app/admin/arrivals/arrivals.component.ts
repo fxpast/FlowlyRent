@@ -40,7 +40,7 @@ import { localDateStr } from '../../core/utils/date.utils';
               }
             </div>
             <div style="display:flex;align-items:center;gap:6px">
-              @if (isToday(b['arrival']) && !reminder.hasSentToday(b['id'])) {
+              @if (!isPast(b['arrival']) && !reminder.hasSent(b['id'])) {
                 <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
               }
               <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
@@ -105,7 +105,7 @@ import { localDateStr } from '../../core/utils/date.utils';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
-              @if (isToday(b['arrival']) && !reminder.hasSentToday(b['id'])) {
+              @if (!isPast(b['arrival']) && !reminder.hasSent(b['id'])) {
                 <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
               }
               @if (b['status'] !== 'cancelled') {
@@ -185,7 +185,7 @@ export class ArrivalsComponent implements OnInit {
     });
   }
 
-  isToday(date: string): boolean { return (date ?? '').substring(0, 10) === localDateStr(); }
+  isPast(date: string): boolean { return (date ?? '').substring(0, 10) < localDateStr(); }
 
   guestName(b: any): string {
     const first = b['guestFirstName'] || b['firstName'] || '';

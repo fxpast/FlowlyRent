@@ -54,7 +54,7 @@ import { localDateStr } from '../../core/utils/date.utils';
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
-                      @if (!reminder.hasSentToday(b.id)) {
+                      @if (!reminder.hasSent(b.id)) {
                         <mat-icon class="msg-reminder" matTooltip="Message check-out non envoyé">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
@@ -91,7 +91,7 @@ import { localDateStr } from '../../core/utils/date.utils';
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
-                      @if (!reminder.hasSentToday(b.id)) {
+                      @if (!reminder.hasSent(b.id)) {
                         <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
