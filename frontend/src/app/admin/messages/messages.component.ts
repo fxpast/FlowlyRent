@@ -756,8 +756,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
     const b = this.selectedBooking();
     if (!b || !this.newMessage.trim() || this.sending()) return;
     this.sending.set(true);
-    this.messageService.sendMessage(+b['id'], this.newMessage.trim()).subscribe({
-      next: msg => { this.messages.update(l => [...l, msg]); this.newMessage = ''; this.sending.set(false); setTimeout(() => this.scrollToBottom(), 80); },
+    const content = this.newMessage.trim();
+    const localMsg = { id: Date.now(), bookingId: +b['id'], sender: 'HOST' as const, content, createdAt: new Date().toISOString() };
+    this.messageService.sendMessage(+b['id'], content).subscribe({
+      next: () => { this.messages.update(l => [...l, localMsg]); this.newMessage = ''; this.sending.set(false); setTimeout(() => this.scrollToBottom(), 80); },
       error: () => this.sending.set(false)
     });
   }

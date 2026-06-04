@@ -785,9 +785,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
     const bookingId = Number(this.data['id']);
     if (bookingId) {
+      const localMsg = { id: Date.now(), bookingId, sender: 'HOST' as const, content, createdAt: new Date().toISOString() };
       this.messageService.sendMessage(bookingId, content).subscribe({
-        next: msg => {
-          this.messages.update(list => [...list, msg]);
+        next: () => {
+          this.messages.update(list => [...list, localMsg]);
           this.newMessage = '';
           this.selectedTemplate = null;
           this.reminderService.markSent(bookingId);
@@ -805,9 +806,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (!content || this.sendingMsg()) return;
     const bookingId = Number(this.data['id']);
     this.sendingMsg.set(true);
+    const localMsg = { id: Date.now(), bookingId, sender: 'HOST' as const, content, createdAt: new Date().toISOString() };
     this.messageService.sendMessage(bookingId, content).subscribe({
-      next: msg => {
-        this.messages.update(list => [...list, msg]);
+      next: () => {
+        this.messages.update(list => [...list, localMsg]);
         this.newMessage = '';
         this.sendingMsg.set(false);
         this.reminderService.markSent(bookingId);
