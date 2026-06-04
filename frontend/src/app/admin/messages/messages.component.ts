@@ -165,6 +165,7 @@ const TYPE_LABELS: Record<string, string> = {
               <code (click)="insertVar('{{depart}}')">{{'{{'}}depart{{'}}'}}</code>
               <code (click)="insertVar('{{logement}}')">{{'{{'}}logement{{'}}'}}</code>
               <code (click)="insertVar('{{code_acces}}')">{{'{{'}}code_acces{{'}}'}}</code>
+              <code (click)="insertVar('{{code_acces_precedent}}')" matTooltip="Ancien code d'accès (avant régénération)">{{'{{'}}code_acces_precedent{{'}}'}}</code>
               <code (click)="insertVar('{{heure_checkin}}')" matTooltip="Heure d'arrivée (standard ou arrangement particulier)">{{'{{'}}heure_checkin{{'}}'}}</code>
               <code (click)="insertVar('{{heure_checkout}}')" matTooltip="Heure de départ (standard ou arrangement particulier)">{{'{{'}}heure_checkout{{'}}'}}</code>
               <button mat-icon-button (click)="insertVar(genCode())" matTooltip="Générer un code 4 chiffres et l'insérer">
@@ -820,7 +821,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     const times   = this.selectedBookingTimes();
     const content = this.templateLang() === 'en' && t.contentEn ? t.contentEn : t.contentFr;
     if (!content) return;
-    this.newMessage = this.templateService.apply(content, b, cfg?.accessCode, times.checkin, times.checkout);
+    this.newMessage = this.templateService.apply(content, b, cfg?.accessCode, times.checkin, times.checkout, cfg?.previousAccessCode);
   }
 
   insertVar(v: string): void {

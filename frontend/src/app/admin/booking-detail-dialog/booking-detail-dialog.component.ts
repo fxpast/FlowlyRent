@@ -573,7 +573,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   saving         = signal(false);
   activeTab      = signal(0);
-  propAccessCode = signal<string | undefined>(undefined);
+  propAccessCode         = signal<string | undefined>(undefined);
+  propPreviousAccessCode = signal<string | undefined>(undefined);
   draft: Record<string, any>;
 
   messages = signal<Message[]>([]);
@@ -721,6 +722,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         next: cfgs => {
           const cfg = cfgs.find(c => c.beds24PropertyId === pid);
           this.propAccessCode.set(cfg?.accessCode ?? '');
+          this.propPreviousAccessCode.set(cfg?.previousAccessCode ?? '');
         },
         error: () => this.propAccessCode.set('')
       });
@@ -735,7 +737,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (!t) return;
     const content = this.templateLang() === 'en' && t.contentEn ? t.contentEn : t.contentFr;
     if (!content) return;
-    this.newMessage = this.templateService.apply(content, this.draft, this.propAccessCode() || undefined, this.arrivalTime, this.departureTime);
+    this.newMessage = this.templateService.apply(content, this.draft, this.propAccessCode() || undefined, this.arrivalTime, this.departureTime, this.propPreviousAccessCode() || undefined);
     this.selectedTemplate = null;
   }
 

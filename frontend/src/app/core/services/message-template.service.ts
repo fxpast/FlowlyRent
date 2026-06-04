@@ -39,7 +39,7 @@ export class MessageTemplateService {
    * Si accessCode est fourni (code stocké sur la propriété), il est utilisé pour {{code_acces}}.
    * Sinon un code aléatoire est généré à la volée.
    */
-  apply(content: string, booking: any, accessCode?: string, checkinTime?: string, checkoutTime?: string): string {
+  apply(content: string, booking: any, accessCode?: string, checkinTime?: string, checkoutTime?: string, previousAccessCode?: string): string {
     const first   = booking['guestFirstName'] || booking['firstName'] || '';
     const last    = booking['guestLastName']  || booking['lastName']  || '';
     const nom     = (first + ' ' + last).trim() || '—';
@@ -49,14 +49,16 @@ export class MessageTemplateService {
     const code    = accessCode ?? '';
     const checkin  = checkinTime  || '16:00';
     const checkout = checkoutTime || '11:00';
+    const prevCode = previousAccessCode ?? '';
     return content
-      .replace(/\{\{nom\}\}/g,           nom)
-      .replace(/\{\{arrivee\}\}/g,       arr)
-      .replace(/\{\{depart\}\}/g,        dep)
-      .replace(/\{\{logement\}\}/g,      prop)
-      .replace(/\{\{code_acces\}\}/g,    code)
-      .replace(/\{\{heure_checkin\}\}/g, checkin)
-      .replace(/\{\{heure_checkout\}\}/g, checkout);
+      .replace(/\{\{nom\}\}/g,                   nom)
+      .replace(/\{\{arrivee\}\}/g,               arr)
+      .replace(/\{\{depart\}\}/g,                dep)
+      .replace(/\{\{logement\}\}/g,              prop)
+      .replace(/\{\{code_acces\}\}/g,            code)
+      .replace(/\{\{code_acces_precedent\}\}/g,  prevCode)
+      .replace(/\{\{heure_checkin\}\}/g,         checkin)
+      .replace(/\{\{heure_checkout\}\}/g,        checkout);
   }
 
   genCode(): string {
