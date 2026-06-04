@@ -99,17 +99,17 @@ FlowlyRent/
 │       │   ├── Beds24Account.java    # Compte Beds24 lié à un AppUser (1:1)
 │       │   ├── Property.java         # Logement (lié à AppUser)
 │       │   ├── PropertyRoom.java     # Chambre/unité Beds24 dans un logement
-│       │   ├── Booking.java          # Réservation
-│       │   ├── Guest.java            # Voyageur
-│       │   ├── Message.java          # Message hôte <-> voyageur
-│       │   ├── Payment.java          # Paiement Stripe
-│       │   ├── Channel.java          # Canal iCal (legacy)
-│       │   ├── AvailabilityBlock.java # Blocage manuel de dates
+│       │   ├── PropertyConfig.java   # Config par propriété — accessCode, previousAccessCode, cleaningHours, shortName
+│       │   ├── PropertyInventoryItem.java # Équipement inventaire — label, category, quantity, sortOrder
+│       │   ├── BookingTimeOverride.java   # Override horaires check-in/check-out par réservation Beds24
+│       │   ├── MessageTemplate.java  # Modèle de message — contentFr, contentEn, type, beds24PropertyId
 │       │   ├── HousekeepingTask.java  # Tâche ménage — housekeeper FK, report, hasIncident
 │       │   ├── HousekeeperProfile.java # Prestataire ménage — linkedUser (AppUser HOUSEKEEPER)
+│       │   ├── HousekeepingStaff.java  # Personnel interne ménage (distinct des prestataires externes)
 │       │   ├── TaskPhoto.java         # Photo tâche — url (Cloudinary) + publicId + data (legacy base64)
 │       │   ├── AnalyticsEvent.java    # Événement analytics (PAGE_VIEW, LOGIN, CLICK)
 │       │   ├── Feedback.java          # Feedback utilisateur (catégorie + message + statut)
+│       │   ├── ExpenseRule.java       # Règle catégorisation transactions Qonto (keywords → catégorie)
 │       │   └── enums/
 │       │       ├── SubscriptionPlan.java  # FREE, STARTER, PRO, AGENCE
 │       │       ├── UserRole.java          # USER, ADMIN, HOUSEKEEPER
@@ -134,20 +134,26 @@ FlowlyRent/
 │       │   ├── AnalyticsService.java  # Enregistrement events + calcul KPIs superadmin
 │       │   └── SyncResult.java        # DTO résultat de sync
 │       ├── controller/
-│       │   ├── AuthController.java          # /auth/register, /auth/login
-│       │   ├── UserSettingsController.java  # /user/profile, /user/beds24/**, /user/password, /user/feedback
-│       │   ├── AdminBookingController.java  # /admin/bookings/**
-│       │   ├── AdminMessageController.java  # /admin/messages/**
-│       │   ├── AdminPaymentController.java  # /admin/payments/**
-│       │   ├── AdminHousekeeperController.java  # /admin/housekeepers/** (CRUD + activate/deactivate portal)
-│       │   ├── AdminHousekeepingController.java # /admin/housekeeping/** (tâches + GET /{id}/photos)
-│       │   ├── HousekeeperPortalController.java # /housekeeper/** (espace prestataire — ROLE_HOUSEKEEPER)
-│       │   ├── SyncController.java          # /sync/channels/** (iCal uniquement)
-│       │   ├── PublicBookingController.java # /public/{slug}/** + /public/**
-│       │   ├── StripeWebhookController.java # /webhooks/stripe
-│       │   ├── AnalyticsController.java     # /analytics/track (public — visiteurs anonymes)
-│       │   ├── FeedbackController.java      # /user/feedback (POST)
-│       │   └── SuperAdminController.java    # /superadmin/** (ROLE_ADMIN requis)
+│       │   ├── AuthController.java                  # /auth/register, /auth/login
+│       │   ├── UserSettingsController.java          # /user/profile, /user/beds24/**, /user/password, /user/feedback
+│       │   ├── AdminBookingController.java          # /admin/bookings/**
+│       │   ├── AdminMessageController.java          # /admin/messages/**
+│       │   ├── AdminMessageTemplateController.java  # /admin/message-templates/** (CRUD modèles FR+EN)
+│       │   ├── AdminPaymentController.java          # /admin/payments/**
+│       │   ├── AdminPropertyController.java         # /admin/properties (pass-through Beds24)
+│       │   ├── AdminPropertyConfigController.java   # /admin/property-configs/** (accessCode, shortName, cleaningHours)
+│       │   ├── AdminPropertyInventoryController.java # /admin/property-inventory/** (équipements par logement)
+│       │   ├── AdminBookingTimeOverrideController.java # /admin/booking-time-overrides/** (horaires custom)
+│       │   ├── AdminHousekeeperController.java      # /admin/housekeepers/** (CRUD + activate/deactivate portal)
+│       │   ├── AdminHousekeepingController.java     # /admin/housekeeping/** (tâches + GET /{id}/photos)
+│       │   ├── AdminAvailabilityController.java     # /admin/availability/** (calendrier + blocages)
+│       │   ├── HousekeeperPortalController.java     # /housekeeper/** (espace prestataire — ROLE_HOUSEKEEPER)
+│       │   ├── SyncController.java                  # /sync/channels/** (iCal uniquement)
+│       │   ├── PublicBookingController.java         # /public/{slug}/** + /public/**
+│       │   ├── StripeWebhookController.java         # /webhooks/stripe
+│       │   ├── AnalyticsController.java             # /analytics/track (public — visiteurs anonymes)
+│       │   ├── FeedbackController.java              # /user/feedback (POST)
+│       │   └── SuperAdminController.java            # /superadmin/** (ROLE_ADMIN requis)
 │       └── dto/
 │           ├── Beds24ApiResponse.java   # Wrapper {"success":true,"data":[...],"pages":{}}
 │           ├── Beds24AuthDTO.java       # token, refreshToken, expiresIn
@@ -177,14 +183,18 @@ FlowlyRent/
 │           ├── core/
 │           │   ├── models/           # booking.model.ts, message.model.ts, payment.model.ts
 │           │   ├── services/
-│           │   │   ├── auth.service.ts      # Login JWT, localStorage — role USER/ADMIN/HOUSEKEEPER
-│           │   │   ├── booking.service.ts   # Appels API admin réservations
-│           │   │   ├── message.service.ts   # Appels API + WebSocket STOMP
-│           │   │   ├── payment.service.ts   # Appels API paiements Stripe
-│           │   │   ├── sync.service.ts      # Appels API synchronisation iCal
-│           │   │   ├── public.service.ts    # Appels API site public
-│           │   │   ├── analytics.service.ts # Auto-tracking PAGE_VIEW (tous visiteurs, auth ou non)
-│           │   │   ├── user.service.ts      # Profil, Beds24, mot de passe
+│           │   │   ├── auth.service.ts               # Login JWT, localStorage — role USER/ADMIN/HOUSEKEEPER
+│           │   │   ├── booking.service.ts            # Appels API + getPropertyNames() (merge shortName) + getPropertiesWithDisplayNames()
+│           │   │   ├── message.service.ts            # Appels API + WebSocket STOMP
+│           │   │   ├── message-template.service.ts   # CRUD modèles + apply() (variables nom, dates, code, horaires, code_precedent)
+│           │   │   ├── property-config.service.ts    # Config propriété — accessCode, shortName, cleaningHours
+│           │   │   ├── property-inventory.service.ts # Inventaire équipements par propriété
+│           │   │   ├── booking-time-override.service.ts # Override horaires check-in/check-out
+│           │   │   ├── payment.service.ts            # Appels API paiements Stripe
+│           │   │   ├── sync.service.ts               # Appels API synchronisation iCal
+│           │   │   ├── public.service.ts             # Appels API site public
+│           │   │   ├── analytics.service.ts          # Auto-tracking PAGE_VIEW (tous visiteurs, auth ou non)
+│           │   │   ├── user.service.ts               # Profil, Beds24, mot de passe
 │           │   │   ├── housekeeper.service.ts        # Admin — CRUD prestataires + activate/deactivate portal
 │           │   │   └── housekeeper-portal.service.ts # Portail — me, tasks, status, report, photos
 │           │   ├── guards/
@@ -198,19 +208,22 @@ FlowlyRent/
 │           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar (mat-sidenav-container)
 │           │   ├── login/login.component.ts           # Redirige ADMIN → /superadmin/dashboard
 │           │   ├── dashboard/dashboard.component.ts  # Stats du jour + listes semaine
-│           │   ├── arrivals/arrivals.component.ts    # Arrivées avec navigation semaine
-│           │   ├── departures/departures.component.ts
-│           │   ├── bookings/bookings.component.ts    # Liste + filtres + actions
-│           │   ├── booking-form/booking-form.component.ts  # Créer/modifier réservation
-│           │   ├── messages/messages.component.ts    # Chat temps réel
+│           │   ├── arrivals/arrivals.component.ts    # Arrivées avec navigation semaine (ligne cliquable → dialog)
+│           │   ├── departures/departures.component.ts # Départs (ligne cliquable → dialog)
+│           │   ├── bookings/bookings.component.ts    # Liste + filtres (ligne cliquable → dialog, pas de formulaire edit)
+│           │   ├── booking-form/booking-form.component.ts  # Créer réservation directe (location.back() au retour)
+│           │   ├── booking-detail-dialog/booking-detail-dialog.component.ts # Dialog réservation — détails, messages, entretien + horaires override
+│           │   ├── messages/messages.component.ts    # Chat temps réel + modèles FR/EN
 │           │   ├── payments/payments.component.ts    # Génération liens Stripe
 │           │   ├── sync/sync.component.ts            # Gestion canaux iCal
 │           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Prestataires + viewer rapport/photos
+│           │   ├── properties/properties.component.ts # Logements — occupancy, inventaire, code accès, nom court
+│           │   ├── calendar/calendar.component.ts    # Calendrier disponibilités
 │           │   ├── settings/settings.component.ts    # Beds24 + Profil + Mot de passe
 │           │   └── feedback/feedback.component.ts    # Formulaire feedback MVP
 │           ├── superadmin/                           # Accessible uniquement ROLE_ADMIN
 │           │   ├── superadmin.routes.ts
-│           │   ├── superadmin-layout.component.ts
+│           │   ├── superadmin-layout.component.ts    # Badge notification feedbacks NEW
 │           │   ├── dashboard/superadmin-dashboard.component.ts  # KPIs (users, logins, clics, visiteurs anonymes)
 │           │   ├── users/superadmin-users.component.ts          # Liste users + reset mdp + suppression
 │           │   └── feedbacks/superadmin-feedbacks.component.ts  # Feedbacks + gestion statut
@@ -220,7 +233,7 @@ FlowlyRent/
 │           │   └── tasks/housekeeper-tasks.component.ts    # Missions groupées par date, rapport, photos
 │           └── public/
 │               ├── public.routes.ts
-│               ├── home/home.component.ts            # Page d'accueil (bandeau bêta MVP)
+│               ├── home/home.component.ts            # Page d'accueil
 │               ├── property-detail/property-detail.component.ts  # Fiche + réservation
 │               └── booking/booking.component.ts      # Récapitulatif + messages client
 │
@@ -253,6 +266,12 @@ FlowlyRent/
 | `task_photos` | TaskPhoto | Photos tâche — `url` VARCHAR(500) Cloudinary + `public_id` VARCHAR(200) + `data` LONGTEXT (legacy base64) |
 | `analytics_events` | AnalyticsEvent | Événements PAGE_VIEW / LOGIN / CLICK — userId NULL pour visiteurs anonymes |
 | `feedbacks` | Feedback | Feedbacks utilisateurs — catégorie, message, statut (NEW/IN_PROGRESS/DONE/REJECTED) |
+| `property_configs` | PropertyConfig | Config par propriété — `accessCode`, `previousAccessCode`, `cleaningHours`, `shortName` |
+| `property_inventory_items` | PropertyInventoryItem | Inventaire équipements — label, category (BEDS/APPLIANCES/TECH/…), quantity, sortOrder |
+| `booking_time_overrides` | BookingTimeOverride | Override horaires — `beds24BookingId`, `checkinTime`, `checkoutTime`, `note` |
+| `message_templates` | MessageTemplate | Modèles messages — `contentFr`, `contentEn`, type (CHECKIN/CHECKOUT/CUSTOM), beds24PropertyId |
+| `housekeeping_staff` | HousekeepingStaff | Personnel interne ménage — firstName, lastName, phone, hourlyRate, hireDate |
+| `expense_rules` | ExpenseRule | Règles catégorisation Qonto — keywords, category |
 
 ---
 
@@ -316,6 +335,20 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | POST | `/admin/messages/{bookingId}` | Envoyer un message (hôte) |
 | GET | `/admin/messages/unread-count` | Nombre de messages non lus |
 | GET | `/admin/properties` | Liste des logements de l'utilisateur |
+| GET | `/admin/property-configs` | Configs des propriétés (accessCode, shortName, cleaningHours) |
+| PUT | `/admin/property-configs/{beds24PropertyId}` | Mettre à jour la config d'une propriété |
+| POST | `/admin/property-configs/{beds24PropertyId}/regenerate` | Régénérer le code d'accès |
+| GET | `/admin/property-inventory?beds24PropertyId=` | Inventaire équipements d'une propriété |
+| POST | `/admin/property-inventory` | Ajouter un équipement |
+| PUT | `/admin/property-inventory/{id}` | Modifier un équipement (ex: augmenter quantité) |
+| DELETE | `/admin/property-inventory/{id}` | Supprimer un équipement |
+| GET | `/admin/booking-time-overrides/{beds24BookingId}` | Horaires custom d'une réservation (404 si défaut) |
+| PUT | `/admin/booking-time-overrides/{beds24BookingId}` | Créer/modifier override horaires |
+| DELETE | `/admin/booking-time-overrides/{beds24BookingId}` | Supprimer override (retour horaires défaut) |
+| GET | `/admin/message-templates` | Liste des modèles de messages |
+| POST | `/admin/message-templates` | Créer un modèle |
+| PUT | `/admin/message-templates/{id}` | Modifier un modèle |
+| DELETE | `/admin/message-templates/{id}` | Supprimer un modèle (soft delete active=false) |
 | GET | `/admin/payments` | Liste des paiements |
 | POST | `/admin/payments/checkout-session` | Créer un lien Stripe Checkout |
 | POST | `/admin/payments/payment-intent` | Créer un Payment Intent Stripe |
@@ -557,6 +590,12 @@ Ne jamais les committer dans git.
 **CORS** : `WebConfig.java` lit `app.cors.allowed-origins` — défaut localhost:4200 en dev,
 variable `CORS_ALLOWED_ORIGINS` en prod.
 
+**WebSocket Railway** : `application-prod.yml` contient `server.forward-headers-strategy: native` pour que Tomcat
+fasse confiance aux headers `X-Forwarded-*` du proxy Railway. Sans ça, les WebSockets échouent avec 400.
+
+**Bug Railway `property_id`** : la table `housekeeping_tasks` en prod peut avoir une ancienne colonne `property_id NOT NULL`
+sans valeur par défaut (vestige d'une version précédente). Fix : `ALTER TABLE housekeeping_tasks MODIFY property_id BIGINT NULL;`
+
 ---
 
 ## Objectifs MVP — Statut
@@ -595,6 +634,16 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - [x] Consultation photos prestataire depuis le menu Ménage admin (MatDialog)
 - [x] Logo SVG + favicon maison bleue
 - [x] Domaine personnalisé flowlyrent.com
+- [x] Inventaire équipements par logement (BEDS, APPLIANCES, TECH, KITCHEN, BATHROOM, OUTDOOR, OTHER)
+- [x] Override horaires check-in/check-out par réservation (avec motif)
+- [x] Modèles de messages FR + EN avec variables : nom, arrivee, depart, logement, code_acces, code_acces_precedent, heure_checkin, heure_checkout
+- [x] Filtrage automatique modèles par langue de la réservation (champ `lang` Beds24)
+- [x] Nom court de propriété — substitue le nom Beds24 partout dans l'app
+- [x] Champ langue (lang) dans le détail de réservation (ISO 639-1 — envoyé vers Beds24)
+- [x] Badge notification feedbacks NEW dans le layout superadmin
+- [x] Dialogs plein écran sur mobile (≤600px)
+- [x] Règles d'occupation logements : Départ aujourd'hui · Arrivée aujourd'hui, prolongation même voyageur → Occupé vert
+- [x] Messages triés chronologiquement (plus ancien en haut, scroll automatique après envoi)
 
 ---
 
@@ -604,6 +653,11 @@ variable `CORS_ALLOWED_ORIGINS` en prod.
 - **Frontend** : composants standalone Angular 17, signals (`signal()`), syntaxe `@for` / `@if`
 - **Multi-tenant** : toujours filtrer par `getCurrentUserId()` dans les contrôleurs admin
 - **Dialogs admin** : utiliser `MatDialog` (CDK overlay) et non `position:fixed` inline — le `mat-sidenav-container` applique des transforms qui cassent `position:fixed`
+- **Dialogs mobile** : règle globale dans `styles.scss` — tous les dialogs passent en plein écran sur ≤600px automatiquement
+- **Noms de propriétés** : toujours utiliser `BookingService.getPropertyNames()` ou `getPropertiesWithDisplayNames()` — ces méthodes appliquent automatiquement le `shortName` si défini. Ne jamais utiliser `p['name']` directement dans les vues sans passer par ce service.
+- **Retour de navigation** : utiliser `location.back()` plutôt que `router.navigate(['/admin/bookings'])` — l'utilisateur revient au menu d'origine
+- **Templates messages** : `MessageTemplateService.apply(content, booking, accessCode?, checkinTime?, checkoutTime?, previousAccessCode?)` — les 4 derniers paramètres sont optionnels
+- **Arrow functions dans templates Angular** : ne jamais utiliser `=>` ou `<` / `>` inline dans `(click)=""` — créer une méthode dans le composant
 - **Langue de l'interface** : Français
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Sécurité repo public** : aucune valeur sensible en dur dans le code — tout passe par `${ENV_VAR}` sans défaut
