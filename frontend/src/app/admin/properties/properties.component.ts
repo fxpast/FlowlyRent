@@ -727,7 +727,7 @@ export class PropertiesComponent implements OnInit {
         tips: ['Vérifiez vos prix pour les nuits encore libres avant cette arrivée.',
                'Une offre last-minute peut éviter des nuits vides.',
                'Préparez le logement et confirmez les détails avec le prochain voyageur.'],
-        backToBack: !!btb, backToBackDate: btbDate };
+        };
     }
     return map;
   });
