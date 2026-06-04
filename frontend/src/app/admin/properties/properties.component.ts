@@ -404,7 +404,7 @@ interface OccupancyStatus {
       user-select: none;
     }
     .occ-banner:hover { filter: brightness(.97); }
-    .occ-icon  { font-size: 15px; width: 15px; height: 15px; }
+    .occ-icon  { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
     .occ-label { font-weight: 700; }
     .occ-sub   { font-weight: 400; opacity: .85; flex: 1; }
     .occ-arrow { font-size: 16px; width: 16px; height: 16px; margin-left: auto; opacity: .7; }
@@ -682,19 +682,37 @@ export class PropertiesComponent implements OnInit {
         if (dep === arr && dep >= today) { btb = true; btbDate = dep; break; }
       }
 
-      // ── Rouge : départ ou arrivée dans <= 1 jour ──
+      const guestName = (b: any) => {
+        const f = b['guestFirstName'] || b['firstName'] || '';
+        const l = b['guestLastName']  || b['lastName']  || '';
+        return (f + ' ' + l).trim() || b['guestName'] || '—';
+      };
+
+      // ── Back-to-back AUJOURD'HUI : départ + arrivée le même jour ──
       const depUrgent = depDays !== null && depDays <= 1;
       const arrUrgent = arrDays !== null && arrDays <= 1;
+      if (depDays === 0 && arrDays === 0 && d10(current!['departure']) === d10(nextBook!['arrival'])) {
+        const depName = guestName(current!);
+        const arrName = guestName(nextBook!);
+        map[id] = { type: 'urgent',
+          label: 'Back-to-back aujourd\'hui',
+          sublabel: `Départ : ${depName} · Arrivée : ${arrName}`,
+          color: '#e65100', bg: '#fff3e0', icon: 'swap_horiz',
+          sortKey: '00_btb',
+          tips: ['Gérez le départ puis préparez l\'arrivée sans délai.',
+                 'Vérifiez que le ménage est planifié entre les deux séjours.',
+                 'Confirmez l\'heure d\'arrivée avec le prochain voyageur.'],
+          backToBack: true, backToBackDate: today };
+        continue;
+      }
+
+      // ── Rouge : départ ou arrivée dans <= 1 jour ──
       if (depUrgent || arrUrgent) {
         const depLabel = depDays === 0 ? 'Départ aujourd\'hui' : 'Départ demain';
         const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
         const label    = depUrgent ? depLabel : arrLabel;
         const sub      = depUrgent && arrUrgent ? (depLabel + ' · ' + arrLabel) : undefined;
-        const tips = depUrgent && arrUrgent
-          ? ['Journée back-to-back : gérez le départ puis préparez l\'arrivée sans délai.',
-             'Vérifiez que le ménage est planifié entre les deux séjours.',
-             'Confirmez l\'heure d\'arrivée du prochain voyageur.']
-          : depUrgent
+        const tips = depUrgent
           ? ['Planifiez le ménage dès la sortie du voyageur.',
              'Vérifiez l\'état du logement et rechargez les consommables (linge, café, etc.).',
              'Mettez à jour vos disponibilités sur les plateformes si nécessaire.']
