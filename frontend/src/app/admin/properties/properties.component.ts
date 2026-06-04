@@ -672,9 +672,15 @@ export class PropertiesComponent implements OnInit {
       const depDays = current  ? daysDiff(d10(current['departure'])) : null;
       const arrDays = nextBook ? daysDiff(d10(nextBook['arrival']))   : null;
 
-      // Back-to-back : départ d'un séjour = arrivée du suivant le même jour
-      const btb = current && nextBook && d10(current['departure']) === d10(nextBook['arrival']);
-      const btbDate = btb ? d10(current!['departure']) : undefined;
+      // Back-to-back : chercher parmi toutes les paires consécutives triées par arrivée
+      const sorted = [...rel].sort((a, b) => d10(a['arrival']).localeCompare(d10(b['arrival'])));
+      let btb = false;
+      let btbDate: string | undefined;
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const dep = d10(sorted[i]['departure']);
+        const arr = d10(sorted[i + 1]['arrival']);
+        if (dep === arr && dep >= today) { btb = true; btbDate = dep; break; }
+      }
 
       // ── Rouge : départ ou arrivée dans <= 1 jour ──
       const depUrgent = depDays !== null && depDays <= 1;
