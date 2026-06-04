@@ -225,17 +225,17 @@ import { Subscription } from 'rxjs';
           }
         </ng-template>
 
-        <div class="channel-banner" [style.background]="channelColor()">
-          <mat-icon class="ch-icon">{{ channelIcon() }}</mat-icon>
-          <span class="ch-label">{{ channelLabel() }}</span>
-          @if (!isDirect()) {
-            <span class="ch-note">— messages transmis via Beds24</span>
-          } @else {
-            <span class="ch-note">— Email · SMS · WhatsApp</span>
-          }
-        </div>
+        <div class="messages-layout">
+          <div class="channel-banner" [style.background]="channelColor()">
+            <mat-icon class="ch-icon">{{ channelIcon() }}</mat-icon>
+            <span class="ch-label">{{ channelLabel() }}</span>
+            @if (!isDirect()) {
+              <span class="ch-note">— messages transmis via Beds24</span>
+            } @else {
+              <span class="ch-note">— Email · SMS · WhatsApp</span>
+            }
+          </div>
 
-        <mat-dialog-content class="messages-content">
           <div class="chat-area" #chatArea>
             @if (loadingMessages()) {
               <p class="msg-loading">Chargement…</p>
@@ -252,54 +252,54 @@ import { Subscription } from 'rxjs';
               <p class="msg-empty">Aucun message</p>
             }
           </div>
-        </mat-dialog-content>
 
-        @if (templates().length > 0) {
-          <div class="template-bar">
-            <mat-form-field appearance="outline" class="tpl-select" subscriptSizing="dynamic">
-              <mat-label><mat-icon class="tpl-icon">auto_fix_high</mat-icon> Modèle</mat-label>
-              <mat-select [(ngModel)]="selectedTemplate" (ngModelChange)="applyTemplate($event)">
-                <mat-option [value]="null">— Aucun modèle —</mat-option>
-                @for (t of templates(); track t.id) {
-                  <mat-option [value]="t">{{ t.name }}@if (t.contentEn) { &nbsp;·&nbsp;EN }</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <button mat-stroked-button class="tpl-lang-btn"
-                    (click)="toggleTemplateLang()"
-                    [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
-              {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
-            </button>
-          </div>
-        }
-
-        <div class="chat-input-bar">
-          <mat-form-field appearance="outline" class="chat-field">
-            <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="8"
-                      [(ngModel)]="newMessage" placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
-                      (keydown.enter)="onEnterSend($event)"></textarea>
-          </mat-form-field>
-          @if (isDirect()) {
-            <div class="direct-btns">
-              <button mat-icon-button class="btn-email" title="Envoyer par Email"
-                      (click)="sendDirect('email')" [disabled]="!newMessage.trim() || sendingMsg()">
-                <mat-icon>email</mat-icon>
-              </button>
-              <button mat-icon-button class="btn-sms" title="Envoyer par SMS"
-                      (click)="sendDirect('sms')" [disabled]="!newMessage.trim() || sendingMsg()">
-                <mat-icon>sms</mat-icon>
-              </button>
-              <button mat-icon-button class="btn-whatsapp" title="Envoyer par WhatsApp"
-                      (click)="sendDirect('whatsapp')" [disabled]="!newMessage.trim() || sendingMsg()">
-                <mat-icon>chat</mat-icon>
+          @if (templates().length > 0) {
+            <div class="template-bar">
+              <mat-form-field appearance="outline" class="tpl-select" subscriptSizing="dynamic">
+                <mat-label><mat-icon class="tpl-icon">auto_fix_high</mat-icon> Modèle</mat-label>
+                <mat-select [(ngModel)]="selectedTemplate" (ngModelChange)="applyTemplate($event)">
+                  <mat-option [value]="null">— Aucun modèle —</mat-option>
+                  @for (t of templates(); track t.id) {
+                    <mat-option [value]="t">{{ t.name }}@if (t.contentEn) { &nbsp;·&nbsp;EN }</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-stroked-button class="tpl-lang-btn"
+                      (click)="toggleTemplateLang()"
+                      [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
+                {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
               </button>
             </div>
-          } @else {
-            <button mat-icon-button color="primary" title="Envoyer via Beds24"
-                    (click)="sendMessage()" [disabled]="!newMessage.trim() || sendingMsg()">
-              <mat-icon>send</mat-icon>
-            </button>
           }
+
+          <div class="chat-input-bar">
+            <mat-form-field appearance="outline" class="chat-field">
+              <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"
+                        [(ngModel)]="newMessage" placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
+                        (keydown.enter)="onEnterSend($event)"></textarea>
+            </mat-form-field>
+            @if (isDirect()) {
+              <div class="direct-btns">
+                <button mat-icon-button class="btn-email" title="Envoyer par Email"
+                        (click)="sendDirect('email')" [disabled]="!newMessage.trim() || sendingMsg()">
+                  <mat-icon>email</mat-icon>
+                </button>
+                <button mat-icon-button class="btn-sms" title="Envoyer par SMS"
+                        (click)="sendDirect('sms')" [disabled]="!newMessage.trim() || sendingMsg()">
+                  <mat-icon>sms</mat-icon>
+                </button>
+                <button mat-icon-button class="btn-whatsapp" title="Envoyer par WhatsApp"
+                        (click)="sendDirect('whatsapp')" [disabled]="!newMessage.trim() || sendingMsg()">
+                  <mat-icon>chat</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <button mat-icon-button color="primary" title="Envoyer via Beds24"
+                      (click)="sendMessage()" [disabled]="!newMessage.trim() || sendingMsg()">
+                <mat-icon>send</mat-icon>
+              </button>
+            }
+          </div>
         </div>
 
       </mat-tab>
@@ -503,9 +503,9 @@ import { Subscription } from 'rxjs';
     }
     .ch-icon { font-size: 15px; width: 15px; height: 15px; }
     .ch-note { font-weight: 400; opacity: 0.85; }
-    .messages-content { padding: 0 !important; }
-    .chat-area { height: 300px; overflow-y: auto; padding: 12px 16px;
-      display: flex; flex-direction: column; gap: 8px; }
+    .messages-layout { display: flex; flex-direction: column; height: 420px; overflow: hidden; }
+    .chat-area { flex: 1; overflow-y: auto; padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 8px; min-height: 0; }
     .msg-loading, .msg-empty { text-align: center; color: #999; font-size: 13px; margin: auto; }
     .bubble-row { display: flex; }
     .bubble-row.host { justify-content: flex-end; }
