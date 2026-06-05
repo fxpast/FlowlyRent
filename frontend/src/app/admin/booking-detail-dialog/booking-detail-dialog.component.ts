@@ -529,7 +529,7 @@ import { Subscription } from 'rxjs';
     .tpl-select { width: 100%; }
     .tpl-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; margin-right: 4px; }
     .chat-input-bar { display: flex; align-items: flex-end; gap: 4px;
-      padding: 6px 16px 4px; border-top: 1px solid #e0e0e0; }
+      padding: 6px 16px 4px; border-top: 1px solid #e0e0e0; flex-shrink: 0; }
     .chat-field { flex: 1; }
     .direct-btns { display: flex; flex-direction: column; gap: 2px; }
     .btn-email    { color: #1976d2; }
@@ -570,8 +570,9 @@ import { Subscription } from 'rxjs';
       mat-dialog-content { min-width: unset; }
       .menage-content { min-width: unset; }
       .row-2, .row-3 { grid-template-columns: 1fr; }
-      .messages-layout { height: calc(100dvh - 180px); }
-      .chat-field textarea { min-height: 80px !important; }
+      .messages-layout { height: auto; overflow: visible; }
+      .chat-area { flex: none; overflow-y: visible; min-height: 200px; }
+      .chat-field textarea { min-height: 60px !important; }
     }
   `]
 })
