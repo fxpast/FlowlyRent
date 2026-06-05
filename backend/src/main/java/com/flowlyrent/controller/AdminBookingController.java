@@ -178,13 +178,14 @@ public class AdminBookingController {
     }
 
     @GetMapping("/today")
-    public ResponseEntity<?> getToday() {
+    public ResponseEntity<?> getToday(@RequestParam(required = false) String date) {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            String today     = LocalDate.now().toString();
-            String yesterday = LocalDate.now().minusDays(1).toString();
-            String pastLimit = LocalDate.now().minusDays(90).toString();
+            LocalDate localToday = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
+            String today     = localToday.toString();
+            String yesterday = localToday.minusDays(1).toString();
+            String pastLimit = localToday.minusDays(90).toString();
 
             // Départs du jour
             List<Map<String, Object>> departures = beds24.getBookings(token,

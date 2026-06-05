@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
 import { map, tap } from 'rxjs';
+import { localDateStr } from '../utils/date.utils';
 import { environment } from '@env/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -87,7 +88,7 @@ export class BookingService {
   }
 
   getToday(): Observable<{ departures: any[], arrivals: any[], ongoing: any[] }> {
-    return this.http.get<any>(`${this.base}/today`);
+    return this.http.get<any>(`${this.base}/today?date=${localDateStr()}`);
   }
 
   getArrivals(weekStart?: string): Observable<any[]> {
