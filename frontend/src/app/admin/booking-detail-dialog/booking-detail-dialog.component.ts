@@ -570,6 +570,8 @@ import { Subscription } from 'rxjs';
       mat-dialog-content { min-width: unset; }
       .menage-content { min-width: unset; }
       .row-2, .row-3 { grid-template-columns: 1fr; }
+      .messages-layout { height: calc(100dvh - 180px); }
+      .chat-field textarea { min-height: 80px !important; }
     }
   `]
 })
