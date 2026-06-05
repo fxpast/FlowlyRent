@@ -691,13 +691,19 @@ export class PropertiesComponent implements OnInit {
         }
       }
 
-      // ── Rouge : départ ou arrivée dans <= 1 jour ──
-      const depUrgent = depDays !== null && depDays <= 1;
-      const arrUrgent = arrDays !== null && arrDays <= 1;
-      if (depUrgent || arrUrgent) {
+      // ── Rouge : départ ou arrivée dans <= 1 jour, ou checkin aujourd'hui ──
+      const depUrgent    = depDays !== null && depDays <= 1;
+      const arrUrgent    = arrDays !== null && arrDays <= 1;
+      const checkinToday = current !== null && d10(current['arrival']) === today;
+      if (depUrgent || arrUrgent || checkinToday) {
         const depLabel = depDays === 0 ? 'Départ aujourd\'hui' : 'Départ demain';
         const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
-        const label    = (depUrgent && arrUrgent) ? (depLabel + ' · ' + arrLabel) : (depUrgent ? depLabel : arrLabel);
+        let label: string;
+        if (checkinToday && !depUrgent && !arrUrgent) {
+          label = 'Arrivée aujourd\'hui';
+        } else {
+          label = (depUrgent && arrUrgent) ? (depLabel + ' · ' + arrLabel) : (depUrgent ? depLabel : arrLabel);
+        }
         const tips = (depUrgent && arrUrgent)
           ? ['Gérez le départ puis préparez l\'arrivée.',
              'Vérifiez que le ménage est planifié entre les deux séjours.',
@@ -709,9 +715,10 @@ export class PropertiesComponent implements OnInit {
           : ['Envoyez les instructions de check-in si ce n\'est pas encore fait.',
              'Vérifiez le bon fonctionnement du code d\'accès.',
              'Confirmez l\'heure d\'arrivée avec le voyageur.'];
+        const sortRef = depUrgent ? d10(current!['departure']) : (nextBook ? d10(nextBook['arrival']) : today);
         map[id] = { type: 'urgent', label,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
-          sortKey: '0_' + (depUrgent ? d10(current!['departure']) : d10(nextBook!['arrival'])), tips };
+          sortKey: '0_' + sortRef, tips };
         continue;
       }
 
