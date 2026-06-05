@@ -51,11 +51,6 @@ interface NavItem { icon: string; label: string; route: string; }
       <mat-sidenav-content>
         <mat-toolbar color="primary">
           @if (isMobile()) {
-            <button mat-icon-button (click)="sidenav.toggle()" title="Menu">
-              <mat-icon>menu</mat-icon>
-            </button>
-          }
-          @if (isMobile()) {
             <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
           }
           <span class="toolbar-spacer"></span>
@@ -66,6 +61,15 @@ interface NavItem { icon: string; label: string; route: string; }
         <div class="content">
           <router-outlet />
         </div>
+        @if (isMobile()) {
+          <button mat-fab color="primary" class="nav-fab"
+                  (click)="sidenav.toggle()"
+                  [title]="sidenav.opened ? 'Fermer le menu' : 'Menu'"
+                  [matBadge]="unreadCount() > 0 ? unreadCount().toString() : null"
+                  matBadgeColor="warn" matBadgeSize="small">
+            <mat-icon>{{ sidenav.opened ? 'close' : 'menu' }}</mat-icon>
+          </button>
+        }
       </mat-sidenav-content>
     </mat-sidenav-container>
   `,
@@ -87,6 +91,13 @@ interface NavItem { icon: string; label: string; route: string; }
     .badge {
       background: #f44336; color: white; border-radius: 10px;
       padding: 2px 6px; font-size: 11px; font-weight: bold;
+    }
+    .nav-fab {
+      position: fixed !important;
+      bottom: 24px;
+      right: 20px;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     }
     @media (max-width: 768px) {
       .content { padding: 16px 12px; }
