@@ -183,7 +183,7 @@ interface ReportDraft {
                     @if (uploadingPhoto()) {
                       <div class="upload-progress">
                         <mat-spinner diameter="24"></mat-spinner>
-                        <span>Envoi en cours…</span>
+                        <span>{{ uploadProgress() }}</span>
                       </div>
                     } @else {
                       <div class="photo-type-row">
@@ -198,7 +198,7 @@ interface ReportDraft {
                         </button>
                       </div>
                       <input #photoInput type="file" accept="image/*,image/heic,image/heif"
-                             style="display:none" (change)="onPhotoSelected($event, task)">
+                             multiple style="display:none" (change)="onPhotoSelected($event, task)">
                     }
                   </div>
 
@@ -285,6 +285,7 @@ export class HousekeeperTasksComponent implements OnInit {
   lightboxPhoto = signal<TaskPhoto | null>(null);
   currentPhotoType = 'AFTER';
   uploadingPhoto = signal(false);
+  uploadProgress = signal('Envoi en cours…');
 
   draft: ReportDraft = { comment: '', hasIncident: false, incidentDesc: '' };
 
@@ -389,12 +390,25 @@ export class HousekeeperTasksComponent implements OnInit {
   }
 
   onPhotoSelected(event: Event, task: TaskWithPhotos): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.uploadingPhoto.set(true);
-    this.compressImage(file).then(base64 => {
+    const files = Array.from((event.target as HTMLInputElement).files ?? []);
+    if (!files.length) return;
+    this.uploadFilesSequentially(files, task, 0);
+  }
+
+  private uploadFilesSequentially(files: File[], task: TaskWithPhotos, index: number): void {
+    if (index >= files.length) {
+      this.zone.run(() => {
+        this.uploadingPhoto.set(false);
+        this.snack.open(files.length > 1 ? `${files.length} photos ajoutées` : 'Photo ajoutée', '', { duration: 2000 });
+      });
+      return;
+    }
+    this.zone.run(() => {
+      this.uploadingPhoto.set(true);
+      this.uploadProgress.set(files.length > 1 ? `Envoi ${index + 1}/${files.length}…` : 'Envoi en cours…');
+    });
+    this.compressImage(files[index]).then(base64 => {
       const token = this.svc.token();
-      console.log('[Photo] token:', token ? `${token.substring(0, 20)}... (${token.length} chars)` : 'NULL', '| tâche:', task.id);
       fetch(`${this.svc.baseUrl}/tasks/${task.id}/photos`, {
         method: 'POST',
         headers: {
@@ -410,17 +424,13 @@ export class HousekeeperTasksComponent implements OnInit {
           this.tasks.update(all => all.map(t =>
             t.id !== task.id ? t : { ...t, photos: [...(t.photos ?? []), photo], photosLoaded: true }
           ));
-          this.uploadingPhoto.set(false);
-          this.snack.open('Photo ajoutée', '', { duration: 2000 });
         });
+        this.uploadFilesSequentially(files, task, index + 1);
       }).catch((err: Error) => {
         this.zone.run(() => {
           this.uploadingPhoto.set(false);
           const status = err.message;
-          if (status === '401') {
-            this.auth.logout();
-            return;
-          }
+          if (status === '401') { this.auth.logout(); return; }
           const msg = status === '413' ? 'Image trop lourde' : `Erreur upload (${status})`;
           this.snack.open(msg, 'Fermer', { duration: 5000 });
         });

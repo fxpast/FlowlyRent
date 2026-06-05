@@ -102,3 +102,12 @@ mat-card {
   &.incident { background: rgba(230, 81, 0, 0.85); }
 }
 .mat-mdc-dialog-container .rphoto-caption { font-size: 11px; color: #666; padding: 4px 8px 6px; }
+.mat-mdc-dialog-container .rphoto-del {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.5); border: none; color: white;
+  border-radius: 50%; width: 22px; height: 22px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+.mat-mdc-dialog-container .admin-photo-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.mat-mdc-dialog-container .admin-upload-progress { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555; }

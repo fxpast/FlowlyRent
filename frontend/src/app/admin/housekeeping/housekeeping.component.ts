@@ -429,20 +429,43 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           }
           @if (reportPanel()!.loading) {
             <div class="rcenter"><mat-spinner diameter="36" /></div>
-          } @else if (reportPanel()!.photos.length === 0) {
-            <p class="rno-photos">Aucune photo déposée par le prestataire.</p>
           } @else {
             <div class="rsection">
-              <div class="rsection-label"><mat-icon>photo_library</mat-icon> Photos ({{ reportPanel()!.photos.length }})</div>
-              <div class="rphotos-grid">
-                @for (photo of reportPanel()!.photos; track photo.id) {
-                  <div class="rphoto-item">
-                    <img [src]="photo.url ?? photo.data" [alt]="photo.caption || photo.photoType" (click)="openFullscreen(photo.url ?? photo.data ?? '')">
-                    <div class="rphoto-badge" [class.incident]="photo.photoType === 'INCIDENT'">{{ photoTypeLabel(photo.photoType) }}</div>
-                    @if (photo.caption) { <div class="rphoto-caption">{{ photo.caption }}</div> }
-                  </div>
+              <div class="rsection-label" style="display:flex;align-items:center;justify-content:space-between">
+                <span><mat-icon>photo_library</mat-icon> Photos ({{ reportPanel()!.photos.length }})</span>
+                @if (adminUploadingPhoto()) {
+                  <span class="admin-upload-progress"><mat-spinner diameter="18"></mat-spinner> {{ adminUploadProgress() }}</span>
+                } @else {
+                  <span class="admin-photo-btns">
+                    <button mat-stroked-button type="button" (click)="triggerAdminPhoto('BEFORE', adminPhotoInput)">
+                      <mat-icon>photo_camera</mat-icon> Avant
+                    </button>
+                    <button mat-stroked-button type="button" (click)="triggerAdminPhoto('AFTER', adminPhotoInput)">
+                      <mat-icon>photo_camera</mat-icon> Après
+                    </button>
+                    <button mat-stroked-button color="warn" type="button" (click)="triggerAdminPhoto('INCIDENT', adminPhotoInput)">
+                      <mat-icon>warning</mat-icon> Incident
+                    </button>
+                    <input #adminPhotoInput type="file" accept="image/*,image/heic,image/heif"
+                           multiple style="display:none" (change)="onAdminPhotoSelected($event)">
+                  </span>
                 }
               </div>
+              @if (reportPanel()!.photos.length === 0) {
+                <p class="rno-photos">Aucune photo pour cette tâche.</p>
+              } @else {
+                <div class="rphotos-grid">
+                  @for (photo of reportPanel()!.photos; track photo.id) {
+                    <div class="rphoto-item">
+                      <img [src]="photo.url ?? photo.data" [alt]="photo.caption || photo.photoType" (click)="openFullscreen(photo.url ?? photo.data ?? '')">
+                      <div class="rphoto-badge" [class.incident]="photo.photoType === 'INCIDENT'">{{ photoTypeLabel(photo.photoType) }}</div>
+                      <button class="rphoto-del" (click)="deleteAdminPhoto(photo)" title="Supprimer">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
         </mat-dialog-content>
@@ -529,6 +552,9 @@ export class HousekeepingComponent implements OnInit {
   housekeepers = signal<HousekeeperProfile[]>([]);
   loading = signal(false);
   reportPanel = signal<ReportPanel | null>(null);
+  adminUploadingPhoto = signal(false);
+  adminUploadProgress = signal('Envoi en cours…');
+  private adminPhotoType = 'AFTER';
   showForm = false;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
@@ -670,6 +696,78 @@ export class HousekeepingComponent implements OnInit {
   }
 
   closeReport(): void { this.dialogRef?.close(); }
+
+  triggerAdminPhoto(type: string, input: HTMLInputElement): void {
+    this.adminPhotoType = type;
+    input.value = '';
+    input.click();
+  }
+
+  onAdminPhotoSelected(event: Event): void {
+    const panel = this.reportPanel();
+    if (!panel) return;
+    const files = Array.from((event.target as HTMLInputElement).files ?? []);
+    if (!files.length) return;
+    this.uploadAdminFilesSequentially(files, panel.taskId, 0);
+  }
+
+  private uploadAdminFilesSequentially(files: File[], taskId: number, index: number): void {
+    if (index >= files.length) {
+      this.adminUploadingPhoto.set(false);
+      this.snack.open(files.length > 1 ? `${files.length} photos ajoutées` : 'Photo ajoutée', '', { duration: 2000 });
+      return;
+    }
+    this.adminUploadingPhoto.set(true);
+    this.adminUploadProgress.set(files.length > 1 ? `Envoi ${index + 1}/${files.length}…` : 'Envoi en cours…');
+    this.compressImage(files[index]).then(base64 => {
+      this.http.post<TaskPhoto>(`${this.base}/admin/housekeeping/${taskId}/photos`,
+        { photoType: this.adminPhotoType, data: base64, caption: '' }
+      ).subscribe({
+        next: photo => {
+          this.reportPanel.update(p => p ? { ...p, photos: [...p.photos, photo] } : null);
+          this.uploadAdminFilesSequentially(files, taskId, index + 1);
+        },
+        error: () => {
+          this.adminUploadingPhoto.set(false);
+          this.snack.open('Erreur upload', 'Fermer', { duration: 4000 });
+        }
+      });
+    }).catch(() => {
+      this.adminUploadingPhoto.set(false);
+      this.snack.open('Impossible de lire l\'image', 'Fermer', { duration: 3000 });
+    });
+  }
+
+  deleteAdminPhoto(photo: TaskPhoto): void {
+    const panel = this.reportPanel();
+    if (!panel) return;
+    this.http.delete(`${this.base}/admin/housekeeping/${panel.taskId}/photos/${photo.id}`).subscribe({
+      next: () => this.reportPanel.update(p => p ? { ...p, photos: p.photos.filter(ph => ph.id !== photo.id) } : null),
+      error: () => this.snack.open('Erreur suppression', 'Fermer', { duration: 3000 })
+    });
+  }
+
+  private compressImage(file: File, maxPx = 1200, quality = 0.82): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   openFullscreen(dataUri: string): void {
     const win = window.open('', '_blank');

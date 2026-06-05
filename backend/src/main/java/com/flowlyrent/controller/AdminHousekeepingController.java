@@ -12,8 +12,10 @@ import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingStaffRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
+import com.flowlyrent.service.CloudinaryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +32,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/admin/housekeeping")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Tâches ménage")
 public class AdminHousekeepingController {
 
@@ -37,6 +40,7 @@ public class AdminHousekeepingController {
     private final HousekeepingStaffRepository staffRepo;
     private final HousekeeperProfileRepository housekeeperRepo;
     private final TaskPhotoRepository photoRepo;
+    private final CloudinaryService cloudinaryService;
     private final SecurityUtils securityUtils;
 
     // --- Tâches ---
@@ -134,6 +138,50 @@ public class AdminHousekeepingController {
                 .filter(t -> t.getUser().getId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
         return ResponseEntity.ok(photoRepo.findByTaskIdOrderByUploadedAtAsc(id));
+    }
+
+    @PostMapping("/{id}/photos")
+    public ResponseEntity<TaskPhoto> addPhoto(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Long userId = securityUtils.getCurrentUserId();
+        HousekeepingTask task = taskRepo.findById(id)
+                .filter(t -> t.getUser().getId().equals(userId))
+                .orElse(null);
+        if (task == null) return ResponseEntity.notFound().build();
+
+        TaskPhoto photo = new TaskPhoto();
+        photo.setTask(task);
+        photo.setPhotoType(body.getOrDefault("photoType", "AFTER"));
+        photo.setCaption(body.get("caption"));
+        photo.setData("");
+
+        String base64Data = body.get("data");
+        if (base64Data != null && !base64Data.isBlank()) {
+            try {
+                java.util.Map<?, ?> result = cloudinaryService.uploadBase64(
+                    base64Data, "flowlyrent/tasks/" + task.getId()
+                );
+                photo.setUrl(result.get("secure_url").toString());
+                photo.setPublicId(result.get("public_id").toString());
+                photo.setData(null);
+            } catch (Exception e) {
+                log.warn("Cloudinary upload failed, falling back to base64: {}", e.getMessage());
+                photo.setData(base64Data);
+            }
+        }
+        return ResponseEntity.ok(photoRepo.save(photo));
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long id, @PathVariable Long photoId) {
+        Long userId = securityUtils.getCurrentUserId();
+        taskRepo.findById(id)
+                .filter(t -> t.getUser().getId().equals(userId))
+                .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+        photoRepo.findById(photoId).ifPresent(photo -> {
+            if (photo.getPublicId() != null) cloudinaryService.delete(photo.getPublicId());
+        });
+        photoRepo.deleteById(photoId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
