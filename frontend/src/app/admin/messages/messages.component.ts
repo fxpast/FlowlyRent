@@ -542,8 +542,11 @@ const TYPE_LABELS: Record<string, string> = {
       h1 { font-size: 20px; }
       .messages-layout { grid-template-columns: 1fr; height: auto; }
       .conversations-panel { height: 50vh; }
-      .chat-panel { height: 60vh; }
+      .chat-panel { height: 70vh; }
       .row-2 { grid-template-columns: 1fr; }
+      .reply-box { flex-wrap: wrap; padding: 8px 10px; }
+      .reply-input { width: 100%; order: 10; }
+      .ext-channels { flex-direction: row; }
     }
   `]
 })
