@@ -276,8 +276,7 @@ import { Subscription } from 'rxjs';
           <div class="chat-input-bar">
             <mat-form-field appearance="outline" class="chat-field">
               <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"
-                        [(ngModel)]="newMessage" placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
-                        (keydown.enter)="onEnterSend($event)"></textarea>
+                        [(ngModel)]="newMessage" placeholder="Écrire un message…"></textarea>
             </mat-form-field>
             <button mat-icon-button title="Copier dans le presse-papier"
                     (click)="copyToClipboard()" [disabled]="!newMessage.trim()">
@@ -751,10 +750,6 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.selectedTemplate = null;
   }
 
-  onEnterSend(e: Event): void {
-    const ke = e as KeyboardEvent;
-    if (!ke.shiftKey) { e.preventDefault(); this.sendMessage(); }
-  }
 
   private loadMessages(): void {
     const bookingId = Number(this.data['id']);
