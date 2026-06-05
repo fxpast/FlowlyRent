@@ -279,6 +279,10 @@ import { Subscription } from 'rxjs';
                         [(ngModel)]="newMessage" placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
                         (keydown.enter)="onEnterSend($event)"></textarea>
             </mat-form-field>
+            <button mat-icon-button title="Copier dans le presse-papier"
+                    (click)="copyToClipboard()" [disabled]="!newMessage.trim()">
+              <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+            </button>
             @if (isDirect()) {
               <div class="direct-btns">
                 <button mat-icon-button class="btn-email" title="Envoyer par Email"
@@ -584,6 +588,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   newMessage   = '';
   templateLang = signal<'fr' | 'en'>('fr');
   sendingMsg   = signal(false);
+  copied       = signal(false);
   arrivalDate: Date | null = null;
   departureDate: Date | null = null;
   arrivalTime   = '16:00';
@@ -945,6 +950,13 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }
+
+  copyToClipboard(): void {
+    navigator.clipboard.writeText(this.newMessage.trim()).then(() => {
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    });
+  }
 
   confirmTimes(): void {
     const bookingId = String(this.data['id'] ?? '');

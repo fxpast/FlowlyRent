@@ -279,6 +279,11 @@ const TYPE_LABELS: Record<string, string> = {
                         (keydown.enter)="onEnter($event)"></textarea>
             </mat-form-field>
 
+            <button mat-icon-button matTooltip="Copier dans le presse-papier"
+                    [disabled]="!newMessage.trim()" (click)="copyToClipboard()">
+              <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+            </button>
+
             @if (isDirect(selectedBooking())) {
               <!-- Réservation directe : envoi via canal externe -->
               <div class="ext-channels">
@@ -548,6 +553,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   editorLang   = signal<'fr' | 'en'>('fr');
   templateLang = signal<'fr' | 'en'>('fr');
+  copied       = signal(false);
 
   searchDraft     = '';
   allBookings     = signal<any[]>([]);
@@ -771,6 +777,13 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   /* ── Templates ── */
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }
+
+  copyToClipboard(): void {
+    navigator.clipboard.writeText(this.newMessage.trim()).then(() => {
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    });
+  }
 
   get activeContent(): string {
     return this.editorLang() === 'en' ? (this.editForm.contentEn ?? '') : (this.editForm.contentFr ?? '');
