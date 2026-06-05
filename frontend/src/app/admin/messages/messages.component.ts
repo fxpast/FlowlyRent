@@ -546,6 +546,7 @@ const TYPE_LABELS: Record<string, string> = {
       .row-2 { grid-template-columns: 1fr; }
       .reply-box { flex-wrap: wrap; padding: 8px 10px; }
       .reply-input { width: 100%; order: 10; }
+      .reply-input textarea { min-height: 100px !important; }
       .ext-channels { flex-direction: row; }
     }
   `]
