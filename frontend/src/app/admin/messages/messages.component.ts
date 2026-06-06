@@ -15,12 +15,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TextFieldModule } from '@angular/cdk/text-field';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, from, of, Observable } from 'rxjs';
+import { concatMap, tap } from 'rxjs/operators';
 import { MessageService } from '../../core/services/message.service';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
 import { BookingTimeOverrideService } from '../../core/services/booking-time-override.service';
+import { TranslationService } from '../../core/services/translation.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 const TPL_PLACEHOLDER = 'Bonjour {{nom}}, votre check-in est le {{arrivee}}…';
@@ -234,10 +236,22 @@ const TYPE_LABELS: Record<string, string> = {
                 <p>Aucun message pour cette réservation</p>
               </div>
             } @else {
-              @for (m of messages(); track $index) {
+              @for (m of messages(); track m['id']) {
                 <div class="message" [class.host-msg]="isHost(m)" [class.guest-msg]="!isHost(m)">
                   <div class="bubble">
-                    <p>{{ m['content'] || m['message'] }}</p>
+                    @if (!isHost(m) && translating().has(m['id'])) {
+                      <p class="tl-pending">Traduction…</p>
+                    } @else if (!isHost(m) && translations().has(m['id']) && !showOriginal().has(m['id'])) {
+                      <p>{{ translations().get(m['id']) }}</p>
+                      <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">Voir original</button></div>
+                    } @else {
+                      <p>{{ m['content'] || m['message'] }}</p>
+                      @if (!isHost(m) && translations().has(m['id'])) {
+                        <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">Voir traduction</button></div>
+                      } @else if (!isHost(m) && !translating().has(m['id'])) {
+                        <div class="tl-bar"><button class="tl-btn" (click)="translateOnDemand(m)"><mat-icon class="tl-icon">translate</mat-icon></button></div>
+                      }
+                    }
                     <small>
                       {{ isHost(m) ? 'Vous' : guestName(selectedBooking()) }}
                       · {{ (m['createdAt'] || m['time']) | date:'dd/MM HH:mm' }}
@@ -521,6 +535,11 @@ const TYPE_LABELS: Record<string, string> = {
     .guest-msg .bubble { background: #f0f4f8; border-bottom-left-radius: 4px; }
     .bubble p { margin: 0 0 4px; line-height: 1.5; white-space: pre-wrap; }
     .bubble small { opacity: 0.7; font-size: 11px; }
+    .tl-bar { display: flex; justify-content: flex-start; margin: 0 0 4px; }
+    .tl-btn { background: none; border: none; font-size: 10px; color: rgba(0,0,0,0.4); cursor: pointer; padding: 0; display: flex; align-items: center; gap: 2px; line-height: 1; }
+    .tl-btn:hover { color: rgba(0,0,0,0.7); }
+    .tl-icon { font-size: 12px !important; width: 12px !important; height: 12px !important; }
+    .tl-pending { margin: 0 0 4px; font-style: italic; opacity: 0.5; font-size: 12px; }
 
     .reply-box { display: flex; gap: 8px; align-items: flex-end; padding: 10px 14px; flex-shrink: 0; }
     .reply-input { flex: 1; }
@@ -569,6 +588,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
   sending         = signal(false);
   loadingBookings = signal(false);
   loadingMessages = signal(false);
+
+  translations = signal<Map<number, string>>(new Map());
+  translating  = signal<Set<number>>(new Set());
+  showOriginal = signal<Set<number>>(new Set());
 
   templates        = signal<MessageTemplate[]>([]);
   loadingTemplates = signal(false);
@@ -637,6 +660,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private templateService: MessageTemplateService,
     private propConfigService: PropertyConfigService,
     private timeOverrideService: BookingTimeOverrideService,
+    private translationService: TranslationService,
     private snackBar: MatSnackBar
   ) {}
 
@@ -727,6 +751,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
     this.wsSubscription?.unsubscribe();
     this.selectedBooking.set(b);
     this.messages.set([]);
+    this.translations.set(new Map());
+    this.translating.set(new Set());
+    this.showOriginal.set(new Set());
     this.loadingMessages.set(true);
     // Langue : non-FR → template EN
     const bookingLang = (b['lang'] || '').toLowerCase();
@@ -752,12 +779,18 @@ export class MessagesComponent implements OnInit, OnDestroy {
           new Date(a['createdAt'] || a['time'] || 0).getTime() - new Date(b['createdAt'] || b['time'] || 0).getTime());
         this.messages.set(sorted);
         this.loadingMessages.set(false);
+        if (bookingLang && bookingLang !== 'fr') {
+          this.autoTranslateGuestMessages(sorted, bookingLang);
+        }
         setTimeout(() => this.scrollToBottom(), 100);
       },
       error: () => this.loadingMessages.set(false)
     });
     this.wsSubscription = this.messageService.watchMessages(+id).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
+      if (!this.isHost(msg) && bookingLang && bookingLang !== 'fr') {
+        this.doTranslate(msg, bookingLang).subscribe();
+      }
       setTimeout(() => this.scrollToBottom(), 80);
     });
   }
@@ -880,6 +913,41 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   isHost(m: any): boolean {
     return String(m['sender'] ?? m['source'] ?? '').toLowerCase() === 'host';
+  }
+
+  private autoTranslateGuestMessages(msgs: any[], lang: string): void {
+    const guests = msgs.filter(m => !this.isHost(m));
+    if (!guests.length) return;
+    from(guests).pipe(concatMap(m => this.doTranslate(m, lang))).subscribe();
+  }
+
+  doTranslate(m: any, lang: string): Observable<string | null> {
+    const id   = m['id'] as number;
+    const text = (m['content'] || m['message'] || '').trim();
+    if (!text) return of<string | null>(null);
+    this.translating.update(s => new Set([...s, id]));
+    return this.translationService.translate(text, lang).pipe(
+      tap(translated => {
+        if (translated && translated !== text) {
+          this.translations.update(map => { const n = new Map(map); n.set(id, translated); return n; });
+        }
+        this.translating.update(s => { const n = new Set(s); n.delete(id); return n; });
+      })
+    );
+  }
+
+  translateOnDemand(m: any): void {
+    const b    = this.selectedBooking();
+    const lang = b ? (b['lang'] || '').toLowerCase() || 'autodetect' : 'autodetect';
+    this.doTranslate(m, lang).subscribe();
+  }
+
+  toggleOriginal(id: number): void {
+    this.showOriginal.update(s => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   }
 
   private scrollToBottom(): void {

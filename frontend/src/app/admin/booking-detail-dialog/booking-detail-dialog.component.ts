@@ -29,7 +29,9 @@ import { PropertyConfigService } from '../../core/services/property-config.servi
 import { MessageReminderService } from '../../core/services/message-reminder.service';
 import { Message } from '../../core/models/message.model';
 import { environment } from '@env/environment';
-import { Subscription } from 'rxjs';
+import { Subscription, from, of, Observable } from 'rxjs';
+import { concatMap, tap } from 'rxjs/operators';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-booking-detail-dialog',
@@ -248,7 +250,19 @@ import { Subscription } from 'rxjs';
             @for (m of messages(); track m.id) {
               <div class="bubble-row" [class.host]="m.sender === 'HOST'" [class.guest]="m.sender === 'GUEST'">
                 <div class="bubble">
-                  <div class="bubble-text">{{ m.content }}</div>
+                  @if (m.sender === 'GUEST' && dlgTranslating().has(m.id!)) {
+                    <div class="bubble-text tl-pending">Traduction…</div>
+                  } @else if (m.sender === 'GUEST' && dlgTranslations().has(m.id!) && !dlgShowOriginal().has(m.id!)) {
+                    <div class="bubble-text">{{ dlgTranslations().get(m.id!) }}</div>
+                    <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">Voir original</button></div>
+                  } @else {
+                    <div class="bubble-text">{{ m.content }}</div>
+                    @if (m.sender === 'GUEST' && dlgTranslations().has(m.id!)) {
+                      <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">Voir traduction</button></div>
+                    } @else if (m.sender === 'GUEST' && !dlgTranslating().has(m.id!)) {
+                      <div class="tl-bar"><button class="tl-btn" (click)="dlgTranslateOnDemand(m)"><mat-icon class="tl-icon">translate</mat-icon></button></div>
+                    }
+                  }
                   <div class="bubble-time">{{ m.createdAt | date:'dd/MM HH:mm' }}</div>
                 </div>
               </div>
@@ -520,6 +534,11 @@ import { Subscription } from 'rxjs';
       border-bottom-left-radius: 2px; }
     .bubble-text { font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
     .bubble-time { font-size: 10px; opacity: 0.65; align-self: flex-end; }
+    .tl-bar { display: flex; justify-content: flex-start; }
+    .tl-btn { background: none; border: none; font-size: 10px; color: rgba(0,0,0,0.4); cursor: pointer; padding: 0; display: flex; align-items: center; gap: 2px; }
+    .tl-btn:hover { color: rgba(0,0,0,0.7); }
+    .tl-icon { font-size: 12px !important; width: 12px !important; height: 12px !important; }
+    .tl-pending { font-style: italic; opacity: 0.5; font-size: 12px; }
     .template-bar { padding: 6px 16px 0; border-top: 1px solid #e8e8e8; background: #fafafa; display: flex; align-items: flex-start; gap: 8px; }
     .tpl-select { flex: 1; }
     .tpl-lang-btn { font-size: 11px !important; font-weight: 700 !important; min-width: 40px !important; height: 36px !important; padding: 0 8px !important; margin-top: 4px; flex-shrink: 0; }
@@ -641,6 +660,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   taskDate: Date | null = null;
   taskTime = '09:00';
 
+  dlgTranslations = signal<Map<number, string>>(new Map());
+  dlgTranslating  = signal<Set<number>>(new Set());
+  dlgShowOriginal = signal<Set<number>>(new Set());
+
   private wsSub?: Subscription;
   private readonly apiBase = environment.apiUrl;
 
@@ -655,6 +678,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private timeOverrideService: BookingTimeOverrideService,
     private propConfigService: PropertyConfigService,
     private reminderService: MessageReminderService,
+    private translationService: TranslationService,
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private router: Router
@@ -708,9 +732,15 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       },
       error: () => {} // 404 = pas d'override, heures par défaut
     });
+    const bookingLang = (this.data['lang'] || '').toLowerCase();
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
-      if (msg.sender === 'GUEST') this.unreadCount.update(n => n + 1);
+      if (msg.sender === 'GUEST') {
+        this.unreadCount.update(n => n + 1);
+        if (bookingLang && bookingLang !== 'fr') {
+          this.dlgDoTranslate(msg as any, bookingLang).subscribe();
+        }
+      }
       setTimeout(() => this.scrollToBottom(), 80);
     });
   }
@@ -763,6 +793,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const bookingId = Number(this.data['id']);
     if (!bookingId) return;
     this.loadingMessages.set(true);
+    const bookingLang = (this.data['lang'] || '').toLowerCase();
     this.messageService.getMessages(bookingId).subscribe({
       next: msgs => {
         const sorted = (msgs ?? []).slice().sort((a, b) =>
@@ -770,9 +801,43 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.messages.set(sorted);
         this.unreadCount.set(0);
         this.loadingMessages.set(false);
+        if (bookingLang && bookingLang !== 'fr') {
+          const guests = sorted.filter(m => m.sender === 'GUEST');
+          if (guests.length) {
+            from(guests as any[]).pipe(concatMap(m => this.dlgDoTranslate(m, bookingLang))).subscribe();
+          }
+        }
         setTimeout(() => this.scrollToBottom(), 100);
       },
       error: () => this.loadingMessages.set(false)
+    });
+  }
+
+  dlgDoTranslate(m: any, lang: string): Observable<string | null> {
+    const id   = m['id'] as number;
+    const text = (m['content'] || '').trim();
+    if (!text) return of<string | null>(null);
+    this.dlgTranslating.update(s => new Set([...s, id]));
+    return this.translationService.translate(text, lang).pipe(
+      tap(translated => {
+        if (translated && translated !== text) {
+          this.dlgTranslations.update(map => { const n = new Map(map); n.set(id, translated); return n; });
+        }
+        this.dlgTranslating.update(s => { const n = new Set(s); n.delete(id); return n; });
+      })
+    );
+  }
+
+  dlgTranslateOnDemand(m: any): void {
+    const lang = (this.data['lang'] || '').toLowerCase() || 'autodetect';
+    this.dlgDoTranslate(m, lang).subscribe();
+  }
+
+  toggleDlgOriginal(id: number): void {
+    this.dlgShowOriginal.update(s => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
     });
   }
 
