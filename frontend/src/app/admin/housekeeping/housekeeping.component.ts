@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -34,9 +34,18 @@ interface Task {
   reportComment?: string;
   incidentDescription?: string;
   reportedAt?: string;
+  extraHours?: number;
+  hourlyRate?: number;
   housekeeper?: { id: number; name: string; phone?: string; email?: string; hourlyRate?: number | null };
   property?: { id: number; name: string; city?: string };
   booking?: { id: number; firstName?: string; lastName?: string };
+}
+
+interface HkChargesEntry {
+  hk: { id: number; name: string; phone?: string; hourlyRate?: number | null };
+  tasks: Task[];
+  totalHours: number;
+  totalCost: number;
 }
 
 interface TaskPhoto {
@@ -406,6 +415,86 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               </mat-card>
             }
           </div>
+
+          <!-- ══ CHARGES MENSUELLES ══ -->
+          <mat-divider style="margin: 28px 0 20px"></mat-divider>
+          <div class="charges-section">
+            <div class="charges-header">
+              <div class="charges-title">
+                <mat-icon>payments</mat-icon>
+                <span>Charges mensuelles</span>
+              </div>
+              <div class="charges-nav">
+                <button mat-icon-button (click)="prevChargesMonth()" title="Mois précédent">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <span class="charges-month-label">{{ chargesMonthLabel() }}</span>
+                <button mat-icon-button (click)="nextChargesMonth()" title="Mois suivant">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            @if (chargesLoading()) {
+              <div class="center"><mat-spinner diameter="36"/></div>
+            } @else if (housekeeperCharges().length === 0) {
+              <p class="empty">Aucune tâche terminée ce mois-ci.</p>
+            } @else {
+              @for (entry of housekeeperCharges(); track entry.hk.id) {
+                <mat-card class="charges-card">
+                  <div class="charges-hk-header">
+                    <div class="charges-hk-name">
+                      <mat-icon>engineering</mat-icon>
+                      {{ entry.hk.name }}
+                    </div>
+                    <div class="charges-hk-totals">
+                      <span class="charges-badge-count">{{ entry.tasks.length }} tâche{{ entry.tasks.length > 1 ? 's' : '' }}</span>
+                      @if (entry.totalHours > 0) {
+                        <span class="charges-badge-hours">{{ entry.totalHours | number:'1.0-1' }} h</span>
+                      }
+                      @if (entry.totalCost > 0) {
+                        <span class="charges-badge-cost">{{ entry.totalCost | number:'1.2-2' }} €</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="charges-list">
+                    @for (task of entry.tasks; track task.id) {
+                      <div class="charges-row">
+                        <div class="charges-row-left">
+                          <span class="charges-row-date">{{ task.scheduledDate | date:'dd/MM':'':'fr-FR' }}</span>
+                          <span class="charges-row-type">{{ typeLabel(task.type) }}</span>
+                          <span class="charges-row-prop">{{ task.propertyName ?? task.beds24PropertyId }}</span>
+                        </div>
+                        <div class="charges-row-right">
+                          @if (task.extraHours != null) {
+                            <span class="charges-hours">{{ task.extraHours | number:'1.0-1' }} h</span>
+                          }
+                          @if (taskCost(task) > 0) {
+                            <span class="charges-cost-cell">{{ taskCost(task) | number:'1.2-2' }} €</span>
+                          } @else if (task.extraHours != null) {
+                            <span class="charges-cost-cell muted">—</span>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </mat-card>
+              }
+              @if (housekeeperCharges().length > 1) {
+                <div class="charges-grand-total">
+                  <span>Total</span>
+                  <div class="charges-hk-totals">
+                    @if (chargesTotalHours() > 0) {
+                      <span class="charges-badge-hours">{{ chargesTotalHours() | number:'1.0-1' }} h</span>
+                    }
+                    @if (chargesTotalCost() > 0) {
+                      <span class="charges-badge-cost">{{ chargesTotalCost() | number:'1.2-2' }} €</span>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
         </div>
       </mat-tab>
 
@@ -589,6 +678,33 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .intervention-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .intervention-form .full { width: 100%; }
     .intervention-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    /* Charges mensuelles */
+    .charges-section { margin-top: 4px; }
+    .charges-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .charges-title { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; color: #333; }
+    .charges-title mat-icon { color: #1976d2; }
+    .charges-nav { display: flex; align-items: center; gap: 2px; }
+    .charges-month-label { font-size: 14px; font-weight: 500; min-width: 130px; text-align: center; }
+    .charges-card { margin-bottom: 14px; overflow: hidden; padding: 0; }
+    .charges-hk-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #e3f2fd; flex-wrap: wrap; gap: 8px; }
+    .charges-hk-name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #0d47a1; }
+    .charges-hk-name mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .charges-hk-totals { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .charges-badge-count { font-size: 12px; color: #555; }
+    .charges-badge-hours { background: #bbdefb; color: #0d47a1; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .charges-badge-cost  { background: #1976d2; color: white; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+    .charges-list { padding: 4px 0; }
+    .charges-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 16px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+    .charges-row:last-child { border-bottom: none; }
+    .charges-row-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+    .charges-row-date { font-weight: 600; color: #555; flex-shrink: 0; }
+    .charges-row-type { color: #333; flex-shrink: 0; }
+    .charges-row-prop { color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .charges-row-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .charges-hours { background: #e8f5e9; color: #2e7d32; padding: 1px 7px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .charges-cost-cell { font-size: 13px; font-weight: 600; color: #1976d2; min-width: 60px; text-align: right; }
+    .charges-cost-cell.muted { color: #aaa; font-weight: 400; }
+    .charges-grand-total { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f5f5f5; border-radius: 8px; font-size: 14px; font-weight: 600; color: #333; margin-top: 4px; }
     /* dialog styles in global styles.scss (bypass ViewEncapsulation for CDK overlay) */
     .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
     .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
@@ -616,6 +732,39 @@ export class HousekeepingComponent implements OnInit {
   adminUploadProgress = signal('Envoi en cours…');
   private adminPhotoType = 'AFTER';
   interventionDraft = signal<InterventionDraft>({ show: false, housekeeperId: null, date: null, notes: '', saving: false });
+
+  chargesYear  = signal(new Date().getFullYear());
+  chargesMonth = signal(new Date().getMonth() + 1);
+  chargeTasks  = signal<Task[]>([]);
+  chargesLoading = signal(false);
+
+  chargesMonthLabel = computed(() => {
+    const d = new Date(this.chargesYear(), this.chargesMonth() - 1, 1);
+    const s = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  });
+
+  housekeeperCharges = computed<HkChargesEntry[]>(() => {
+    const byHk = new Map<number, HkChargesEntry>();
+    for (const task of this.chargeTasks()) {
+      if (!task.housekeeper || task.status !== 'DONE') continue;
+      const hkId = task.housekeeper.id;
+      if (!byHk.has(hkId)) {
+        byHk.set(hkId, { hk: task.housekeeper, tasks: [], totalHours: 0, totalCost: 0 });
+      }
+      const entry = byHk.get(hkId)!;
+      entry.tasks.push(task);
+      const hours = task.extraHours ?? 0;
+      const rate = Number(task.hourlyRate ?? task.housekeeper.hourlyRate ?? 0);
+      entry.totalHours += hours;
+      entry.totalCost  += hours * rate;
+    }
+    return Array.from(byHk.values()).sort((a, b) => a.hk.name.localeCompare(b.hk.name));
+  });
+
+  chargesTotalHours = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalHours, 0));
+  chargesTotalCost  = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalCost, 0));
+
   showForm = false;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
@@ -647,6 +796,41 @@ export class HousekeepingComponent implements OnInit {
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
     this.load();
+    this.loadCharges();
+  }
+
+  loadCharges(): void {
+    const y = this.chargesYear();
+    const m = this.chargesMonth();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const from = `${y}-${pad(m)}-01`;
+    const to   = `${y}-${pad(m)}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    this.chargesLoading.set(true);
+    this.http.get<Task[]>(`${this.base}/admin/housekeeping`, { params: { from, to } }).subscribe({
+      next: t => { this.chargeTasks.set(t); this.chargesLoading.set(false); },
+      error: () => this.chargesLoading.set(false)
+    });
+  }
+
+  prevChargesMonth(): void {
+    let m = this.chargesMonth() - 1;
+    let y = this.chargesYear();
+    if (m < 1) { m = 12; y--; }
+    this.chargesMonth.set(m); this.chargesYear.set(y);
+    this.loadCharges();
+  }
+
+  nextChargesMonth(): void {
+    let m = this.chargesMonth() + 1;
+    let y = this.chargesYear();
+    if (m > 12) { m = 1; y++; }
+    this.chargesMonth.set(m); this.chargesYear.set(y);
+    this.loadCharges();
+  }
+
+  taskCost(task: Task): number {
+    if (!task.extraHours) return 0;
+    return task.extraHours * Number(task.hourlyRate ?? task.housekeeper?.hourlyRate ?? 0);
   }
 
   load(): void {
