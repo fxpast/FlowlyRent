@@ -268,7 +268,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     <div class="task-notes">{{ task.notes }}</div>
                   }
                   <div class="task-actions">
-                    @if (task.status !== 'DONE') {
+                    @if (task.status === 'PENDING' || task.status === 'IN_PROGRESS') {
                       @if (task.status === 'PENDING') {
                         <button mat-stroked-button (click)="updateStatus(task, 'IN_PROGRESS')">
                           <mat-icon>play_arrow</mat-icon> Démarrer
@@ -279,13 +279,24 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                           <mat-icon>check</mat-icon> Terminer
                         </button>
                       }
+                      <button mat-icon-button (click)="updateStatus(task, 'SKIPPED')" title="Abandonner" style="color:#757575">
+                        <mat-icon>block</mat-icon>
+                      </button>
                       <button mat-icon-button color="warn" (click)="deleteTask(task)" title="Supprimer">
                         <mat-icon>delete</mat-icon>
                       </button>
-                    } @else {
+                    } @else if (task.status === 'DONE') {
                       <span class="completed-at">
                         Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
                       </span>
+                    } @else if (task.status === 'SKIPPED') {
+                      <span class="skipped-label">Abandonnée</span>
+                      <button mat-icon-button (click)="updateStatus(task, 'PENDING')" title="Réactiver" style="color:#1976d2">
+                        <mat-icon>replay</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteTask(task)" title="Supprimer">
+                        <mat-icon>delete</mat-icon>
+                      </button>
                     }
                     @if (task.housekeeper) {
                       <button mat-icon-button (click)="openReport(task)" title="Rapport & photos"
@@ -663,6 +674,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-notes { font-size: 12px; color: #888; margin: 8px 0; font-style: italic; white-space: pre-wrap; }
     .task-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
     .completed-at { font-size: 12px; color: #2e7d32; }
+    .skipped-label { font-size: 12px; color: #757575; font-style: italic; }
     .tab-content { padding: 16px 0; }
     .hk-count { display: inline-flex; align-items: center; justify-content: center; background: #1976d2; color: white; border-radius: 10px; font-size: 11px; font-weight: 600; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; }
     .hk-list { display: flex; flex-direction: column; gap: 12px; }
