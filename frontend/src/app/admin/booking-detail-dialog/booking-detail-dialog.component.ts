@@ -902,6 +902,70 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.taskForm.housekeeperId = id;
     const hk = this.housekeepers().find(h => h.id === id);
     this.taskForm.hourlyRate = hk?.hourlyRate != null ? String(hk.hourlyRate) : '';
+    if (id && hk && this.taskForm.type === 'CHECKOUT_CLEANING') {
+      this.generateCleaningNotes(hk);
+    }
+  }
+
+  private generateCleaningNotes(hk: HousekeeperProfile): void {
+    const departure = (this.draft['departure'] || '').toString().substring(0, 10);
+    const pid       = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    const propName  = this.draft['propName'] || this.draft['propertyName'] || '';
+
+    const buildNotes = (nextCheckinTime?: string) => {
+      const code     = this.propAccessCode() ?? '';
+      const prevCode = this.propPreviousAccessCode() ?? '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.departureTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      if (nextCheckinTime) {
+        msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
+      }
+      this.taskForm.notes = msg;
+    };
+
+    const checkNextArrival = () => {
+      if (!departure || !pid) { buildNotes(); return; }
+      this.bookingService.getArrivals(departure).subscribe({
+        next: arrivals => {
+          const next = (arrivals ?? []).find(b => {
+            const bpid    = String(b['propId'] ?? b['propertyId'] ?? '');
+            const arrDate = (b['arrival'] || '').toString().substring(0, 10);
+            return bpid === pid && arrDate === departure;
+          });
+          let checkinTime: string | undefined;
+          if (next) {
+            const arrStr = (next['arrival'] || '').toString();
+            const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
+            checkinTime = (t && t !== '00:00') ? t : '16:00';
+          }
+          buildNotes(checkinTime);
+        },
+        error: () => buildNotes()
+      });
+    };
+
+    if (this.propAccessCode() !== undefined) {
+      checkNextArrival();
+    } else {
+      this.propConfigService.getAll().subscribe({
+        next: cfgs => {
+          const cfg = cfgs.find(c => c.beds24PropertyId === pid);
+          this.propAccessCode.set(cfg?.accessCode ?? '');
+          this.propPreviousAccessCode.set(cfg?.previousAccessCode ?? '');
+          checkNextArrival();
+        },
+        error: () => {
+          this.propAccessCode.set('');
+          this.propPreviousAccessCode.set('');
+          checkNextArrival();
+        }
+      });
+    }
+  }
+
+  private toFrDate(iso: string): string {
+    if (!iso || iso.length < 10) return iso;
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
   }
 
   createTask(): void {
