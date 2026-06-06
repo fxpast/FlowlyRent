@@ -18,6 +18,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TextFieldModule } from '@angular/cdk/text-field';
+import { Router } from '@angular/router';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
@@ -60,6 +61,9 @@ import { Subscription } from 'rxjs';
             <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : 'Créer' }}
           </button>
         }
+        <button mat-icon-button (click)="goCreateInvoice()" matTooltip="Créer une facture">
+          <mat-icon>receipt_long</mat-icon>
+        </button>
         <button mat-icon-button mat-dialog-close [disabled]="saving()" matTooltip="Fermer">
           <mat-icon>close</mat-icon>
         </button>
@@ -652,7 +656,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private propConfigService: PropertyConfigService,
     private reminderService: MessageReminderService,
     private http: HttpClient,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router
   ) {
     const d: Record<string, any> = { ...data };
     d['guestFirstName'] = d['guestFirstName'] || d['firstName'] || '';
@@ -1107,6 +1112,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.channel === 'airbnb')  return 'house';
     if (this.channel === 'booking') return 'hotel';
     return 'public';
+  }
+
+  goCreateInvoice(): void {
+    const booking = { ...this.draft };
+    this.dialogRef.close();
+    this.router.navigate(['/admin/invoices/new'], { state: { booking } });
   }
 
   toDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }

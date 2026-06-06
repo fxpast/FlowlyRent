@@ -217,6 +217,44 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-actions>
     </mat-card>
 
+    <!-- Informations de facturation -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>receipt_long</mat-icon>
+        <mat-card-title>Facturation</mat-card-title>
+        <mat-card-subtitle>Informations affichées en en-tête de vos factures</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (profile()) {
+          <div class="form-row">
+            <mat-form-field>
+              <mat-label>Raison sociale</mat-label>
+              <input matInput [(ngModel)]="profileEdit.companyName" placeholder="Ex : Dupont Location" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>SIRET</mat-label>
+              <input matInput [(ngModel)]="profileEdit.siret" placeholder="Ex : 12345678900012" />
+            </mat-form-field>
+          </div>
+          <mat-form-field class="full-width">
+            <mat-label>Adresse de facturation</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="profileEdit.companyAddress"
+                      placeholder="Ex : 12 rue de la Paix&#10;75001 Paris"></textarea>
+          </mat-form-field>
+          @if (billingMsg()) {
+            <p class="msg" [class.error]="billingError()">{{ billingMsg() }}</p>
+          }
+        } @else {
+          <mat-spinner diameter="32" />
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="saveBilling()" [disabled]="savingBilling()">
+          @if (savingBilling()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
   `,
   styles: [`
     h2 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
@@ -261,10 +299,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 })
 export class SettingsComponent implements OnInit {
   profile = signal<UserProfile | null>(null);
-  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '' };
+  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
   savingProfile = signal(false);
   profileMsg = signal('');
   profileError = signal(false);
+  savingBilling = signal(false);
+  billingMsg = signal('');
+  billingError = signal(false);
 
   beds24Status = signal<Beds24Status | null>(null);
   b24SetupToken = '';
@@ -296,7 +337,12 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     this.userService.getProfile().subscribe(p => {
       this.profile.set(p);
-      this.profileEdit = { firstName: p.firstName ?? '', lastName: p.lastName ?? '', publicSiteSlug: p.publicSiteSlug ?? '' };
+      this.profileEdit = {
+        firstName: p.firstName ?? '', lastName: p.lastName ?? '',
+        publicSiteSlug: p.publicSiteSlug ?? '',
+        siret: p.siret ?? '', companyName: p.companyName ?? '',
+        companyAddress: p.companyAddress ?? '', companyLogoUrl: p.companyLogoUrl ?? ''
+      };
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
     this.loadBeds24Status();
@@ -305,7 +351,11 @@ export class SettingsComponent implements OnInit {
   saveProfile(): void {
     this.savingProfile.set(true);
     this.profileMsg.set('');
-    this.userService.updateProfile(this.profileEdit).subscribe({
+    this.userService.updateProfile({
+      firstName: this.profileEdit.firstName,
+      lastName: this.profileEdit.lastName,
+      publicSiteSlug: this.profileEdit.publicSiteSlug
+    }).subscribe({
       next: p => {
         this.profile.set(p);
         this.savingProfile.set(false);
@@ -316,6 +366,28 @@ export class SettingsComponent implements OnInit {
         this.savingProfile.set(false);
         this.profileMsg.set('Erreur lors de la mise à jour (le slug est peut-être déjà utilisé)');
         this.profileError.set(true);
+      }
+    });
+  }
+
+  saveBilling(): void {
+    this.savingBilling.set(true);
+    this.billingMsg.set('');
+    this.userService.updateProfile({
+      siret: this.profileEdit.siret,
+      companyName: this.profileEdit.companyName,
+      companyAddress: this.profileEdit.companyAddress
+    }).subscribe({
+      next: p => {
+        this.profile.set(p);
+        this.savingBilling.set(false);
+        this.billingMsg.set('Informations de facturation enregistrées');
+        this.billingError.set(false);
+      },
+      error: () => {
+        this.savingBilling.set(false);
+        this.billingMsg.set('Erreur lors de l\'enregistrement');
+        this.billingError.set(true);
       }
     });
   }

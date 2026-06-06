@@ -50,6 +50,15 @@ public class AppUser implements UserDetails {
     private String stripeSubscriptionId;
     private java.time.LocalDateTime planExpiresAt;
 
+    private String siret;
+    private String companyName;
+
+    @Column(columnDefinition = "TEXT")
+    private String companyAddress;
+
+    @Column(length = 500)
+    private String companyLogoUrl;
+
     private boolean active = true;
 
     @CreationTimestamp

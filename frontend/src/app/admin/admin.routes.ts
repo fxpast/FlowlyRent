@@ -78,6 +78,18 @@ export const adminRoutes: Routes = [
       {
         path: 'feedback',
         loadComponent: () => import('./feedback/feedback.component').then(m => m.FeedbackComponent)
+      },
+      {
+        path: 'invoices',
+        loadComponent: () => import('./invoices/invoices.component').then(m => m.InvoicesComponent)
+      },
+      {
+        path: 'invoices/new',
+        loadComponent: () => import('./invoice-editor/invoice-editor.component').then(m => m.InvoiceEditorComponent)
+      },
+      {
+        path: 'invoices/:id',
+        loadComponent: () => import('./invoice-editor/invoice-editor.component').then(m => m.InvoiceEditorComponent)
       }
     ]
   }

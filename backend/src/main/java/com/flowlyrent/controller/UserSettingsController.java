@@ -36,8 +36,12 @@ public class UserSettingsController {
     @PutMapping("/profile")
     public ResponseEntity<LoginResponse> updateProfile(@RequestBody Map<String, String> body) {
         AppUser user = securityUtils.getCurrentUser();
-        if (body.containsKey("firstName")) user.setFirstName(body.get("firstName"));
-        if (body.containsKey("lastName"))  user.setLastName(body.get("lastName"));
+        if (body.containsKey("firstName"))    user.setFirstName(body.get("firstName"));
+        if (body.containsKey("lastName"))     user.setLastName(body.get("lastName"));
+        if (body.containsKey("siret"))        user.setSiret(body.get("siret"));
+        if (body.containsKey("companyName"))  user.setCompanyName(body.get("companyName"));
+        if (body.containsKey("companyAddress")) user.setCompanyAddress(body.get("companyAddress"));
+        if (body.containsKey("companyLogoUrl")) user.setCompanyLogoUrl(body.get("companyLogoUrl"));
         if (body.containsKey("publicSiteSlug")) {
             String slug = body.get("publicSiteSlug");
             if (!slug.equals(user.getPublicSiteSlug()) && userRepository.existsByPublicSiteSlug(slug)) {
@@ -132,6 +136,10 @@ public class UserSettingsController {
         r.setLastName(user.getLastName());
         r.setPlan(user.getPlan());
         r.setPublicSiteSlug(user.getPublicSiteSlug());
+        r.setSiret(user.getSiret());
+        r.setCompanyName(user.getCompanyName());
+        r.setCompanyAddress(user.getCompanyAddress());
+        r.setCompanyLogoUrl(user.getCompanyLogoUrl());
         return r;
     }
 }

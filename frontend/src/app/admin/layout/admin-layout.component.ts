@@ -123,6 +123,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
     { icon: 'chat',             label: 'Messages',         route: 'messages' },
     { icon: 'home_repair_service', label: 'Entretien',        route: 'housekeeping' },
+    { icon: 'receipt_long',      label: 'Factures',         route: 'invoices' },
     { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
     { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
     { icon: 'payment',          label: 'Paiements',        route: 'payments' },

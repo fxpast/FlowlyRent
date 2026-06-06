@@ -14,4 +14,8 @@ public class LoginResponse {
     private SubscriptionPlan plan;
     private String publicSiteSlug;
     private UserRole role;
+    private String siret;
+    private String companyName;
+    private String companyAddress;
+    private String companyLogoUrl;
 }
