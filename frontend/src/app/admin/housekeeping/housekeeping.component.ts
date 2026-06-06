@@ -52,12 +52,21 @@ interface ReportPanel {
   taskId: number;
   taskLabel: string;
   propertyName: string;
+  beds24PropertyId?: string;
   scheduledDate: string;
   reportComment?: string;
   hasIncident?: boolean;
   incidentDescription?: string;
   photos: TaskPhoto[];
   loading: boolean;
+}
+
+interface InterventionDraft {
+  show: boolean;
+  housekeeperId: number | null;
+  date: Date | null;
+  notes: string;
+  saving: boolean;
 }
 
 interface Property { id: number; name: string; city?: string; }
@@ -421,9 +430,55 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           }
           @if (reportPanel()!.hasIncident) {
             <div class="rsection rincident">
-              <div class="rsection-label"><mat-icon>warning</mat-icon> Incident signalé</div>
+              <div class="rsection-label" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                <span><mat-icon>warning</mat-icon> Incident signalé</span>
+                @if (!interventionDraft().show) {
+                  <button mat-stroked-button color="warn" type="button" (click)="openInterventionForm()">
+                    <mat-icon>build</mat-icon> Créer une tâche d'intervention
+                  </button>
+                }
+              </div>
               @if (reportPanel()!.incidentDescription) {
                 <div class="rcomment-text">{{ reportPanel()!.incidentDescription }}</div>
+              }
+              @if (interventionDraft().show) {
+                <div class="intervention-form">
+                  <div class="intervention-title"><mat-icon>build</mat-icon> Nouvelle tâche d'intervention</div>
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>Prestataire</mat-label>
+                    <mat-select [ngModel]="interventionDraft().housekeeperId"
+                                (ngModelChange)="setInterventionHousekeeper($event)">
+                      @for (hk of housekeepers(); track hk.id) {
+                        <mat-option [value]="hk.id">{{ hk.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>Date d'intervention</mat-label>
+                    <input matInput [matDatepicker]="interventionPicker"
+                           [ngModel]="interventionDraft().date"
+                           (ngModelChange)="setInterventionDate($event)">
+                    <mat-datepicker-toggle matIconSuffix [for]="interventionPicker"/>
+                    <mat-datepicker #interventionPicker/>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>Notes</mat-label>
+                    <textarea matInput rows="2"
+                              [ngModel]="interventionDraft().notes"
+                              (ngModelChange)="setInterventionNotes($event)"></textarea>
+                  </mat-form-field>
+                  <div class="intervention-actions">
+                    <button mat-flat-button color="warn" (click)="createIntervention()"
+                            [disabled]="!interventionDraft().housekeeperId || !interventionDraft().date || interventionDraft().saving">
+                      @if (interventionDraft().saving) { <mat-spinner diameter="18" style="display:inline-block"/> }
+                      @else { <mat-icon>check</mat-icon> }
+                      Créer
+                    </button>
+                    <button mat-stroked-button type="button" (click)="cancelIntervention()">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
               }
             </div>
           }
@@ -529,6 +584,11 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
     .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-report-preview { font-size: 12px; color: #555; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+    .intervention-form { margin-top: 12px; padding: 12px; background: #fff8f8; border-radius: 8px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; gap: 0; }
+    .intervention-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #c62828; margin-bottom: 10px; }
+    .intervention-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .intervention-form .full { width: 100%; }
+    .intervention-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
     /* dialog styles in global styles.scss (bypass ViewEncapsulation for CDK overlay) */
     .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
     .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
@@ -555,6 +615,7 @@ export class HousekeepingComponent implements OnInit {
   adminUploadingPhoto = signal(false);
   adminUploadProgress = signal('Envoi en cours…');
   private adminPhotoType = 'AFTER';
+  interventionDraft = signal<InterventionDraft>({ show: false, housekeeperId: null, date: null, notes: '', saving: false });
   showForm = false;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
@@ -677,6 +738,7 @@ export class HousekeepingComponent implements OnInit {
       taskId: task.id,
       taskLabel: this.typeLabel(task.type),
       propertyName: propName,
+      beds24PropertyId: task.beds24PropertyId,
       scheduledDate: task.scheduledDate,
       reportComment: task.reportComment,
       hasIncident: task.hasIncident,
@@ -684,6 +746,7 @@ export class HousekeepingComponent implements OnInit {
       photos: [],
       loading: true
     });
+    this.interventionDraft.set({ show: false, housekeeperId: null, date: null, notes: '', saving: false });
     this.dialogRef = this.dialog.open(this.reportDialogTpl, {
       width: '720px',
       maxWidth: '95vw',
@@ -698,6 +761,62 @@ export class HousekeepingComponent implements OnInit {
   }
 
   closeReport(): void { this.dialogRef?.close(); }
+
+  setInterventionHousekeeper(id: number | null): void {
+    this.interventionDraft.update(d => ({ ...d, housekeeperId: id }));
+  }
+
+  setInterventionDate(date: Date | null): void {
+    this.interventionDraft.update(d => ({ ...d, date }));
+  }
+
+  setInterventionNotes(notes: string): void {
+    this.interventionDraft.update(d => ({ ...d, notes }));
+  }
+
+  cancelIntervention(): void {
+    this.interventionDraft.update(d => ({ ...d, show: false }));
+  }
+
+  openInterventionForm(): void {
+    const panel = this.reportPanel();
+    this.interventionDraft.set({
+      show: true,
+      housekeeperId: null,
+      date: new Date(),
+      notes: panel?.incidentDescription ?? '',
+      saving: false
+    });
+  }
+
+  createIntervention(): void {
+    const draft = this.interventionDraft();
+    const panel = this.reportPanel();
+    if (!draft.housekeeperId || !draft.date || !panel) return;
+    const dateStr = localDateStr(draft.date);
+    this.interventionDraft.update(d => ({ ...d, saving: true }));
+    const prop = this.properties().find(p => String(p.id) === panel.beds24PropertyId);
+    const payload: Record<string, unknown> = {
+      beds24PropertyId: panel.beds24PropertyId ?? '',
+      propertyName: prop?.name ?? panel.propertyName ?? '',
+      type: 'MAINTENANCE',
+      scheduledDate: `${dateStr}T09:00:00`,
+      housekeeperId: draft.housekeeperId,
+      notes: draft.notes
+    };
+    this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe({
+      next: task => {
+        this.tasks.update(all => [task, ...all]);
+        this.applyFilter();
+        this.interventionDraft.update(d => ({ ...d, show: false, saving: false }));
+        this.snack.open('Tâche d\'intervention créée', '', { duration: 3000 });
+      },
+      error: () => {
+        this.interventionDraft.update(d => ({ ...d, saving: false }));
+        this.snack.open('Erreur lors de la création', 'Fermer', { duration: 4000 });
+      }
+    });
+  }
 
   triggerAdminPhoto(type: string, input: HTMLInputElement): void {
     this.adminPhotoType = type;
