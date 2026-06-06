@@ -282,9 +282,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       <button mat-icon-button (click)="updateStatus(task, 'SKIPPED')" title="Abandonner" style="color:#757575">
                         <mat-icon>block</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteTask(task)" title="Supprimer">
-                        <mat-icon>delete</mat-icon>
-                      </button>
                     } @else if (task.status === 'DONE') {
                       <span class="completed-at">
                         Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
@@ -293,9 +290,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       <span class="skipped-label">Abandonnée</span>
                       <button mat-icon-button (click)="updateStatus(task, 'PENDING')" title="Réactiver" style="color:#1976d2">
                         <mat-icon>replay</mat-icon>
-                      </button>
-                      <button mat-icon-button color="warn" (click)="deleteTask(task)" title="Supprimer">
-                        <mat-icon>delete</mat-icon>
                       </button>
                     }
                     @if (task.housekeeper) {
