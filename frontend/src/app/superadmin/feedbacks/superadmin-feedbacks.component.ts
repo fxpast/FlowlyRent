@@ -104,9 +104,19 @@ export class SuperadminFeedbacksComponent implements OnInit {
 
   constructor(private http: HttpClient) {}
 
+  private readonly STATUS_ORDER: Record<string, number> = { NEW: 0, IN_PROGRESS: 1, DONE: 2, REJECTED: 3 };
+
+  private sortFeedbacks(list: Feedback[]): Feedback[] {
+    return [...list].sort((a, b) => {
+      const diff = (this.STATUS_ORDER[a.status] ?? 1) - (this.STATUS_ORDER[b.status] ?? 1);
+      if (diff !== 0) return diff;
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
+  }
+
   ngOnInit(): void {
     this.http.get<Feedback[]>(`${environment.apiUrl}/superadmin/feedbacks`).subscribe({
-      next: data => { this.feedbacks.set(data); this.loading.set(false); },
+      next: data => { this.feedbacks.set(this.sortFeedbacks(data)); this.loading.set(false); },
       error: () => this.loading.set(false)
     });
   }
@@ -115,6 +125,8 @@ export class SuperadminFeedbacksComponent implements OnInit {
   statusColor(status: string): string { return STATUS_COLORS[status] ?? '#333'; }
 
   updateStatus(fb: Feedback): void {
-    this.http.patch(`${environment.apiUrl}/superadmin/feedbacks/${fb.id}/status`, { status: fb.status }).subscribe();
+    this.http.patch(`${environment.apiUrl}/superadmin/feedbacks/${fb.id}/status`, { status: fb.status }).subscribe({
+      next: () => this.feedbacks.update(list => this.sortFeedbacks(list))
+    });
   }
 }
