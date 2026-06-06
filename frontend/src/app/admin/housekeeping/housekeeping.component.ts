@@ -224,7 +224,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </div>
                   <div class="task-type">{{ typeLabel(task.type) }}</div>
                   <div class="task-property">
-                    <mat-icon>home</mat-icon> {{ task.propertyName ?? task.property?.name ?? resolvePropertyName(task.beds24PropertyId) ?? task.beds24PropertyId }}
+                    <mat-icon>home</mat-icon> {{ task.propertyName ?? task.property?.name ?? task.beds24PropertyId }}
                   </div>
                   @if (task.booking) {
                     <div class="task-guest">
@@ -807,7 +807,15 @@ export class HousekeepingComponent implements OnInit {
     const to   = `${y}-${pad(m)}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     this.chargesLoading.set(true);
     this.http.get<Task[]>(`${this.base}/admin/housekeeping`, { params: { from, to } }).subscribe({
-      next: t => { this.chargeTasks.set(t); this.chargesLoading.set(false); },
+      next: t => {
+        this.bookingService.getPropertyNames().subscribe(names => {
+          this.chargeTasks.set(t.map(task => {
+            const pid = task.beds24PropertyId ?? '';
+            return pid && names[pid] ? { ...task, propertyName: names[pid] } : task;
+          }));
+          this.chargesLoading.set(false);
+        });
+      },
       error: () => this.chargesLoading.set(false)
     });
   }
@@ -838,7 +846,16 @@ export class HousekeepingComponent implements OnInit {
     this.http.get<Task[]>(`${this.base}/admin/housekeeping`, {
       params: { from: this.filterFrom, to: this.filterTo }
     }).subscribe({
-      next: t => { this.tasks.set(t); this.applyFilter(); this.loading.set(false); },
+      next: t => {
+        this.bookingService.getPropertyNames().subscribe(names => {
+          this.tasks.set(t.map(task => {
+            const pid = task.beds24PropertyId ?? '';
+            return pid && names[pid] ? { ...task, propertyName: names[pid] } : task;
+          }));
+          this.applyFilter();
+          this.loading.set(false);
+        });
+      },
       error: () => this.loading.set(false)
     });
   }
