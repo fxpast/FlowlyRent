@@ -306,14 +306,22 @@ export class HousekeeperTasksComponent implements OnInit {
       map.get(key)!.push(t);
     }
 
+    const done = new Set(['DONE', 'SKIPPED']);
+    const sortGroup = (ts: TaskWithPhotos[]) => [...ts].sort((a, b) => {
+      const aD = done.has(a.status) ? 1 : 0;
+      const bD = done.has(b.status) ? 1 : 0;
+      if (aD !== bD) return aD - bD;
+      return (a.scheduledDate ?? '') < (b.scheduledDate ?? '') ? -1 : 1;
+    });
+
     const order = ["Aujourd'hui", 'Demain'];
     for (const k of order) {
-      if (map.has(k)) { groups.push({ label: k, tasks: map.get(k)! }); map.delete(k); }
+      if (map.has(k)) { groups.push({ label: k, tasks: sortGroup(map.get(k)!) }); map.delete(k); }
     }
     for (const [label, ts] of map) {
-      if (label !== 'Passées') groups.push({ label, tasks: ts });
+      if (label !== 'Passées') groups.push({ label, tasks: sortGroup(ts) });
     }
-    if (map.has('Passées')) groups.push({ label: 'Passées', tasks: map.get('Passées')! });
+    if (map.has('Passées')) groups.push({ label: 'Passées', tasks: sortGroup(map.get('Passées')!) });
     return groups;
   });
 
