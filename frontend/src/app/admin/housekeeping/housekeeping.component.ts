@@ -759,7 +759,9 @@ export class HousekeepingComponent implements OnInit {
       entry.totalHours += hours;
       entry.totalCost  += hours * rate;
     }
-    return Array.from(byHk.values()).sort((a, b) => a.hk.name.localeCompare(b.hk.name));
+    return Array.from(byHk.values())
+      .map(e => ({ ...e, tasks: [...e.tasks].sort((a, b) => (b.scheduledDate ?? '') < (a.scheduledDate ?? '') ? -1 : 1) }))
+      .sort((a, b) => a.hk.name.localeCompare(b.hk.name));
   });
 
   chargesTotalHours = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalHours, 0));
