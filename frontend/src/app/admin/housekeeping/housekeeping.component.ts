@@ -614,7 +614,9 @@ export class HousekeepingComponent implements OnInit {
         const aD = done.has(a.status) ? 1 : 0;
         const bD = done.has(b.status) ? 1 : 0;
         if (aD !== bD) return aD - bD;
-        return b.scheduledDate.localeCompare(a.scheduledDate);
+        const da = (a.scheduledDate ?? '');
+        const db = (b.scheduledDate ?? '');
+        return da < db ? -1 : da > db ? 1 : 0;
       })
     );
   }
