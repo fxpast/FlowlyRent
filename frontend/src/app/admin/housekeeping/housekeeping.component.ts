@@ -660,7 +660,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-type { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
     .task-property, .task-guest, .task-assigned { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #555; margin-bottom: 4px; }
     .task-property mat-icon, .task-guest mat-icon, .task-assigned mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .task-notes { font-size: 12px; color: #888; margin: 8px 0; font-style: italic; }
+    .task-notes { font-size: 12px; color: #888; margin: 8px 0; font-style: italic; white-space: pre-wrap; }
     .task-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
     .completed-at { font-size: 12px; color: #2e7d32; }
     .tab-content { padding: 16px 0; }

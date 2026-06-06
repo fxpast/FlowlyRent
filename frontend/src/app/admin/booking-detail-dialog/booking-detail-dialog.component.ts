@@ -359,7 +359,7 @@ import { Subscription } from 'rxjs';
                 @if (existingTask()!.notes) {
                   <div class="ti-row">
                     <mat-icon>notes</mat-icon>
-                    <span>{{ existingTask()!.notes }}</span>
+                    <span style="white-space:pre-wrap">{{ existingTask()!.notes }}</span>
                   </div>
                 }
               </div>
@@ -445,7 +445,7 @@ import { Subscription } from 'rxjs';
               }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notes</mat-label>
-                <textarea matInput rows="2" [(ngModel)]="taskForm.notes"
+                <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="taskForm.notes"
                           placeholder="Instructions particulières…"></textarea>
               </mat-form-field>
             </div>
