@@ -212,11 +212,11 @@ FlowlyRent/
 │           │   ├── departures/departures.component.ts # Départs (ligne cliquable → dialog)
 │           │   ├── bookings/bookings.component.ts    # Liste + filtres (ligne cliquable → dialog, pas de formulaire edit)
 │           │   ├── booking-form/booking-form.component.ts  # Créer réservation directe (location.back() au retour)
-│           │   ├── booking-detail-dialog/booking-detail-dialog.component.ts # Dialog réservation — détails, messages, entretien + horaires override
+│           │   ├── booking-detail-dialog/booking-detail-dialog.component.ts # Dialog réservation — détails, messages, entretien + horaires override + auto-notes ménage (CHECKOUT_CLEANING + sélection prestataire → message pré-rempli avec code accès + détection arrivée J)
 │           │   ├── messages/messages.component.ts    # Chat temps réel + modèles FR/EN
 │           │   ├── payments/payments.component.ts    # Génération liens Stripe
 │           │   ├── sync/sync.component.ts            # Gestion canaux iCal
-│           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Prestataires + viewer rapport/photos
+│           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Prestataires + viewer rapport/photos + charges mensuelles par prestataire + abandon/réactivation tâches (SKIPPED) + auto-notes à la création
 │           │   ├── properties/properties.component.ts # Logements — occupancy, inventaire, code accès, nom court
 │           │   ├── calendar/calendar.component.ts    # Calendrier disponibilités
 │           │   ├── settings/settings.component.ts    # Beds24 + Profil + Mot de passe
@@ -230,7 +230,7 @@ FlowlyRent/
 │           ├── housekeeper/                          # Portail prestataire — ROLE_HOUSEKEEPER uniquement
 │           │   ├── housekeeper.routes.ts             # Route racine avec housekeeperGuard
 │           │   ├── layout/housekeeper-layout.component.ts  # Toolbar simple + nom + logout
-│           │   └── tasks/housekeeper-tasks.component.ts    # Missions groupées par date, rapport, photos
+│           │   └── tasks/housekeeper-tasks.component.ts    # Missions groupées par date, rapport, photos — tâches terminées/abandonnées triées en bas
 │           └── public/
 │               ├── public.routes.ts
 │               ├── home/home.component.ts            # Page d'accueil
@@ -644,6 +644,11 @@ sans valeur par défaut (vestige d'une version précédente). Fix : `ALTER TABLE
 - [x] Dialogs plein écran sur mobile (≤600px)
 - [x] Règles d'occupation logements : Départ aujourd'hui · Arrivée aujourd'hui, prolongation même voyageur → Occupé vert
 - [x] Messages triés chronologiquement (plus ancien en haut, scroll automatique après envoi)
+- [x] Charges mensuelles par prestataire — listing DONE tasks groupé par housekeeper, navigation mois (onglet Prestataires > Entretien)
+- [x] Auto-notes ménage — pré-remplissage notes à la sélection du prestataire (type CHECKOUT_CLEANING) : code accès, heure checkout, détection arrivée le même jour
+- [x] Abandon / réactivation de tâches ménage (statut SKIPPED ↔ PENDING) sans suppression
+- [x] Formulaire nouvelle tâche enrichi — heures, taux horaire, notes auto (mêmes règles que dialog réservation)
+- [x] Tri tâches : terminées et abandonnées reléguées en bas (admin + portail prestataire)
 
 ---
 
@@ -658,6 +663,8 @@ sans valeur par défaut (vestige d'une version précédente). Fix : `ALTER TABLE
 - **Retour de navigation** : utiliser `location.back()` plutôt que `router.navigate(['/admin/bookings'])` — l'utilisateur revient au menu d'origine
 - **Templates messages** : `MessageTemplateService.apply(content, booking, accessCode?, checkinTime?, checkoutTime?, previousAccessCode?)` — les 4 derniers paramètres sont optionnels
 - **Arrow functions dans templates Angular** : ne jamais utiliser `=>` ou `<` / `>` inline dans `(click)=""` — créer une méthode dans le composant
+- **Noms de propriétés dans les tâches ménage** : appliquer `getPropertyNames()` après le chargement pour mettre à jour `task.propertyName` (même pattern que arrivals/departures). Ne jamais appeler `resolvePropertyName()` inline dans le template.
+- **Affichage notes multi-lignes** : utiliser `white-space: pre-wrap` sur l'élément d'affichage + `cdkTextareaAutosize cdkAutosizeMinRows="5"` sur le textarea de saisie
 - **Langue de l'interface** : Français
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Sécurité repo public** : aucune valeur sensible en dur dans le code — tout passe par `${ENV_VAR}` sans défaut

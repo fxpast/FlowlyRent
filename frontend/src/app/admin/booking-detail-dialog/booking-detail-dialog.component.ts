@@ -55,7 +55,7 @@ import { Subscription } from 'rxjs';
             <mat-icon>save</mat-icon> {{ saving() ? '…' : 'Enregistrer' }}
           </button>
         }
-        @if (activeTab() === 2 && !existingTask() && !loadingTask()) {
+        @if (activeTab() === 2 && !loadingTask()) {
           <button mat-flat-button color="primary" (click)="createTask()" [disabled]="savingTask()">
             <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : 'Créer' }}
           </button>
@@ -314,82 +314,76 @@ import { Subscription } from 'rxjs';
 
           @if (loadingTask()) {
             <div class="center-spin"><mat-spinner diameter="36"/></div>
-          } @else if (existingTask()) {
-            <!-- Mission existante -->
-            <div class="task-card">
-              <div class="task-header">
-                <mat-icon class="task-icon">home_repair_service</mat-icon>
-                <span class="task-title">Intervention</span>
-                <span class="task-status" [class]="'status-' + existingTask()!.status.toLowerCase()">
-                  {{ taskStatusLabel(existingTask()!.status) }}
-                </span>
-              </div>
-              <mat-divider/>
-              <div class="task-info-grid">
-                <div class="ti-row">
-                  <mat-icon>home</mat-icon>
-                  <span>{{ existingTask()!.propertyName || draft['propName'] || '—' }}</span>
+          } @else {
+            <!-- Liste des tâches existantes -->
+            @for (task of existingTasks(); track task.id) {
+              <div class="task-card">
+                <div class="task-header">
+                  <mat-icon class="task-icon">home_repair_service</mat-icon>
+                  <span class="task-title">{{ taskTypeLabel(task.type) }}</span>
+                  <span class="task-status" [class]="'status-' + task.status.toLowerCase()">
+                    {{ taskStatusLabel(task.status) }}
+                  </span>
                 </div>
-                <div class="ti-row">
-                  <mat-icon>calendar_today</mat-icon>
-                  <span>{{ existingTask()!.scheduledDate | date:'dd/MM/yyyy HH:mm' }}</span>
-                </div>
-                <div class="ti-row">
-                  <mat-icon>person</mat-icon>
-                  <span>{{ existingTask()!.housekeeper?.name || 'Non assigné' }}</span>
-                  @if (existingTask()!.housekeeper?.hourlyRate != null) {
-                    <span class="ti-badge green">{{ existingTask()!.housekeeper!.hourlyRate | number:'1.2-2' }} €/h</span>
-                  }
-                </div>
-                @if (existingTask()!.extraHours != null) {
-                  <div class="ti-row">
-                    <mat-icon>schedule</mat-icon>
-                    <span>{{ existingTask()!.extraHours }} h prévues</span>
-                    @if (existingTask()!.hourlyRate != null) {
-                      <span class="ti-badge green">= {{ existingTask()!.extraHours * existingTask()!.hourlyRate | number:'1.2-2' }} €</span>
-                    }
-                  </div>
-                }
-                @if (existingTask()!.hourlyRate != null && existingTask()!.extraHours == null) {
-                  <div class="ti-row">
-                    <mat-icon>payments</mat-icon>
-                    <span>{{ existingTask()!.hourlyRate | number:'1.2-2' }} €/h</span>
-                  </div>
-                }
-                @if (existingTask()!.notes) {
-                  <div class="ti-row">
-                    <mat-icon>notes</mat-icon>
-                    <span style="white-space:pre-wrap">{{ existingTask()!.notes }}</span>
-                  </div>
-                }
-              </div>
-              @if (existingTask()!.reportComment || existingTask()!.hasIncident) {
                 <mat-divider/>
-                <div class="task-report">
-                  <div class="report-title">
-                    <mat-icon>assignment</mat-icon> Rapport prestataire
+                <div class="task-info-grid">
+                  <div class="ti-row">
+                    <mat-icon>calendar_today</mat-icon>
+                    <span>{{ task.scheduledDate | date:'dd/MM/yyyy HH:mm' }}</span>
                   </div>
-                  @if (existingTask()!.hasIncident) {
-                    <div class="incident-badge">
-                      <mat-icon>warning</mat-icon> Incident signalé
-                    </div>
-                    @if (existingTask()!.incidentDescription) {
-                      <p class="report-text">{{ existingTask()!.incidentDescription }}</p>
+                  <div class="ti-row">
+                    <mat-icon>person</mat-icon>
+                    <span>{{ task.housekeeper?.name || 'Non assigné' }}</span>
+                    @if (task.housekeeper?.hourlyRate != null) {
+                      <span class="ti-badge green">{{ task.housekeeper.hourlyRate | number:'1.2-2' }} €/h</span>
                     }
+                  </div>
+                  @if (task.extraHours != null) {
+                    <div class="ti-row">
+                      <mat-icon>schedule</mat-icon>
+                      <span>{{ task.extraHours }} h prévues</span>
+                      @if (task.hourlyRate != null) {
+                        <span class="ti-badge green">= {{ task.extraHours * task.hourlyRate | number:'1.2-2' }} €</span>
+                      }
+                    </div>
                   }
-                  @if (existingTask()!.reportComment) {
-                    <p class="report-text">{{ existingTask()!.reportComment }}</p>
+                  @if (task.notes) {
+                    <div class="ti-row">
+                      <mat-icon>notes</mat-icon>
+                      <span style="white-space:pre-wrap">{{ task.notes }}</span>
+                    </div>
                   }
+                  @if (task.reportComment || task.hasIncident) {
+                    <div class="ti-row report-row">
+                      <mat-icon>assignment</mat-icon>
+                      <div class="report-inline">
+                        @if (task.hasIncident) {
+                          <span class="incident-inline"><mat-icon>warning</mat-icon> Incident</span>
+                        }
+                        @if (task.reportComment) {
+                          <span>{{ task.reportComment }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+              <mat-divider class="task-sep"/>
+            }
+
+            <!-- Formulaire nouvelle tâche -->
+            <div class="task-form">
+              @if (existingTasks().length === 0) {
+                <p class="task-hint">
+                  <mat-icon>info</mat-icon>
+                  Aucune mission créée pour ce départ. Remplissez les informations ci-dessous.
+                </p>
+              } @else {
+                <div class="new-task-header">
+                  <mat-icon>add_task</mat-icon>
+                  <span>Nouvelle tâche</span>
                 </div>
               }
-            </div>
-          } @else {
-            <!-- Formulaire de création -->
-            <div class="task-form">
-              <p class="task-hint">
-                <mat-icon>info</mat-icon>
-                Aucune mission créée pour ce départ. Remplissez les informations ci-dessous.
-              </p>
               <div class="row-2">
                 <div class="datetime-pair">
                   <mat-form-field appearance="outline" class="date-part">
@@ -564,6 +558,15 @@ import { Subscription } from 'rxjs';
       background: #f5f5f5; padding: 8px 12px; border-radius: 8px; margin: 0 0 16px; }
     .task-hint mat-icon { font-size: 18px; width: 18px; height: 18px; color: #0288d1; }
     .task-form { display: flex; flex-direction: column; gap: 0; }
+    .task-sep { margin: 8px 0 16px; }
+    .new-task-header { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600;
+      color: #1976d2; margin: 4px 0 12px; }
+    .new-task-header mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .report-row { align-items: flex-start; }
+    .report-inline { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #444; }
+    .incident-inline { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600;
+      color: #b71c1c; }
+    .incident-inline mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
     @media (max-width: 600px) {
       mat-dialog-content { min-width: unset; }
@@ -620,9 +623,9 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   });
   selectedTemplate: MessageTemplate | null = null;
 
-  loadingTask  = signal(false);
-  savingTask   = signal(false);
-  existingTask = signal<any>(null);
+  loadingTask   = signal(false);
+  savingTask    = signal(false);
+  existingTasks = signal<any[]>([]);
   housekeepers = signal<HousekeeperProfile[]>([]);
   taskForm: { type: string; housekeeperId: number | null; notes: string; extraHours: string; hourlyRate: string } = {
     type: 'CHECKOUT_CLEANING',
@@ -873,8 +876,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (!bookingId) return;
     this.loadingTask.set(true);
     this.housekeepingService.getByBooking(bookingId, propertyId || undefined, departure || undefined).subscribe({
-      next: task => { this.existingTask.set(task); this.loadingTask.set(false); },
-      error: ()  => { this.existingTask.set(null); this.loadingTask.set(false); }
+      next: tasks => { this.existingTasks.set(tasks ?? []); this.loadingTask.set(false); },
+      error: ()   => { this.existingTasks.set([]);          this.loadingTask.set(false); }
     });
   }
 
@@ -990,7 +993,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.taskForm.hourlyRate)   body['hourlyRate']   = this.taskForm.hourlyRate;
     this.housekeepingService.createTask(body).subscribe({
       next: task => {
-        this.existingTask.set(task);
+        this.existingTasks.update(list => [...list, task]);
+        this.resetTaskForm();
         this.savingTask.set(false);
         this.snackBar.open('Mission créée', 'OK', { duration: 2500 });
       },
@@ -1006,9 +1010,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       PENDING:     'En attente',
       IN_PROGRESS: 'En cours',
       DONE:        'Terminée',
-      SKIPPED:     'Ignorée',
+      SKIPPED:     'Abandonnée',
     };
     return labels[status] ?? status;
+  }
+
+  taskTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      CHECKOUT_CLEANING: 'Nettoyage départ',
+      CHECKIN_PREP:      'Préparation arrivée',
+      CLEANING:          'Nettoyage général',
+      MAINTENANCE:       'Maintenance',
+      INSPECTION:        'Inspection',
+    };
+    return labels[type] ?? type;
+  }
+
+  private resetTaskForm(): void {
+    this.taskForm = { type: 'CHECKOUT_CLEANING', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    this.taskDate = this.departureDate;
+    this.taskTime = this.departureTime;
   }
 
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }

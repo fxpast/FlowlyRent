@@ -27,7 +27,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/admin/housekeeping")
@@ -46,29 +45,25 @@ public class AdminHousekeepingController {
     // --- Tâches ---
 
     @GetMapping("/by-booking/{bookingId}")
-    public ResponseEntity<HousekeepingTask> getByBooking(
+    public ResponseEntity<List<HousekeepingTask>> getByBooking(
             @PathVariable String bookingId,
             @RequestParam(required = false) String propertyId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate scheduledDate) {
         Long userId = securityUtils.getCurrentUserId();
 
-        // 1. Cherche par beds24BookingId (tâches créées via webhook ou dialog)
-        Optional<HousekeepingTask> byId = taskRepo.findByBeds24BookingId(bookingId)
-                .filter(t -> t.getUser().getId().equals(userId));
-        if (byId.isPresent()) return ResponseEntity.ok(byId.get());
+        // 1. Cherche toutes les tâches par beds24BookingId (scopées à l'utilisateur)
+        List<HousekeepingTask> byId = taskRepo.findByBeds24BookingIdOrderByScheduledDateAsc(bookingId)
+                .stream().filter(t -> t.getUser().getId().equals(userId)).toList();
+        if (!byId.isEmpty()) return ResponseEntity.ok(byId);
 
         // 2. Fallback : tâche manuelle sans bookingId — cherche par propriété + date
         if (propertyId != null && scheduledDate != null) {
-            return taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
-                            userId, propertyId,
-                            scheduledDate.atStartOfDay(),
-                            scheduledDate.atTime(LocalTime.MAX))
-                    .stream().findFirst()
-                    .map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
+            return ResponseEntity.ok(
+                taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                    userId, propertyId, scheduledDate.atStartOfDay(), scheduledDate.atTime(LocalTime.MAX)));
         }
 
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(List.of());
     }
 
     @GetMapping

@@ -20,7 +20,7 @@ public interface HousekeepingTaskRepository extends JpaRepository<HousekeepingTa
     List<HousekeepingTask> findByHousekeeper_IdAndScheduledDateGreaterThanEqualOrderByScheduledDateAsc(
             Long housekeeperId, LocalDateTime from);
 
-    Optional<HousekeepingTask> findByBeds24BookingId(String beds24BookingId);
+    List<HousekeepingTask> findByBeds24BookingIdOrderByScheduledDateAsc(String beds24BookingId);
 
     boolean existsByBeds24BookingId(String beds24BookingId);
 

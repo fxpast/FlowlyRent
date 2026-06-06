@@ -9,11 +9,11 @@ export class HousekeepingService {
 
   constructor(private http: HttpClient) {}
 
-  getByBooking(bookingId: string, propertyId?: string, scheduledDate?: string): Observable<any> {
+  getByBooking(bookingId: string, propertyId?: string, scheduledDate?: string): Observable<any[]> {
     const params: Record<string, string> = {};
     if (propertyId)    params['propertyId']    = propertyId;
     if (scheduledDate) params['scheduledDate']  = scheduledDate;
-    return this.http.get<any>(`${this.base}/by-booking/${bookingId}`, { params });
+    return this.http.get<any[]>(`${this.base}/by-booking/${bookingId}`, { params });
   }
 
   createTask(body: Record<string, any>): Observable<any> {
