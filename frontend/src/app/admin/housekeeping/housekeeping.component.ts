@@ -156,22 +156,36 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </div>
                 </div>
                 <div class="form-row">
-                  <mat-form-field>
+                  <mat-form-field class="flex2">
                     <mat-label>Prestataire</mat-label>
-                    <mat-select [(ngModel)]="newTask.housekeeperId">
+                    <mat-select [ngModel]="newTask.housekeeperId" (ngModelChange)="onNewHousekeeperChange($event)">
                       <mat-option [value]="null">— Non assigné —</mat-option>
                       @for (h of housekeepers(); track h.id) {
-                        <mat-option [value]="h.id">{{ h.name }}
-                          @if (h.phone) { <span class="hk-sub"> · {{ h.phone }}</span> }
-                        </mat-option>
+                        <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
-                  <mat-form-field class="flex2">
-                    <mat-label>Notes</mat-label>
-                    <input matInput [(ngModel)]="newTask.notes" />
+                  <mat-form-field>
+                    <mat-label>Heures d'intervention</mat-label>
+                    <input matInput type="number" min="0" step="0.5" [(ngModel)]="newTask.extraHours" placeholder="Ex : 3">
+                    <span matTextSuffix>h</span>
+                  </mat-form-field>
+                  <mat-form-field>
+                    <mat-label>Taux horaire</mat-label>
+                    <input matInput type="number" min="0" step="0.5" [(ngModel)]="newTask.hourlyRate" placeholder="Ex : 15">
+                    <span matTextSuffix>€/h</span>
                   </mat-form-field>
                 </div>
+                @if (newTask.extraHours && newTask.hourlyRate) {
+                  <div class="task-total">
+                    <mat-icon>calculate</mat-icon>
+                    Total estimé : <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
+                  </div>
+                }
+                <mat-form-field style="width:100%">
+                  <mat-label>Notes</mat-label>
+                  <textarea matInput rows="2" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
+                </mat-form-field>
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
@@ -666,6 +680,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .hk-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
     .hk-sub { color: #888; font-size: 12px; }
     .hk-datetime-pair { display: flex; gap: 8px; align-items: flex-start; }
+    .task-total { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #2e7d32; background: #e8f5e9; border-radius: 6px; padding: 6px 12px; margin-bottom: 8px; }
+    .task-total mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .hk-time-field { width: 110px; flex-shrink: 0; }
     .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
@@ -776,7 +792,7 @@ export class HousekeepingComponent implements OnInit {
   filterToDate: Date   = new Date(Date.now() + 30 * 86400000);
   filterStatus = '';
 
-  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '' };
+  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '', extraHours: '', hourlyRate: '' };
   newTaskDate: Date | null = null;
   newTaskTime = '09:00';
   activatingHk: number | null = null;
@@ -865,7 +881,7 @@ export class HousekeepingComponent implements OnInit {
   openNewTaskForm(): void {
     this.newTaskDate = new Date();
     this.newTaskTime = '09:00';
-    this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '' };
+    this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.showForm = true;
   }
 
@@ -897,12 +913,19 @@ export class HousekeepingComponent implements OnInit {
       notes:            this.newTask.notes
     };
     if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
+    if (this.newTask.extraHours)   payload['extraHours']   = this.newTask.extraHours;
+    if (this.newTask.hourlyRate)   payload['hourlyRate']   = this.newTask.hourlyRate;
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
-      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '' };
-      this.showForm = false;
+      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
       this.load();
     });
+  }
+
+  onNewHousekeeperChange(id: number | null): void {
+    this.newTask.housekeeperId = id;
+    const hk = this.housekeepers().find(h => h.id === id);
+    this.newTask.hourlyRate = hk?.hourlyRate != null ? String(hk.hourlyRate) : '';
   }
 
   updateStatus(task: Task, status: string): void {
