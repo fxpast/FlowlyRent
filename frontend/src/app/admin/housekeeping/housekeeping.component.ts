@@ -127,7 +127,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                 <div class="form-row">
                   <mat-form-field>
                     <mat-label>Logement</mat-label>
-                    <mat-select [(ngModel)]="newTask.propertyId">
+                    <mat-select [ngModel]="newTask.propertyId" (ngModelChange)="onNewPropertyChange($event)">
                       @for (p of properties(); track p.id) {
                         <mat-option [value]="p.id">{{ p.name }}</mat-option>
                       }
@@ -135,7 +135,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </mat-form-field>
                   <mat-form-field>
                     <mat-label>Type</mat-label>
-                    <mat-select [(ngModel)]="newTask.type">
+                    <mat-select [ngModel]="newTask.type" (ngModelChange)="onNewTypeChange($event)">
                       @for (t of taskTypes; track t.value) {
                         <mat-option [value]="t.value">{{ t.label }}</mat-option>
                       }
@@ -184,7 +184,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                 }
                 <mat-form-field style="width:100%">
                   <mat-label>Notes</mat-label>
-                  <textarea matInput rows="2" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
+                  <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
                 </mat-form-field>
               </mat-card-content>
               <mat-card-actions>
@@ -795,6 +795,7 @@ export class HousekeepingComponent implements OnInit {
   chargesTotalHours = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalHours, 0));
   chargesTotalCost  = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalCost, 0));
 
+  private propConfigs = signal<any[]>([]);
   showForm = false;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
@@ -895,6 +896,12 @@ export class HousekeepingComponent implements OnInit {
     this.newTaskTime = '09:00';
     this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.showForm = true;
+    if (this.propConfigs().length === 0) {
+      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
+        next: cfgs => this.propConfigs.set(cfgs ?? []),
+        error: () => {}
+      });
+    }
   }
 
   applyFilter(): void {
@@ -934,10 +941,85 @@ export class HousekeepingComponent implements OnInit {
     });
   }
 
+  onNewPropertyChange(id: number | null): void {
+    this.newTask.propertyId = id;
+    if (id != null) {
+      const cfg = this.propConfigs().find(c => c.beds24PropertyId === String(id));
+      if (cfg?.cleaningHours != null) this.newTask.extraHours = String(cfg.cleaningHours);
+    }
+    if (id && this.newTask.housekeeperId && this.newTask.type === 'CHECKOUT_CLEANING') {
+      const hk = this.housekeepers().find(h => h.id === this.newTask.housekeeperId);
+      if (hk) this.generateNewTaskNotes(hk);
+    }
+  }
+
+  onNewTypeChange(type: string): void {
+    this.newTask.type = type;
+    if (type === 'CHECKOUT_CLEANING' && this.newTask.housekeeperId && this.newTask.propertyId) {
+      const hk = this.housekeepers().find(h => h.id === this.newTask.housekeeperId);
+      if (hk) this.generateNewTaskNotes(hk);
+    }
+  }
+
   onNewHousekeeperChange(id: number | null): void {
     this.newTask.housekeeperId = id;
     const hk = this.housekeepers().find(h => h.id === id);
     this.newTask.hourlyRate = hk?.hourlyRate != null ? String(hk.hourlyRate) : '';
+    if (id && hk && this.newTask.type === 'CHECKOUT_CLEANING' && this.newTask.propertyId) {
+      this.generateNewTaskNotes(hk);
+    }
+  }
+
+  private generateNewTaskNotes(hk: HousekeeperProfile): void {
+    const pid      = String(this.newTask.propertyId ?? '');
+    const departure = this.fromDate(this.newTaskDate);
+    const prop     = this.properties().find(p => String(p.id) === pid);
+    const propName = prop?.name ?? '';
+
+    const buildNotes = (nextCheckinTime?: string) => {
+      const cfg      = this.propConfigs().find(c => c.beds24PropertyId === pid);
+      const code     = cfg?.accessCode ?? '';
+      const prevCode = cfg?.previousAccessCode ?? '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.newTaskTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      if (nextCheckinTime) msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
+      this.newTask.notes = msg;
+    };
+
+    const checkNextArrival = () => {
+      if (!departure || !pid) { buildNotes(); return; }
+      this.bookingService.getArrivals(departure).subscribe({
+        next: arrivals => {
+          const next = (arrivals ?? []).find((b: any) => {
+            const bpid    = String(b['propId'] ?? b['propertyId'] ?? '');
+            const arrDate = (b['arrival'] || '').toString().substring(0, 10);
+            return bpid === pid && arrDate === departure;
+          });
+          let checkinTime: string | undefined;
+          if (next) {
+            const arrStr = (next['arrival'] || '').toString();
+            const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
+            checkinTime = (t && t !== '00:00') ? t : '16:00';
+          }
+          buildNotes(checkinTime);
+        },
+        error: () => buildNotes()
+      });
+    };
+
+    if (this.propConfigs().length > 0) {
+      checkNextArrival();
+    } else {
+      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
+        next: cfgs => { this.propConfigs.set(cfgs ?? []); checkNextArrival(); },
+        error: () => checkNextArrival()
+      });
+    }
+  }
+
+  private toFrDate(iso: string): string {
+    if (!iso || iso.length < 10) return iso;
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
   }
 
   updateStatus(task: Task, status: string): void {
