@@ -450,14 +450,15 @@ export class CalendarComponent implements OnInit {
       `${this.base}/admin/availability/calendar`, { params: { from, to } }
     ).subscribe({
       next: r => {
-        const rawProps = r.properties ?? [];
-        this.bookingService.applyDisplayNames(rawProps).subscribe(mapped => this.properties.set(mapped));
         this.bookings.set(r.bookings ?? []);
         this.blocks.set(r.blocks ?? []);
         this.calendarData.set(r.calendarData ?? {});
-        this.grid.set(this.buildGrid());
-        this.loading.set(false);
-        setTimeout(() => this.scrollToToday(), 50);
+        this.bookingService.applyDisplayNames(r.properties ?? []).subscribe(mapped => {
+          this.properties.set(mapped);
+          this.grid.set(this.buildGrid());
+          this.loading.set(false);
+          setTimeout(() => this.scrollToToday(), 50);
+        });
       },
       error: (e) => { console.error('[Calendar] error', e); this.loading.set(false); }
     });
