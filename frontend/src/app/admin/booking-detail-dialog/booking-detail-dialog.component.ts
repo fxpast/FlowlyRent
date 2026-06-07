@@ -218,6 +218,44 @@ import { TranslationService } from '../../core/services/translation.service';
               <mat-label>Notes</mat-label>
               <textarea matInput rows="2" [(ngModel)]="draft['notes']"></textarea>
             </mat-form-field>
+
+            <!-- ── Paiement / Caution Beds24 ── -->
+            <div class="payment-section">
+              <div class="payment-header">
+                <mat-icon class="pay-icon">payment</mat-icon>
+                <span>Demande de paiement Beds24</span>
+              </div>
+              <div class="payment-row">
+                <mat-form-field appearance="outline" class="pay-amount" subscriptSizing="dynamic">
+                  <mat-label>Montant €</mat-label>
+                  <input matInput type="number" min="1" step="1"
+                         [(ngModel)]="payAmount" (ngModelChange)="payLink.set('')">
+                </mat-form-field>
+                <button mat-stroked-button color="primary"
+                        [disabled]="!payAmount || !beds24Id"
+                        (click)="generatePayLink('payment')"
+                        [matTooltip]="beds24Id ? 'Encaissement immédiat' : 'Réservation Beds24 requise'">
+                  <mat-icon>euro</mat-icon> Paiement
+                </button>
+                <button mat-stroked-button
+                        [disabled]="!payAmount || !beds24Id"
+                        (click)="generatePayLink('deposit')"
+                        [matTooltip]="beds24Id ? 'Pré-autorisation sans débit (caution)' : 'Réservation Beds24 requise'">
+                  <mat-icon>shield</mat-icon> Caution
+                </button>
+              </div>
+              @if (payLink()) {
+                <div class="pay-link-box">
+                  <a [href]="payLink()" target="_blank" class="pay-link-text">{{ payLink() }}</a>
+                  <button mat-icon-button (click)="copyPayLink()" matTooltip="Copier le lien">
+                    <mat-icon>{{ payLinkCopied() ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                  <a mat-icon-button [href]="payLink()" target="_blank" matTooltip="Ouvrir">
+                    <mat-icon>open_in_new</mat-icon>
+                  </a>
+                </div>
+              }
+            </div>
           </div>
         </mat-dialog-content>
 
@@ -591,6 +629,24 @@ import { TranslationService } from '../../core/services/translation.service';
       color: #b71c1c; }
     .incident-inline mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
+    .payment-section {
+      margin-top: 12px; padding: 12px 14px;
+      border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;
+    }
+    .payment-header { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; color: #444; margin-bottom: 10px; }
+    .pay-icon { font-size: 18px; width: 18px; height: 18px; color: #0288d1; }
+    .payment-row { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+    .pay-amount { max-width: 110px; }
+    .pay-link-box {
+      display: flex; align-items: center; gap: 2px; margin-top: 8px;
+      background: #e3f2fd; border-radius: 6px; padding: 2px 4px 2px 10px;
+    }
+    .pay-link-text {
+      font-size: 11px; color: #0277bd; flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none;
+    }
+    .pay-link-text:hover { text-decoration: underline; }
+
     @media (max-width: 600px) {
       mat-dialog-content { min-width: unset; }
       .menage-content { min-width: unset; }
@@ -663,6 +719,10 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   dlgTranslations = signal<Map<number, string>>(new Map());
   dlgTranslating  = signal<Set<number>>(new Set());
   dlgShowOriginal = signal<Set<number>>(new Set());
+
+  payAmount     = '';
+  payLink       = signal('');
+  payLinkCopied = signal(false);
 
   private wsSub?: Subscription;
   private readonly apiBase = environment.apiUrl;
@@ -742,6 +802,27 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         }
       }
       setTimeout(() => this.scrollToBottom(), 80);
+    });
+  }
+
+  get beds24Id(): string | null {
+    const ext = String(this.data['externalId'] || this.draft['externalId'] || '');
+    if (ext.startsWith('beds24-')) return ext.replace('beds24-', '');
+    return null;
+  }
+
+  generatePayLink(type: 'payment' | 'deposit'): void {
+    const id = this.beds24Id;
+    if (!id || !this.payAmount) return;
+    const capture = type === 'payment' ? 1 : 0;
+    this.payLink.set(`https://beds24.com/bookpay.php?bookid=${id}&g=st&capture=${capture}&pay=${this.payAmount}`);
+    this.payLinkCopied.set(false);
+  }
+
+  copyPayLink(): void {
+    navigator.clipboard.writeText(this.payLink()).then(() => {
+      this.payLinkCopied.set(true);
+      setTimeout(() => this.payLinkCopied.set(false), 2000);
     });
   }
 
