@@ -189,11 +189,14 @@ public class QontoService {
 
     private void categorize(Map<String, Object> tx, List<ExpenseRule> rules) {
         String label = tx.getOrDefault("label", "").toString().toLowerCase();
+        String reference = tx.getOrDefault("reference", "").toString().toLowerCase();
         String counterparty = tx.getOrDefault("counterparty_name", "").toString().toLowerCase();
+        String note = tx.getOrDefault("note", "").toString().toLowerCase();
+        String altText = counterparty + " " + reference + " " + note;
 
         for (ExpenseRule rule : rules) {
             boolean matchLabel = rule.getKeywords().stream().anyMatch(k -> label.contains(k.toLowerCase()));
-            boolean matchAlt = rule.getAltKeywords().stream().anyMatch(k -> counterparty.contains(k.toLowerCase()));
+            boolean matchAlt = rule.getAltKeywords().stream().anyMatch(k -> altText.contains(k.toLowerCase()));
             if (matchLabel || matchAlt) {
                 tx.put("category", rule.getCategory());
                 tx.put("ruleLabel", rule.getLabel());

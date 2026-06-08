@@ -10,22 +10,22 @@ export interface QontoStatus {
 }
 
 export interface QontoTransaction {
-  id: number;
-  qontoId: string;
+  transaction_id: string;
   label: string;
-  counterpartyName: string;
+  reference?: string;      // Libellé complémentaire Qonto
+  note?: string;           // Commentaire / Informations complémentaires Qonto
+  counterparty_name?: string;
   amount: number;
   currency: string;
-  side: 'DEBIT' | 'CREDIT';
+  side: 'debit' | 'credit';
   status: string;
-  settledAt: string;
-  emittedAt: string;
-  bankAccountIban: string;
+  settled_at: string;
+  emitted_at?: string;
+  bankAccountIban?: string;
   category: string | null;
   ruleLabel: string | null;
   expenseRuleId: number | null;
   beds24PropertyId: string | null;
-  userNote: string | null;
 }
 
 export interface ExpenseRule {

@@ -90,8 +90,8 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                 <mat-label>Type</mat-label>
                 <mat-select [(ngModel)]="filterSide" (selectionChange)="loadTransactions()">
                   <mat-option value="">Tous</mat-option>
-                  <mat-option value="DEBIT">Débit</mat-option>
-                  <mat-option value="CREDIT">Crédit</mat-option>
+                  <mat-option value="debit">Débit</mat-option>
+                  <mat-option value="credit">Crédit</mat-option>
                 </mat-select>
               </mat-form-field>
               <button mat-stroked-button (click)="clearFilters()">
@@ -111,17 +111,23 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
               </div>
 
               <div class="tx-list">
-                @for (tx of filteredTx(); track tx.id) {
+                @for (tx of filteredTx(); track tx.transaction_id) {
                   <div class="tx-row">
-                    <div class="tx-date">{{ tx.settledAt | date:'dd/MM' }}</div>
+                    <div class="tx-date">{{ tx.settled_at | date:'dd/MM' }}</div>
                     <div class="tx-label">
                       <div class="tx-main-label">{{ tx.label }}</div>
-                      @if (tx.counterpartyName && tx.counterpartyName !== tx.label) {
-                        <div class="tx-counterparty">{{ tx.counterpartyName }}</div>
+                      @if (tx.counterparty_name && tx.counterparty_name !== tx.label) {
+                        <div class="tx-sub">{{ tx.counterparty_name }}</div>
+                      }
+                      @if (tx.reference) {
+                        <div class="tx-sub tx-ref">Réf. : {{ tx.reference }}</div>
+                      }
+                      @if (tx.note) {
+                        <div class="tx-sub tx-note-qonto">{{ tx.note }}</div>
                       }
                     </div>
-                    <div class="tx-amount" [class.debit]="tx.side === 'DEBIT'" [class.credit]="tx.side === 'CREDIT'">
-                      {{ tx.side === 'DEBIT' ? '-' : '+' }}{{ tx.amount | number:'1.2-2' }} €
+                    <div class="tx-amount" [class.debit]="tx.side === 'debit'" [class.credit]="tx.side === 'credit'">
+                      {{ tx.side === 'debit' ? '-' : '+' }}{{ tx.amount | number:'1.2-2' }} €
                     </div>
                     <div class="tx-cat">
                       @if (tx.category) {
@@ -132,9 +138,6 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                         <span class="cat-empty">—</span>
                       }
                     </div>
-                    @if (tx.userNote) {
-                      <div class="tx-note">{{ tx.userNote }}</div>
-                    }
                   </div>
                 }
                 @if (filteredTx().length === 0) {
@@ -184,10 +187,10 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                       <mat-hint>Recherche dans le libellé Qonto (insensible à la casse)</mat-hint>
                     </mat-form-field>
                     <mat-form-field class="full-width">
-                      <mat-label>Mots-clés alternatifs (bénéficiaire, nom)</mat-label>
+                      <mat-label>Mots-clés alternatifs</mat-label>
                       <input matInput [(ngModel)]="ruleForm.altKeywordsRaw"
                              placeholder="Ex : EDF, ENEDIS" />
-                      <mat-hint>Recherche dans le nom du bénéficiaire</mat-hint>
+                      <mat-hint>Recherche dans le bénéficiaire, la référence et les informations complémentaires</mat-hint>
                     </mat-form-field>
                   </div>
                 </mat-card-content>
@@ -359,7 +362,9 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
     .tx-date { width: 48px; font-size: 13px; color: #888; flex-shrink: 0; }
     .tx-label { flex: 1; min-width: 0; }
     .tx-main-label { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tx-counterparty { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-sub { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-ref { color: #555; font-style: italic; }
+    .tx-note-qonto { color: #777; }
     .tx-amount { width: 90px; text-align: right; font-size: 14px; font-weight: 500; flex-shrink: 0; }
     .tx-amount.debit { color: #d32f2f; }
     .tx-amount.credit { color: #2e7d32; }
@@ -487,13 +492,13 @@ export class ExpensesComponent implements OnInit {
 
   totalDebits(): number {
     return this.filteredTx()
-      .filter(t => t.side === 'DEBIT')
+      .filter(t => t.side === 'debit')
       .reduce((s, t) => s + (t.amount ?? 0), 0);
   }
 
   totalCredits(): number {
     return this.filteredTx()
-      .filter(t => t.side === 'CREDIT')
+      .filter(t => t.side === 'credit')
       .reduce((s, t) => s + (t.amount ?? 0), 0);
   }
 
