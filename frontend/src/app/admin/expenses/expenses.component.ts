@@ -11,6 +11,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
@@ -29,6 +31,7 @@ const COLOR_PALETTE = [
     MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatChipsModule, MatTooltipModule,
+    MatDatepickerModule, MatNativeDateModule,
     MatSnackBarModule, MatDividerModule
   ],
   template: `
@@ -60,11 +63,17 @@ const COLOR_PALETTE = [
             <div class="filters">
               <mat-form-field>
                 <mat-label>De</mat-label>
-                <input matInput type="date" [(ngModel)]="filterFrom" (change)="loadTransactions()" />
+                <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="filterFromDate"
+                       (dateChange)="loadTransactions()" readonly />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
+                <mat-datepicker #pickerFrom />
               </mat-form-field>
               <mat-form-field>
                 <mat-label>À</mat-label>
-                <input matInput type="date" [(ngModel)]="filterTo" (change)="loadTransactions()" />
+                <input matInput [matDatepicker]="pickerTo" [(ngModel)]="filterToDate"
+                       (dateChange)="loadTransactions()" readonly />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
+                <mat-datepicker #pickerTo />
               </mat-form-field>
               <mat-form-field>
                 <mat-label>Catégorie</mat-label>
@@ -406,8 +415,8 @@ export class ExpensesComponent implements OnInit {
   // Transactions
   transactions = signal<QontoTransaction[]>([]);
   loadingTx = signal(false);
-  filterFrom = '';
-  filterTo = '';
+  filterFromDate: Date | null = null;
+  filterToDate: Date | null = null;
   filterCategory = '';
   filterSide = '';
 
@@ -450,15 +459,22 @@ export class ExpensesComponent implements OnInit {
   loadTransactions(): void {
     this.loadingTx.set(true);
     const params: Record<string, string> = {};
-    if (this.filterFrom) params['from'] = this.filterFrom;
-    if (this.filterTo) params['to'] = this.filterTo;
+    if (this.filterFromDate) params['from'] = this.toDateStr(this.filterFromDate);
+    if (this.filterToDate)   params['to']   = this.toDateStr(this.filterToDate);
     if (this.filterCategory) params['category'] = this.filterCategory;
-    if (this.filterSide) params['side'] = this.filterSide;
+    if (this.filterSide)     params['side']     = this.filterSide;
 
     this.qontoService.getTransactions(params).subscribe({
       next: txs => { this.transactions.set(txs); this.loadingTx.set(false); },
       error: () => this.loadingTx.set(false)
     });
+  }
+
+  private toDateStr(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
   filteredTx(): QontoTransaction[] {
@@ -478,8 +494,8 @@ export class ExpensesComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.filterFrom = '';
-    this.filterTo = '';
+    this.filterFromDate = null;
+    this.filterToDate = null;
     this.filterCategory = '';
     this.filterSide = '';
     this.loadTransactions();
