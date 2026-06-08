@@ -35,6 +35,14 @@ export const routes: Routes = [
     loadChildren: () => import('./housekeeper/housekeeper.routes').then(m => m.housekeeperRoutes)
   },
   {
+    path: 'paiement/:token',
+    loadComponent: () => import('./public/payment-redirect/payment-redirect.component').then(m => m.PaymentRedirectComponent)
+  },
+  {
+    path: 'caution/:token',
+    loadComponent: () => import('./public/payment-redirect/payment-redirect.component').then(m => m.PaymentRedirectComponent)
+  },
+  {
     path: '**',
     redirectTo: '/public/home'
   }
