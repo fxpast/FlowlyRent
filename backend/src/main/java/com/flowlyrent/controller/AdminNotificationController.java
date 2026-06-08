@@ -32,7 +32,7 @@ public class AdminNotificationController {
         Set<Long> readIds = readRepo.findByUser_Id(userId).stream()
                 .map(r -> r.getNotification().getId())
                 .collect(Collectors.toSet());
-        return notifRepo.findAllByOrderBySentAtDesc().stream()
+        return notifRepo.findVisibleForUser(userId).stream()
                 .map(n -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id",      n.getId());
@@ -71,7 +71,7 @@ public class AdminNotificationController {
                 .map(r -> r.getNotification().getId())
                 .collect(Collectors.toSet());
         var user = securityUtils.getCurrentUser();
-        notifRepo.findAllByOrderBySentAtDesc().stream()
+        notifRepo.findVisibleForUser(userId).stream()
                 .filter(n -> !alreadyRead.contains(n.getId()))
                 .forEach(n -> {
                     AdminNotificationRead read = new AdminNotificationRead();
