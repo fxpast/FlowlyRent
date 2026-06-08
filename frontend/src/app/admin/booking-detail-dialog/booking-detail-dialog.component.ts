@@ -226,21 +226,16 @@ import { TranslationService } from '../../core/services/translation.service';
                 <span>Demande de paiement Beds24</span>
               </div>
               <div class="payment-row">
-                <mat-form-field appearance="outline" class="pay-amount" subscriptSizing="dynamic">
-                  <mat-label>Montant €</mat-label>
-                  <input matInput type="number" min="1" step="1"
-                         [(ngModel)]="payAmount" (ngModelChange)="payLink.set('')">
-                </mat-form-field>
                 <button mat-stroked-button color="primary"
-                        [disabled]="!payAmount || !beds24Id"
+                        [disabled]="!beds24Id"
                         (click)="generatePayLink('payment')"
-                        [matTooltip]="beds24Id ? 'Encaissement immédiat' : 'Réservation Beds24 requise'">
+                        matTooltip="Encaissement immédiat">
                   <mat-icon>euro</mat-icon> Paiement
                 </button>
                 <button mat-stroked-button
-                        [disabled]="!payAmount || !beds24Id"
+                        [disabled]="!beds24Id"
                         (click)="generatePayLink('deposit')"
-                        [matTooltip]="beds24Id ? 'Pré-autorisation sans débit (caution)' : 'Réservation Beds24 requise'">
+                        matTooltip="Pré-autorisation sans débit (caution)">
                   <mat-icon>shield</mat-icon> Caution
                 </button>
               </div>
@@ -635,8 +630,7 @@ import { TranslationService } from '../../core/services/translation.service';
     }
     .payment-header { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; color: #444; margin-bottom: 10px; }
     .pay-icon { font-size: 18px; width: 18px; height: 18px; color: #0288d1; }
-    .payment-row { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
-    .pay-amount { max-width: 110px; }
+    .payment-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .pay-link-box {
       display: flex; align-items: center; gap: 2px; margin-top: 8px;
       background: #e3f2fd; border-radius: 6px; padding: 2px 4px 2px 10px;
@@ -720,7 +714,6 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   dlgTranslating  = signal<Set<number>>(new Set());
   dlgShowOriginal = signal<Set<number>>(new Set());
 
-  payAmount     = '';
   payLink       = signal('');
   payLinkCopied = signal(false);
 
@@ -812,9 +805,9 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   generatePayLink(type: 'payment' | 'deposit'): void {
     const id = this.beds24Id;
-    if (!id || !this.payAmount) return;
+    if (!id) return;
     const capture = type === 'payment' ? 1 : 0;
-    this.payLink.set(`https://beds24.com/bookpay.php?bookid=${id}&g=st&capture=${capture}&pay=${this.payAmount}`);
+    this.payLink.set(`https://beds24.com/bookpay.php?bookid=${id}&g=st&capture=${capture}`);
     this.payLinkCopied.set(false);
   }
 
