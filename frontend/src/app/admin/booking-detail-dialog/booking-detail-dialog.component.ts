@@ -806,9 +806,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   get beds24Id(): string | null {
-    const ext = String(this.data['externalId'] || this.draft['externalId'] || '');
-    if (ext.startsWith('beds24-')) return ext.replace('beds24-', '');
-    return null;
+    const id = String(this.data['id'] || '');
+    return id && id !== '0' ? id : null;
   }
 
   generatePayLink(type: 'payment' | 'deposit'): void {
