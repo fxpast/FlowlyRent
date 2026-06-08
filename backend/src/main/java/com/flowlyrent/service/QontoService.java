@@ -188,10 +188,10 @@ public class QontoService {
     // ─── Categorization (in-memory) ───────────────────────────────────────────
 
     private void categorize(Map<String, Object> tx, List<ExpenseRule> rules) {
-        String label = tx.getOrDefault("label", "").toString().toLowerCase();
-        String reference = tx.getOrDefault("reference", "").toString().toLowerCase();
-        String counterparty = tx.getOrDefault("counterparty_name", "").toString().toLowerCase();
-        String note = tx.getOrDefault("note", "").toString().toLowerCase();
+        String label = tx.get("label") != null ? tx.get("label").toString().toLowerCase() : "";
+        String reference = tx.get("reference") != null ? tx.get("reference").toString().toLowerCase() : "";
+        String counterparty = tx.get("counterparty_name") != null ? tx.get("counterparty_name").toString().toLowerCase() : "";
+        String note = tx.get("note") != null ? tx.get("note").toString().toLowerCase() : "";
         String altText = counterparty + " " + reference + " " + note;
 
         for (ExpenseRule rule : rules) {
