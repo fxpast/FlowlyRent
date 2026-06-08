@@ -39,7 +39,7 @@ interface Stats {
       <div class="loading"><mat-spinner diameter="40" /></div>
     } @else {
       <div class="period-toggle">
-        <mat-button-toggle-group [(value)]="period" (change)="onPeriodChange()">
+        <mat-button-toggle-group [(value)]="period">
           <mat-button-toggle value="7">7 jours</mat-button-toggle>
           <mat-button-toggle value="30">30 jours</mat-button-toggle>
         </mat-button-toggle-group>
@@ -189,8 +189,6 @@ export class SuperadminDashboardComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void { this.load(); }
-
-  onPeriodChange(): void {}
 
   private load(): void {
     this.http.get<Stats>(`${environment.apiUrl}/superadmin/stats`).subscribe({

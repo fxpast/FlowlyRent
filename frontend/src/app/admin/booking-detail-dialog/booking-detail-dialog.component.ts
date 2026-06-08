@@ -218,6 +218,44 @@ import { TranslationService } from '../../core/services/translation.service';
               <mat-label>Notes</mat-label>
               <textarea matInput rows="2" [(ngModel)]="draft['notes']"></textarea>
             </mat-form-field>
+
+            <!-- ── Paiement / Caution ── -->
+            <div class="payment-section">
+              <div class="payment-header">
+                <mat-icon class="pay-icon">payment</mat-icon>
+                <span>Demande de paiement</span>
+              </div>
+              <div class="payment-row">
+                <mat-form-field appearance="outline" class="pay-amount" subscriptSizing="dynamic">
+                  <mat-label>Montant €</mat-label>
+                  <input matInput type="number" min="1" step="0.01"
+                         [(ngModel)]="payAmount" (ngModelChange)="payLink.set('')">
+                </mat-form-field>
+                <button mat-stroked-button color="primary"
+                        [disabled]="!payAmount || !beds24Id"
+                        (click)="generatePayLink('payment')"
+                        matTooltip="Encaissement immédiat">
+                  <mat-icon>euro</mat-icon> Paiement
+                </button>
+                <button mat-stroked-button
+                        [disabled]="!payAmount || !beds24Id"
+                        (click)="generatePayLink('deposit')"
+                        matTooltip="Pré-autorisation sans débit (caution)">
+                  <mat-icon>shield</mat-icon> Caution
+                </button>
+              </div>
+              @if (payLink()) {
+                <div class="pay-link-box">
+                  <a [href]="payLink()" target="_blank" class="pay-link-text">{{ payLink() }}</a>
+                  <button mat-icon-button (click)="copyPayLink()" matTooltip="Copier le lien">
+                    <mat-icon>{{ payLinkCopied() ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                  <a mat-icon-button [href]="payLink()" target="_blank" matTooltip="Ouvrir">
+                    <mat-icon>open_in_new</mat-icon>
+                  </a>
+                </div>
+              }
+            </div>
           </div>
         </mat-dialog-content>
 
@@ -455,6 +493,22 @@ import { TranslationService } from '../../core/services/translation.service';
                   Total estimé : <strong>{{ +taskForm.extraHours * +taskForm.hourlyRate | number:'1.2-2' }} €</strong>
                 </div>
               }
+              @if (taskLinenItems.length > 0) {
+                <div class="task-linen-preset">
+                  <div class="task-linen-title">
+                    <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                  </div>
+                  @for (item of taskLinenItems; track item.linenItemId) {
+                    <div class="task-linen-row">
+                      <span class="task-linen-label">{{ item.label }}</span>
+                      <mat-form-field appearance="outline" class="task-linen-qty">
+                        <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateDialogLinenQty(item.linenItemId, $event)">
+                        <span matTextSuffix>pcs</span>
+                      </mat-form-field>
+                    </div>
+                  }
+                </div>
+              }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notes</mat-label>
                 <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="taskForm.notes"
@@ -591,6 +645,31 @@ import { TranslationService } from '../../core/services/translation.service';
       color: #b71c1c; }
     .incident-inline mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
+    .payment-section {
+      margin-top: 12px; padding: 12px 14px;
+      border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;
+    }
+    .payment-header { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; color: #444; margin-bottom: 10px; }
+    .pay-icon { font-size: 18px; width: 18px; height: 18px; color: #0288d1; }
+    .payment-row { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+    .pay-amount { max-width: 110px; }
+    .pay-link-box {
+      display: flex; align-items: center; gap: 2px; margin-top: 8px;
+      background: #e3f2fd; border-radius: 6px; padding: 2px 4px 2px 10px;
+    }
+    .pay-link-text {
+      font-size: 11px; color: #0277bd; flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none;
+    }
+    .pay-link-text:hover { text-decoration: underline; }
+
+    .task-linen-preset { margin: 0 0 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
+    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
+    .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .task-linen-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .task-linen-label { flex: 1; font-size: 13px; color: #333; }
+    .task-linen-qty { width: 110px; flex-shrink: 0; }
+
     @media (max-width: 600px) {
       mat-dialog-content { min-width: unset; }
       .menage-content { min-width: unset; }
@@ -657,12 +736,17 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     extraHours: '',
     hourlyRate: ''
   };
+  taskLinenItems: {linenItemId: number; label: string; category: string; quantity: number}[] = [];
   taskDate: Date | null = null;
   taskTime = '09:00';
 
   dlgTranslations = signal<Map<number, string>>(new Map());
   dlgTranslating  = signal<Set<number>>(new Set());
   dlgShowOriginal = signal<Set<number>>(new Set());
+
+  payAmount     = '';
+  payLink       = signal('');
+  payLinkCopied = signal(false);
 
   private wsSub?: Subscription;
   private readonly apiBase = environment.apiUrl;
@@ -745,6 +829,27 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     });
   }
 
+  get beds24Id(): string | null {
+    const id = String(this.data['id'] || '');
+    return id && id !== '0' ? id : null;
+  }
+
+  generatePayLink(type: 'payment' | 'deposit'): void {
+    const id = this.beds24Id;
+    if (!id || !this.payAmount) return;
+    const token = btoa(`${id}:${this.payAmount}`);
+    const path  = type === 'payment' ? 'paiement' : 'caution';
+    this.payLink.set(`${window.location.origin}/${path}/${token}`);
+    this.payLinkCopied.set(false);
+  }
+
+  copyPayLink(): void {
+    navigator.clipboard.writeText(this.payLink()).then(() => {
+      this.payLinkCopied.set(true);
+      setTimeout(() => this.payLinkCopied.set(false), 2000);
+    });
+  }
+
   ngOnDestroy(): void {
     this.wsSub?.unsubscribe();
   }
@@ -759,6 +864,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       this.loadHousekeepingTask();
       if (this.housekeepers().length === 0) this.loadHousekeepers();
       this.loadPropertyCleaningHours();
+      if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
     }
   }
 
@@ -988,7 +1094,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const buildNotes = (nextCheckinTime?: string) => {
       const code     = this.propAccessCode() ?? '';
       const prevCode = this.propPreviousAccessCode() ?? '';
-      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.departureTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      const hours    = this.taskForm.extraHours ? ` — ${this.taskForm.extraHours}h` : '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.departureTime}${hours}\n\nCode : ${prevCode}\nNouveau : ${code}`;
       if (nextCheckinTime) {
         msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
       }
@@ -1061,6 +1168,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.taskForm.housekeeperId) body['housekeeperId'] = this.taskForm.housekeeperId;
     if (this.taskForm.extraHours)   body['extraHours']   = this.taskForm.extraHours;
     if (this.taskForm.hourlyRate)   body['hourlyRate']   = this.taskForm.hourlyRate;
+    const usages = this.taskLinenItems.filter(i => i.quantity > 0);
+    if (usages.length > 0) body['linenUsages'] = usages.map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }));
     this.housekeepingService.createTask(body).subscribe({
       next: task => {
         this.existingTasks.update(list => [...list, task]);
@@ -1100,6 +1209,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.taskForm = { type: 'CHECKOUT_CLEANING', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.taskDate = this.departureDate;
     this.taskTime = this.departureTime;
+    this.loadTaskLinenDefaults();
+  }
+
+  private loadTaskLinenDefaults(): void {
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    if (!pid) return;
+    this.http.get<any[]>(`${this.apiBase}/admin/linen/items`, { params: { beds24PropertyId: pid } }).subscribe({
+      next: items => {
+        this.taskLinenItems = items
+          .filter(i => i.defaultPerCleaning > 0)
+          .map(i => ({ linenItemId: i.id, label: i.label, category: i.category, quantity: i.defaultPerCleaning }));
+      },
+      error: () => { this.taskLinenItems = []; }
+    });
+  }
+
+  updateDialogLinenQty(linenItemId: number, qty: number): void {
+    this.taskLinenItems = this.taskLinenItems.map(i =>
+      i.linenItemId === linenItemId ? { ...i, quantity: Math.max(0, qty || 0) } : i
+    );
   }
 
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }

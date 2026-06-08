@@ -5,10 +5,12 @@ import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.TaskPhoto;
 import com.flowlyrent.model.enums.TaskStatus;
+import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.LinenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,11 +34,12 @@ public class HousekeeperPortalController {
     private final HousekeepingTaskRepository taskRepo;
     private final TaskPhotoRepository photoRepo;
     private final CloudinaryService cloudinaryService;
+    private final LinenService linenService;
     private final SecurityUtils securityUtils;
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
-        return profileRepo.findByLinkedUserId(userId)
+        return profileRepo.findByLinkedUserIdWithUser(userId)
                 .orElseThrow(() -> new IllegalStateException("Profil prestataire introuvable"));
     }
 
@@ -66,7 +69,10 @@ public class HousekeeperPortalController {
 
         TaskStatus status = TaskStatus.valueOf(body.get("status"));
         task.setStatus(status);
-        if (status == TaskStatus.DONE) task.setCompletedAt(LocalDateTime.now());
+        if (status == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+            linenService.deductLinenForTask(task, profile.getUser());
+        }
         return ResponseEntity.ok(taskRepo.save(task));
     }
 
@@ -78,15 +84,44 @@ public class HousekeeperPortalController {
                 .orElse(null);
         if (task == null) return ResponseEntity.notFound().build();
 
+        boolean wasIncident = Boolean.TRUE.equals(task.getHasIncident());
+        boolean newIncident = body.containsKey("hasIncident") &&
+                              Boolean.parseBoolean(body.get("hasIncident").toString());
+        log.debug("saveReport tâche {} | wasIncident={} | newIncident={} | host={}",
+                id, wasIncident, newIncident, profile.getUser().getId());
+
         if (body.containsKey("reportComment"))
             task.setReportComment(body.get("reportComment").toString());
-        if (body.containsKey("hasIncident"))
-            task.setHasIncident(Boolean.parseBoolean(body.get("hasIncident").toString()));
+        task.setHasIncident(newIncident);
         if (body.containsKey("incidentDescription"))
             task.setIncidentDescription(body.get("incidentDescription").toString());
         task.setReportedAt(LocalDateTime.now());
 
-        return ResponseEntity.ok(taskRepo.save(task));
+        // Le rapport est sauvegardé dans sa propre transaction, indépendamment de la suite
+        HousekeepingTask saved = taskRepo.save(task);
+
+        // Création automatique d'une tâche MAINTENANCE si l'incident vient d'être déclaré
+        if (!wasIncident && newIncident) {
+            log.debug("Création tâche MAINTENANCE pour tâche {} (propId={})", saved.getId(), saved.getBeds24PropertyId());
+            try {
+                HousekeepingTask maintenance = new HousekeepingTask();
+                maintenance.setUser(profile.getUser());
+                maintenance.setBeds24PropertyId(saved.getBeds24PropertyId());
+                maintenance.setPropertyName(saved.getPropertyName());
+                maintenance.setType(TaskType.MAINTENANCE);
+                maintenance.setScheduledDate(saved.getScheduledDate().toLocalDate().plusDays(1).atTime(10, 0));
+                String desc = saved.getIncidentDescription();
+                maintenance.setNotes("Dépannage suite incident du "
+                    + saved.getScheduledDate().toLocalDate()
+                    + (desc != null && !desc.isBlank() ? " : " + desc : ""));
+                taskRepo.save(maintenance);
+                log.info("Tâche MAINTENANCE créée automatiquement (incident tâche {})", saved.getId());
+            } catch (Exception e) {
+                log.error("Échec création tâche MAINTENANCE pour tâche {} : {}", saved.getId(), e.getMessage(), e);
+            }
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/tasks/{id}/photos")

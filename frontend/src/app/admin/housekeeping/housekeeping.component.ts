@@ -16,10 +16,12 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
 import { BookingService } from '../../core/services/booking.service';
+import { LinenComponent } from '../linen/linen.component';
 
 interface Task {
   id: number;
@@ -103,7 +105,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule,
+    LinenComponent
   ],
   template: `
     <mat-tab-group animationDuration="150ms">
@@ -113,7 +116,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
         <div class="tab-content">
 
           <div class="header-row">
-            <span></span>
+            <mat-button-toggle-group [value]="taskCategory()" (change)="setTaskCategory($event.value)" hideSingleSelectionIndicator>
+              <mat-button-toggle value="menage">
+                <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">cleaning_services</mat-icon>
+                Ménages
+              </mat-button-toggle>
+              <mat-button-toggle value="depannage">
+                <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">build</mat-icon>
+                Dépannage
+                @if (unassignedDepannageCount()) {
+                  <span class="depannage-alert">{{ unassignedDepannageCount() }}</span>
+                }
+              </mat-button-toggle>
+            </mat-button-toggle-group>
             <button mat-flat-button color="primary" (click)="openNewTaskForm()">
               <mat-icon>add</mat-icon> Nouvelle tâche
             </button>
@@ -122,7 +137,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <!-- Formulaire création -->
           @if (showForm) {
             <mat-card class="create-form">
-              <mat-card-header><mat-card-title>Créer une tâche</mat-card-title></mat-card-header>
+              <mat-card-header><mat-card-title>{{ editingTask ? 'Modifier la tâche' : 'Créer une tâche' }}</mat-card-title></mat-card-header>
               <mat-card-content>
                 <div class="form-row">
                   <mat-form-field>
@@ -136,7 +151,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   <mat-form-field>
                     <mat-label>Type</mat-label>
                     <mat-select [ngModel]="newTask.type" (ngModelChange)="onNewTypeChange($event)">
-                      @for (t of taskTypes; track t.value) {
+                      @for (t of filteredTaskTypes(); track t.value) {
                         <mat-option [value]="t.value">{{ t.label }}</mat-option>
                       }
                     </mat-select>
@@ -182,6 +197,22 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     Total estimé : <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
                   </div>
                 }
+                @if (taskLinenItems().length > 0) {
+                  <div class="task-linen-preset">
+                    <div class="task-linen-title">
+                      <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                    </div>
+                    @for (item of taskLinenItems(); track item.linenItemId) {
+                      <div class="task-linen-row">
+                        <span class="task-linen-label">{{ item.label }}</span>
+                        <mat-form-field class="task-linen-qty">
+                          <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateLinenQty(item.linenItemId, $event)">
+                          <span matTextSuffix>pcs</span>
+                        </mat-form-field>
+                      </div>
+                    }
+                  </div>
+                }
                 <mat-form-field style="width:100%">
                   <mat-label>Notes</mat-label>
                   <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
@@ -189,9 +220,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
-                  Créer
+                  {{ editingTask ? 'Modifier' : 'Créer' }}
                 </button>
-                <button mat-button (click)="showForm = false; newTask.scheduledDate = ''">Annuler</button>
+                <button mat-button (click)="cancelTaskForm()">Annuler</button>
               </mat-card-actions>
             </mat-card>
     }
@@ -224,11 +255,11 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <!-- Liste des tâches -->
           @if (loading()) {
             <div class="center"><mat-spinner diameter="40" /></div>
-          } @else if (filteredTasks().length === 0) {
+          } @else if (displayedTasks().length === 0) {
             <p class="empty">Aucune tâche sur cette période.</p>
           } @else {
             <div class="tasks-grid">
-              @for (task of filteredTasks(); track task.id) {
+              @for (task of displayedTasks(); track task.id) {
                 <mat-card class="task-card" [class.done]="task.status === 'DONE'" [class.in-progress]="task.status === 'IN_PROGRESS'">
                   <div class="task-header">
                     <div class="task-date">{{ task.scheduledDate | date:'EEE dd/MM · HH:mm' : '' : 'fr-FR' }}</div>
@@ -258,6 +289,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       }
                     </div>
                   }
+                  @if (!task.housekeeper && (task.status === 'PENDING' || task.status === 'IN_PROGRESS')) {
+                    <div class="task-unassigned"><mat-icon>person_off</mat-icon> Non attribuée</div>
+                  }
                   @if (task.hasIncident) {
                     <div class="task-incident"><mat-icon>warning</mat-icon> Incident signalé</div>
                   }
@@ -279,9 +313,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                           <mat-icon>check</mat-icon> Terminer
                         </button>
                       }
-                      <button mat-icon-button (click)="updateStatus(task, 'SKIPPED')" title="Abandonner" style="color:#757575">
-                        <mat-icon>block</mat-icon>
-                      </button>
                     } @else if (task.status === 'DONE') {
                       <span class="completed-at">
                         Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
@@ -298,6 +329,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                         <mat-icon>photo_library</mat-icon>
                       </button>
                     }
+                    <button mat-icon-button (click)="openEditTaskForm(task)" title="Modifier la tâche" style="color:#555">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="deleteTask(task)" title="Supprimer la tâche" style="color:#c62828">
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </div>
                 </mat-card>
               }
@@ -517,6 +554,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
         </div>
       </mat-tab>
 
+      <!-- ══════════════ ONGLET BLANCHISSERIE ══════════════ -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon style="margin-right:6px;font-size:18px;width:18px;height:18px">local_laundry_service</mat-icon>
+          Blanchisserie
+        </ng-template>
+        <div class="tab-content">
+          <app-linen />
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
 
     <!-- ══════════════ DIALOG RAPPORT & PHOTOS ══════════════ -->
@@ -692,6 +740,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .depannage-alert { display: inline-flex; align-items: center; justify-content: center; background: #d32f2f; color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; line-height: 1; }
+    .task-unassigned { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #f57c00; font-weight: 600; margin: 4px 0; background: #fff3e0; border-radius: 4px; padding: 2px 6px; width: fit-content; }
+    .task-unassigned mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
     .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-report-preview { font-size: 12px; color: #555; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
@@ -728,6 +779,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .charges-cost-cell.muted { color: #aaa; font-weight: 400; }
     .charges-grand-total { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f5f5f5; border-radius: 8px; font-size: 14px; font-weight: 600; color: #333; margin-top: 4px; }
     /* dialog styles in global styles.scss (bypass ViewEncapsulation for CDK overlay) */
+    .task-linen-preset { margin-bottom: 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
+    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
+    .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .task-linen-row { display: flex; align-items: center; gap: 12px; margin-bottom: 0; }
+    .task-linen-label { flex: 1; font-size: 13px; color: #333; }
+    .task-linen-qty { width: 110px; flex-shrink: 0; }
     .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
     .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
     .portal-badge.inactive { background: #f3f4f6; color: #555; }
@@ -790,7 +847,9 @@ export class HousekeepingComponent implements OnInit {
   chargesTotalCost  = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalCost, 0));
 
   private propConfigs = signal<any[]>([]);
+  taskLinenItems = signal<{linenItemId: number; label: string; category: string; quantity: number}[]>([]);
   showForm = false;
+  editingTask: Task | null = null;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
   filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
@@ -809,6 +868,33 @@ export class HousekeepingComponent implements OnInit {
   taskTypes = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
   statuses  = Object.entries(STATUS_LABELS).map(([value, { label }]) => ({ value, label }));
 
+  private readonly MENAGE_TYPES = new Set(['CHECKOUT_CLEANING', 'CHECKIN_PREP', 'CLEANING']);
+  taskCategory = signal<'menage' | 'depannage'>('menage');
+
+  displayedTasks = computed(() => {
+    const cat = this.taskCategory();
+    return this.filteredTasks().filter(t =>
+      cat === 'menage' ? this.MENAGE_TYPES.has(t.type) : !this.MENAGE_TYPES.has(t.type)
+    );
+  });
+
+  filteredTaskTypes = computed(() =>
+    this.taskTypes.filter(t =>
+      this.taskCategory() === 'menage' ? this.MENAGE_TYPES.has(t.value) : !this.MENAGE_TYPES.has(t.value)
+    )
+  );
+
+  unassignedDepannageCount = computed(() =>
+    this.filteredTasks().filter(t =>
+      !this.MENAGE_TYPES.has(t.type) && !t.housekeeper &&
+      (t.status === 'PENDING' || t.status === 'IN_PROGRESS')
+    ).length
+  );
+
+  setTaskCategory(cat: 'menage' | 'depannage'): void {
+    this.taskCategory.set(cat);
+  }
+
   constructor(
     private http: HttpClient,
     private housekeeperService: HousekeeperService,
@@ -820,6 +906,10 @@ export class HousekeepingComponent implements OnInit {
   ngOnInit(): void {
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
+    this.http.get<any[]>(`${this.base}/admin/property-configs`).subscribe({
+      next: cfgs => this.propConfigs.set(cfgs ?? []),
+      error: () => {}
+    });
     this.load();
     this.loadCharges();
   }
@@ -886,16 +976,85 @@ export class HousekeepingComponent implements OnInit {
   }
 
   openNewTaskForm(): void {
+    this.editingTask = null;
     this.newTaskDate = new Date();
     this.newTaskTime = '09:00';
-    this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    const defaultType = this.taskCategory() === 'menage' ? 'CHECKOUT_CLEANING' : 'MAINTENANCE';
+    this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    this.taskLinenItems.set([]);
     this.showForm = true;
-    if (this.propConfigs().length === 0) {
-      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
-        next: cfgs => this.propConfigs.set(cfgs ?? []),
-        error: () => {}
-      });
-    }
+  }
+
+  openEditTaskForm(task: Task): void {
+    this.editingTask = task;
+    const dt = task.scheduledDate ? new Date(task.scheduledDate) : new Date();
+    this.newTaskDate = dt;
+    this.newTaskTime = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+    const matchingProp = this.properties().find(p => String(p.id) === task.beds24PropertyId);
+    this.newTask = {
+      propertyId:    matchingProp?.id ?? (task.beds24PropertyId ? Number(task.beds24PropertyId) : null),
+      type:          task.type,
+      scheduledDate: task.scheduledDate ?? '',
+      housekeeperId: task.housekeeper?.id ?? null,
+      notes:         task.notes ?? '',
+      extraHours:    task.extraHours != null ? String(task.extraHours) : '',
+      hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : ''
+    };
+    this.taskLinenItems.set([]);
+    this.showForm = true;
+    this.http.get<any[]>(`${this.base}/admin/housekeeping/${task.id}/linen`).subscribe({
+      next: usages => {
+        if (usages.length > 0) {
+          this.taskLinenItems.set(usages.map(u => ({
+            linenItemId: u.linenItem.id,
+            label: u.linenItem.label,
+            category: u.linenItem.category,
+            quantity: u.quantity
+          })));
+        } else if (task.beds24PropertyId) {
+          this.loadTaskLinenDefaults(task.beds24PropertyId);
+        }
+      },
+      error: () => {
+        if (task.beds24PropertyId) this.loadTaskLinenDefaults(task.beds24PropertyId);
+      }
+    });
+  }
+
+  cancelTaskForm(): void {
+    this.showForm = false;
+    this.editingTask = null;
+    this.newTask.scheduledDate = '';
+    this.taskLinenItems.set([]);
+  }
+
+  saveTask(): void {
+    const task = this.editingTask!;
+    const dateStr = this.fromDate(this.newTaskDate);
+    const pid = String(this.newTask.propertyId ?? '');
+    const prop = this.properties().find(p => String(p.id) === pid);
+    const payload: Record<string, unknown> = {
+      beds24PropertyId: pid,
+      propertyName:     prop ? (prop['name'] ?? '') : (task.propertyName ?? null),
+      type:             this.newTask.type,
+      scheduledDate:    dateStr ? `${dateStr}T${this.newTaskTime}:00` : '',
+      notes:            this.newTask.notes || null,
+      housekeeperId:    this.newTask.housekeeperId ?? null,
+      extraHours:       this.newTask.extraHours || null,
+      hourlyRate:       this.newTask.hourlyRate || null,
+      linenUsages:      this.taskLinenItems().filter(i => i.quantity > 0).map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }))
+    };
+    this.http.patch<Task>(`${this.base}/admin/housekeeping/${task.id}`, payload).subscribe({
+      next: updated => {
+        this.bookingService.getPropertyNames().subscribe(names => {
+          const pid2 = updated.beds24PropertyId ?? '';
+          const withName = pid2 && names[pid2] ? { ...updated, propertyName: names[pid2] } : updated;
+          this.tasks.update(all => all.map(t => t.id === withName.id ? withName : t));
+          this.applyFilter();
+          this.cancelTaskForm();
+        });
+      }
+    });
   }
 
   applyFilter(): void {
@@ -915,6 +1074,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   createTask(): void {
+    if (this.editingTask) { this.saveTask(); return; }
     const dateStr = this.fromDate(this.newTaskDate);
     const pid = String(this.newTask.propertyId ?? '');
     const prop = this.properties().find(p => String(p.id) === pid);
@@ -928,9 +1088,12 @@ export class HousekeepingComponent implements OnInit {
     if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
     if (this.newTask.extraHours)   payload['extraHours']   = this.newTask.extraHours;
     if (this.newTask.hourlyRate)   payload['hourlyRate']   = this.newTask.hourlyRate;
+    const usages = this.taskLinenItems().filter(i => i.quantity > 0);
+    if (usages.length > 0) payload['linenUsages'] = usages.map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }));
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
       this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+      this.taskLinenItems.set([]);
       this.load();
     });
   }
@@ -940,6 +1103,9 @@ export class HousekeepingComponent implements OnInit {
     if (id != null) {
       const cfg = this.propConfigs().find(c => c.beds24PropertyId === String(id));
       if (cfg?.cleaningHours != null) this.newTask.extraHours = String(cfg.cleaningHours);
+      this.loadTaskLinenDefaults(String(id));
+    } else {
+      this.taskLinenItems.set([]);
     }
     if (id && this.newTask.housekeeperId && this.newTask.type === 'CHECKOUT_CLEANING') {
       const hk = this.housekeepers().find(h => h.id === this.newTask.housekeeperId);
@@ -974,7 +1140,8 @@ export class HousekeepingComponent implements OnInit {
       const cfg      = this.propConfigs().find(c => c.beds24PropertyId === pid);
       const code     = cfg?.accessCode ?? '';
       const prevCode = cfg?.previousAccessCode ?? '';
-      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.newTaskTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      const hours    = this.newTask.extraHours ? ` — ${this.newTask.extraHours}h` : '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.newTaskTime}${hours}\n\nCode : ${prevCode}\nNouveau : ${code}`;
       if (nextCheckinTime) msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
       this.newTask.notes = msg;
     };
@@ -1000,14 +1167,26 @@ export class HousekeepingComponent implements OnInit {
       });
     };
 
-    if (this.propConfigs().length > 0) {
-      checkNextArrival();
-    } else {
-      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
-        next: cfgs => { this.propConfigs.set(cfgs ?? []); checkNextArrival(); },
-        error: () => checkNextArrival()
-      });
-    }
+    checkNextArrival();
+  }
+
+  private loadTaskLinenDefaults(pid: string): void {
+    this.http.get<any[]>(`${this.base}/admin/linen/items`, { params: { beds24PropertyId: pid } }).subscribe({
+      next: items => {
+        this.taskLinenItems.set(
+          items
+            .filter(i => i.defaultPerCleaning > 0)
+            .map(i => ({ linenItemId: i.id, label: i.label, category: i.category, quantity: i.defaultPerCleaning }))
+        );
+      },
+      error: () => this.taskLinenItems.set([])
+    });
+  }
+
+  updateLinenQty(linenItemId: number, qty: number): void {
+    this.taskLinenItems.update(items =>
+      items.map(i => i.linenItemId === linenItemId ? { ...i, quantity: Math.max(0, qty || 0) } : i)
+    );
   }
 
   private toFrDate(iso: string): string {

@@ -7,8 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { MessageService } from '../../core/services/message.service';
+import { environment } from '../../../environments/environment';
 
 interface NavItem { icon: string; label: string; route: string; }
 
@@ -42,6 +44,9 @@ interface NavItem { icon: string; label: string; route: string; }
               <span matListItemTitle>{{ item.label }}</span>
               @if (item.route === 'messages' && unreadCount() > 0) {
                 <span class="badge">{{ unreadCount() }}</span>
+              }
+              @if (item.route === 'notifications' && unreadNotifCount() > 0) {
+                <span class="badge">{{ unreadNotifCount() }}</span>
               }
             </a>
           }
@@ -108,6 +113,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
   unreadCount = signal(0);
+  unreadNotifCount = signal(0);
   isMobile = signal(false);
 
   private mq = window.matchMedia('(max-width: 768px)');
@@ -123,6 +129,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
     { icon: 'chat',             label: 'Messages',         route: 'messages' },
     { icon: 'home_repair_service', label: 'Entretien',        route: 'housekeeping' },
+    { icon: 'notifications',    label: 'Notifications',    route: 'notifications' },
     { icon: 'receipt_long',      label: 'Factures',         route: 'invoices' },
     { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
     { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
@@ -132,13 +139,15 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'assessment',       label: 'Rapports',         route: 'reports' }
   ];
 
-  constructor(public auth: AuthService, private messageService: MessageService) {}
+  constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient) {}
 
   ngOnInit(): void {
     this.isMobile.set(this.mq.matches);
     this.mq.addEventListener('change', this.mqListener);
     this.loadUnreadCount();
+    this.loadUnreadNotifCount();
     setInterval(() => this.loadUnreadCount(), 30000);
+    setInterval(() => this.loadUnreadNotifCount(), 60000);
   }
 
   ngOnDestroy(): void {
@@ -147,5 +156,12 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   private loadUnreadCount(): void {
     this.messageService.getUnreadCount().subscribe(r => this.unreadCount.set(r.count));
+  }
+
+  private loadUnreadNotifCount(): void {
+    this.http.get<{count: number}>(`${environment.apiUrl}/admin/notifications/unread-count`).subscribe({
+      next: r => this.unreadNotifCount.set(r.count),
+      error: () => {}
+    });
   }
 }
