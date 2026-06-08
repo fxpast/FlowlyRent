@@ -5,14 +5,18 @@ import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingStaff;
 import com.flowlyrent.model.HousekeepingTask;
+import com.flowlyrent.model.TaskLinenUsage;
 import com.flowlyrent.model.TaskPhoto;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingStaffRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
+import com.flowlyrent.repository.LinenItemRepository;
+import com.flowlyrent.repository.TaskLinenUsageRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.LinenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +29,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/housekeeping")
@@ -39,7 +45,10 @@ public class AdminHousekeepingController {
     private final HousekeepingStaffRepository staffRepo;
     private final HousekeeperProfileRepository housekeeperRepo;
     private final TaskPhotoRepository photoRepo;
+    private final TaskLinenUsageRepository usageRepo;
+    private final LinenItemRepository linenItemRepo;
     private final CloudinaryService cloudinaryService;
+    private final LinenService linenService;
     private final SecurityUtils securityUtils;
 
     // --- Tâches ---
@@ -51,12 +60,10 @@ public class AdminHousekeepingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate scheduledDate) {
         Long userId = securityUtils.getCurrentUserId();
 
-        // 1. Cherche toutes les tâches par beds24BookingId (scopées à l'utilisateur)
         List<HousekeepingTask> byId = taskRepo.findByBeds24BookingIdOrderByScheduledDateAsc(bookingId)
                 .stream().filter(t -> t.getUser().getId().equals(userId)).toList();
         if (!byId.isEmpty()) return ResponseEntity.ok(byId);
 
-        // 2. Fallback : tâche manuelle sans bookingId — cherche par propriété + date
         if (propertyId != null && scheduledDate != null) {
             return ResponseEntity.ok(
                 taskRepo.findByUserIdAndBeds24PropertyIdAndScheduledDateBetweenOrderByScheduledDateAsc(
@@ -110,7 +117,13 @@ public class AdminHousekeepingController {
                     .ifPresent(task::setHousekeeper);
         }
 
-        return ResponseEntity.ok(taskRepo.save(task));
+        HousekeepingTask saved = taskRepo.save(task);
+
+        if (body.containsKey("linenUsages")) {
+            saveLinenUsages(saved, user, body.get("linenUsages"));
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/{id}")
@@ -137,20 +150,50 @@ public class AdminHousekeepingController {
             }
         }
 
-        return ResponseEntity.ok(taskRepo.save(task));
+        HousekeepingTask updated = taskRepo.save(task);
+
+        if (body.containsKey("linenUsages")) {
+            saveLinenUsages(updated, user, body.get("linenUsages"));
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<HousekeepingTask> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        Long userId = securityUtils.getCurrentUserId();
+        AppUser user = securityUtils.getCurrentUser();
         HousekeepingTask task = taskRepo.findById(id)
-                .filter(t -> t.getUser().getId().equals(userId))
+                .filter(t -> t.getUser().getId().equals(user.getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
 
         TaskStatus status = TaskStatus.valueOf(body.get("status"));
         task.setStatus(status);
-        if (status == TaskStatus.DONE) task.setCompletedAt(LocalDateTime.now());
+        if (status == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+            linenService.deductLinenForTask(task, user);
+        }
         return ResponseEntity.ok(taskRepo.save(task));
+    }
+
+    @GetMapping("/{id}/linen")
+    public ResponseEntity<List<Map<String, Object>>> getTaskLinen(@PathVariable Long id) {
+        Long userId = securityUtils.getCurrentUserId();
+        taskRepo.findById(id)
+                .filter(t -> t.getUser().getId().equals(userId))
+                .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+        return ResponseEntity.ok(
+            usageRepo.findByTask_Id(id).stream().map(u -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", u.getId());
+                m.put("quantity", u.getQuantity());
+                Map<String, Object> li = new LinkedHashMap<>();
+                li.put("id", u.getLinenItem().getId());
+                li.put("label", u.getLinenItem().getLabel());
+                li.put("category", u.getLinenItem().getCategory());
+                m.put("linenItem", li);
+                return m;
+            }).collect(Collectors.toList())
+        );
     }
 
     @GetMapping("/{id}/photos")
@@ -212,7 +255,7 @@ public class AdminHousekeepingController {
         HousekeepingTask task = taskRepo.findById(id)
                 .filter(t -> t.getUser().getId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
-        // Supprimer les photos (Cloudinary + DB) avant la tâche pour respecter la FK RESTRICT
+        usageRepo.deleteByTaskId(id);
         List<TaskPhoto> photos = photoRepo.findByTaskIdOrderByUploadedAtAsc(id);
         for (TaskPhoto photo : photos) {
             if (photo.getPublicId() != null) cloudinaryService.delete(photo.getPublicId());
@@ -257,14 +300,37 @@ public class AdminHousekeepingController {
         return ResponseEntity.ok(staffRepo.save(staff));
     }
 
+    // --- Helpers ---
+
+    @SuppressWarnings("unchecked")
+    private void saveLinenUsages(HousekeepingTask task, AppUser user, Object rawList) {
+        if (!(rawList instanceof List)) return;
+        usageRepo.deleteByTaskId(task.getId());
+        for (Object item : (List<?>) rawList) {
+            if (!(item instanceof Map)) continue;
+            Map<String, Object> u = (Map<String, Object>) item;
+            if (!u.containsKey("linenItemId") || !u.containsKey("quantity")) continue;
+            int qty = Integer.parseInt(u.get("quantity").toString());
+            if (qty <= 0) continue;
+            Long linenItemId = Long.parseLong(u.get("linenItemId").toString());
+            linenItemRepo.findByIdAndUserId(linenItemId, user.getId()).ifPresent(linenItem -> {
+                TaskLinenUsage usage = new TaskLinenUsage();
+                usage.setTask(task);
+                usage.setLinenItem(linenItem);
+                usage.setQuantity(qty);
+                usageRepo.save(usage);
+            });
+        }
+    }
+
     private static final DateTimeFormatter FMT_HHMM = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     private LocalDateTime parseScheduledDate(String raw) {
         if (!raw.contains("T")) return LocalDate.parse(raw).atTime(9, 0);
         try {
-            return LocalDateTime.parse(raw);                   // HH:mm:ss ou ISO complet
+            return LocalDateTime.parse(raw);
         } catch (Exception e) {
-            return LocalDateTime.parse(raw, FMT_HHMM);        // HH:mm sans secondes (datetime-local)
+            return LocalDateTime.parse(raw, FMT_HHMM);
         }
     }
 }

@@ -73,6 +73,8 @@ public class HousekeepingTask {
 
     private LocalDateTime completedAt;
 
+    private Boolean linenDeducted = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

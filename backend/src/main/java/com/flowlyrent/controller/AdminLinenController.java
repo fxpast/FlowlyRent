@@ -8,6 +8,7 @@ import com.flowlyrent.model.enums.LinenCategory;
 import com.flowlyrent.model.enums.MovementDirection;
 import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.LinenMovementRepository;
+import com.flowlyrent.repository.TaskLinenUsageRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ public class AdminLinenController {
 
     private final LinenItemRepository itemRepo;
     private final LinenMovementRepository movementRepo;
+    private final TaskLinenUsageRepository usageRepo;
     private final SecurityUtils securityUtils;
 
     // ─── Articles ───────────────────────────────────────────────────────────
@@ -61,6 +63,7 @@ public class AdminLinenController {
         Long userId = securityUtils.getCurrentUserId();
         LinenItem item = itemRepo.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Article introuvable"));
+        usageRepo.deleteByLinenItemId(id);
         movementRepo.deleteByLinenItemId(id);
         itemRepo.delete(item);
         return ResponseEntity.noContent().build();
@@ -119,6 +122,8 @@ public class AdminLinenController {
             item.setMinThreshold(body.get("minThreshold") != null ? Integer.parseInt(body.get("minThreshold").toString()) : null);
         if (body.containsKey("sortOrder"))
             item.setSortOrder(body.get("sortOrder") != null ? Integer.parseInt(body.get("sortOrder").toString()) : 0);
+        if (body.containsKey("defaultPerCleaning"))
+            item.setDefaultPerCleaning(body.get("defaultPerCleaning") != null ? Integer.parseInt(body.get("defaultPerCleaning").toString()) : null);
     }
 
     private Map<String, Object> itemToMap(LinenItem item) {
@@ -135,6 +140,7 @@ public class AdminLinenController {
         m.put("totalQuantity",    item.getTotalQuantity());
         m.put("minThreshold",     item.getMinThreshold());
         m.put("sortOrder",        item.getSortOrder());
+        m.put("defaultPerCleaning", item.getDefaultPerCleaning());
         m.put("atLaundry",        atLaundry);
         m.put("atProperty",       atProperty);
         return m;

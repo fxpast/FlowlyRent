@@ -10,6 +10,7 @@ import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.LinenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class HousekeeperPortalController {
     private final HousekeepingTaskRepository taskRepo;
     private final TaskPhotoRepository photoRepo;
     private final CloudinaryService cloudinaryService;
+    private final LinenService linenService;
     private final SecurityUtils securityUtils;
 
     private HousekeeperProfile myProfile() {
@@ -67,7 +69,10 @@ public class HousekeeperPortalController {
 
         TaskStatus status = TaskStatus.valueOf(body.get("status"));
         task.setStatus(status);
-        if (status == TaskStatus.DONE) task.setCompletedAt(LocalDateTime.now());
+        if (status == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+            linenService.deductLinenForTask(task, profile.getUser());
+        }
         return ResponseEntity.ok(taskRepo.save(task));
     }
 

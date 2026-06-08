@@ -197,6 +197,22 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     Total estimé : <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
                   </div>
                 }
+                @if (taskLinenItems().length > 0) {
+                  <div class="task-linen-preset">
+                    <div class="task-linen-title">
+                      <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                    </div>
+                    @for (item of taskLinenItems(); track item.linenItemId) {
+                      <div class="task-linen-row">
+                        <span class="task-linen-label">{{ item.label }}</span>
+                        <mat-form-field class="task-linen-qty">
+                          <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateLinenQty(item.linenItemId, $event)">
+                          <span matTextSuffix>pcs</span>
+                        </mat-form-field>
+                      </div>
+                    }
+                  </div>
+                }
                 <mat-form-field style="width:100%">
                   <mat-label>Notes</mat-label>
                   <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
@@ -763,6 +779,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .charges-cost-cell.muted { color: #aaa; font-weight: 400; }
     .charges-grand-total { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f5f5f5; border-radius: 8px; font-size: 14px; font-weight: 600; color: #333; margin-top: 4px; }
     /* dialog styles in global styles.scss (bypass ViewEncapsulation for CDK overlay) */
+    .task-linen-preset { margin-bottom: 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
+    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
+    .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .task-linen-row { display: flex; align-items: center; gap: 12px; margin-bottom: 0; }
+    .task-linen-label { flex: 1; font-size: 13px; color: #333; }
+    .task-linen-qty { width: 110px; flex-shrink: 0; }
     .portal-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 8px; border-radius: 6px; margin-top: 8px; cursor: pointer; flex-wrap: wrap; }
     .portal-badge.active { background: #e8f5e9; color: #2e7d32; cursor: default; }
     .portal-badge.inactive { background: #f3f4f6; color: #555; }
@@ -825,6 +847,7 @@ export class HousekeepingComponent implements OnInit {
   chargesTotalCost  = computed(() => this.housekeeperCharges().reduce((s, e) => s + e.totalCost, 0));
 
   private propConfigs = signal<any[]>([]);
+  taskLinenItems = signal<{linenItemId: number; label: string; category: string; quantity: number}[]>([]);
   showForm = false;
   editingTask: Task | null = null;
   editingHk: Partial<HousekeeperProfile> | null = null;
@@ -958,6 +981,7 @@ export class HousekeepingComponent implements OnInit {
     this.newTaskTime = '09:00';
     const defaultType = this.taskCategory() === 'menage' ? 'CHECKOUT_CLEANING' : 'MAINTENANCE';
     this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    this.taskLinenItems.set([]);
     this.showForm = true;
   }
 
@@ -976,13 +1000,32 @@ export class HousekeepingComponent implements OnInit {
       extraHours:    task.extraHours != null ? String(task.extraHours) : '',
       hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : ''
     };
+    this.taskLinenItems.set([]);
     this.showForm = true;
+    this.http.get<any[]>(`${this.base}/admin/housekeeping/${task.id}/linen`).subscribe({
+      next: usages => {
+        if (usages.length > 0) {
+          this.taskLinenItems.set(usages.map(u => ({
+            linenItemId: u.linenItem.id,
+            label: u.linenItem.label,
+            category: u.linenItem.category,
+            quantity: u.quantity
+          })));
+        } else if (task.beds24PropertyId) {
+          this.loadTaskLinenDefaults(task.beds24PropertyId);
+        }
+      },
+      error: () => {
+        if (task.beds24PropertyId) this.loadTaskLinenDefaults(task.beds24PropertyId);
+      }
+    });
   }
 
   cancelTaskForm(): void {
     this.showForm = false;
     this.editingTask = null;
     this.newTask.scheduledDate = '';
+    this.taskLinenItems.set([]);
   }
 
   saveTask(): void {
@@ -998,7 +1041,8 @@ export class HousekeepingComponent implements OnInit {
       notes:            this.newTask.notes || null,
       housekeeperId:    this.newTask.housekeeperId ?? null,
       extraHours:       this.newTask.extraHours || null,
-      hourlyRate:       this.newTask.hourlyRate || null
+      hourlyRate:       this.newTask.hourlyRate || null,
+      linenUsages:      this.taskLinenItems().filter(i => i.quantity > 0).map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }))
     };
     this.http.patch<Task>(`${this.base}/admin/housekeeping/${task.id}`, payload).subscribe({
       next: updated => {
@@ -1044,9 +1088,12 @@ export class HousekeepingComponent implements OnInit {
     if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
     if (this.newTask.extraHours)   payload['extraHours']   = this.newTask.extraHours;
     if (this.newTask.hourlyRate)   payload['hourlyRate']   = this.newTask.hourlyRate;
+    const usages = this.taskLinenItems().filter(i => i.quantity > 0);
+    if (usages.length > 0) payload['linenUsages'] = usages.map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }));
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
       this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+      this.taskLinenItems.set([]);
       this.load();
     });
   }
@@ -1056,6 +1103,9 @@ export class HousekeepingComponent implements OnInit {
     if (id != null) {
       const cfg = this.propConfigs().find(c => c.beds24PropertyId === String(id));
       if (cfg?.cleaningHours != null) this.newTask.extraHours = String(cfg.cleaningHours);
+      this.loadTaskLinenDefaults(String(id));
+    } else {
+      this.taskLinenItems.set([]);
     }
     if (id && this.newTask.housekeeperId && this.newTask.type === 'CHECKOUT_CLEANING') {
       const hk = this.housekeepers().find(h => h.id === this.newTask.housekeeperId);
@@ -1118,6 +1168,25 @@ export class HousekeepingComponent implements OnInit {
     };
 
     checkNextArrival();
+  }
+
+  private loadTaskLinenDefaults(pid: string): void {
+    this.http.get<any[]>(`${this.base}/admin/linen/items`, { params: { beds24PropertyId: pid } }).subscribe({
+      next: items => {
+        this.taskLinenItems.set(
+          items
+            .filter(i => i.defaultPerCleaning > 0)
+            .map(i => ({ linenItemId: i.id, label: i.label, category: i.category, quantity: i.defaultPerCleaning }))
+        );
+      },
+      error: () => this.taskLinenItems.set([])
+    });
+  }
+
+  updateLinenQty(linenItemId: number, qty: number): void {
+    this.taskLinenItems.update(items =>
+      items.map(i => i.linenItemId === linenItemId ? { ...i, quantity: Math.max(0, qty || 0) } : i)
+    );
   }
 
   private toFrDate(iso: string): string {

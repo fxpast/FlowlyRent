@@ -28,6 +28,7 @@ interface LinenItem {
   category: string;
   totalQuantity: number;
   minThreshold?: number;
+  defaultPerCleaning?: number;
   sortOrder: number;
   atLaundry: number;
   atProperty: number;
@@ -122,6 +123,12 @@ const CATEGORY_ICONS: Record<string, string> = {
                   <mat-label>Quantité totale *</mat-label>
                   <input matInput type="number" min="1" [(ngModel)]="itemForm.totalQuantity">
                   <span matTextSuffix>pcs</span>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Par ménage (défaut)</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="itemForm.defaultPerCleaning" placeholder="Ex : 1">
+                  <span matTextSuffix>pcs</span>
+                  <mat-hint>Pré-rempli à la création de tâche</mat-hint>
                 </mat-form-field>
                 <mat-form-field>
                   <mat-label>Alerte stock bas</mat-label>
@@ -394,8 +401,9 @@ export class LinenComponent implements OnInit {
     category: string;
     totalQuantity: number;
     minThreshold: string;
+    defaultPerCleaning: string;
     saving: boolean;
-  } = { show: false, editingId: null, label: '', category: 'DRAPS', totalQuantity: 0, minThreshold: '', saving: false };
+  } = { show: false, editingId: null, label: '', category: 'DRAPS', totalQuantity: 0, minThreshold: '', defaultPerCleaning: '', saving: false };
 
   movementForm: {
     itemId: number | null;
@@ -454,9 +462,9 @@ export class LinenComponent implements OnInit {
   openItemForm(item?: LinenItem): void {
     this.movementForm.itemId = null;
     if (item) {
-      this.itemForm = { show: true, editingId: item.id, label: item.label, category: item.category, totalQuantity: item.totalQuantity, minThreshold: item.minThreshold != null ? String(item.minThreshold) : '', saving: false };
+      this.itemForm = { show: true, editingId: item.id, label: item.label, category: item.category, totalQuantity: item.totalQuantity, minThreshold: item.minThreshold != null ? String(item.minThreshold) : '', defaultPerCleaning: item.defaultPerCleaning != null ? String(item.defaultPerCleaning) : '', saving: false };
     } else {
-      this.itemForm = { show: true, editingId: null, label: '', category: 'DRAPS', totalQuantity: 1, minThreshold: '', saving: false };
+      this.itemForm = { show: true, editingId: null, label: '', category: 'DRAPS', totalQuantity: 1, minThreshold: '', defaultPerCleaning: '', saving: false };
     }
   }
 
@@ -472,7 +480,8 @@ export class LinenComponent implements OnInit {
       label: this.itemForm.label.trim(),
       category: this.itemForm.category,
       totalQuantity: this.itemForm.totalQuantity,
-      minThreshold: this.itemForm.minThreshold ? Number(this.itemForm.minThreshold) : null
+      minThreshold: this.itemForm.minThreshold ? Number(this.itemForm.minThreshold) : null,
+      defaultPerCleaning: this.itemForm.defaultPerCleaning ? Number(this.itemForm.defaultPerCleaning) : null
     };
     const req = this.itemForm.editingId
       ? this.http.put<LinenItem>(`${this.base}/admin/linen/items/${this.itemForm.editingId}`, payload)

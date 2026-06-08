@@ -493,6 +493,22 @@ import { TranslationService } from '../../core/services/translation.service';
                   Total estimé : <strong>{{ +taskForm.extraHours * +taskForm.hourlyRate | number:'1.2-2' }} €</strong>
                 </div>
               }
+              @if (taskLinenItems.length > 0) {
+                <div class="task-linen-preset">
+                  <div class="task-linen-title">
+                    <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                  </div>
+                  @for (item of taskLinenItems; track item.linenItemId) {
+                    <div class="task-linen-row">
+                      <span class="task-linen-label">{{ item.label }}</span>
+                      <mat-form-field appearance="outline" class="task-linen-qty">
+                        <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateDialogLinenQty(item.linenItemId, $event)">
+                        <span matTextSuffix>pcs</span>
+                      </mat-form-field>
+                    </div>
+                  }
+                </div>
+              }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notes</mat-label>
                 <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="taskForm.notes"
@@ -647,6 +663,13 @@ import { TranslationService } from '../../core/services/translation.service';
     }
     .pay-link-text:hover { text-decoration: underline; }
 
+    .task-linen-preset { margin: 0 0 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
+    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
+    .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .task-linen-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .task-linen-label { flex: 1; font-size: 13px; color: #333; }
+    .task-linen-qty { width: 110px; flex-shrink: 0; }
+
     @media (max-width: 600px) {
       mat-dialog-content { min-width: unset; }
       .menage-content { min-width: unset; }
@@ -713,6 +736,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     extraHours: '',
     hourlyRate: ''
   };
+  taskLinenItems: {linenItemId: number; label: string; category: string; quantity: number}[] = [];
   taskDate: Date | null = null;
   taskTime = '09:00';
 
@@ -840,6 +864,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       this.loadHousekeepingTask();
       if (this.housekeepers().length === 0) this.loadHousekeepers();
       this.loadPropertyCleaningHours();
+      if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
     }
   }
 
@@ -1143,6 +1168,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.taskForm.housekeeperId) body['housekeeperId'] = this.taskForm.housekeeperId;
     if (this.taskForm.extraHours)   body['extraHours']   = this.taskForm.extraHours;
     if (this.taskForm.hourlyRate)   body['hourlyRate']   = this.taskForm.hourlyRate;
+    const usages = this.taskLinenItems.filter(i => i.quantity > 0);
+    if (usages.length > 0) body['linenUsages'] = usages.map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }));
     this.housekeepingService.createTask(body).subscribe({
       next: task => {
         this.existingTasks.update(list => [...list, task]);
@@ -1182,6 +1209,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.taskForm = { type: 'CHECKOUT_CLEANING', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.taskDate = this.departureDate;
     this.taskTime = this.departureTime;
+    this.loadTaskLinenDefaults();
+  }
+
+  private loadTaskLinenDefaults(): void {
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    if (!pid) return;
+    this.http.get<any[]>(`${this.apiBase}/admin/linen/items`, { params: { beds24PropertyId: pid } }).subscribe({
+      next: items => {
+        this.taskLinenItems = items
+          .filter(i => i.defaultPerCleaning > 0)
+          .map(i => ({ linenItemId: i.id, label: i.label, category: i.category, quantity: i.defaultPerCleaning }));
+      },
+      error: () => { this.taskLinenItems = []; }
+    });
+  }
+
+  updateDialogLinenQty(linenItemId: number, qty: number): void {
+    this.taskLinenItems = this.taskLinenItems.map(i =>
+      i.linenItemId === linenItemId ? { ...i, quantity: Math.max(0, qty || 0) } : i
+    );
   }
 
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }

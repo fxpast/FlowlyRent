@@ -39,6 +39,8 @@ public class LinenItem {
 
     private Integer minThreshold;
 
+    private Integer defaultPerCleaning;
+
     private int sortOrder = 0;
 
     @CreationTimestamp
