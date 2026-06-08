@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -73,7 +72,6 @@ public class HousekeeperPortalController {
     }
 
     @PostMapping("/tasks/{id}/report")
-    @Transactional
     public ResponseEntity<HousekeepingTask> saveReport(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         HousekeeperProfile profile = myProfile();
         HousekeepingTask task = taskRepo.findById(id)
@@ -81,8 +79,6 @@ public class HousekeeperPortalController {
                 .orElse(null);
         if (task == null) return ResponseEntity.notFound().build();
 
-        // Charger l'utilisateur hôte ici, pendant la transaction, avant tout save
-        com.flowlyrent.model.AppUser host = task.getUser();
         boolean wasIncident = Boolean.TRUE.equals(task.getHasIncident());
 
         if (body.containsKey("reportComment"))
@@ -93,22 +89,27 @@ public class HousekeeperPortalController {
             task.setIncidentDescription(body.get("incidentDescription").toString());
         task.setReportedAt(LocalDateTime.now());
 
+        // Le rapport est sauvegardé dans sa propre transaction, indépendamment de la suite
         HousekeepingTask saved = taskRepo.save(task);
 
         // Création automatique d'une tâche MAINTENANCE si l'incident vient d'être déclaré
         if (!wasIncident && Boolean.TRUE.equals(saved.getHasIncident())) {
-            HousekeepingTask maintenance = new HousekeepingTask();
-            maintenance.setUser(host);
-            maintenance.setBeds24PropertyId(saved.getBeds24PropertyId());
-            maintenance.setPropertyName(saved.getPropertyName());
-            maintenance.setType(TaskType.MAINTENANCE);
-            maintenance.setScheduledDate(saved.getScheduledDate().toLocalDate().plusDays(1).atTime(10, 0));
-            String desc = saved.getIncidentDescription();
-            maintenance.setNotes("Dépannage suite incident du "
-                + saved.getScheduledDate().toLocalDate()
-                + (desc != null && !desc.isBlank() ? " : " + desc : ""));
-            taskRepo.save(maintenance);
-            log.info("Tâche MAINTENANCE créée automatiquement (incident tâche {})", saved.getId());
+            try {
+                HousekeepingTask maintenance = new HousekeepingTask();
+                maintenance.setUser(profile.getUser()); // profil → même utilisateur hôte que la tâche
+                maintenance.setBeds24PropertyId(saved.getBeds24PropertyId());
+                maintenance.setPropertyName(saved.getPropertyName());
+                maintenance.setType(TaskType.MAINTENANCE);
+                maintenance.setScheduledDate(saved.getScheduledDate().toLocalDate().plusDays(1).atTime(10, 0));
+                String desc = saved.getIncidentDescription();
+                maintenance.setNotes("Dépannage suite incident du "
+                    + saved.getScheduledDate().toLocalDate()
+                    + (desc != null && !desc.isBlank() ? " : " + desc : ""));
+                taskRepo.save(maintenance);
+                log.info("Tâche MAINTENANCE créée automatiquement (incident tâche {})", saved.getId());
+            } catch (Exception e) {
+                log.error("Échec création tâche MAINTENANCE pour tâche {} : {}", saved.getId(), e.getMessage(), e);
+            }
         }
 
         return ResponseEntity.ok(saved);
