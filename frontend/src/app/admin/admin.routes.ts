@@ -94,6 +94,10 @@ export const adminRoutes: Routes = [
       {
         path: 'notifications',
         loadComponent: () => import('./notifications/notifications.component').then(m => m.NotificationsComponent)
+      },
+      {
+        path: 'expenses',
+        loadComponent: () => import('./expenses/expenses.component').then(m => m.ExpensesComponent)
       }
     ]
   }

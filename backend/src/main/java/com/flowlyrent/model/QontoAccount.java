@@ -8,27 +8,24 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "beds24_accounts")
+@Table(name = "qonto_accounts")
 @Data
-public class Beds24Account {
+public class QontoAccount {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id", nullable = false, unique = true,
+                foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"))
     private AppUser appUser;
 
-    @Convert(converter = EncryptionConverter.class)
-    @Column(columnDefinition = "TEXT")
-    private String refreshToken;
+    private String login;
 
     @Convert(converter = EncryptionConverter.class)
     @Column(columnDefinition = "TEXT")
-    private String accessToken;
-
-    private LocalDateTime tokenExpiresAt;
+    private String secretKey;
 
     private boolean connected = false;
 

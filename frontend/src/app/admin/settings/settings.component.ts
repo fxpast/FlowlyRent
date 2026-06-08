@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserService, UserProfile, Beds24Status } from '../../core/services/user.service';
+import { QontoService, QontoStatus } from '../../core/services/qonto.service';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -132,6 +133,86 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         } @else {
           <button mat-flat-button color="primary" (click)="connectBeds24()" [disabled]="connecting() || !b24SetupToken">
             @if (connecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> Connecter }
+          </button>
+        }
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Connexion Qonto -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>account_balance</mat-icon>
+        <mat-card-title>Connexion Qonto</mat-card-title>
+        <mat-card-subtitle>Synchronisez vos transactions bancaires pour catégoriser vos dépenses</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (qontoStatus()) {
+          @if (qontoStatus()!.connected) {
+            <div class="status-connected">
+              <mat-icon color="primary">check_circle</mat-icon>
+              <span>Compte Qonto connecté</span>
+            </div>
+            @if (qontoStatus()!.lastSync) {
+              <p class="sync-info">Dernière sync : {{ qontoStatus()!.lastSync }}</p>
+            }
+          } @else {
+            <div class="status-disconnected">
+              <mat-icon color="warn">cancel</mat-icon>
+              <span>Aucun compte Qonto connecté</span>
+            </div>
+            <div class="connect-steps">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <strong>Générez une clé API dans Qonto</strong>
+                  <p>Dans Qonto : <strong>Paramètres → Intégrations → API</strong><br>
+                  Notez votre <strong>login</strong> (identifiant Qonto) et générez une <strong>clé secrète</strong>.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <strong>Renseignez vos identifiants ci-dessous</strong>
+                </div>
+              </div>
+            </div>
+            <mat-form-field class="full-width">
+              <mat-label>Login Qonto</mat-label>
+              <input matInput [(ngModel)]="qontoLogin" autocomplete="off"
+                     placeholder="votre-entreprise-slug" />
+              <mat-icon matSuffix>person</mat-icon>
+            </mat-form-field>
+            <mat-form-field class="full-width">
+              <mat-label>Clé secrète</mat-label>
+              <input matInput [type]="showQontoKey() ? 'text' : 'password'"
+                     [(ngModel)]="qontoSecretKey" autocomplete="off" />
+              <button mat-icon-button matSuffix (click)="showQontoKey.set(!showQontoKey())">
+                <mat-icon>{{ showQontoKey() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+            @if (qontoConnectMsg()) {
+              <div class="connect-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
+                  <strong>Connexion échouée</strong>
+                  <p>{{ qontoConnectMsg() }}</p>
+                </div>
+              </div>
+            }
+          }
+        } @else {
+          <mat-spinner diameter="32" />
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        @if (qontoStatus()?.connected) {
+          <button mat-stroked-button color="warn" (click)="disconnectQonto()">
+            Déconnecter
+          </button>
+        } @else {
+          <button mat-flat-button color="primary" (click)="connectQonto()"
+                  [disabled]="qontoConnecting() || !qontoLogin || !qontoSecretKey">
+            @if (qontoConnecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> Connecter }
           </button>
         }
       </mat-card-actions>
@@ -316,6 +397,13 @@ export class SettingsComponent implements OnInit {
 
   webhookUrl = signal('');
 
+  qontoStatus = signal<QontoStatus | null>(null);
+  qontoLogin = '';
+  qontoSecretKey = '';
+  qontoConnecting = signal(false);
+  qontoConnectMsg = signal('');
+  showQontoKey = signal(false);
+
   pwd = { current: '', new: '', confirm: '' };
   savingPwd = signal(false);
   pwdMsg = signal('');
@@ -324,6 +412,7 @@ export class SettingsComponent implements OnInit {
 
   constructor(
     private userService: UserService,
+    private qontoService: QontoService,
     private route: ActivatedRoute,
     private snackBar: MatSnackBar
   ) {}
@@ -346,6 +435,7 @@ export class SettingsComponent implements OnInit {
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
     this.loadBeds24Status();
+    this.loadQontoStatus();
   }
 
   saveProfile(): void {
@@ -455,5 +545,37 @@ export class SettingsComponent implements OnInit {
 
   private loadBeds24Status(): void {
     this.userService.getBeds24Status().subscribe(s => this.beds24Status.set(s));
+  }
+
+  connectQonto(): void {
+    this.qontoConnecting.set(true);
+    this.qontoConnectMsg.set('');
+    this.qontoService.connect(this.qontoLogin, this.qontoSecretKey).subscribe({
+      next: r => {
+        this.qontoConnecting.set(false);
+        if (r.error) {
+          this.qontoConnectMsg.set(r.error);
+        } else {
+          this.qontoLogin = '';
+          this.qontoSecretKey = '';
+          this.loadQontoStatus();
+          this.snackBar.open('Compte Qonto connecté !', '', { duration: 3000 });
+        }
+      },
+      error: err => {
+        this.qontoConnecting.set(false);
+        this.qontoConnectMsg.set(err.error?.error ?? 'Identifiants invalides');
+      }
+    });
+  }
+
+  disconnectQonto(): void {
+    this.qontoService.disconnect().subscribe(() => {
+      this.loadQontoStatus();
+    });
+  }
+
+  private loadQontoStatus(): void {
+    this.qontoService.getStatus().subscribe(s => this.qontoStatus.set(s));
   }
 }
