@@ -5,6 +5,7 @@ import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.TaskPhoto;
 import com.flowlyrent.model.enums.TaskStatus;
+import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
@@ -78,6 +79,8 @@ public class HousekeeperPortalController {
                 .orElse(null);
         if (task == null) return ResponseEntity.notFound().build();
 
+        boolean wasIncident = Boolean.TRUE.equals(task.getHasIncident());
+
         if (body.containsKey("reportComment"))
             task.setReportComment(body.get("reportComment").toString());
         if (body.containsKey("hasIncident"))
@@ -86,7 +89,24 @@ public class HousekeeperPortalController {
             task.setIncidentDescription(body.get("incidentDescription").toString());
         task.setReportedAt(LocalDateTime.now());
 
-        return ResponseEntity.ok(taskRepo.save(task));
+        HousekeepingTask saved = taskRepo.save(task);
+
+        // Création automatique d'une tâche MAINTENANCE si l'incident vient d'être déclaré
+        if (!wasIncident && Boolean.TRUE.equals(saved.getHasIncident())) {
+            HousekeepingTask maintenance = new HousekeepingTask();
+            maintenance.setUser(saved.getUser());
+            maintenance.setBeds24PropertyId(saved.getBeds24PropertyId());
+            maintenance.setPropertyName(saved.getPropertyName());
+            maintenance.setType(TaskType.MAINTENANCE);
+            maintenance.setScheduledDate(saved.getScheduledDate().toLocalDate().plusDays(1).atTime(10, 0));
+            String desc = saved.getIncidentDescription();
+            maintenance.setNotes("Dépannage suite incident du "
+                + saved.getScheduledDate().toLocalDate()
+                + (desc != null && !desc.isBlank() ? " : " + desc : ""));
+            taskRepo.save(maintenance);
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/tasks/{id}/photos")

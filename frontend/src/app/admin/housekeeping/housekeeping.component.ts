@@ -268,6 +268,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       }
                     </div>
                   }
+                  @if (!task.housekeeper && (task.status === 'PENDING' || task.status === 'IN_PROGRESS')) {
+                    <div class="task-unassigned"><mat-icon>person_off</mat-icon> Non attribuée</div>
+                  }
                   @if (task.hasIncident) {
                     <div class="task-incident"><mat-icon>warning</mat-icon> Incident signalé</div>
                   }
@@ -705,6 +708,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .task-unassigned { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #f57c00; font-weight: 600; margin: 4px 0; background: #fff3e0; border-radius: 4px; padding: 2px 6px; width: fit-content; }
+    .task-unassigned mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
     .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-report-preview { font-size: 12px; color: #555; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
