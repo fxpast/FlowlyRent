@@ -37,7 +37,7 @@ public class HousekeeperPortalController {
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
-        return profileRepo.findByLinkedUserId(userId)
+        return profileRepo.findByLinkedUserIdWithUser(userId)
                 .orElseThrow(() -> new IllegalStateException("Profil prestataire introuvable"));
     }
 
@@ -80,11 +80,14 @@ public class HousekeeperPortalController {
         if (task == null) return ResponseEntity.notFound().build();
 
         boolean wasIncident = Boolean.TRUE.equals(task.getHasIncident());
+        boolean newIncident = body.containsKey("hasIncident") &&
+                              Boolean.parseBoolean(body.get("hasIncident").toString());
+        log.debug("saveReport tâche {} | wasIncident={} | newIncident={} | host={}",
+                id, wasIncident, newIncident, profile.getUser().getId());
 
         if (body.containsKey("reportComment"))
             task.setReportComment(body.get("reportComment").toString());
-        if (body.containsKey("hasIncident"))
-            task.setHasIncident(Boolean.parseBoolean(body.get("hasIncident").toString()));
+        task.setHasIncident(newIncident);
         if (body.containsKey("incidentDescription"))
             task.setIncidentDescription(body.get("incidentDescription").toString());
         task.setReportedAt(LocalDateTime.now());
@@ -93,10 +96,11 @@ public class HousekeeperPortalController {
         HousekeepingTask saved = taskRepo.save(task);
 
         // Création automatique d'une tâche MAINTENANCE si l'incident vient d'être déclaré
-        if (!wasIncident && Boolean.TRUE.equals(saved.getHasIncident())) {
+        if (!wasIncident && newIncident) {
+            log.debug("Création tâche MAINTENANCE pour tâche {} (propId={})", saved.getId(), saved.getBeds24PropertyId());
             try {
                 HousekeepingTask maintenance = new HousekeepingTask();
-                maintenance.setUser(profile.getUser()); // profil → même utilisateur hôte que la tâche
+                maintenance.setUser(profile.getUser());
                 maintenance.setBeds24PropertyId(saved.getBeds24PropertyId());
                 maintenance.setPropertyName(saved.getPropertyName());
                 maintenance.setType(TaskType.MAINTENANCE);
