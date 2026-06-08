@@ -60,8 +60,11 @@ public class AdminExpenseRuleController {
 
     @SuppressWarnings("unchecked")
     private void applyBody(ExpenseRule rule, Map<String, Object> body) {
-        if (body.containsKey("category"))         rule.setCategory((String) body.get("category"));
-        if (body.containsKey("label"))            rule.setLabel((String) body.get("label"));
+        if (body.containsKey("label")) {
+            String lbl = (String) body.get("label");
+            rule.setLabel(lbl);
+            rule.setCategory(lbl); // category = label (colonne DB maintenue pour compat)
+        }
         if (body.containsKey("beds24PropertyId")) rule.setBeds24PropertyId((String) body.get("beds24PropertyId"));
         if (body.containsKey("keywords")) {
             rule.setKeywords(body.get("keywords") instanceof List
@@ -76,7 +79,6 @@ public class AdminExpenseRuleController {
     private Map<String, Object> toMap(ExpenseRule r) {
         return Map.of(
                 "id", r.getId(),
-                "category", r.getCategory(),
                 "label", r.getLabel(),
                 "beds24PropertyId", r.getBeds24PropertyId() != null ? r.getBeds24PropertyId() : "",
                 "keywords", r.getKeywords(),

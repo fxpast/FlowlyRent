@@ -198,7 +198,7 @@ public class QontoService {
             boolean matchLabel = rule.getKeywords().stream().anyMatch(k -> label.contains(k.toLowerCase()));
             boolean matchAlt = rule.getAltKeywords().stream().anyMatch(k -> altText.contains(k.toLowerCase()));
             if (matchLabel || matchAlt) {
-                tx.put("category", rule.getCategory());
+                tx.put("category", rule.getLabel());
                 tx.put("ruleLabel", rule.getLabel());
                 tx.put("expenseRuleId", rule.getId());
                 tx.put("beds24PropertyId", rule.getBeds24PropertyId());

@@ -15,21 +15,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 
-const CATEGORIES: Record<string, { label: string; color: string }> = {
-  ELECTRICITY:  { label: 'Électricité',   color: '#ff9800' },
-  WATER:        { label: 'Eau',            color: '#2196f3' },
-  INTERNET:     { label: 'Internet',       color: '#9c27b0' },
-  RENT:         { label: 'Loyer',          color: '#f44336' },
-  SOFTWARE:     { label: 'Logiciels',      color: '#3f51b5' },
-  INSURANCE:    { label: 'Assurance',      color: '#009688' },
-  CLEANING:     { label: 'Ménage',         color: '#4caf50' },
-  MAINTENANCE:  { label: 'Entretien',      color: '#795548' },
-  MISC:         { label: 'Divers',         color: '#607d8b' },
-  INCOME:       { label: 'Revenus',        color: '#4caf50' },
-  NON_CATEGORISE: { label: 'Non catégorisé', color: '#9e9e9e' },
-};
-
-const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE');
+const COLOR_PALETTE = [
+  '#1976d2','#388e3c','#f57c00','#7b1fa2','#c62828',
+  '#00796b','#5d4037','#455a64','#e64a19','#0288d1',
+  '#558b2f','#ad1457','#6a1b9a','#2e7d32','#bf360c',
+];
 
 @Component({
   selector: 'app-expenses',
@@ -80,8 +70,8 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                 <mat-label>Catégorie</mat-label>
                 <mat-select [(ngModel)]="filterCategory" (selectionChange)="loadTransactions()">
                   <mat-option value="">Toutes</mat-option>
-                  @for (key of categoryKeys; track key) {
-                    <mat-option [value]="key">{{ catLabel(key) }}</mat-option>
+                  @for (cat of uniqueCategories(); track cat) {
+                    <mat-option [value]="cat">{{ cat }}</mat-option>
                   }
                   <mat-option value="NON_CATEGORISE">Non catégorisé</mat-option>
                 </mat-select>
@@ -169,16 +159,9 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                 <mat-card-content>
                   <div class="rule-form">
                     <mat-form-field>
-                      <mat-label>Nom affiché</mat-label>
-                      <input matInput [(ngModel)]="ruleForm.label" placeholder="Ex : EDF Appartement Paris" />
-                    </mat-form-field>
-                    <mat-form-field>
-                      <mat-label>Catégorie</mat-label>
-                      <mat-select [(ngModel)]="ruleForm.category">
-                        @for (key of categoryKeys; track key) {
-                          <mat-option [value]="key">{{ catLabel(key) }}</mat-option>
-                        }
-                      </mat-select>
+                      <mat-label>Nom de la catégorie</mat-label>
+                      <input matInput [(ngModel)]="ruleForm.label" placeholder="Ex : EDF, Ménage, Loyer Paris…" />
+                      <mat-hint>Ce nom devient la catégorie affichée sur les transactions</mat-hint>
                     </mat-form-field>
                     <mat-form-field class="full-width">
                       <mat-label>Mots-clés libellé (séparés par virgule)</mat-label>
@@ -211,7 +194,7 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
               <div class="rules-list">
                 @for (rule of rules(); track rule.id) {
                   <div class="rule-row">
-                    <span class="cat-badge" [style.background]="catColor(rule.category)">{{ catLabel(rule.category) }}</span>
+                    <span class="cat-badge" [style.background]="catColor(rule.label)">{{ rule.label }}</span>
                     <div class="rule-info">
                       <strong>{{ rule.label }}</strong>
                       <div class="rule-keywords">
@@ -440,7 +423,7 @@ export class ExpensesComponent implements OnInit {
   showRuleForm = signal(false);
   editingRule = signal<ExpenseRule | null>(null);
   savingRule = signal(false);
-  ruleForm = { label: '', category: 'MISC', keywordsRaw: '', altKeywordsRaw: '' };
+  ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '' };
 
   // Summary
   summary = signal<QontoSummary | null>(null);
@@ -454,8 +437,6 @@ export class ExpensesComponent implements OnInit {
     { value: 7, label: 'Juillet' }, { value: 8, label: 'Août' }, { value: 9, label: 'Septembre' },
     { value: 10, label: 'Octobre' }, { value: 11, label: 'Novembre' }, { value: 12, label: 'Décembre' }
   ];
-
-  readonly categoryKeys = CATEGORY_KEYS;
 
   constructor(private qontoService: QontoService, private snack: MatSnackBar) {}
 
@@ -522,7 +503,7 @@ export class ExpensesComponent implements OnInit {
 
   openRuleForm(): void {
     this.editingRule.set(null);
-    this.ruleForm = { label: '', category: 'MISC', keywordsRaw: '', altKeywordsRaw: '' };
+    this.ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '' };
     this.showRuleForm.set(true);
   }
 
@@ -530,7 +511,6 @@ export class ExpensesComponent implements OnInit {
     this.editingRule.set(rule);
     this.ruleForm = {
       label: rule.label,
-      category: rule.category,
       keywordsRaw: rule.keywords.join(', '),
       altKeywordsRaw: rule.altKeywords.join(', ')
     };
@@ -543,12 +523,11 @@ export class ExpensesComponent implements OnInit {
   }
 
   saveRule(): void {
-    if (!this.ruleForm.label.trim() || !this.ruleForm.category) return;
+    if (!this.ruleForm.label.trim()) return;
     this.savingRule.set(true);
 
     const payload = {
       label: this.ruleForm.label.trim(),
-      category: this.ruleForm.category,
       keywords: this.ruleForm.keywordsRaw.split(',').map(s => s.trim()).filter(Boolean),
       altKeywords: this.ruleForm.altKeywordsRaw.split(',').map(s => s.trim()).filter(Boolean)
     };
@@ -620,11 +599,18 @@ export class ExpensesComponent implements OnInit {
   // ─── Helpers ───────────────────────────────────────────────────────────
 
   catLabel(key: string): string {
-    return CATEGORIES[key]?.label ?? key;
+    return key || 'Non catégorisé';
   }
 
   catColor(key: string): string {
-    return CATEGORIES[key]?.color ?? '#9e9e9e';
+    if (!key || key === 'NON_CATEGORISE') return '#9e9e9e';
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    return COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
+  }
+
+  uniqueCategories(): string[] {
+    return [...new Set(this.rules().map(r => r.label))].sort();
   }
 
   formatDate(iso: string): string {

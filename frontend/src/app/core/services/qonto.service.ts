@@ -30,7 +30,6 @@ export interface QontoTransaction {
 
 export interface ExpenseRule {
   id: number;
-  category: string;
   label: string;
   beds24PropertyId: string;
   keywords: string[];
