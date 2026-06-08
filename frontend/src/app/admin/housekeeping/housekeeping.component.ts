@@ -122,7 +122,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <!-- Formulaire création -->
           @if (showForm) {
             <mat-card class="create-form">
-              <mat-card-header><mat-card-title>Créer une tâche</mat-card-title></mat-card-header>
+              <mat-card-header><mat-card-title>{{ editingTask ? 'Modifier la tâche' : 'Créer une tâche' }}</mat-card-title></mat-card-header>
               <mat-card-content>
                 <div class="form-row">
                   <mat-form-field>
@@ -189,9 +189,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
-                  Créer
+                  {{ editingTask ? 'Modifier' : 'Créer' }}
                 </button>
-                <button mat-button (click)="showForm = false; newTask.scheduledDate = ''">Annuler</button>
+                <button mat-button (click)="cancelTaskForm()">Annuler</button>
               </mat-card-actions>
             </mat-card>
     }
@@ -279,9 +279,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                           <mat-icon>check</mat-icon> Terminer
                         </button>
                       }
-                      <button mat-icon-button (click)="updateStatus(task, 'SKIPPED')" title="Abandonner" style="color:#757575">
-                        <mat-icon>block</mat-icon>
-                      </button>
                     } @else if (task.status === 'DONE') {
                       <span class="completed-at">
                         Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
@@ -298,6 +295,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                         <mat-icon>photo_library</mat-icon>
                       </button>
                     }
+                    <button mat-icon-button (click)="openEditTaskForm(task)" title="Modifier la tâche" style="color:#555">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="deleteTask(task)" title="Supprimer la tâche" style="color:#c62828">
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </div>
                 </mat-card>
               }
@@ -791,6 +794,7 @@ export class HousekeepingComponent implements OnInit {
 
   private propConfigs = signal<any[]>([]);
   showForm = false;
+  editingTask: Task | null = null;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
   filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
@@ -886,6 +890,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   openNewTaskForm(): void {
+    this.editingTask = null;
     this.newTaskDate = new Date();
     this.newTaskTime = '09:00';
     this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
@@ -896,6 +901,64 @@ export class HousekeepingComponent implements OnInit {
         error: () => {}
       });
     }
+  }
+
+  openEditTaskForm(task: Task): void {
+    this.editingTask = task;
+    const dt = task.scheduledDate ? new Date(task.scheduledDate) : new Date();
+    this.newTaskDate = dt;
+    this.newTaskTime = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+    const matchingProp = this.properties().find(p => String(p.id) === task.beds24PropertyId);
+    this.newTask = {
+      propertyId:    matchingProp?.id ?? (task.beds24PropertyId ? Number(task.beds24PropertyId) : null),
+      type:          task.type,
+      scheduledDate: task.scheduledDate ?? '',
+      housekeeperId: task.housekeeper?.id ?? null,
+      notes:         task.notes ?? '',
+      extraHours:    task.extraHours != null ? String(task.extraHours) : '',
+      hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : ''
+    };
+    this.showForm = true;
+    if (this.propConfigs().length === 0) {
+      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
+        next: cfgs => this.propConfigs.set(cfgs ?? []),
+        error: () => {}
+      });
+    }
+  }
+
+  cancelTaskForm(): void {
+    this.showForm = false;
+    this.editingTask = null;
+    this.newTask.scheduledDate = '';
+  }
+
+  saveTask(): void {
+    const task = this.editingTask!;
+    const dateStr = this.fromDate(this.newTaskDate);
+    const pid = String(this.newTask.propertyId ?? '');
+    const prop = this.properties().find(p => String(p.id) === pid);
+    const payload: Record<string, unknown> = {
+      beds24PropertyId: pid,
+      propertyName:     prop ? (prop['name'] ?? '') : (task.propertyName ?? null),
+      type:             this.newTask.type,
+      scheduledDate:    dateStr ? `${dateStr}T${this.newTaskTime}:00` : '',
+      notes:            this.newTask.notes || null,
+      housekeeperId:    this.newTask.housekeeperId ?? null,
+      extraHours:       this.newTask.extraHours || null,
+      hourlyRate:       this.newTask.hourlyRate || null
+    };
+    this.http.patch<Task>(`${this.base}/admin/housekeeping/${task.id}`, payload).subscribe({
+      next: updated => {
+        this.bookingService.getPropertyNames().subscribe(names => {
+          const pid2 = updated.beds24PropertyId ?? '';
+          const withName = pid2 && names[pid2] ? { ...updated, propertyName: names[pid2] } : updated;
+          this.tasks.update(all => all.map(t => t.id === withName.id ? withName : t));
+          this.applyFilter();
+          this.cancelTaskForm();
+        });
+      }
+    });
   }
 
   applyFilter(): void {
@@ -915,6 +978,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   createTask(): void {
+    if (this.editingTask) { this.saveTask(); return; }
     const dateStr = this.fromDate(this.newTaskDate);
     const pid = String(this.newTask.propertyId ?? '');
     const prop = this.properties().find(p => String(p.id) === pid);

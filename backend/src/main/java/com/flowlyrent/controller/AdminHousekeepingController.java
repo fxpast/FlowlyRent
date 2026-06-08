@@ -113,6 +113,33 @@ public class AdminHousekeepingController {
         return ResponseEntity.ok(taskRepo.save(task));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<HousekeepingTask> updateTask(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        AppUser user = securityUtils.getCurrentUser();
+        HousekeepingTask task = taskRepo.findById(id)
+                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+
+        if (body.containsKey("type"))             task.setType(TaskType.valueOf(body.get("type").toString()));
+        if (body.containsKey("scheduledDate"))    task.setScheduledDate(parseScheduledDate(body.get("scheduledDate").toString()));
+        if (body.containsKey("beds24PropertyId")) task.setBeds24PropertyId(body.get("beds24PropertyId").toString());
+        if (body.containsKey("propertyName"))     task.setPropertyName(body.get("propertyName") != null ? body.get("propertyName").toString() : null);
+        if (body.containsKey("notes"))            task.setNotes(body.get("notes") != null ? body.get("notes").toString() : null);
+        if (body.containsKey("extraHours"))       task.setExtraHours(body.get("extraHours") != null ? Float.parseFloat(body.get("extraHours").toString()) : null);
+        if (body.containsKey("hourlyRate"))       task.setHourlyRate(body.get("hourlyRate") != null ? new BigDecimal(body.get("hourlyRate").toString()) : null);
+
+        if (body.containsKey("housekeeperId")) {
+            if (body.get("housekeeperId") == null) {
+                task.setHousekeeper(null);
+            } else {
+                Long hkId = Long.parseLong(body.get("housekeeperId").toString());
+                housekeeperRepo.findByIdAndUserId(hkId, user.getId()).ifPresent(task::setHousekeeper);
+            }
+        }
+
+        return ResponseEntity.ok(taskRepo.save(task));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<HousekeepingTask> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Long userId = securityUtils.getCurrentUserId();
