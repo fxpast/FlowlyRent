@@ -212,6 +212,12 @@ public class AdminHousekeepingController {
         HousekeepingTask task = taskRepo.findById(id)
                 .filter(t -> t.getUser().getId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable"));
+        // Supprimer les photos (Cloudinary + DB) avant la tâche pour respecter la FK RESTRICT
+        List<TaskPhoto> photos = photoRepo.findByTaskIdOrderByUploadedAtAsc(id);
+        for (TaskPhoto photo : photos) {
+            if (photo.getPublicId() != null) cloudinaryService.delete(photo.getPublicId());
+        }
+        photoRepo.deleteByTaskId(id);
         taskRepo.delete(task);
         return ResponseEntity.noContent().build();
     }
