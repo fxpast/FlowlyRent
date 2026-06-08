@@ -164,16 +164,10 @@ const COLOR_PALETTE = [
                       <mat-hint>Ce nom devient la catégorie affichée sur les transactions</mat-hint>
                     </mat-form-field>
                     <mat-form-field class="full-width">
-                      <mat-label>Mots-clés libellé (séparés par virgule)</mat-label>
+                      <mat-label>Mots-clés (séparés par virgule)</mat-label>
                       <input matInput [(ngModel)]="ruleForm.keywordsRaw"
                              placeholder="Ex : EDF, electricite, électricité" />
-                      <mat-hint>Recherche dans le libellé Qonto (insensible à la casse)</mat-hint>
-                    </mat-form-field>
-                    <mat-form-field class="full-width">
-                      <mat-label>Mots-clés alternatifs</mat-label>
-                      <input matInput [(ngModel)]="ruleForm.altKeywordsRaw"
-                             placeholder="Ex : EDF, ENEDIS" />
-                      <mat-hint>Recherche dans le bénéficiaire, la référence et les informations complémentaires</mat-hint>
+                      <mat-hint>Recherche dans tous les champs de la transaction (libellé, bénéficiaire, référence…)</mat-hint>
                     </mat-form-field>
                   </div>
                 </mat-card-content>

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.stream.Stream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -188,16 +189,15 @@ public class QontoService {
     // ─── Categorization (in-memory) ───────────────────────────────────────────
 
     private void categorize(Map<String, Object> tx, List<ExpenseRule> rules) {
-        String label = tx.get("label") != null ? tx.get("label").toString().toLowerCase() : "";
-        String reference = tx.get("reference") != null ? tx.get("reference").toString().toLowerCase() : "";
-        String counterparty = tx.get("counterparty_name") != null ? tx.get("counterparty_name").toString().toLowerCase() : "";
-        String note = tx.get("note") != null ? tx.get("note").toString().toLowerCase() : "";
-        String altText = counterparty + " " + reference + " " + note;
+        String fullText = Stream.of("label", "counterparty_name", "reference", "note")
+                .map(f -> tx.get(f) != null ? tx.get(f).toString() : "")
+                .collect(java.util.stream.Collectors.joining(" "))
+                .toLowerCase();
 
         for (ExpenseRule rule : rules) {
-            boolean matchLabel = rule.getKeywords().stream().anyMatch(k -> label.contains(k.toLowerCase()));
-            boolean matchAlt = rule.getAltKeywords().stream().anyMatch(k -> altText.contains(k.toLowerCase()));
-            if (matchLabel || matchAlt) {
+            boolean match = Stream.concat(rule.getKeywords().stream(), rule.getAltKeywords().stream())
+                    .anyMatch(k -> fullText.contains(k.toLowerCase()));
+            if (match) {
                 tx.put("category", rule.getLabel());
                 tx.put("ruleLabel", rule.getLabel());
                 tx.put("expenseRuleId", rule.getId());
