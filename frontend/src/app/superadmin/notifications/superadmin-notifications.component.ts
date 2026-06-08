@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { environment } from '../../../environments/environment';
 
 interface Notification {
@@ -26,7 +27,8 @@ interface Notification {
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSnackBarModule, MatDividerModule
+    MatFormFieldModule, MatInputModule, MatSnackBarModule, MatDividerModule,
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="page">
