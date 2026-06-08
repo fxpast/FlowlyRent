@@ -1069,7 +1069,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const buildNotes = (nextCheckinTime?: string) => {
       const code     = this.propAccessCode() ?? '';
       const prevCode = this.propPreviousAccessCode() ?? '';
-      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.departureTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      const hours    = this.taskForm.extraHours ? ` — ${this.taskForm.extraHours}h` : '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.departureTime}${hours}\n\nCode : ${prevCode}\nNouveau : ${code}`;
       if (nextCheckinTime) {
         msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
       }
