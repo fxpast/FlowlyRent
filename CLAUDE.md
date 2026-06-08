@@ -103,10 +103,15 @@ FlowlyRent/
 │       │   ├── PropertyInventoryItem.java # Équipement inventaire — label, category, quantity, sortOrder
 │       │   ├── BookingTimeOverride.java   # Override horaires check-in/check-out par réservation Beds24
 │       │   ├── MessageTemplate.java  # Modèle de message — contentFr, contentEn, type, beds24PropertyId
-│       │   ├── HousekeepingTask.java  # Tâche ménage — housekeeper FK, report, hasIncident
+│       │   ├── HousekeepingTask.java  # Tâche ménage — housekeeper FK, report, hasIncident, linenDeducted
 │       │   ├── HousekeeperProfile.java # Prestataire ménage — linkedUser (AppUser HOUSEKEEPER)
 │       │   ├── HousekeepingStaff.java  # Personnel interne ménage (distinct des prestataires externes)
 │       │   ├── TaskPhoto.java         # Photo tâche — url (Cloudinary) + publicId + data (legacy base64)
+│       │   ├── LinenItem.java         # Article de linge par logement — label, category, quantity, defaultPerCleaning
+│       │   ├── LinenMovement.java     # Mouvement de stock linge — direction (CLEAN_IN/TO_LAUNDRY), quantity, date
+│       │   ├── TaskLinenUsage.java    # Sets de linge utilisés par tâche — lien ManyToOne tâche + article + quantité
+│       │   ├── AdminNotification.java # Notification superadmin → users — subject, content, targetUsers (ManyToMany)
+│       │   ├── AdminNotificationRead.java # Suivi lectures — notification + user (contrainte unique)
 │       │   ├── AnalyticsEvent.java    # Événement analytics (PAGE_VIEW, LOGIN, CLICK)
 │       │   ├── Feedback.java          # Feedback utilisateur (catégorie + message + statut)
 │       │   ├── ExpenseRule.java       # Règle catégorisation transactions Qonto (keywords → catégorie)
@@ -122,7 +127,9 @@ FlowlyRent/
 │       │       ├── TaskType.java          # CHECKIN_PREP, CHECKOUT_CLEANING, CLEANING, MAINTENANCE, INSPECTION
 │       │       ├── TaskStatus.java        # PENDING, IN_PROGRESS, DONE, SKIPPED
 │       │       ├── PaymentStatus.java     # PENDING, COMPLETED, REFUNDED, FAILED, CANCELLED
-│       │       └── SenderType.java        # GUEST, HOST
+│       │       ├── SenderType.java        # GUEST, HOST
+│       │       ├── LinenCategory.java     # SHEETS, PILLOWCASES, TOWELS, BATH_TOWELS, DUVET_COVERS, OTHER
+│       │       └── MovementDirection.java # CLEAN_IN (stock propre entrant), TO_LAUNDRY (sortie en laverie)
 │       ├── repository/               # Spring Data JPA (un par entité)
 │       ├── service/
 │       │   ├── Beds24SyncService.java # Sync Beds24 API v2 (propriétés, chambres, réservations)
@@ -132,6 +139,7 @@ FlowlyRent/
 │       │   ├── MessageService.java    # Messagerie + push WebSocket
 │       │   ├── PaymentService.java    # Stripe Checkout + webhooks
 │       │   ├── AnalyticsService.java  # Enregistrement events + calcul KPIs superadmin
+│       │   ├── LinenService.java      # Déduction stock linge à la fin d'une tâche (idempotent via linenDeducted)
 │       │   └── SyncResult.java        # DTO résultat de sync
 │       ├── controller/
 │       │   ├── AuthController.java                  # /auth/register, /auth/login
@@ -145,7 +153,9 @@ FlowlyRent/
 │       │   ├── AdminPropertyInventoryController.java # /admin/property-inventory/** (équipements par logement)
 │       │   ├── AdminBookingTimeOverrideController.java # /admin/booking-time-overrides/** (horaires custom)
 │       │   ├── AdminHousekeeperController.java      # /admin/housekeepers/** (CRUD + activate/deactivate portal)
-│       │   ├── AdminHousekeepingController.java     # /admin/housekeeping/** (tâches + GET /{id}/photos)
+│       │   ├── AdminHousekeepingController.java     # /admin/housekeeping/** (tâches + photos + linen usages)
+│       │   ├── AdminLinenController.java            # /admin/linen/** (articles + mouvements de stock par logement)
+│       │   ├── AdminNotificationController.java     # /admin/notifications/** (liste, unread-count, mark-read)
 │       │   ├── AdminAvailabilityController.java     # /admin/availability/** (calendrier + blocages)
 │       │   ├── HousekeeperPortalController.java     # /housekeeper/** (espace prestataire — ROLE_HOUSEKEEPER)
 │       │   ├── SyncController.java                  # /sync/channels/** (iCal uniquement)
@@ -153,7 +163,8 @@ FlowlyRent/
 │       │   ├── StripeWebhookController.java         # /webhooks/stripe
 │       │   ├── AnalyticsController.java             # /analytics/track (public — visiteurs anonymes)
 │       │   ├── FeedbackController.java              # /user/feedback (POST)
-│       │   └── SuperAdminController.java            # /superadmin/** (ROLE_ADMIN requis)
+│       │   ├── SuperAdminController.java            # /superadmin/stats, /users, /feedbacks (ROLE_ADMIN)
+│       │   └── SuperAdminNotificationController.java # /superadmin/notifications/** (envoi + historique)
 │       └── dto/
 │           ├── Beds24ApiResponse.java   # Wrapper {"success":true,"data":[...],"pages":{}}
 │           ├── Beds24AuthDTO.java       # token, refreshToken, expiresIn
@@ -205,28 +216,31 @@ FlowlyRent/
 │           │       └── auth.interceptor.ts  # Bearer token sur /admin, /sync, /user, /superadmin, /analytics, /housekeeper
 │           ├── admin/
 │           │   ├── admin.routes.ts          # Lazy loading des pages admin
-│           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar (mat-sidenav-container)
+│           │   ├── layout/admin-layout.component.ts  # Sidenav + toolbar — badge messages + badge notifications non-lues (polling 60s)
 │           │   ├── login/login.component.ts           # Redirige ADMIN → /superadmin/dashboard
 │           │   ├── dashboard/dashboard.component.ts  # Stats du jour + listes semaine
 │           │   ├── arrivals/arrivals.component.ts    # Arrivées avec navigation semaine (ligne cliquable → dialog)
 │           │   ├── departures/departures.component.ts # Départs (ligne cliquable → dialog)
 │           │   ├── bookings/bookings.component.ts    # Liste + filtres (ligne cliquable → dialog, pas de formulaire edit)
 │           │   ├── booking-form/booking-form.component.ts  # Créer réservation directe (location.back() au retour)
-│           │   ├── booking-detail-dialog/booking-detail-dialog.component.ts # Dialog réservation — détails, messages, entretien + horaires override + auto-notes ménage (CHECKOUT_CLEANING + sélection prestataire → message pré-rempli avec code accès + détection arrivée J)
+│           │   ├── booking-detail-dialog/booking-detail-dialog.component.ts # Dialog réservation — détails, messages, entretien + horaires override + auto-notes ménage + sets de linge modifiables
 │           │   ├── messages/messages.component.ts    # Chat temps réel + modèles FR/EN
 │           │   ├── payments/payments.component.ts    # Génération liens Stripe
 │           │   ├── sync/sync.component.ts            # Gestion canaux iCal
-│           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Prestataires + viewer rapport/photos + charges mensuelles par prestataire + abandon/réactivation tâches (SKIPPED) + auto-notes à la création
+│           │   ├── housekeeping/housekeeping.component.ts  # Tâches ménage + Dépannage + Prestataires + viewer rapport/photos + sets de linge par tâche + charges mensuelles
+│           │   ├── linen/linen.component.ts          # Blanchisserie — articles de linge par logement + mouvements de stock (CLEAN_IN / TO_LAUNDRY)
+│           │   ├── notifications/notifications.component.ts # Notifications reçues — unread highlight, mark-as-read au clic, tout marquer lu
 │           │   ├── properties/properties.component.ts # Logements — occupancy, inventaire, code accès, nom court
 │           │   ├── calendar/calendar.component.ts    # Calendrier disponibilités
 │           │   ├── settings/settings.component.ts    # Beds24 + Profil + Mot de passe
 │           │   └── feedback/feedback.component.ts    # Formulaire feedback MVP
 │           ├── superadmin/                           # Accessible uniquement ROLE_ADMIN
 │           │   ├── superadmin.routes.ts
-│           │   ├── superadmin-layout.component.ts    # Badge notification feedbacks NEW
+│           │   ├── superadmin-layout.component.ts    # Toolbar — badge feedbacks NEW + bouton notifications (campaign)
 │           │   ├── dashboard/superadmin-dashboard.component.ts  # KPIs (users, logins, clics, visiteurs anonymes)
 │           │   ├── users/superadmin-users.component.ts          # Liste users + reset mdp + suppression
-│           │   └── feedbacks/superadmin-feedbacks.component.ts  # Feedbacks + gestion statut
+│           │   ├── feedbacks/superadmin-feedbacks.component.ts  # Feedbacks + gestion statut
+│           │   └── notifications/superadmin-notifications.component.ts  # Envoi notifications (ciblées ou globales) + historique avec compteur lectures
 │           ├── housekeeper/                          # Portail prestataire — ROLE_HOUSEKEEPER uniquement
 │           │   ├── housekeeper.routes.ts             # Route racine avec housekeeperGuard
 │           │   ├── layout/housekeeper-layout.component.ts  # Toolbar simple + nom + logout
@@ -272,6 +286,12 @@ FlowlyRent/
 | `message_templates` | MessageTemplate | Modèles messages — `contentFr`, `contentEn`, type (CHECKIN/CHECKOUT/CUSTOM), beds24PropertyId |
 | `housekeeping_staff` | HousekeepingStaff | Personnel interne ménage — firstName, lastName, phone, hourlyRate, hireDate |
 | `expense_rules` | ExpenseRule | Règles catégorisation Qonto — keywords, category |
+| `linen_items` | LinenItem | Articles de linge par logement — label, category (SHEETS/TOWELS/…), quantity, defaultPerCleaning |
+| `linen_movements` | LinenMovement | Mouvements de stock — direction (CLEAN_IN/TO_LAUNDRY), quantity, date, housekeepingTaskId |
+| `task_linen_usages` | TaskLinenUsage | Sets de linge par tâche — task_id FK, linen_item_id FK, quantity |
+| `admin_notifications` | AdminNotification | Notifications superadmin → users — subject, content, sentByEmail, sentAt |
+| `admin_notification_reads` | AdminNotificationRead | Suivi lectures — notification_id + user_id (unique) |
+| `admin_notification_targets` | — | Table jointure ManyToMany AdminNotification ↔ AppUser (vide = envoi à tous) |
 
 ---
 
@@ -353,10 +373,22 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | POST | `/admin/payments/checkout-session` | Créer un lien Stripe Checkout |
 | POST | `/admin/payments/payment-intent` | Créer un Payment Intent Stripe |
 | GET | `/admin/housekeeping?from=&to=` | Tâches ménage (filtrées par date) |
-| POST | `/admin/housekeeping` | Créer une tâche manuelle (accepte `housekeeperId`) |
-| PATCH | `/admin/housekeeping/{id}/status` | Changer le statut d'une tâche |
+| POST | `/admin/housekeeping` | Créer une tâche manuelle (accepte `housekeeperId`, `linenUsages`) |
+| PATCH | `/admin/housekeeping/{id}/status` | Changer le statut — déclenche déduction linge si DONE |
 | GET | `/admin/housekeeping/{id}/photos` | Photos d'une tâche (vérifié par user_id) |
-| DELETE | `/admin/housekeeping/{id}` | Supprimer une tâche |
+| GET | `/admin/housekeeping/{id}/linen` | Sets de linge assignés à une tâche |
+| DELETE | `/admin/housekeeping/{id}` | Supprimer une tâche (cascade linen usages + photos) |
+| GET | `/admin/linen/items?beds24PropertyId=` | Articles de linge d'un logement |
+| POST | `/admin/linen/items` | Ajouter un article |
+| PUT | `/admin/linen/items/{id}` | Modifier un article (quantité, defaultPerCleaning, etc.) |
+| DELETE | `/admin/linen/items/{id}` | Supprimer un article (cascade usages + mouvements) |
+| GET | `/admin/linen/movements?beds24PropertyId=` | Mouvements de stock d'un logement |
+| POST | `/admin/linen/movements` | Enregistrer un mouvement manuel |
+| DELETE | `/admin/linen/movements/{id}` | Supprimer un mouvement |
+| GET | `/admin/notifications` | Notifications visibles pour l'utilisateur courant (avec isRead) |
+| GET | `/admin/notifications/unread-count` | Nombre de notifications non lues |
+| POST | `/admin/notifications/{id}/read` | Marquer une notification comme lue |
+| POST | `/admin/notifications/read-all` | Marquer toutes les notifications visibles comme lues |
 | GET | `/admin/housekeepers` | Liste des prestataires (scopé user) |
 | POST | `/admin/housekeepers` | Créer un prestataire |
 | PUT | `/admin/housekeepers/{id}` | Modifier un prestataire |
@@ -409,6 +441,9 @@ Le contexte path est `/api` — toutes les routes sont préfixées.
 | PATCH | `/superadmin/users/{id}/password` | Réinitialiser le mot de passe d'un user |
 | GET | `/superadmin/feedbacks` | Liste des feedbacks |
 | PATCH | `/superadmin/feedbacks/{id}/status` | Changer le statut d'un feedback |
+| GET | `/superadmin/notifications` | Liste des notifications envoyées (avec readCount) |
+| POST | `/superadmin/notifications` | Envoyer une notification (ciblée ou globale via targetUserIds) |
+| DELETE | `/superadmin/notifications/{id}` | Supprimer une notification (cascade reads + targets) |
 
 > **Comptes exclus des KPIs** : configurés via la variable d'environnement `ANALYTICS_INTERNAL_EMAILS` (liste séparée par virgules dans `.env`)
 
@@ -649,6 +684,11 @@ sans valeur par défaut (vestige d'une version précédente). Fix : `ALTER TABLE
 - [x] Abandon / réactivation de tâches ménage (statut SKIPPED ↔ PENDING) sans suppression
 - [x] Formulaire nouvelle tâche enrichi — heures, taux horaire, notes auto (mêmes règles que dialog réservation)
 - [x] Tri tâches : terminées et abandonnées reléguées en bas (admin + portail prestataire)
+- [x] Distinction ménages / dépannage dans le menu Entretien (onglets séparés)
+- [x] Tâche maintenance auto créée sur signalement d'incident — badge « non attribuées »
+- [x] Gestion blanchisserie — stock de linge par logement, catégories, mouvements CLEAN_IN / TO_LAUNDRY
+- [x] Sets de linge par défaut par logement — pré-remplissage à la création de tâche, déduction auto du stock à la fin (idempotent)
+- [x] Notifications superadmin → utilisateurs — envoi ciblé (sélection individuelle) ou global, suivi lectures, badge non-lu dans le menu admin
 
 ---
 
