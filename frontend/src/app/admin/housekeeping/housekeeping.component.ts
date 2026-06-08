@@ -122,6 +122,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               <mat-button-toggle value="depannage">
                 <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">build</mat-icon>
                 Dépannage
+                @if (unassignedDepannageCount()) {
+                  <span class="depannage-alert">{{ unassignedDepannageCount() }}</span>
+                }
               </mat-button-toggle>
             </mat-button-toggle-group>
             <button mat-flat-button color="primary" (click)="openNewTaskForm()">
@@ -708,6 +711,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .depannage-alert { display: inline-flex; align-items: center; justify-content: center; background: #d32f2f; color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; line-height: 1; }
     .task-unassigned { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #f57c00; font-weight: 600; margin: 4px 0; background: #fff3e0; border-radius: 4px; padding: 2px 6px; width: fit-content; }
     .task-unassigned mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
@@ -842,6 +846,13 @@ export class HousekeepingComponent implements OnInit {
     this.taskTypes.filter(t =>
       this.taskCategory() === 'menage' ? this.MENAGE_TYPES.has(t.value) : !this.MENAGE_TYPES.has(t.value)
     )
+  );
+
+  unassignedDepannageCount = computed(() =>
+    this.filteredTasks().filter(t =>
+      !this.MENAGE_TYPES.has(t.type) && !t.housekeeper &&
+      (t.status === 'PENDING' || t.status === 'IN_PROGRESS')
+    ).length
   );
 
   setTaskCategory(cat: 'menage' | 'depannage'): void {
