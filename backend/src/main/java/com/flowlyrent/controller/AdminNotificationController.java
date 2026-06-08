@@ -32,7 +32,7 @@ public class AdminNotificationController {
         Set<Long> readIds = readRepo.findByUser_Id(userId).stream()
                 .map(r -> r.getNotification().getId())
                 .collect(Collectors.toSet());
-        return notifRepo.findVisibleForUser(userId).stream()
+        return visibleForUser(userId).stream()
                 .map(n -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id",      n.getId());
@@ -47,7 +47,13 @@ public class AdminNotificationController {
     @GetMapping("/unread-count")
     public Map<String, Long> unreadCount() {
         Long userId = securityUtils.getCurrentUserId();
-        return Map.of("count", notifRepo.countUnreadByUserId(userId));
+        Set<Long> readIds = readRepo.findByUser_Id(userId).stream()
+                .map(r -> r.getNotification().getId())
+                .collect(Collectors.toSet());
+        long count = visibleForUser(userId).stream()
+                .filter(n -> !readIds.contains(n.getId()))
+                .count();
+        return Map.of("count", count);
     }
 
     @PostMapping("/{id}/read")
@@ -71,7 +77,7 @@ public class AdminNotificationController {
                 .map(r -> r.getNotification().getId())
                 .collect(Collectors.toSet());
         var user = securityUtils.getCurrentUser();
-        notifRepo.findVisibleForUser(userId).stream()
+        visibleForUser(userId).stream()
                 .filter(n -> !alreadyRead.contains(n.getId()))
                 .forEach(n -> {
                     AdminNotificationRead read = new AdminNotificationRead();
@@ -80,5 +86,13 @@ public class AdminNotificationController {
                     readRepo.save(read);
                 });
         return ResponseEntity.noContent().build();
+    }
+
+    // Notifications visibles pour un user : ciblées vers tous (targetUsers vide) OU spécifiquement ce user
+    private List<AdminNotification> visibleForUser(Long userId) {
+        return notifRepo.findAllByOrderBySentAtDesc().stream()
+                .filter(n -> n.getTargetUsers().isEmpty()
+                        || n.getTargetUsers().stream().anyMatch(u -> u.getId().equals(userId)))
+                .collect(Collectors.toList());
     }
 }
