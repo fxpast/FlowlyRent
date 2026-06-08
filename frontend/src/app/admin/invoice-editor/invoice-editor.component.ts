@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TextFieldModule } from '@angular/cdk/text-field';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InvoiceService } from '../../core/services/invoice.service';
 import { UserService } from '../../core/services/user.service';
 import { Invoice, InvoiceLine, InvoiceLineType, InvoiceStatus } from '../../core/models/invoice.model';
@@ -36,21 +37,20 @@ interface LineForm {
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
     MatSelectModule, MatDatepickerModule, MatNativeDateModule,
     MatSnackBarModule, MatProgressSpinnerModule, MatDividerModule,
-    MatTooltipModule, TextFieldModule
+    MatTooltipModule, TextFieldModule, TranslateModule
   ],
   template: `
     <div class="editor-wrap">
 
-      <!-- Barre de titre -->
       <div class="editor-header">
-        <button mat-icon-button (click)="goBack()" matTooltip="Retour">
+        <button mat-icon-button (click)="goBack()" [matTooltip]="'invoices.back_tooltip' | translate">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <div class="header-title">
           @if (invoice()?.invoiceNumber) {
             <span class="inv-num">{{ invoice()!.invoiceNumber }}</span>
           } @else {
-            <span class="inv-num new">Nouvelle facture</span>
+            <span class="inv-num new">{{ 'invoices.new' | translate }}</span>
           }
           @if (invoice()?.status) {
             <span class="status-chip" [class]="'status-' + invoice()!.status.toLowerCase()">
@@ -61,12 +61,12 @@ interface LineForm {
         <div class="header-actions">
           @if (invoice()?.id && invoice()?.status === 'DRAFT') {
             <button mat-stroked-button (click)="changeStatus('ISSUED')">
-              <mat-icon>send</mat-icon> Émettre
+              <mat-icon>send</mat-icon> {{ 'invoices.issue_action' | translate }}
             </button>
           }
           @if (invoice()?.id && invoice()?.status === 'ISSUED') {
             <button mat-stroked-button color="accent" (click)="changeStatus('PAID')">
-              <mat-icon>check_circle</mat-icon> Marquer payée
+              <mat-icon>check_circle</mat-icon> {{ 'invoices.mark_paid' | translate }}
             </button>
           }
           @if (invoice()?.id) {
@@ -75,7 +75,7 @@ interface LineForm {
             </button>
           }
           <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
-            <mat-icon>save</mat-icon> {{ saving() ? '…' : (invoice()?.id ? 'Enregistrer' : 'Créer') }}
+            <mat-icon>save</mat-icon> {{ saveLabel() }}
           </button>
         </div>
       </div>
@@ -88,33 +88,33 @@ interface LineForm {
         <div class="col-main">
 
           <div class="section-title">
-            <mat-icon>person</mat-icon> Client
+            <mat-icon>person</mat-icon> {{ 'invoices.section_client' | translate }}
           </div>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Nom du client</mat-label>
+            <mat-label>{{ 'invoices.client_name' | translate }}</mat-label>
             <input matInput [(ngModel)]="form.guestName">
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Email</mat-label>
+            <mat-label>{{ 'common.email' | translate }}</mat-label>
             <input matInput [(ngModel)]="form.guestEmail" type="email">
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Adresse</mat-label>
+            <mat-label>{{ 'invoices.client_address' | translate }}</mat-label>
             <textarea matInput rows="2" [(ngModel)]="form.guestAddress"></textarea>
           </mat-form-field>
 
           <div class="section-title" style="margin-top:16px">
-            <mat-icon>calendar_today</mat-icon> Dates
+            <mat-icon>calendar_today</mat-icon> {{ 'invoices.section_dates' | translate }}
           </div>
           <div class="row-2">
             <mat-form-field appearance="outline">
-              <mat-label>Date d'émission</mat-label>
+              <mat-label>{{ 'invoices.issue_date' | translate }}</mat-label>
               <input matInput [matDatepicker]="issuePicker" [(ngModel)]="issueDateObj">
               <mat-datepicker-toggle matIconSuffix [for]="issuePicker"/>
               <mat-datepicker #issuePicker/>
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Date d'échéance</mat-label>
+              <mat-label>{{ 'invoices.due_date' | translate }}</mat-label>
               <input matInput [matDatepicker]="duePicker" [(ngModel)]="dueDateObj">
               <mat-datepicker-toggle matIconSuffix [for]="duePicker"/>
               <mat-datepicker #duePicker/>
@@ -123,7 +123,7 @@ interface LineForm {
 
           @if (form.beds24BookingId) {
             <div class="ref-chip">
-              <mat-icon>link</mat-icon> Réservation #{{ form.beds24BookingId }}
+              <mat-icon>link</mat-icon> {{ 'invoices.booking_ref' | translate:{ id: form.beds24BookingId } }}
             </div>
           }
 
@@ -132,7 +132,7 @@ interface LineForm {
         <!-- Colonne droite : aperçu émetteur -->
         <div class="col-side">
           <div class="company-card">
-            <div class="section-title"><mat-icon>business</mat-icon> Émetteur</div>
+            <div class="section-title"><mat-icon>business</mat-icon> {{ 'invoices.section_issuer' | translate }}</div>
             @if (userProfile()?.companyName) {
               <p class="co-name">{{ userProfile()!.companyName }}</p>
             }
@@ -145,7 +145,7 @@ interface LineForm {
             @if (!userProfile()?.companyName && !userProfile()?.siret) {
               <p class="co-empty">
                 <mat-icon>info</mat-icon>
-                Complétez vos infos de facturation dans les <a routerLink="/admin/settings">Paramètres</a>.
+                {{ 'invoices.billing_hint_before' | translate }}<a routerLink="/admin/settings">{{ 'nav.settings' | translate }}</a>{{ 'invoices.billing_hint_after' | translate }}
               </p>
             }
           </div>
@@ -156,22 +156,22 @@ interface LineForm {
       <!-- Lignes -->
       <div class="lines-section">
         <div class="lines-header">
-          <div class="section-title"><mat-icon>list_alt</mat-icon> Lignes</div>
+          <div class="section-title"><mat-icon>list_alt</mat-icon> {{ 'invoices.section_lines' | translate }}</div>
           <button mat-stroked-button (click)="addLine()">
-            <mat-icon>add</mat-icon> Ajouter une ligne
+            <mat-icon>add</mat-icon> {{ 'invoices.add_line' | translate }}
           </button>
         </div>
 
         @if (lines().length === 0) {
-          <div class="lines-empty">Aucune ligne — cliquez sur "Ajouter une ligne"</div>
+          <div class="lines-empty">{{ 'invoices.no_lines' | translate }}</div>
         }
 
         <div class="lines-table">
           @if (lines().length > 0) {
             <div class="lines-th">
-              <span>Type</span><span class="desc-col">Description</span>
-              <span class="num-col">Qté</span><span class="num-col">P.U. HT</span>
-              <span class="num-col">TVA</span><span class="num-col">Total HT</span>
+              <span>{{ 'invoices.col_type' | translate }}</span><span class="desc-col">{{ 'invoices.col_description' | translate }}</span>
+              <span class="num-col">{{ 'invoices.col_qty' | translate }}</span><span class="num-col">{{ 'invoices.col_unit_ht' | translate }}</span>
+              <span class="num-col">{{ 'invoices.col_vat' | translate }}</span><span class="num-col">{{ 'invoices.col_total_ht' | translate }}</span>
               <span></span>
             </div>
           }
@@ -179,10 +179,10 @@ interface LineForm {
             <div class="line-row">
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-select [(ngModel)]="line.lineType">
-                  <mat-option value="BOOKING">Hébergement</mat-option>
-                  <mat-option value="CLEANING">Ménage</mat-option>
-                  <mat-option value="TOURIST_TAX">Taxe séjour</mat-option>
-                  <mat-option value="CUSTOM">Autre</mat-option>
+                  <mat-option value="BOOKING">{{ 'invoices.line_booking' | translate }}</mat-option>
+                  <mat-option value="CLEANING">{{ 'invoices.line_cleaning' | translate }}</mat-option>
+                  <mat-option value="TOURIST_TAX">{{ 'invoices.line_tourist_tax' | translate }}</mat-option>
+                  <mat-option value="CUSTOM">{{ 'invoices.line_custom' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="desc-col">
@@ -215,21 +215,21 @@ interface LineForm {
 
         @if (lines().length > 0) {
           <div class="totals">
-            <div class="total-row"><span>Total HT</span><span>{{ computedTotalHT() | number:'1.2-2' }} €</span></div>
+            <div class="total-row"><span>{{ 'invoices.total_ht' | translate }}</span><span>{{ computedTotalHT() | number:'1.2-2' }} €</span></div>
             @for (v of vatBreakdown(); track v.rate) {
-              <div class="total-row"><span>TVA {{ v.rate }}%</span><span>{{ v.amount | number:'1.2-2' }} €</span></div>
+              <div class="total-row"><span>{{ 'invoices.vat_rate' | translate:{ rate: v.rate } }}</span><span>{{ v.amount | number:'1.2-2' }} €</span></div>
             }
             <mat-divider/>
-            <div class="total-row total-ttc"><span>TOTAL TTC</span><span>{{ computedTotalTTC() | number:'1.2-2' }} €</span></div>
+            <div class="total-row total-ttc"><span>{{ 'invoices.total_ttc' | translate }}</span><span>{{ computedTotalTTC() | number:'1.2-2' }} €</span></div>
           </div>
         }
       </div>
 
       <!-- Notes -->
       <mat-form-field appearance="outline" class="full notes-field">
-        <mat-label>Notes / conditions de paiement</mat-label>
+        <mat-label>{{ 'invoices.notes_label' | translate }}</mat-label>
         <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="3" [(ngModel)]="form.notes"
-                  placeholder="Ex : Virement bancaire sous 30 jours…"></textarea>
+                  [placeholder]="'invoices.notes_placeholder' | translate"></textarea>
       </mat-form-field>
 
     </div>
@@ -332,7 +332,8 @@ export class InvoiceEditorComponent implements OnInit {
     private userService: UserService,
     private route: ActivatedRoute,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -391,8 +392,8 @@ export class InvoiceEditorComponent implements OnInit {
         ? Math.round((new Date(departure).getTime() - new Date(arrival).getTime()) / 86400000)
         : 1;
       const desc = (arrival && departure)
-        ? `Séjour du ${this.frDate(arrival)} au ${this.frDate(departure)}${nights > 1 ? ' (' + nights + ' nuits)' : ''}`
-        : 'Séjour';
+        ? this.t.instant(nights > 1 ? 'invoices.stay_desc_both' : 'invoices.stay_desc_single', { from: this.frDate(arrival), to: this.frDate(departure), nights })
+        : this.t.instant('invoices.stay_default');
       lines.push({ lineType: 'BOOKING', description: desc, quantity: 1, unitPrice: price, vatRate: 0 });
     }
 
@@ -402,7 +403,7 @@ export class InvoiceEditorComponent implements OnInit {
       const nights = arrival && departure
         ? Math.round((new Date(departure).getTime() - new Date(arrival).getTime()) / 86400000)
         : 1;
-      lines.push({ lineType: 'TOURIST_TAX', description: 'Taxe de séjour', quantity: guests * nights, unitPrice: tax / (guests * nights || 1), vatRate: 0 });
+      lines.push({ lineType: 'TOURIST_TAX', description: this.t.instant('invoices.tourist_tax_desc'), quantity: guests * nights, unitPrice: tax / (guests * nights || 1), vatRate: 0 });
     }
 
     this._lines.set(lines);
@@ -441,12 +442,12 @@ export class InvoiceEditorComponent implements OnInit {
       next: inv => {
         this.loadInvoice(inv);
         this.saving.set(false);
-        this.snackBar.open(id ? 'Facture enregistrée' : 'Facture créée', 'OK', { duration: 2500 });
+        this.snackBar.open(id ? this.t.instant('invoices.saved') : this.t.instant('invoices.created'), this.t.instant('common.ok'), { duration: 2500 });
         if (!id) this.router.navigate(['/admin/invoices', inv.id], { replaceUrl: true });
       },
       error: () => {
         this.saving.set(false);
-        this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.t.instant('invoices.save_error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -457,9 +458,9 @@ export class InvoiceEditorComponent implements OnInit {
     this.invoiceService.updateStatus(id, status).subscribe({
       next: inv => {
         this.invoice.update(i => i ? { ...i, status: inv.status } : i);
-        this.snackBar.open('Statut mis à jour', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t.instant('invoices.status_updated'), this.t.instant('common.ok'), { duration: 2000 });
       },
-      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 2000 })
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 2000 })
     });
   }
 
@@ -480,8 +481,11 @@ export class InvoiceEditorComponent implements OnInit {
   }
 
   statusLabel(s: InvoiceStatus): string {
-    const m: Record<string, string> = { DRAFT: 'Brouillon', ISSUED: 'Émise', PAID: 'Payée', CANCELLED: 'Annulée' };
-    return m[s] ?? s;
+    return this.t.instant('invoices.status_' + s.toLowerCase());
+  }
+
+  saveLabel(): string {
+    return this.saving() ? '…' : (this.invoice()?.id ? this.t.instant('invoices.save_action') : this.t.instant('invoices.create_action'));
   }
 
   goBack(): void { this.router.navigate(['/admin/invoices']); }

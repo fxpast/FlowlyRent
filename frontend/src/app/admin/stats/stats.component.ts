@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 interface MonthStat { label: string; revenue: number; pct: number; key: string; }
@@ -31,24 +32,23 @@ const CHANNEL_COLORS: Record<string, string> = {
 @Component({
   selector: 'app-stats',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, MatCardModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [CommonModule, CurrencyPipe, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
   template: `
-    <h2>Revenus & statistiques</h2>
+    <h2>{{ 'stats.title' | translate }}</h2>
 
     @if (loading()) {
       <div class="center"><mat-spinner diameter="40"/></div>
     } @else if (stats()) {
 
-    <!-- KPI cards -->
     <div class="kpi-grid">
       <mat-card class="kpi-card">
         <div class="kpi-icon" style="background:#e3f2fd"><mat-icon style="color:#1976d2">euro</mat-icon></div>
         <div class="kpi-body">
           <div class="kpi-value">{{ stats()!.revenueThisMonth | currency:'EUR':'symbol':'1.0-0':'fr' }}</div>
-          <div class="kpi-label">Revenus ce mois</div>
+          <div class="kpi-label">{{ 'stats.revenue_this_month' | translate }}</div>
           <div class="kpi-delta" [class.up]="delta('revenue') >= 0" [class.down]="delta('revenue') < 0">
             <mat-icon>{{ delta('revenue') >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-            {{ deltaStr('revenue') }} vs mois dernier
+            {{ deltaStr('revenue') }} {{ 'stats.vs_last_month' | translate }}
           </div>
         </div>
       </mat-card>
@@ -57,10 +57,10 @@ const CHANNEL_COLORS: Record<string, string> = {
         <div class="kpi-icon" style="background:#f3e5f5"><mat-icon style="color:#7b1fa2">book_online</mat-icon></div>
         <div class="kpi-body">
           <div class="kpi-value">{{ stats()!.bookingsThisMonth }}</div>
-          <div class="kpi-label">Réservations ce mois</div>
+          <div class="kpi-label">{{ 'stats.bookings_this_month' | translate }}</div>
           <div class="kpi-delta" [class.up]="delta('bookings') >= 0" [class.down]="delta('bookings') < 0">
             <mat-icon>{{ delta('bookings') >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-            {{ deltaStr('bookings') }} vs mois dernier
+            {{ deltaStr('bookings') }} {{ 'stats.vs_last_month' | translate }}
           </div>
         </div>
       </mat-card>
@@ -69,7 +69,7 @@ const CHANNEL_COLORS: Record<string, string> = {
         <div class="kpi-icon" style="background:#e8f5e9"><mat-icon style="color:#2e7d32">home</mat-icon></div>
         <div class="kpi-body">
           <div class="kpi-value">{{ stats()!.propertiesCount }}</div>
-          <div class="kpi-label">Logements actifs</div>
+          <div class="kpi-label">{{ 'stats.properties_active' | translate }}</div>
         </div>
       </mat-card>
 
@@ -77,16 +77,15 @@ const CHANNEL_COLORS: Record<string, string> = {
         <div class="kpi-icon" style="background:#fff3e0"><mat-icon style="color:#e65100">payments</mat-icon></div>
         <div class="kpi-body">
           <div class="kpi-value">{{ avgNightly() | currency:'EUR':'symbol':'1.0-0':'fr' }}</div>
-          <div class="kpi-label">Revenu moyen / réservation</div>
+          <div class="kpi-label">{{ 'stats.avg_per_booking' | translate }}</div>
         </div>
       </mat-card>
     </div>
 
     <div class="charts-row">
 
-      <!-- Graphe revenus 6 mois -->
       <mat-card class="chart-card">
-        <mat-card-header><mat-card-title>Revenus des 6 derniers mois</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'stats.revenue_6_months' | translate }}</mat-card-title></mat-card-header>
         <mat-card-content>
           <div class="bar-chart">
             @for (m of stats()!.monthlyRevenue; track m.key) {
@@ -103,12 +102,11 @@ const CHANNEL_COLORS: Record<string, string> = {
         </mat-card-content>
       </mat-card>
 
-      <!-- Répartition par canal -->
       <mat-card class="chart-card">
-        <mat-card-header><mat-card-title>Répartition par canal ({{ currentYear }})</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'stats.by_channel_year' | translate:{ year: currentYear } }}</mat-card-title></mat-card-header>
         <mat-card-content>
           @if (stats()!.byChannel.length === 0) {
-            <p class="empty-chart">Aucune donnée pour cette année.</p>
+            <p class="empty-chart">{{ 'stats.no_data_year' | translate }}</p>
           } @else {
             <div class="channel-list">
               @for (c of stats()!.byChannel; track c.channel) {
@@ -123,7 +121,7 @@ const CHANNEL_COLORS: Record<string, string> = {
                   </div>
                   <div class="channel-stats">
                     {{ c.revenue | currency:'EUR':'symbol':'1.0-0':'fr' }}
-                    <span class="channel-count">({{ c.count }} rés.)</span>
+                    <span class="channel-count">({{ c.count }} {{ 'stats.bookings_abbr' | translate }})</span>
                   </div>
                 </div>
               }
@@ -187,7 +185,7 @@ export class StatsComponent implements OnInit {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
   })();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private t: TranslateService) {}
 
   ngOnInit(): void {
     this.http.get<Stats>(`${environment.apiUrl}/admin/stats`).subscribe({

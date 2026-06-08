@@ -16,11 +16,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 
 interface ReportDef {
   id: string;
-  label: string;
+  labelKey: string;
   category: 'menage' | 'beds24';
   params: ParamDef[];
   endpoint: string;
@@ -28,7 +29,7 @@ interface ReportDef {
 
 interface ParamDef {
   key: string;
-  label: string;
+  labelKey: string;
   type: 'date' | 'year' | 'staff' | 'property-id';
 }
 
@@ -50,18 +51,17 @@ interface ReportResult {
     MatSelectModule, MatFormFieldModule, MatInputModule,
     MatTableModule, MatProgressBarModule, MatSnackBarModule,
     MatTabsModule, MatChipsModule, MatTooltipModule,
-    MatDatepickerModule, MatNativeDateModule
+    MatDatepickerModule, MatNativeDateModule, TranslateModule
   ],
   template: `
     <div class="page-header">
-      <h1>Rapports</h1>
-      <p class="subtitle">Générez et exportez vos rapports ménage et Beds24 en PDF, Excel ou CSV.</p>
+      <h1>{{ 'reports.title' | translate }}</h1>
+      <p class="subtitle">{{ 'reports.subtitle' | translate }}</p>
     </div>
 
     <mat-tab-group animationDuration="200ms">
 
-      <!-- =================== MÉNAGE =================== -->
-      <mat-tab label="Ménage">
+      <mat-tab [label]="'reports.tab_housekeeping' | translate">
         <div class="tab-content">
           <div class="report-grid">
             @for (def of menageReports; track def.id) {
@@ -69,7 +69,7 @@ interface ReportResult {
                         (click)="selectReport(def)">
                 <mat-card-header>
                   <mat-icon mat-card-avatar>cleaning_services</mat-icon>
-                  <mat-card-title>{{ def.label }}</mat-card-title>
+                  <mat-card-title>{{ def.labelKey | translate }}</mat-card-title>
                 </mat-card-header>
               </mat-card>
             }
@@ -77,8 +77,7 @@ interface ReportResult {
         </div>
       </mat-tab>
 
-      <!-- =================== BEDS24 =================== -->
-      <mat-tab label="Beds24 / CA">
+      <mat-tab [label]="'reports.tab_beds24' | translate">
         <div class="tab-content">
           <div class="report-grid">
             @for (def of beds24Reports; track def.id) {
@@ -86,7 +85,7 @@ interface ReportResult {
                         (click)="selectReport(def)">
                 <mat-card-header>
                   <mat-icon mat-card-avatar>bar_chart</mat-icon>
-                  <mat-card-title>{{ def.label }}</mat-card-title>
+                  <mat-card-title>{{ def.labelKey | translate }}</mat-card-title>
                 </mat-card-header>
               </mat-card>
             }
@@ -96,18 +95,17 @@ interface ReportResult {
 
     </mat-tab-group>
 
-    <!-- =================== PANNEAU PARAMÈTRES =================== -->
     @if (selectedReport()) {
       <mat-card class="params-card">
         <mat-card-header>
-          <mat-card-title>{{ selectedReport()!.label }}</mat-card-title>
+          <mat-card-title>{{ selectedReport()!.labelKey | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="params-row">
             @for (param of selectedReport()!.params; track param.key) {
               @if (param.type === 'date') {
                 <mat-form-field appearance="outline">
-                  <mat-label>{{ param.label }}</mat-label>
+                  <mat-label>{{ param.labelKey | translate }}</mat-label>
                   <input matInput [matDatepicker]="datePicker" [(ngModel)]="paramDates[param.key]" (ngModelChange)="paramValues[param.key] = fromDate($event)">
                   <mat-datepicker-toggle matIconSuffix [for]="datePicker"></mat-datepicker-toggle>
                   <mat-datepicker #datePicker></mat-datepicker>
@@ -115,7 +113,7 @@ interface ReportResult {
               }
               @if (param.type === 'year') {
                 <mat-form-field appearance="outline">
-                  <mat-label>{{ param.label }}</mat-label>
+                  <mat-label>{{ param.labelKey | translate }}</mat-label>
                   <mat-select [(ngModel)]="paramValues[param.key]">
                     @for (y of years; track y) {
                       <mat-option [value]="y">{{ y }}</mat-option>
@@ -125,9 +123,9 @@ interface ReportResult {
               }
               @if (param.type === 'staff' || param.type === 'property-id') {
                 <mat-form-field appearance="outline">
-                  <mat-label>{{ param.label }}</mat-label>
+                  <mat-label>{{ param.labelKey | translate }}</mat-label>
                   <input matInput [(ngModel)]="paramValues[param.key]"
-                         [placeholder]="param.type === 'staff' ? 'ID agent' : 'ID propriété Beds24'">
+                         [placeholder]="param.type === 'staff' ? ('reports.staff_placeholder' | translate) : ('reports.property_placeholder' | translate)">
                 </mat-form-field>
               }
             }
@@ -136,7 +134,7 @@ interface ReportResult {
           <div class="action-row">
             <button mat-raised-button color="primary" (click)="generate()" [disabled]="loading()">
               <mat-icon>play_arrow</mat-icon>
-              Générer
+              {{ 'reports.generate' | translate }}
             </button>
             @if (result()) {
               <button mat-stroked-button (click)="download('csv')">
@@ -154,7 +152,6 @@ interface ReportResult {
       </mat-card>
     }
 
-    <!-- =================== RÉSULTATS =================== -->
     @if (loading()) {
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     }
@@ -163,19 +160,17 @@ interface ReportResult {
       <mat-card class="result-card">
         <mat-card-header>
           <mat-card-title>{{ result()!.title }}</mat-card-title>
-          <mat-card-subtitle>Généré le {{ result()!.generatedAt | date:'dd/MM/yyyy HH:mm' }}</mat-card-subtitle>
+          <mat-card-subtitle>{{ 'reports.generated_at' | translate }} {{ result()!.generatedAt | date:'dd/MM/yyyy HH:mm' }}</mat-card-subtitle>
         </mat-card-header>
 
-        <!-- Summary chips -->
         @if (result()!.summary) {
           <div class="summary-row">
             @for (entry of summaryEntries(); track entry.key) {
-              <mat-chip>{{ entry.label }} : {{ entry.value }}</mat-chip>
+              <mat-chip>{{ entry.label | translate }} : {{ entry.value }}</mat-chip>
             }
           </div>
         }
 
-        <!-- Table -->
         <div class="table-wrapper">
           <table mat-table [dataSource]="result()!.rows">
             @for (col of result()!.headers; track col; let i = $index) {
@@ -190,7 +185,7 @@ interface ReportResult {
         </div>
 
         <mat-card-footer>
-          <span class="row-count">{{ result()!.rows.length }} ligne(s)</span>
+          <span class="row-count">{{ 'reports.row_count' | translate:{ count: result()!.rows.length } }}</span>
         </mat-card-footer>
       </mat-card>
     }
@@ -256,48 +251,48 @@ export class ReportsComponent {
   menageReports: ReportDef[] = [
     {
       id: 'HK_MONTH_BY_STAFF',
-      label: 'Tâches par agent (période)',
+      labelKey: 'reports.hk_month_by_staff',
       category: 'menage',
       endpoint: '/hk/month-by-staff',
       params: [
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     },
     {
       id: 'HK_ANNUAL_BY_PROPERTY',
-      label: 'Résumé annuel par propriété',
+      labelKey: 'reports.hk_annual_by_property',
       category: 'menage',
       endpoint: '/hk/annual-by-property',
-      params: [{ key: 'year', label: 'Année', type: 'year' }]
+      params: [{ key: 'year', labelKey: 'reports.param_year', type: 'year' }]
     },
     {
       id: 'HK_ANNUAL_DETAIL',
-      label: 'Détail complet annuel',
+      labelKey: 'reports.hk_annual_detail',
       category: 'menage',
       endpoint: '/hk/annual-detail',
-      params: [{ key: 'year', label: 'Année', type: 'year' }]
+      params: [{ key: 'year', labelKey: 'reports.param_year', type: 'year' }]
     },
     {
       id: 'HK_BY_STAFF',
-      label: 'Tâches d\'un agent',
+      labelKey: 'reports.hk_by_staff',
       category: 'menage',
       endpoint: '/hk/by-staff',
       params: [
-        { key: 'staffId', label: 'ID Agent', type: 'staff' },
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'staffId', labelKey: 'reports.param_staff_id', type: 'staff' },
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     },
     {
       id: 'HK_BY_PROPERTY',
-      label: 'Tâches d\'une propriété',
+      labelKey: 'reports.hk_by_property',
       category: 'menage',
       endpoint: '/hk/by-property',
       params: [
-        { key: 'beds24PropertyId', label: 'ID Propriété', type: 'property-id' },
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'beds24PropertyId', labelKey: 'reports.param_property_id', type: 'property-id' },
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     }
   ];
@@ -305,47 +300,47 @@ export class ReportsComponent {
   beds24Reports: ReportDef[] = [
     {
       id: 'B24_CA_ANNUAL',
-      label: 'CA mensuel annuel',
+      labelKey: 'reports.b24_ca_annual',
       category: 'beds24',
       endpoint: '/b24/ca-annual',
-      params: [{ key: 'year', label: 'Année', type: 'year' }]
+      params: [{ key: 'year', labelKey: 'reports.param_year', type: 'year' }]
     },
     {
       id: 'B24_CA_ANNUAL_PROPERTY',
-      label: 'CA annuel par propriété',
+      labelKey: 'reports.b24_ca_annual_property',
       category: 'beds24',
       endpoint: '/b24/ca-annual-by-property',
-      params: [{ key: 'year', label: 'Année', type: 'year' }]
+      params: [{ key: 'year', labelKey: 'reports.param_year', type: 'year' }]
     },
     {
       id: 'B24_CA_PROPERTY',
-      label: 'CA d\'une propriété (période)',
+      labelKey: 'reports.b24_ca_property',
       category: 'beds24',
       endpoint: '/b24/ca-by-property',
       params: [
-        { key: 'propId', label: 'ID Propriété', type: 'property-id' },
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'propId', labelKey: 'reports.param_property_id', type: 'property-id' },
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     },
     {
       id: 'B24_STATS_PLATFORM',
-      label: 'Stats par plateforme',
+      labelKey: 'reports.b24_stats_platform',
       category: 'beds24',
       endpoint: '/b24/stats-platform',
       params: [
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     },
     {
       id: 'B24_OCCUPANCY',
-      label: 'Taux d\'occupation',
+      labelKey: 'reports.b24_occupancy',
       category: 'beds24',
       endpoint: '/b24/occupancy',
       params: [
-        { key: 'from', label: 'Du', type: 'date' },
-        { key: 'to', label: 'Au', type: 'date' }
+        { key: 'from', labelKey: 'reports.param_from', type: 'date' },
+        { key: 'to', labelKey: 'reports.param_to', type: 'date' }
       ]
     }
   ];
@@ -353,23 +348,23 @@ export class ReportsComponent {
   summaryEntries = computed(() => {
     const s = this.result()?.summary;
     if (!s) return [];
-    const labels: Record<string, string> = {
-      totalTaches: 'Tâches',
-      terminees: 'Terminées',
-      enAttente: 'En attente',
-      coutTotal: 'Coût total (€)',
-      totalReservations: 'Réservations',
-      caTotal: 'CA total (€)',
-      periodeDays: 'Jours'
+    const labelKeys: Record<string, string> = {
+      totalTaches: 'reports.summary_tasks',
+      terminees: 'reports.summary_done',
+      enAttente: 'reports.summary_pending',
+      coutTotal: 'reports.summary_cost',
+      totalReservations: 'reports.summary_bookings',
+      caTotal: 'reports.summary_ca',
+      periodeDays: 'reports.summary_days'
     };
     return Object.entries(s).map(([key, value]) => ({
       key,
-      label: labels[key] ?? key,
+      label: labelKeys[key] ?? key,
       value
     }));
   });
 
-  constructor(private http: HttpClient, private snack: MatSnackBar) {
+  constructor(private http: HttpClient, private snack: MatSnackBar, private t: TranslateService) {
     // Init default year
     const currentYear = new Date().getFullYear();
     this.paramValues['year'] = currentYear;
@@ -401,7 +396,7 @@ export class ReportsComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        this.snack.open(err.error?.error ?? 'Erreur lors de la génération', 'Fermer', { duration: 4000 });
+        this.snack.open(err.error?.error ?? this.t.instant('reports.generate_error'), this.t.instant('common.close'), { duration: 4000 });
       }
     });
   }
@@ -427,7 +422,7 @@ export class ReportsComponent {
         a.click();
         URL.revokeObjectURL(a.href);
       },
-      error: () => this.snack.open('Erreur lors de l\'export', 'Fermer', { duration: 4000 })
+      error: () => this.snack.open(this.t.instant('reports.export_error'), this.t.instant('common.close'), { duration: 4000 })
     });
   }
 
@@ -436,7 +431,7 @@ export class ReportsComponent {
     for (const p of def.params) {
       const val = this.paramValues[p.key];
       if (!val && val !== 0) {
-        this.snack.open('Veuillez renseigner : ' + p.label, 'Fermer', { duration: 3000 });
+        this.snack.open(this.t.instant('reports.fill_param', { label: this.t.instant(p.labelKey) }), this.t.instant('common.close'), { duration: 3000 });
         return null;
       }
       out[p.key] = String(val);
