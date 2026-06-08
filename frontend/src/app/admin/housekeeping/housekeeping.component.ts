@@ -21,6 +21,7 @@ import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
 import { BookingService } from '../../core/services/booking.service';
+import { LinenComponent } from '../linen/linen.component';
 
 interface Task {
   id: number;
@@ -104,7 +105,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule,
+    LinenComponent
   ],
   template: `
     <mat-tab-group animationDuration="150ms">
@@ -533,6 +535,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               }
             }
           </div>
+        </div>
+      </mat-tab>
+
+      <!-- ══════════════ ONGLET BLANCHISSERIE ══════════════ -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon style="margin-right:6px;font-size:18px;width:18px;height:18px">local_laundry_service</mat-icon>
+          Blanchisserie
+        </ng-template>
+        <div class="tab-content">
+          <app-linen />
         </div>
       </mat-tab>
 
