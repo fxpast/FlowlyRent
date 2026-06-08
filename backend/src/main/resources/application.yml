@@ -59,6 +59,10 @@ app:
     allowed-origins: "http://localhost:4200,http://localhost:3000"
   analytics:
     internal-emails: ${ANALYTICS_INTERNAL_EMAILS:}
+  encryption:
+    # Clé AES-256 encodée en Base64 (32 octets). Obligatoire en prod : variable ENCRYPTION_KEY.
+    # En dev : générer avec : openssl rand -base64 32
+    key: ${ENCRYPTION_KEY:}
 
 admin:
   username: ${ADMIN_USERNAME:}

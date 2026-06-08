@@ -1,5 +1,6 @@
 package com.flowlyrent.model;
 
+import com.flowlyrent.config.EncryptionConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,6 +23,7 @@ public class QontoAccount {
 
     private String login;
 
+    @Convert(converter = EncryptionConverter.class)
     @Column(columnDefinition = "TEXT")
     private String secretKey;
 
