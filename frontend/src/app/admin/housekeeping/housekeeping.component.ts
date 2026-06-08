@@ -1077,7 +1077,8 @@ export class HousekeepingComponent implements OnInit {
       const cfg      = this.propConfigs().find(c => c.beds24PropertyId === pid);
       const code     = cfg?.accessCode ?? '';
       const prevCode = cfg?.previousAccessCode ?? '';
-      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.newTaskTime}\n\nCode : ${prevCode}\nNouveau : ${code}`;
+      const hours    = this.newTask.extraHours ? ` — ${this.newTask.extraHours}h` : '';
+      let msg = `Bonjour ${hk.name},\n\nMénage ${propName} à partir du ${this.toFrDate(departure)} à ${this.newTaskTime}${hours}\n\nCode : ${prevCode}\nNouveau : ${code}`;
       if (nextCheckinTime) msg += `\n\nUn client arrive cet après-midi à ${nextCheckinTime}`;
       this.newTask.notes = msg;
     };
