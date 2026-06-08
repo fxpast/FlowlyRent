@@ -1,5 +1,6 @@
 package com.flowlyrent.model;
 
+import com.flowlyrent.config.EncryptionConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -19,11 +20,11 @@ public class Beds24Account {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private AppUser appUser;
 
-    // Token durable (refresh) obtenu lors de la connexion initiale
+    @Convert(converter = EncryptionConverter.class)
     @Column(columnDefinition = "TEXT")
     private String refreshToken;
 
-    // Token court-vécu pour les appels API
+    @Convert(converter = EncryptionConverter.class)
     @Column(columnDefinition = "TEXT")
     private String accessToken;
 

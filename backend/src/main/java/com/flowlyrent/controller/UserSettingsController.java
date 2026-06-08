@@ -159,17 +159,6 @@ public class UserSettingsController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/qonto/sync")
-    public ResponseEntity<Map<String, Object>> qontoSync() {
-        AppUser user = securityUtils.getCurrentUser();
-        try {
-            Map<String, Object> result = qontoService.syncTransactions(user.getId());
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @DeleteMapping("/qonto/disconnect")
     public ResponseEntity<Map<String, String>> qontoDisconnect() {
         AppUser user = securityUtils.getCurrentUser();

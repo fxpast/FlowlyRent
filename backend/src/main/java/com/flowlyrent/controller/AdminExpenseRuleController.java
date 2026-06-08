@@ -4,7 +4,6 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.ExpenseRule;
 import com.flowlyrent.repository.ExpenseRuleRepository;
-import com.flowlyrent.service.QontoService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +22,6 @@ public class AdminExpenseRuleController {
 
     private final ExpenseRuleRepository ruleRepo;
     private final SecurityUtils securityUtils;
-    private final QontoService qontoService;
 
     @GetMapping
     public List<Map<String, Object>> list() {
@@ -47,13 +45,7 @@ public class AdminExpenseRuleController {
         ExpenseRule rule = ruleRepo.findById(id).orElse(null);
         if (rule == null || !rule.getUser().getId().equals(userId)) return ResponseEntity.notFound().build();
         applyBody(rule, body);
-        ruleRepo.save(rule);
-
-        // Recatégoriser les transactions après modification d'une règle
-        List<ExpenseRule> rules = ruleRepo.findByUserIdAndActiveTrue(userId);
-        qontoService.recategorizeAll(userId, rules);
-
-        return ResponseEntity.ok(toMap(rule));
+        return ResponseEntity.ok(toMap(ruleRepo.save(rule)));
     }
 
     @DeleteMapping("/{id}")
@@ -68,8 +60,8 @@ public class AdminExpenseRuleController {
 
     @SuppressWarnings("unchecked")
     private void applyBody(ExpenseRule rule, Map<String, Object> body) {
-        if (body.containsKey("category"))        rule.setCategory((String) body.get("category"));
-        if (body.containsKey("label"))           rule.setLabel((String) body.get("label"));
+        if (body.containsKey("category"))         rule.setCategory((String) body.get("category"));
+        if (body.containsKey("label"))            rule.setLabel((String) body.get("label"));
         if (body.containsKey("beds24PropertyId")) rule.setBeds24PropertyId((String) body.get("beds24PropertyId"));
         if (body.containsKey("keywords")) {
             rule.setKeywords(body.get("keywords") instanceof List

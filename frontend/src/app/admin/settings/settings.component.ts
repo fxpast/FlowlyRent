@@ -206,10 +206,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-content>
       <mat-card-actions>
         @if (qontoStatus()?.connected) {
-          <button mat-flat-button color="accent" (click)="syncQonto()" [disabled]="qontoSyncing()">
-            @if (qontoSyncing()) { <mat-spinner diameter="18" /> } @else { <mat-icon>sync</mat-icon> Synchroniser }
-          </button>
-          <button mat-stroked-button color="warn" (click)="disconnectQonto()" style="margin-left:8px">
+          <button mat-stroked-button color="warn" (click)="disconnectQonto()">
             Déconnecter
           </button>
         } @else {
@@ -405,7 +402,6 @@ export class SettingsComponent implements OnInit {
   qontoSecretKey = '';
   qontoConnecting = signal(false);
   qontoConnectMsg = signal('');
-  qontoSyncing = signal(false);
   showQontoKey = signal(false);
 
   pwd = { current: '', new: '', confirm: '' };
@@ -569,21 +565,6 @@ export class SettingsComponent implements OnInit {
       error: err => {
         this.qontoConnecting.set(false);
         this.qontoConnectMsg.set(err.error?.error ?? 'Identifiants invalides');
-      }
-    });
-  }
-
-  syncQonto(): void {
-    this.qontoSyncing.set(true);
-    this.qontoService.sync().subscribe({
-      next: r => {
-        this.qontoSyncing.set(false);
-        this.snackBar.open(`Sync OK — ${r.synced ?? 0} transactions`, '', { duration: 3000 });
-        this.loadQontoStatus();
-      },
-      error: err => {
-        this.qontoSyncing.set(false);
-        this.snackBar.open(err.error?.error ?? 'Erreur lors de la sync', 'OK', { duration: 5000 });
       }
     });
   }

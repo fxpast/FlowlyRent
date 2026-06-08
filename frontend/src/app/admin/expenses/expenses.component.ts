@@ -44,16 +44,6 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
   template: `
     <div class="page-header">
       <h2>Dépenses Qonto</h2>
-      @if (status()?.connected) {
-        <div class="header-actions">
-          @if (status()?.lastSync) {
-            <span class="sync-info">Dernière sync : {{ formatDate(status()!.lastSync!) }}</span>
-          }
-          <button mat-stroked-button (click)="syncNow()" [disabled]="syncing()">
-            @if (syncing()) { <mat-spinner diameter="18" /> } @else { <mat-icon>sync</mat-icon> Synchroniser }
-          </button>
-        </div>
-      }
     </div>
 
     @if (!status()) {
@@ -122,7 +112,7 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
 
               <div class="tx-list">
                 @for (tx of filteredTx(); track tx.id) {
-                  <div class="tx-row" [class.editing]="editingId() === tx.id">
+                  <div class="tx-row">
                     <div class="tx-date">{{ tx.settledAt | date:'dd/MM' }}</div>
                     <div class="tx-label">
                       <div class="tx-main-label">{{ tx.label }}</div>
@@ -134,29 +124,12 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
                       {{ tx.side === 'DEBIT' ? '-' : '+' }}{{ tx.amount | number:'1.2-2' }} €
                     </div>
                     <div class="tx-cat">
-                      @if (editingId() === tx.id) {
-                        <mat-form-field class="cat-select">
-                          <mat-select [(ngModel)]="editCategory" (selectionChange)="saveCategory(tx)">
-                            <mat-option value="">— Aucune —</mat-option>
-                            @for (key of categoryKeys; track key) {
-                              <mat-option [value]="key">{{ catLabel(key) }}</mat-option>
-                            }
-                          </mat-select>
-                        </mat-form-field>
-                        <button mat-icon-button (click)="editingId.set(0)" matTooltip="Annuler">
-                          <mat-icon>close</mat-icon>
-                        </button>
+                      @if (tx.category) {
+                        <span class="cat-badge" [style.background]="catColor(tx.category)">
+                          {{ catLabel(tx.category) }}
+                        </span>
                       } @else {
-                        @if (tx.category) {
-                          <span class="cat-badge" [style.background]="catColor(tx.category)">
-                            {{ catLabel(tx.category) }}
-                          </span>
-                        } @else {
-                          <span class="cat-empty">—</span>
-                        }
-                        <button mat-icon-button class="edit-btn" (click)="startEdit(tx)" matTooltip="Changer la catégorie">
-                          <mat-icon>edit</mat-icon>
-                        </button>
+                        <span class="cat-empty">—</span>
                       }
                     </div>
                     @if (tx.userNote) {
@@ -447,7 +420,6 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => k !== 'NON_CATEGORISE'
 export class ExpensesComponent implements OnInit {
 
   status = signal<QontoStatus | null>(null);
-  syncing = signal(false);
 
   // Transactions
   transactions = signal<QontoTransaction[]>([]);
@@ -456,8 +428,6 @@ export class ExpensesComponent implements OnInit {
   filterTo = '';
   filterCategory = '';
   filterSide = '';
-  editingId = signal(0);
-  editCategory = '';
 
   // Rules
   rules = signal<ExpenseRule[]>([]);
@@ -491,25 +461,6 @@ export class ExpensesComponent implements OnInit {
         this.loadTransactions();
         this.loadRules();
         this.loadSummary();
-      }
-    });
-  }
-
-  // ─── Sync ──────────────────────────────────────────────────────────────
-
-  syncNow(): void {
-    this.syncing.set(true);
-    this.qontoService.sync().subscribe({
-      next: r => {
-        this.syncing.set(false);
-        this.snack.open(`Sync OK — ${r.synced ?? 0} transactions`, '', { duration: 3000 });
-        this.loadTransactions();
-        this.loadSummary();
-        this.qontoService.getStatus().subscribe(s => this.status.set(s));
-      },
-      error: err => {
-        this.syncing.set(false);
-        this.snack.open(err.error?.error ?? 'Erreur lors de la synchronisation', 'OK', { duration: 5000 });
       }
     });
   }
@@ -552,24 +503,6 @@ export class ExpensesComponent implements OnInit {
     this.filterCategory = '';
     this.filterSide = '';
     this.loadTransactions();
-  }
-
-  startEdit(tx: QontoTransaction): void {
-    this.editingId.set(tx.id);
-    this.editCategory = tx.category ?? '';
-  }
-
-  saveCategory(tx: QontoTransaction): void {
-    this.qontoService.patchTransaction(tx.id, { category: this.editCategory || undefined }).subscribe({
-      next: updated => {
-        const list = this.transactions();
-        const idx = list.findIndex(t => t.id === tx.id);
-        if (idx >= 0) list[idx] = { ...updated };
-        this.transactions.set([...list]);
-        this.editingId.set(0);
-      },
-      error: () => this.editingId.set(0)
-    });
   }
 
   // ─── Rules ─────────────────────────────────────────────────────────────

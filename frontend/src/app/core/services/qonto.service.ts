@@ -66,10 +66,6 @@ export class QontoService {
     return this.http.post<any>(`${this.base}/user/qonto/connect`, { login, secretKey });
   }
 
-  sync(): Observable<{ status?: string; synced?: number; lastSync?: string; error?: string }> {
-    return this.http.post<any>(`${this.base}/user/qonto/sync`, {});
-  }
-
   disconnect(): Observable<{ status: string }> {
     return this.http.delete<{ status: string }>(`${this.base}/user/qonto/disconnect`);
   }
@@ -83,10 +79,6 @@ export class QontoService {
       if (qs) url += '?' + qs;
     }
     return this.http.get<QontoTransaction[]>(url);
-  }
-
-  patchTransaction(id: number, patch: Partial<QontoTransaction>): Observable<QontoTransaction> {
-    return this.http.patch<QontoTransaction>(`${this.base}/admin/qonto/transactions/${id}`, patch);
   }
 
   getSummary(year?: number, month?: number): Observable<QontoSummary> {

@@ -5,14 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.ExpenseRule;
 import com.flowlyrent.model.QontoAccount;
-import com.flowlyrent.model.QontoTransaction;
-import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.ExpenseRuleRepository;
 import com.flowlyrent.repository.QontoAccountRepository;
-import com.flowlyrent.repository.QontoTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,11 +17,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.YearMonth;
+import java.util.*;
 
+/**
+ * Accès live à l'API Qonto v2 — aucune donnée de transaction n'est stockée en base.
+ * Les transactions sont récupérées, catégorisées en mémoire, puis retournées directement.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,21 +32,17 @@ public class QontoService {
     private static final String BASE_URL = "https://thirdparty.qonto.com/v2";
 
     private final QontoAccountRepository qontoAccountRepository;
-    private final QontoTransactionRepository transactionRepository;
     private final ExpenseRuleRepository expenseRuleRepository;
-    private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
 
-    // ─── Connect ─────────────────────────────────────────────────────────────
+    // ─── Connect / Disconnect ─────────────────────────────────────────────────
 
     public Map<String, Object> connect(AppUser user, String login, String secretKey) {
         try {
             Map<String, Object> orgData = apiGet("/organization", login, secretKey);
             @SuppressWarnings("unchecked")
             Map<String, Object> org = (Map<String, Object>) orgData.get("organization");
-            if (org == null) {
-                return Map.of("error", "Réponse inattendue de l'API Qonto");
-            }
+            if (org == null) return Map.of("error", "Réponse inattendue de l'API Qonto");
 
             QontoAccount account = qontoAccountRepository.findByAppUserId(user.getId())
                     .orElseGet(() -> { QontoAccount a = new QontoAccount(); a.setAppUser(user); return a; });
@@ -68,174 +62,176 @@ public class QontoService {
     public void disconnect(Long userId) {
         qontoAccountRepository.findByAppUserId(userId).ifPresent(a -> {
             a.setConnected(false);
+            a.setLogin(null);
             a.setSecretKey(null);
             qontoAccountRepository.save(a);
         });
     }
 
-    // ─── Sync ─────────────────────────────────────────────────────────────────
+    // ─── Live fetch transactions ───────────────────────────────────────────────
 
-    public Map<String, Object> syncTransactions(Long userId) {
-        QontoAccount account = qontoAccountRepository.findByAppUserId(userId)
-                .orElseThrow(() -> new IllegalStateException("Compte Qonto non connecté"));
-        if (!account.isConnected()) throw new IllegalStateException("Compte Qonto non connecté");
+    public List<Map<String, Object>> fetchTransactions(Long userId, LocalDate from, LocalDate to) {
+        QontoAccount account = getAccount(userId);
+        List<Map<String, Object>> ibans = getIbans(account);
+        List<ExpenseRule> rules = expenseRuleRepository.findByUserIdAndActiveTrue(userId);
+        List<Map<String, Object>> result = new ArrayList<>();
 
-        AppUser user = appUserRepository.findById(userId).orElseThrow();
-        account.setAppUser(user);
+        String fromStr = from + "T00:00:00.000Z";
+        String toStr = to + "T23:59:59.000Z";
 
-        try {
-            Map<String, Object> orgData = apiGet("/organization", account.getLogin(), account.getSecretKey());
-            @SuppressWarnings("unchecked")
-            Map<String, Object> org = (Map<String, Object>) orgData.get("organization");
-            if (org == null) throw new IllegalStateException("Organisation Qonto introuvable");
+        for (Map<String, Object> ba : ibans) {
+            String iban = (String) ba.get("iban");
+            if (iban == null) continue;
 
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> bankAccounts = (List<Map<String, Object>>) org.get("bank_accounts");
-            if (bankAccounts == null || bankAccounts.isEmpty()) {
-                throw new IllegalStateException("Aucun compte bancaire trouvé dans Qonto");
-            }
+            int page = 1;
+            while (true) {
+                try {
+                    String path = "/transactions?iban=" + iban
+                            + "&settled_at_from=" + fromStr
+                            + "&settled_at_to=" + toStr
+                            + "&current_page=" + page
+                            + "&per_page=100"
+                            + "&sorted_by=settled_at:desc";
 
-            LocalDate fromDate = account.getLastSync() != null
-                    ? account.getLastSync().toLocalDate().minusDays(1)
-                    : LocalDate.now().minusMonths(6);
+                    Map<String, Object> data = apiGet(path, account.getLogin(), account.getSecretKey());
 
-            List<ExpenseRule> rules = expenseRuleRepository.findByUserIdAndActiveTrue(userId);
-            int total = 0;
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> transactions = (List<Map<String, Object>>) data.get("transactions");
+                    if (transactions == null || transactions.isEmpty()) break;
 
-            for (Map<String, Object> ba : bankAccounts) {
-                String iban = (String) ba.get("iban");
-                if (iban == null) continue;
-                total += fetchAndSave(user, account, iban, fromDate, rules);
-            }
+                    for (Map<String, Object> tx : transactions) {
+                        Map<String, Object> enriched = new LinkedHashMap<>(tx);
+                        enriched.put("bankAccountIban", iban);
+                        categorize(enriched, rules);
+                        result.add(enriched);
+                    }
 
-            recategorizeAll(userId, rules);
-
-            account.setLastSync(LocalDateTime.now());
-            account.setLastSyncStatus("OK — " + total + " transactions");
-            qontoAccountRepository.save(account);
-
-            return Map.of("status", "OK", "synced", total, "lastSync", account.getLastSync().toString());
-
-        } catch (Exception e) {
-            log.error("Sync Qonto erreur pour user {}: {}", userId, e.getMessage());
-            account.setLastSyncStatus("ERREUR: " + e.getMessage());
-            qontoAccountRepository.save(account);
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
-    private int fetchAndSave(AppUser user, QontoAccount account, String iban,
-                              LocalDate fromDate, List<ExpenseRule> rules) throws Exception {
-        int page = 1;
-        int saved = 0;
-        String fromStr = fromDate + "T00:00:00.000Z";
-
-        while (true) {
-            String path = "/transactions?iban=" + iban
-                    + "&settled_at_from=" + fromStr
-                    + "&current_page=" + page
-                    + "&per_page=100"
-                    + "&sorted_by=settled_at:desc";
-
-            Map<String, Object> data = apiGet(path, account.getLogin(), account.getSecretKey());
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> transactions = (List<Map<String, Object>>) data.get("transactions");
-            if (transactions == null || transactions.isEmpty()) break;
-
-            for (Map<String, Object> dto : transactions) {
-                String qontoId = (String) dto.get("transaction_id");
-                if (qontoId == null) continue;
-
-                QontoTransaction tx = transactionRepository.findByUserIdAndQontoId(user.getId(), qontoId)
-                        .orElseGet(() -> { QontoTransaction t = new QontoTransaction(); t.setUser(user); t.setQontoId(qontoId); return t; });
-
-                tx.setLabel((String) dto.get("label"));
-                tx.setCounterpartyName((String) dto.get("counterparty_name"));
-                tx.setStatus((String) dto.get("status"));
-                tx.setBankAccountIban(iban);
-
-                String side = (String) dto.get("side");
-                tx.setSide(side != null ? side.toUpperCase() : "DEBIT");
-
-                String currency = (String) dto.get("currency");
-                tx.setCurrency(currency != null ? currency : "EUR");
-
-                Object amt = dto.get("amount");
-                if (amt != null) tx.setAmount(new BigDecimal(amt.toString()));
-
-                String settledAt = (String) dto.get("settled_at");
-                if (settledAt != null && settledAt.length() >= 10) {
-                    tx.setSettledAt(LocalDate.parse(settledAt.substring(0, 10)));
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> meta = (Map<String, Object>) data.get("meta");
+                    if (meta == null || meta.get("next_page") == null) break;
+                    page = ((Number) meta.get("next_page")).intValue();
+                } catch (Exception e) {
+                    log.error("Erreur fetch transactions Qonto iban={}: {}", iban, e.getMessage());
+                    break;
                 }
-                String emittedAt = (String) dto.get("emitted_at");
-                if (emittedAt != null && emittedAt.length() >= 10) {
-                    tx.setEmittedAt(LocalDate.parse(emittedAt.substring(0, 10)));
-                }
+            }
+        }
 
-                categorize(tx, rules);
-                transactionRepository.save(tx);
-                saved++;
+        result.sort((a, b) -> {
+            String dA = a.getOrDefault("settled_at", "").toString();
+            String dB = b.getOrDefault("settled_at", "").toString();
+            return dB.compareTo(dA);
+        });
+
+        return result;
+    }
+
+    // ─── Live summary ─────────────────────────────────────────────────────────
+
+    public Map<String, Object> fetchSummary(Long userId, Integer year, Integer month) {
+        LocalDate from, to;
+        if (year != null && month != null) {
+            YearMonth ym = YearMonth.of(year, month);
+            from = ym.atDay(1);
+            to = ym.atEndOfMonth();
+        } else if (year != null) {
+            from = LocalDate.of(year, 1, 1);
+            to = LocalDate.of(year, 12, 31);
+        } else {
+            from = LocalDate.now().withDayOfMonth(1).minusMonths(11);
+            to = LocalDate.now();
+        }
+
+        List<Map<String, Object>> txs = fetchTransactions(userId, from, to);
+
+        Map<String, BigDecimal> byCategory = new LinkedHashMap<>();
+        Map<String, BigDecimal> byMonth = new LinkedHashMap<>();
+        BigDecimal totalDebits = BigDecimal.ZERO;
+        BigDecimal totalCredits = BigDecimal.ZERO;
+        int uncategorized = 0;
+
+        for (Map<String, Object> tx : txs) {
+            Object amtObj = tx.get("amount");
+            if (amtObj == null) continue;
+            BigDecimal amount = new BigDecimal(amtObj.toString());
+            String side = tx.getOrDefault("side", "debit").toString().toUpperCase();
+
+            if ("DEBIT".equals(side)) {
+                totalDebits = totalDebits.add(amount);
+            } else {
+                totalCredits = totalCredits.add(amount);
             }
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> meta = (Map<String, Object>) data.get("meta");
-            if (meta == null || meta.get("next_page") == null) break;
-            page = ((Number) meta.get("next_page")).intValue();
+            String cat = tx.get("category") != null ? tx.get("category").toString() : null;
+            if (cat == null) { uncategorized++; cat = "NON_CATEGORISE"; }
+            byCategory.merge(cat, amount, BigDecimal::add);
+
+            String settledAt = tx.getOrDefault("settled_at", "").toString();
+            if (settledAt.length() >= 7 && "DEBIT".equals(side)) {
+                String monthKey = settledAt.substring(0, 7);
+                byMonth.merge(monthKey, amount, BigDecimal::add);
+            }
         }
 
-        return saved;
+        return Map.of(
+                "from", from.toString(),
+                "to", to.toString(),
+                "totalDebits", totalDebits,
+                "totalCredits", totalCredits,
+                "transactionCount", txs.size(),
+                "uncategorized", uncategorized,
+                "byCategory", byCategory,
+                "byMonth", byMonth
+        );
     }
 
-    // ─── Categorization ───────────────────────────────────────────────────────
+    // ─── Categorization (in-memory) ───────────────────────────────────────────
 
-    public void recategorizeAll(Long userId, List<ExpenseRule> rules) {
-        List<QontoTransaction> txs = transactionRepository.findByUserIdOrderBySettledAtDescEmittedAtDesc(userId);
-        for (QontoTransaction tx : txs) {
-            categorize(tx, rules);
-            transactionRepository.save(tx);
-        }
-    }
-
-    public void categorize(QontoTransaction tx, List<ExpenseRule> rules) {
-        String label = tx.getLabel() != null ? tx.getLabel().toLowerCase() : "";
-        String counterparty = tx.getCounterpartyName() != null ? tx.getCounterpartyName().toLowerCase() : "";
+    private void categorize(Map<String, Object> tx, List<ExpenseRule> rules) {
+        String label = tx.getOrDefault("label", "").toString().toLowerCase();
+        String counterparty = tx.getOrDefault("counterparty_name", "").toString().toLowerCase();
 
         for (ExpenseRule rule : rules) {
             boolean matchLabel = rule.getKeywords().stream().anyMatch(k -> label.contains(k.toLowerCase()));
             boolean matchAlt = rule.getAltKeywords().stream().anyMatch(k -> counterparty.contains(k.toLowerCase()));
-
             if (matchLabel || matchAlt) {
-                tx.setCategory(rule.getCategory());
-                tx.setRuleLabel(rule.getLabel());
-                tx.setExpenseRuleId(rule.getId());
-                tx.setBeds24PropertyId(rule.getBeds24PropertyId());
+                tx.put("category", rule.getCategory());
+                tx.put("ruleLabel", rule.getLabel());
+                tx.put("expenseRuleId", rule.getId());
+                tx.put("beds24PropertyId", rule.getBeds24PropertyId());
                 return;
             }
         }
-
-        tx.setCategory(null);
-        tx.setRuleLabel(null);
-        tx.setExpenseRuleId(null);
-        tx.setBeds24PropertyId(null);
+        tx.put("category", null);
+        tx.put("ruleLabel", null);
+        tx.put("expenseRuleId", null);
+        tx.put("beds24PropertyId", null);
     }
 
-    // ─── Scheduled sync ───────────────────────────────────────────────────────
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    @Scheduled(cron = "0 30 */2 * * *")
-    public void scheduledSync() {
-        List<Long> userIds = qontoAccountRepository.findUserIdsWithConnectedAccounts();
-        for (Long userId : userIds) {
-            try {
-                syncTransactions(userId);
-                log.info("Sync Qonto OK user {}", userId);
-            } catch (Exception e) {
-                log.warn("Sync Qonto KO user {}: {}", userId, e.getMessage());
-            }
+    private QontoAccount getAccount(Long userId) {
+        QontoAccount account = qontoAccountRepository.findByAppUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("Compte Qonto non connecté"));
+        if (!account.isConnected() || account.getSecretKey() == null) {
+            throw new IllegalStateException("Compte Qonto non connecté");
+        }
+        return account;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> getIbans(QontoAccount account) {
+        try {
+            Map<String, Object> orgData = apiGet("/organization", account.getLogin(), account.getSecretKey());
+            Map<String, Object> org = (Map<String, Object>) orgData.get("organization");
+            if (org == null) return List.of();
+            List<Map<String, Object>> accounts = (List<Map<String, Object>>) org.get("bank_accounts");
+            return accounts != null ? accounts : List.of();
+        } catch (Exception e) {
+            log.error("Impossible de récupérer les comptes Qonto: {}", e.getMessage());
+            return List.of();
         }
     }
-
-    // ─── HTTP client ──────────────────────────────────────────────────────────
 
     private Map<String, Object> apiGet(String path, String login, String secretKey) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
