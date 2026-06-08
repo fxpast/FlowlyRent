@@ -17,6 +17,10 @@ export const superadminRoutes: Routes = [
       {
         path: 'feedbacks',
         loadComponent: () => import('./feedbacks/superadmin-feedbacks.component').then(m => m.SuperadminFeedbacksComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./notifications/superadmin-notifications.component').then(m => m.SuperadminNotificationsComponent)
       }
     ]
   }

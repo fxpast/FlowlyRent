@@ -29,6 +29,9 @@ import { filter } from 'rxjs';
               [matBadge]="newFeedbackCount() || null" matBadgeColor="warn" matBadgeSize="small">
         <mat-icon>rate_review</mat-icon>
       </button>
+      <button mat-icon-button routerLink="/superadmin/notifications" matTooltip="Notifications utilisateurs">
+        <mat-icon>campaign</mat-icon>
+      </button>
       <button mat-stroked-button (click)="logout()" style="margin-left:16px;color:white;border-color:rgba(255,255,255,.5)">
         <mat-icon>logout</mat-icon> Déconnexion
       </button>

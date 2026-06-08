@@ -90,6 +90,10 @@ export const adminRoutes: Routes = [
       {
         path: 'invoices/:id',
         loadComponent: () => import('./invoice-editor/invoice-editor.component').then(m => m.InvoiceEditorComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./notifications/notifications.component').then(m => m.NotificationsComponent)
       }
     ]
   }
