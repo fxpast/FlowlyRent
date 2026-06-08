@@ -72,6 +72,11 @@ cloudinary:
 sync:
   ical:
     cron: "0 0 */2 * * *"
+  qonto:
+    cron: "0 30 */2 * * *"
+
+qonto:
+  api-url: https://thirdparty.qonto.com/v2
 
 logging:
   level:

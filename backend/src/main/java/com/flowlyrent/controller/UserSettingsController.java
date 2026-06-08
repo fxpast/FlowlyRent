@@ -6,7 +6,9 @@ import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.QontoAccountRepository;
 import com.flowlyrent.service.Beds24TokenService;
+import com.flowlyrent.service.QontoService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,8 @@ public class UserSettingsController {
     private final Beds24AccountRepository beds24AccountRepository;
     private final Beds24TokenService beds24TokenService;
     private final PasswordEncoder passwordEncoder;
+    private final QontoAccountRepository qontoAccountRepository;
+    private final QontoService qontoService;
 
     @GetMapping("/profile")
     public ResponseEntity<LoginResponse> getProfile() {
@@ -125,6 +129,51 @@ public class UserSettingsController {
             a.setRefreshToken(null);
             beds24AccountRepository.save(a);
         });
+        return ResponseEntity.ok(Map.of("status", "Déconnecté"));
+    }
+
+    // --- Qonto ---
+
+    @GetMapping("/qonto/status")
+    public ResponseEntity<Map<String, Object>> qontoStatus() {
+        AppUser user = securityUtils.getCurrentUser();
+        return qontoAccountRepository.findByAppUserId(user.getId())
+                .map(a -> ResponseEntity.ok(Map.<String, Object>of(
+                        "connected", a.isConnected(),
+                        "lastSync", a.getLastSync() != null ? a.getLastSync().toString() : "",
+                        "lastSyncStatus", a.getLastSyncStatus() != null ? a.getLastSyncStatus() : ""
+                )))
+                .orElse(ResponseEntity.ok(Map.of("connected", false)));
+    }
+
+    @PostMapping("/qonto/connect")
+    public ResponseEntity<Map<String, Object>> qontoConnect(@RequestBody Map<String, String> body) {
+        AppUser user = securityUtils.getCurrentUser();
+        String login = body.get("login");
+        String secretKey = body.get("secretKey");
+        if (login == null || login.isBlank() || secretKey == null || secretKey.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Login et clé secrète requis"));
+        }
+        Map<String, Object> result = qontoService.connect(user, login, secretKey);
+        if (result.containsKey("error")) return ResponseEntity.badRequest().body(result);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/qonto/sync")
+    public ResponseEntity<Map<String, Object>> qontoSync() {
+        AppUser user = securityUtils.getCurrentUser();
+        try {
+            Map<String, Object> result = qontoService.syncTransactions(user.getId());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/qonto/disconnect")
+    public ResponseEntity<Map<String, String>> qontoDisconnect() {
+        AppUser user = securityUtils.getCurrentUser();
+        qontoService.disconnect(user.getId());
         return ResponseEntity.ok(Map.of("status", "Déconnecté"));
     }
 

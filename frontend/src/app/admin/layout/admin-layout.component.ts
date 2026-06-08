@@ -131,6 +131,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'home_repair_service', label: 'Entretien',        route: 'housekeeping' },
     { icon: 'notifications',    label: 'Notifications',    route: 'notifications' },
     { icon: 'receipt_long',      label: 'Factures',         route: 'invoices' },
+    { icon: 'account_balance',  label: 'Dépenses Qonto',   route: 'expenses' },
     { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
     { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
     { icon: 'payment',          label: 'Paiements',        route: 'payments' },
