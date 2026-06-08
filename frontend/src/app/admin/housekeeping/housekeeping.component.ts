@@ -870,6 +870,10 @@ export class HousekeepingComponent implements OnInit {
   ngOnInit(): void {
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
+    this.http.get<any[]>(`${this.base}/admin/property-configs`).subscribe({
+      next: cfgs => this.propConfigs.set(cfgs ?? []),
+      error: () => {}
+    });
     this.load();
     this.loadCharges();
   }
@@ -942,12 +946,6 @@ export class HousekeepingComponent implements OnInit {
     const defaultType = this.taskCategory() === 'menage' ? 'CHECKOUT_CLEANING' : 'MAINTENANCE';
     this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.showForm = true;
-    if (this.propConfigs().length === 0) {
-      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
-        next: cfgs => this.propConfigs.set(cfgs ?? []),
-        error: () => {}
-      });
-    }
   }
 
   openEditTaskForm(task: Task): void {
@@ -966,12 +964,6 @@ export class HousekeepingComponent implements OnInit {
       hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : ''
     };
     this.showForm = true;
-    if (this.propConfigs().length === 0) {
-      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
-        next: cfgs => this.propConfigs.set(cfgs ?? []),
-        error: () => {}
-      });
-    }
   }
 
   cancelTaskForm(): void {
@@ -1111,14 +1103,7 @@ export class HousekeepingComponent implements OnInit {
       });
     };
 
-    if (this.propConfigs().length > 0) {
-      checkNextArrival();
-    } else {
-      this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
-        next: cfgs => { this.propConfigs.set(cfgs ?? []); checkNextArrival(); },
-        error: () => checkNextArrival()
-      });
-    }
+    checkNextArrival();
   }
 
   private toFrDate(iso: string): string {
