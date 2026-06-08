@@ -16,6 +16,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
@@ -103,7 +104,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule
   ],
   template: `
     <mat-tab-group animationDuration="150ms">
@@ -113,7 +114,16 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
         <div class="tab-content">
 
           <div class="header-row">
-            <span></span>
+            <mat-button-toggle-group [value]="taskCategory()" (change)="setTaskCategory($event.value)" hideSingleSelectionIndicator>
+              <mat-button-toggle value="menage">
+                <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">cleaning_services</mat-icon>
+                Ménages
+              </mat-button-toggle>
+              <mat-button-toggle value="depannage">
+                <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">build</mat-icon>
+                Dépannage
+              </mat-button-toggle>
+            </mat-button-toggle-group>
             <button mat-flat-button color="primary" (click)="openNewTaskForm()">
               <mat-icon>add</mat-icon> Nouvelle tâche
             </button>
@@ -136,7 +146,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   <mat-form-field>
                     <mat-label>Type</mat-label>
                     <mat-select [ngModel]="newTask.type" (ngModelChange)="onNewTypeChange($event)">
-                      @for (t of taskTypes; track t.value) {
+                      @for (t of filteredTaskTypes(); track t.value) {
                         <mat-option [value]="t.value">{{ t.label }}</mat-option>
                       }
                     </mat-select>
@@ -224,11 +234,11 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <!-- Liste des tâches -->
           @if (loading()) {
             <div class="center"><mat-spinner diameter="40" /></div>
-          } @else if (filteredTasks().length === 0) {
+          } @else if (displayedTasks().length === 0) {
             <p class="empty">Aucune tâche sur cette période.</p>
           } @else {
             <div class="tasks-grid">
-              @for (task of filteredTasks(); track task.id) {
+              @for (task of displayedTasks(); track task.id) {
                 <mat-card class="task-card" [class.done]="task.status === 'DONE'" [class.in-progress]="task.status === 'IN_PROGRESS'">
                   <div class="task-header">
                     <div class="task-date">{{ task.scheduledDate | date:'EEE dd/MM · HH:mm' : '' : 'fr-FR' }}</div>
@@ -813,6 +823,26 @@ export class HousekeepingComponent implements OnInit {
   taskTypes = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
   statuses  = Object.entries(STATUS_LABELS).map(([value, { label }]) => ({ value, label }));
 
+  private readonly MENAGE_TYPES = new Set(['CHECKOUT_CLEANING', 'CHECKIN_PREP', 'CLEANING']);
+  taskCategory = signal<'menage' | 'depannage'>('menage');
+
+  displayedTasks = computed(() => {
+    const cat = this.taskCategory();
+    return this.filteredTasks().filter(t =>
+      cat === 'menage' ? this.MENAGE_TYPES.has(t.type) : !this.MENAGE_TYPES.has(t.type)
+    );
+  });
+
+  filteredTaskTypes = computed(() =>
+    this.taskTypes.filter(t =>
+      this.taskCategory() === 'menage' ? this.MENAGE_TYPES.has(t.value) : !this.MENAGE_TYPES.has(t.value)
+    )
+  );
+
+  setTaskCategory(cat: 'menage' | 'depannage'): void {
+    this.taskCategory.set(cat);
+  }
+
   constructor(
     private http: HttpClient,
     private housekeeperService: HousekeeperService,
@@ -893,7 +923,8 @@ export class HousekeepingComponent implements OnInit {
     this.editingTask = null;
     this.newTaskDate = new Date();
     this.newTaskTime = '09:00';
-    this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    const defaultType = this.taskCategory() === 'menage' ? 'CHECKOUT_CLEANING' : 'MAINTENANCE';
+    this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
     this.showForm = true;
     if (this.propConfigs().length === 0) {
       this.http.get<any[]>(`${this.base.replace('/housekeeping', '')}/property-configs`).subscribe({
