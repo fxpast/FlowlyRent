@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InvoiceService } from '../../core/services/invoice.service';
 import { UserService } from '../../core/services/user.service';
 import { Invoice, InvoiceStatus } from '../../core/models/invoice.model';
@@ -23,25 +24,25 @@ import { generateInvoicePdf } from '../invoice-editor/invoice-pdf';
     CommonModule, FormsModule,
     MatButtonModule, MatIconModule, MatTableModule, MatChipsModule,
     MatSelectModule, MatFormFieldModule, MatSnackBarModule,
-    MatTooltipModule, MatProgressSpinnerModule
+    MatTooltipModule, MatProgressSpinnerModule, TranslateModule
   ],
   template: `
     <div class="page-header">
-      <h2>Factures</h2>
+      <h2>{{ 'invoices.title' | translate }}</h2>
       <button mat-flat-button color="primary" (click)="newInvoice()">
-        <mat-icon>add</mat-icon> Nouvelle facture
+        <mat-icon>add</mat-icon> {{ 'invoices.new' | translate }}
       </button>
     </div>
 
     <div class="filters">
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Statut</mat-label>
+        <mat-label>{{ 'invoices.filter_status' | translate }}</mat-label>
         <mat-select [(ngModel)]="filterStatus" (ngModelChange)="load()">
-          <mat-option value="">Tous</mat-option>
-          <mat-option value="DRAFT">Brouillon</mat-option>
-          <mat-option value="ISSUED">Émise</mat-option>
-          <mat-option value="PAID">Payée</mat-option>
-          <mat-option value="CANCELLED">Annulée</mat-option>
+          <mat-option value="">{{ 'invoices.status_all' | translate }}</mat-option>
+          <mat-option value="DRAFT">{{ 'invoices.status_draft' | translate }}</mat-option>
+          <mat-option value="ISSUED">{{ 'invoices.status_issued' | translate }}</mat-option>
+          <mat-option value="PAID">{{ 'invoices.status_paid' | translate }}</mat-option>
+          <mat-option value="CANCELLED">{{ 'invoices.status_cancelled' | translate }}</mat-option>
         </mat-select>
       </mat-form-field>
     </div>
@@ -51,8 +52,8 @@ import { generateInvoicePdf } from '../invoice-editor/invoice-pdf';
     } @else if (invoices().length === 0) {
       <div class="empty-state">
         <mat-icon>receipt_long</mat-icon>
-        <p>Aucune facture</p>
-        <button mat-flat-button color="primary" (click)="newInvoice()">Créer la première facture</button>
+        <p>{{ 'invoices.empty' | translate }}</p>
+        <button mat-flat-button color="primary" (click)="newInvoice()">{{ 'invoices.create_first' | translate }}</button>
       </div>
     } @else {
       <div class="invoice-list">
@@ -68,11 +69,11 @@ import { generateInvoicePdf } from '../invoice-editor/invoice-pdf';
               </span>
             </div>
             <div class="inv-actions" (click)="$event.stopPropagation()">
-              <button mat-icon-button matTooltip="Télécharger PDF"
+              <button mat-icon-button [matTooltip]="'invoices.download_pdf' | translate"
                       (click)="downloadPdf(inv, $event)">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
-              <button mat-icon-button matTooltip="Supprimer" color="warn"
+              <button mat-icon-button [matTooltip]="'common.delete' | translate" color="warn"
                       (click)="deleteInvoice(inv, $event)">
                 <mat-icon>delete_outline</mat-icon>
               </button>
@@ -125,7 +126,8 @@ export class InvoicesComponent implements OnInit {
     private invoiceService: InvoiceService,
     private userService: UserService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -153,8 +155,7 @@ export class InvoicesComponent implements OnInit {
   }
 
   statusLabel(s: InvoiceStatus): string {
-    const m: Record<string, string> = { DRAFT: 'Brouillon', ISSUED: 'Émise', PAID: 'Payée', CANCELLED: 'Annulée' };
-    return m[s] ?? s;
+    return this.t.instant('invoices.status_' + s.toLowerCase());
   }
 
   downloadPdf(inv: Invoice, e: Event): void {
@@ -164,13 +165,13 @@ export class InvoicesComponent implements OnInit {
 
   deleteInvoice(inv: Invoice, e: Event): void {
     e.stopPropagation();
-    if (!confirm(`Supprimer la facture ${inv.invoiceNumber} ?`)) return;
+    if (!confirm(this.t.instant('invoices.delete_confirm', { number: inv.invoiceNumber }))) return;
     this.invoiceService.delete(inv.id!).subscribe({
       next: () => {
         this.invoices.update(list => list.filter(i => i.id !== inv.id));
-        this.snackBar.open('Facture supprimée', 'OK', { duration: 2500 });
+        this.snackBar.open(this.t.instant('invoices.deleted'), this.t.instant('common.ok'), { duration: 2500 });
       },
-      error: () => this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000 })
+      error: () => this.snackBar.open(this.t.instant('invoices.delete_error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 }

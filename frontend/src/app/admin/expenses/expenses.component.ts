@@ -15,6 +15,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 
 const COLOR_PALETTE = [
@@ -32,11 +33,11 @@ const COLOR_PALETTE = [
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatChipsModule, MatTooltipModule,
     MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatDividerModule
+    MatSnackBarModule, MatDividerModule, TranslateModule
   ],
   template: `
     <div class="page-header">
-      <h2>Dépenses Qonto</h2>
+      <h2>{{ 'expenses.title' | translate }}</h2>
     </div>
 
     @if (!status()) {
@@ -47,8 +48,8 @@ const COLOR_PALETTE = [
           <div class="connect-banner">
             <mat-icon class="connect-icon">account_balance</mat-icon>
             <div>
-              <strong>Connectez votre compte Qonto</strong>
-              <p>Pour accéder à vos transactions et catégoriser vos dépenses, connectez votre compte Qonto dans les <a href="/admin/settings">Paramètres</a>.</p>
+              <strong>{{ 'expenses.connect_prompt' | translate }}</strong>
+              <p>{{ 'expenses.connect_detail_before' | translate }}<a href="/admin/settings">{{ 'nav.settings' | translate }}</a>{{ 'expenses.connect_detail_after' | translate }}</p>
             </div>
           </div>
         </mat-card-content>
@@ -56,45 +57,43 @@ const COLOR_PALETTE = [
     } @else {
       <mat-tab-group animationDuration="200ms">
 
-        <!-- ── Onglet Transactions ───────────────────────────────────────── -->
-        <mat-tab label="Transactions">
+        <mat-tab [label]="'expenses.transactions' | translate">
           <div class="tab-content">
-            <!-- Filtres -->
             <div class="filters">
               <mat-form-field>
-                <mat-label>De</mat-label>
+                <mat-label>{{ 'expenses.filter_from' | translate }}</mat-label>
                 <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="filterFromDate"
                        (dateChange)="loadTransactions()" readonly />
                 <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
                 <mat-datepicker #pickerFrom />
               </mat-form-field>
               <mat-form-field>
-                <mat-label>À</mat-label>
+                <mat-label>{{ 'expenses.filter_to' | translate }}</mat-label>
                 <input matInput [matDatepicker]="pickerTo" [(ngModel)]="filterToDate"
                        (dateChange)="loadTransactions()" readonly />
                 <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
                 <mat-datepicker #pickerTo />
               </mat-form-field>
               <mat-form-field>
-                <mat-label>Catégorie</mat-label>
+                <mat-label>{{ 'expenses.filter_category' | translate }}</mat-label>
                 <mat-select [(ngModel)]="filterCategory" (selectionChange)="loadTransactions()">
-                  <mat-option value="">Toutes</mat-option>
+                  <mat-option value="">{{ 'expenses.filter_all_cat' | translate }}</mat-option>
                   @for (cat of uniqueCategories(); track cat) {
                     <mat-option [value]="cat">{{ cat }}</mat-option>
                   }
-                  <mat-option value="NON_CATEGORISE">Non catégorisé</mat-option>
+                  <mat-option value="NON_CATEGORISE">{{ 'expenses.uncategorized' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
               <mat-form-field>
-                <mat-label>Type</mat-label>
+                <mat-label>{{ 'expenses.filter_type' | translate }}</mat-label>
                 <mat-select [(ngModel)]="filterSide" (selectionChange)="loadTransactions()">
-                  <mat-option value="">Tous</mat-option>
-                  <mat-option value="debit">Débit</mat-option>
-                  <mat-option value="credit">Crédit</mat-option>
+                  <mat-option value="">{{ 'expenses.filter_all_types' | translate }}</mat-option>
+                  <mat-option value="debit">{{ 'expenses.filter_debit' | translate }}</mat-option>
+                  <mat-option value="credit">{{ 'expenses.filter_credit' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
               <button mat-stroked-button (click)="clearFilters()">
-                <mat-icon>clear</mat-icon> Effacer
+                <mat-icon>clear</mat-icon> {{ 'expenses.filter_clear' | translate }}
               </button>
             </div>
 
@@ -102,10 +101,10 @@ const COLOR_PALETTE = [
               <div class="center"><mat-spinner /></div>
             } @else {
               <div class="tx-summary">
-                <span>{{ filteredTx().length }} transactions</span>
+                <span>{{ filteredTx().length }} {{ 'expenses.transactions_unit' | translate }}</span>
                 @if (filteredTx().length > 0) {
-                  <span class="debit-total">Débits : {{ totalDebits() | number:'1.2-2' }} €</span>
-                  <span class="credit-total">Crédits : {{ totalCredits() | number:'1.2-2' }} €</span>
+                  <span class="debit-total">{{ 'expenses.total_debits' | translate }} {{ totalDebits() | number:'1.2-2' }} €</span>
+                  <span class="credit-total">{{ 'expenses.total_credits' | translate }} {{ totalCredits() | number:'1.2-2' }} €</span>
                 }
               </div>
 
@@ -119,7 +118,7 @@ const COLOR_PALETTE = [
                         <div class="tx-sub">{{ tx.counterparty_name }}</div>
                       }
                       @if (tx.reference) {
-                        <div class="tx-sub tx-ref">Réf. : {{ tx.reference }}</div>
+                        <div class="tx-sub tx-ref">{{ 'expenses.ref' | translate }} {{ tx.reference }}</div>
                       }
                       @if (tx.note) {
                         <div class="tx-sub tx-note-qonto">{{ tx.note }}</div>
@@ -140,51 +139,46 @@ const COLOR_PALETTE = [
                   </div>
                 }
                 @if (filteredTx().length === 0) {
-                  <div class="empty">Aucune transaction trouvée</div>
+                  <div class="empty">{{ 'expenses.no_transactions' | translate }}</div>
                 }
               </div>
             }
           </div>
         </mat-tab>
 
-        <!-- ── Onglet Règles ─────────────────────────────────────────────── -->
-        <mat-tab label="Règles de catégorisation">
+        <mat-tab [label]="'expenses.rules' | translate">
           <div class="tab-content">
             <div class="rules-header">
-              <p class="rules-hint">
-                Les règles s'appliquent aux transactions Qonto par correspondance de mots-clés dans le libellé.
-                La première règle qui correspond est appliquée.
-              </p>
+              <p class="rules-hint">{{ 'expenses.rules_hint' | translate }}</p>
               <button mat-flat-button color="primary" (click)="openRuleForm()">
-                <mat-icon>add</mat-icon> Nouvelle règle
+                <mat-icon>add</mat-icon> {{ 'expenses.new_rule' | translate }}
               </button>
             </div>
 
             @if (showRuleForm()) {
               <mat-card class="rule-form-card">
                 <mat-card-header>
-                  <mat-card-title>{{ editingRule()?.id ? 'Modifier la règle' : 'Nouvelle règle' }}</mat-card-title>
+                  <mat-card-title>{{ (editingRule()?.id ? 'expenses.edit_rule_title' : 'expenses.new_rule') | translate }}</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
                   <div class="rule-form">
                     <mat-form-field>
-                      <mat-label>Nom de la catégorie</mat-label>
-                      <input matInput [(ngModel)]="ruleForm.label" placeholder="Ex : EDF, Ménage, Loyer Paris…" />
-                      <mat-hint>Ce nom devient la catégorie affichée sur les transactions</mat-hint>
+                      <mat-label>{{ 'expenses.rule_name' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="ruleForm.label" />
+                      <mat-hint>{{ 'expenses.rule_name_hint' | translate }}</mat-hint>
                     </mat-form-field>
                     <mat-form-field class="full-width">
-                      <mat-label>Mots-clés (séparés par virgule)</mat-label>
-                      <input matInput [(ngModel)]="ruleForm.keywordsRaw"
-                             placeholder="Ex : EDF, electricite, électricité" />
-                      <mat-hint>Recherche dans tous les champs de la transaction (libellé, bénéficiaire, référence…)</mat-hint>
+                      <mat-label>{{ 'expenses.rule_keywords' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="ruleForm.keywordsRaw" />
+                      <mat-hint>{{ 'expenses.rule_keywords_hint' | translate }}</mat-hint>
                     </mat-form-field>
                   </div>
                 </mat-card-content>
                 <mat-card-actions>
                   <button mat-flat-button color="primary" (click)="saveRule()" [disabled]="savingRule()">
-                    @if (savingRule()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
+                    @if (savingRule()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
                   </button>
-                  <button mat-stroked-button (click)="cancelRuleForm()" style="margin-left:8px">Annuler</button>
+                  <button mat-stroked-button (click)="cancelRuleForm()" style="margin-left:8px">{{ 'common.cancel' | translate }}</button>
                 </mat-card-actions>
               </mat-card>
             }
@@ -192,7 +186,7 @@ const COLOR_PALETTE = [
             @if (loadingRules()) {
               <div class="center"><mat-spinner /></div>
             } @else if (rules().length === 0) {
-              <div class="empty">Aucune règle définie. Créez votre première règle pour catégoriser automatiquement vos transactions.</div>
+              <div class="empty">{{ 'expenses.no_rules' | translate }}</div>
             } @else {
               <div class="rules-list">
                 @for (rule of rules(); track rule.id) {
@@ -210,10 +204,10 @@ const COLOR_PALETTE = [
                       </div>
                     </div>
                     <div class="rule-actions">
-                      <button mat-icon-button (click)="editRule(rule)" matTooltip="Modifier">
+                      <button mat-icon-button (click)="editRule(rule)" [matTooltip]="'common.edit' | translate">
                         <mat-icon>edit</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteRule(rule)" matTooltip="Supprimer">
+                      <button mat-icon-button color="warn" (click)="deleteRule(rule)" [matTooltip]="'common.delete' | translate">
                         <mat-icon>delete</mat-icon>
                       </button>
                     </div>
@@ -224,12 +218,11 @@ const COLOR_PALETTE = [
           </div>
         </mat-tab>
 
-        <!-- ── Onglet Résumé ─────────────────────────────────────────────── -->
-        <mat-tab label="Résumé">
+        <mat-tab [label]="'expenses.summary' | translate">
           <div class="tab-content">
             <div class="summary-filters">
               <mat-form-field>
-                <mat-label>Année</mat-label>
+                <mat-label>{{ 'expenses.summary_year' | translate }}</mat-label>
                 <mat-select [(ngModel)]="summaryYear" (selectionChange)="loadSummary()">
                   @for (y of years; track y) {
                     <mat-option [value]="y">{{ y }}</mat-option>
@@ -237,11 +230,11 @@ const COLOR_PALETTE = [
                 </mat-select>
               </mat-form-field>
               <mat-form-field>
-                <mat-label>Mois</mat-label>
+                <mat-label>{{ 'expenses.summary_month' | translate }}</mat-label>
                 <mat-select [(ngModel)]="summaryMonth" (selectionChange)="loadSummary()">
-                  <mat-option [value]="0">Toute l'année</mat-option>
-                  @for (m of months; track m.value) {
-                    <mat-option [value]="m.value">{{ m.label }}</mat-option>
+                  <mat-option [value]="0">{{ 'expenses.summary_all_year' | translate }}</mat-option>
+                  @for (m of months; track m) {
+                    <mat-option [value]="m">{{ getMonthName(m) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -252,24 +245,24 @@ const COLOR_PALETTE = [
             } @else if (summary()) {
               <div class="summary-kpis">
                 <mat-card class="kpi-card debit">
-                  <div class="kpi-label">Total dépenses</div>
+                  <div class="kpi-label">{{ 'expenses.total_expenses' | translate }}</div>
                   <div class="kpi-value">{{ summary()!.totalDebits | number:'1.2-2' }} €</div>
-                  <div class="kpi-sub">{{ summary()!.transactionCount }} transactions</div>
+                  <div class="kpi-sub">{{ summary()!.transactionCount }} {{ 'expenses.transactions_unit' | translate }}</div>
                 </mat-card>
                 <mat-card class="kpi-card credit">
-                  <div class="kpi-label">Total entrées</div>
+                  <div class="kpi-label">{{ 'expenses.total_income' | translate }}</div>
                   <div class="kpi-value">{{ summary()!.totalCredits | number:'1.2-2' }} €</div>
                 </mat-card>
                 <mat-card class="kpi-card">
-                  <div class="kpi-label">Non catégorisé</div>
+                  <div class="kpi-label">{{ 'expenses.uncategorized' | translate }}</div>
                   <div class="kpi-value">{{ summary()!.uncategorized }}</div>
-                  <div class="kpi-sub">transactions</div>
+                  <div class="kpi-sub">{{ 'expenses.transactions_unit' | translate }}</div>
                 </mat-card>
               </div>
 
               @if (summaryCategories().length > 0) {
                 <mat-card class="summary-card">
-                  <mat-card-header><mat-card-title>Par catégorie</mat-card-title></mat-card-header>
+                  <mat-card-header><mat-card-title>{{ 'expenses.by_category' | translate }}</mat-card-title></mat-card-header>
                   <mat-card-content>
                     <div class="cat-summary-list">
                       @for (entry of summaryCategories(); track entry.key) {
@@ -289,7 +282,7 @@ const COLOR_PALETTE = [
 
               @if (monthlyEntries().length > 0) {
                 <mat-card class="summary-card">
-                  <mat-card-header><mat-card-title>Évolution mensuelle des dépenses</mat-card-title></mat-card-header>
+                  <mat-card-header><mat-card-title>{{ 'expenses.monthly_evolution' | translate }}</mat-card-title></mat-card-header>
                   <mat-card-content>
                     <div class="monthly-list">
                       @for (entry of monthlyEntries(); track entry.key) {
@@ -434,14 +427,9 @@ export class ExpensesComponent implements OnInit {
   summaryYear = new Date().getFullYear();
   summaryMonth = 0;
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-  months = [
-    { value: 1, label: 'Janvier' }, { value: 2, label: 'Février' }, { value: 3, label: 'Mars' },
-    { value: 4, label: 'Avril' }, { value: 5, label: 'Mai' }, { value: 6, label: 'Juin' },
-    { value: 7, label: 'Juillet' }, { value: 8, label: 'Août' }, { value: 9, label: 'Septembre' },
-    { value: 10, label: 'Octobre' }, { value: 11, label: 'Novembre' }, { value: 12, label: 'Décembre' }
-  ];
+  months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  constructor(private qontoService: QontoService, private snack: MatSnackBar) {}
+  constructor(private qontoService: QontoService, private snack: MatSnackBar, private t: TranslateService) {}
 
   ngOnInit(): void {
     this.qontoService.getStatus().subscribe(s => {
@@ -552,18 +540,18 @@ export class ExpensesComponent implements OnInit {
         this.showRuleForm.set(false);
         this.loadRules();
         this.loadTransactions();
-        this.snack.open('Règle enregistrée', '', { duration: 2000 });
+        this.snack.open(this.t.instant('expenses.rule_saved'), '', { duration: 2000 });
       },
       error: () => this.savingRule.set(false)
     });
   }
 
   deleteRule(rule: ExpenseRule): void {
-    if (!confirm(`Supprimer la règle "${rule.label}" ?`)) return;
+    if (!confirm(this.t.instant('expenses.delete_rule_confirm') + ' "' + rule.label + '" ?')) return;
     this.qontoService.deleteRule(rule.id).subscribe(() => {
       this.loadRules();
       this.loadTransactions();
-      this.snack.open('Règle supprimée', '', { duration: 2000 });
+      this.snack.open(this.t.instant('expenses.rule_deleted'), '', { duration: 2000 });
     });
   }
 
@@ -609,7 +597,11 @@ export class ExpensesComponent implements OnInit {
   // ─── Helpers ───────────────────────────────────────────────────────────
 
   catLabel(key: string): string {
-    return key || 'Non catégorisé';
+    return key || this.t.instant('expenses.uncategorized');
+  }
+
+  getMonthName(value: number): string {
+    return new Date(2000, value - 1, 1).toLocaleDateString(this.t.currentLang || 'fr', { month: 'long' });
   }
 
   catColor(key: string): string {
@@ -623,15 +615,10 @@ export class ExpensesComponent implements OnInit {
     return [...new Set(this.rules().map(r => r.label))].sort();
   }
 
-  formatDate(iso: string): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
-
   formatMonthKey(key: string): string {
     const [y, m] = key.split('-');
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return months[parseInt(m, 10) - 1] + ' ' + y;
+    const date = new Date(2000, parseInt(m, 10) - 1, 1);
+    const short = date.toLocaleDateString(this.t.currentLang || 'fr', { month: 'short' });
+    return short.charAt(0).toUpperCase() + short.slice(1) + ' ' + y;
   }
 }
