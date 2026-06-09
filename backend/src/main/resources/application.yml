@@ -64,6 +64,11 @@ app:
     # En dev : générer avec : openssl rand -base64 32
     key: ${ENCRYPTION_KEY:}
 
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:BIet5HanpLlrFaS2DLY7TyO5TJ07SWSXJgOmQdlt_vZTuN4gx46BbH-6A52XxIIr72yQaQXgyLRg6_bl3TeqVwk}
+  private-key: ${VAPID_PRIVATE_KEY:}
+  subject: ${VAPID_SUBJECT:mailto:contact@flowlyrent.com}
+
 admin:
   username: ${ADMIN_USERNAME:}
   password: ${ADMIN_PASSWORD:}

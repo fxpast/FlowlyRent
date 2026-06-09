@@ -5,10 +5,12 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
+import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
+import { environment } from '../environments/environment';
 
 registerLocaleData(localeFr, 'fr-FR');
 
@@ -21,6 +23,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'fr-FR' },
     { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
     ...provideTranslateService({ lang: 'fr' }),
-    ...provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' })
+    ...provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
+    provideServiceWorker('ngsw-worker.js', { enabled: environment.production, registrationStrategy: 'registerWhenStable:30000' })
   ]
 };

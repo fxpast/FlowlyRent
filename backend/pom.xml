@@ -127,6 +127,18 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Web Push Notifications (VAPID) -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
         <!-- Cloudinary (stockage photos tâches ménage) -->
         <dependency>
             <groupId>com.cloudinary</groupId>

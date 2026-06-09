@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/superadmin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/user/push/**").hasAnyRole("ADMIN", "USER", "HOUSEKEEPER")
                 .requestMatchers("/sync/**", "/user/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/housekeeper/**").hasAnyRole("ADMIN", "USER", "HOUSEKEEPER")
                 .anyRequest().authenticated()

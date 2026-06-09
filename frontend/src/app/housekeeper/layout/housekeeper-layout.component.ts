@@ -7,6 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 import { AuthService } from '../../core/services/auth.service';
 import { HousekeeperPortalService } from '../../core/services/housekeeper-portal.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
 
 @Component({
   selector: 'app-housekeeper-layout',
@@ -63,9 +64,10 @@ import { HousekeeperPortalService } from '../../core/services/housekeeper-portal
 export class HousekeeperLayoutComponent implements OnInit {
   name = signal('');
 
-  constructor(private auth: AuthService, private portalService: HousekeeperPortalService) {}
+  constructor(private auth: AuthService, private portalService: HousekeeperPortalService, private push: PushNotificationService) {}
 
   ngOnInit(): void {
+    this.push.init();
     this.portalService.getMe().subscribe({
       next: p => this.name.set(p.name),
       error: err => { if (err?.status === 401) this.auth.logout(); }

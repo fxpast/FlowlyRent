@@ -17,6 +17,7 @@ import com.flowlyrent.repository.TaskLinenUsageRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.CloudinaryService;
 import com.flowlyrent.service.LinenService;
+import com.flowlyrent.service.WebPushService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,7 @@ public class AdminHousekeepingController {
     private final CloudinaryService cloudinaryService;
     private final LinenService linenService;
     private final SecurityUtils securityUtils;
+    private final WebPushService webPushService;
 
     // --- Tâches ---
 
@@ -111,16 +113,25 @@ public class AdminHousekeepingController {
                     .ifPresent(task::setStaff);
         }
 
+        HousekeeperProfile assignedHk = null;
         if (body.containsKey("housekeeperId")) {
             Long hkId = Long.parseLong(body.get("housekeeperId").toString());
-            housekeeperRepo.findByIdAndUserId(hkId, user.getId())
-                    .ifPresent(task::setHousekeeper);
+            assignedHk = housekeeperRepo.findByIdAndUserId(hkId, user.getId()).orElse(null);
+            if (assignedHk != null) task.setHousekeeper(assignedHk);
         }
 
         HousekeepingTask saved = taskRepo.save(task);
 
         if (body.containsKey("linenUsages")) {
             saveLinenUsages(saved, user, body.get("linenUsages"));
+        }
+
+        if (assignedHk != null && assignedHk.getLinkedUser() != null) {
+            String prop = saved.getPropertyName() != null ? saved.getPropertyName() : ("prop " + saved.getBeds24PropertyId());
+            webPushService.sendToUser(assignedHk.getLinkedUser().getId(),
+                "🧹 Nouvelle mission assignée",
+                prop + " — " + (saved.getScheduledDate() != null ? saved.getScheduledDate().toLocalDate() : ""),
+                "/tasks");
         }
 
         return ResponseEntity.ok(saved);
@@ -141,12 +152,14 @@ public class AdminHousekeepingController {
         if (body.containsKey("extraHours"))       task.setExtraHours(body.get("extraHours") != null ? Float.parseFloat(body.get("extraHours").toString()) : null);
         if (body.containsKey("hourlyRate"))       task.setHourlyRate(body.get("hourlyRate") != null ? new BigDecimal(body.get("hourlyRate").toString()) : null);
 
+        HousekeeperProfile updatedHk = null;
         if (body.containsKey("housekeeperId")) {
             if (body.get("housekeeperId") == null) {
                 task.setHousekeeper(null);
             } else {
                 Long hkId = Long.parseLong(body.get("housekeeperId").toString());
-                housekeeperRepo.findByIdAndUserId(hkId, user.getId()).ifPresent(task::setHousekeeper);
+                updatedHk = housekeeperRepo.findByIdAndUserId(hkId, user.getId()).orElse(null);
+                if (updatedHk != null) task.setHousekeeper(updatedHk);
             }
         }
 
@@ -154,6 +167,14 @@ public class AdminHousekeepingController {
 
         if (body.containsKey("linenUsages")) {
             saveLinenUsages(updated, user, body.get("linenUsages"));
+        }
+
+        if (updatedHk != null && updatedHk.getLinkedUser() != null) {
+            String prop = updated.getPropertyName() != null ? updated.getPropertyName() : ("prop " + updated.getBeds24PropertyId());
+            webPushService.sendToUser(updatedHk.getLinkedUser().getId(),
+                "🧹 Nouvelle mission assignée",
+                prop + " — " + (updated.getScheduledDate() != null ? updated.getScheduledDate().toLocalDate() : ""),
+                "/tasks");
         }
 
         return ResponseEntity.ok(updated);

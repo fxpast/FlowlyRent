@@ -12,6 +12,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 import { AuthService } from '../../core/services/auth.service';
 import { MessageService } from '../../core/services/message.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
 import { environment } from '../../../environments/environment';
 
 interface NavItem { icon: string; label: string; route: string; }
@@ -144,11 +145,12 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'assessment',        label: 'nav.reports',     route: 'reports' }
   ];
 
-  constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient) {}
+  constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient, private push: PushNotificationService) {}
 
   ngOnInit(): void {
     this.isMobile.set(this.mq.matches);
     this.mq.addEventListener('change', this.mqListener);
+    this.push.init();
     this.loadUnreadCount();
     this.loadUnreadNotifCount();
     setInterval(() => this.loadUnreadCount(), 30000);

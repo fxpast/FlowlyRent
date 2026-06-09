@@ -14,6 +14,7 @@ import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.CloudinaryService;
 import com.flowlyrent.service.LinenService;
+import com.flowlyrent.service.WebPushService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,7 @@ public class HousekeeperPortalController {
     private final SecurityUtils securityUtils;
     private final Beds24ApiClient beds24;
     private final Beds24AccountRepository accountRepo;
+    private final WebPushService webPushService;
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
@@ -112,6 +114,16 @@ public class HousekeeperPortalController {
 
         // Le rapport est sauvegardé dans sa propre transaction, indépendamment de la suite
         HousekeepingTask saved = taskRepo.save(task);
+
+        // Notif push au propriétaire si incident nouvellement déclaré
+        if (!wasIncident && newIncident) {
+            String prop = saved.getPropertyName() != null ? saved.getPropertyName() : ("prop " + saved.getBeds24PropertyId());
+            String desc = saved.getIncidentDescription();
+            webPushService.sendToUser(profile.getUser().getId(),
+                "⚠️ Incident signalé — " + prop,
+                desc != null && !desc.isBlank() ? desc : "Un incident a été signalé par " + profile.getName(),
+                "/admin/housekeeping");
+        }
 
         // Création automatique d'une tâche MAINTENANCE si l'incident vient d'être déclaré
         if (!wasIncident && newIncident) {
