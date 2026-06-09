@@ -2,22 +2,27 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule } from '@ngx-translate/core';
+import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, TranslateModule, LangSwitcherComponent],
   template: `
     <div class="hero">
+      <div class="hero-lang">
+        <app-lang-switcher />
+      </div>
       <div class="hero-content">
         <img src="assets/logo.svg" alt="FlowlyRent" class="hero-logo" />
-        <h1>Gérez vos locations en toute simplicité</h1>
-        <p>Centralisez vos propriétés, réservations et équipes depuis un seul espace.</p>
+        <h1>{{ 'public.home_title' | translate }}</h1>
+        <p>{{ 'public.home_subtitle' | translate }}</p>
         <div class="hero-actions">
           <a mat-raised-button routerLink="/admin/login" class="btn-login">
-            <mat-icon>login</mat-icon> Se connecter
+            <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
           </a>
-          <p class="login-hint">Hôtes · Prestataires · Administrateurs</p>
+          <p class="login-hint">{{ 'public.login_hint' | translate }}</p>
         </div>
       </div>
     </div>
@@ -25,27 +30,33 @@ import { MatIconModule } from '@angular/material/icon';
     <div class="features">
       <div class="feature">
         <mat-icon>sync</mat-icon>
-        <h3>Synchronisation Beds24</h3>
-        <p>Connectez votre compte Beds24 pour accéder à vos propriétés et réservations en temps réel, sans stockage de données.</p>
+        <h3>{{ 'public.feature_sync_title' | translate }}</h3>
+        <p>{{ 'public.feature_sync_desc' | translate }}</p>
       </div>
       <div class="feature">
         <mat-icon>cleaning_services</mat-icon>
-        <h3>Gestion du ménage</h3>
-        <p>Planifiez et suivez les tâches de ménage par propriété et par agent.</p>
+        <h3>{{ 'public.feature_cleaning_title' | translate }}</h3>
+        <p>{{ 'public.feature_cleaning_desc' | translate }}</p>
       </div>
       <div class="feature">
         <mat-icon>assessment</mat-icon>
-        <h3>Rapports & exports</h3>
-        <p>Générez vos rapports à la volée depuis vos données Beds24, sans qu'elles transitent par nos serveurs. Export PDF, Excel ou CSV.</p>
+        <h3>{{ 'public.feature_reports_title' | translate }}</h3>
+        <p>{{ 'public.feature_reports_desc' | translate }}</p>
       </div>
     </div>
   `,
   styles: [`
     .hero {
+      position: relative;
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
       color: white;
       padding: 80px 24px 100px;
       text-align: center;
+    }
+    .hero-lang {
+      position: absolute;
+      top: 12px;
+      right: 12px;
     }
     .hero-logo { width: 240px; height: auto; filter: brightness(0) invert(1); margin-bottom: 24px; display: block; margin-left: auto; margin-right: auto; }
     .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
@@ -88,6 +99,7 @@ import { MatIconModule } from '@angular/material/icon';
     @media (max-width: 700px) {
       .features { grid-template-columns: 1fr; }
       .hero h1 { font-size: 28px; }
+      .hero { padding: 60px 24px 80px; }
     }
   `]
 })

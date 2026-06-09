@@ -25,7 +25,11 @@ export class LanguageService {
     this.current.set(code);
   }
 
-  currentLabel(): string {
+  currentFlag(): string {
     return this.languages.find(l => l.code === this.current())?.flag ?? '🇫🇷';
+  }
+
+  currentLabel(): string {
+    return this.languages.find(l => l.code === this.current())?.label ?? 'Français';
   }
 }

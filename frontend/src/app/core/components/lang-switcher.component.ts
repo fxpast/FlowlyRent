@@ -1,17 +1,15 @@
 import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatIconModule } from '@angular/material/icon';
 import { LanguageService } from '../services/language.service';
 
 @Component({
   selector: 'app-lang-switcher',
   standalone: true,
-  imports: [MatButtonModule, MatMenuModule, MatIconModule],
+  imports: [MatButtonModule, MatMenuModule],
   template: `
-    <button mat-icon-button [matMenuTriggerFor]="langMenu"
-            style="font-size:18px; line-height:1" [title]="langService.currentLabel()">
-      {{ langService.currentLabel() }}
+    <button mat-button [matMenuTriggerFor]="langMenu" class="lang-btn">
+      {{ langService.currentFlag() }} {{ langService.current().toUpperCase() }}
     </button>
     <mat-menu #langMenu="matMenu">
       @for (lang of langService.languages; track lang.code) {
@@ -21,7 +19,18 @@ import { LanguageService } from '../services/language.service';
         </button>
       }
     </mat-menu>
-  `
+  `,
+  styles: [`
+    .lang-btn {
+      color: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      min-width: 64px;
+      opacity: 0.9;
+    }
+    .lang-btn:hover { opacity: 1; }
+  `]
 })
 export class LangSwitcherComponent {
   constructor(readonly langService: LanguageService) {}
