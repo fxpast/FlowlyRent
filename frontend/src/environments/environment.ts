@@ -3,5 +3,5 @@ export const environment = {
   apiUrl: '/api',
   stripePublishableKey: 'pk_test_placeholder',
   wsUrl: 'http://localhost:8080/api/ws',
-  vapidPublicKey: 'BIet5HanpLlrFaS2DLY7TyO5TJ07SWSXJgOmQdlt_vZTuN4gx46BbH-6A52XxIIr72yQaQXgyLRg6_bl3TeqVwk'
+  vapidPublicKey: 'BMGk0cSh1FZP3Kewk15rq8j8xujMfalgOhsvXL2FHj-3klTBSWlFlXYiJWd8j3bmSARKsfHv3s_DyFiqm2U4DKQ'
 };
