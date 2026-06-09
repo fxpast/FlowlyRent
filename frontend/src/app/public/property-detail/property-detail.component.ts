@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PublicService } from '../../core/services/public.service';
 import { Property } from '../../core/models/booking.model';
 
@@ -21,11 +22,12 @@ import { Property } from '../../core/models/booking.model';
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatButtonModule, MatIconModule,
     MatInputModule, MatFormFieldModule, MatSnackBarModule, MatProgressSpinnerModule,
-    MatDatepickerModule, MatNativeDateModule
+    MatDatepickerModule, MatNativeDateModule,
+    TranslateModule
   ],
   template: `
     <div class="navbar">
-      <a mat-button routerLink="/public/home"><mat-icon>arrow_back</mat-icon> Retour</a>
+      <a mat-button routerLink="/public/home"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
     </div>
 
     @if (property()) {
@@ -41,33 +43,33 @@ import { Property } from '../../core/models/booking.model';
             <p class="location"><mat-icon>place</mat-icon> {{ property()!.city }}, {{ property()!.country }}</p>
             <p class="description">{{ property()!.description }}</p>
             <div class="details">
-              <span><mat-icon>people</mat-icon> {{ property()!.maxGuests }} personnes max</span>
-              <span class="price">{{ property()!.pricePerNight | currency:'EUR':'symbol':'1.0-0' }} / nuit</span>
+              <span><mat-icon>people</mat-icon> {{ property()!.maxGuests }} {{ 'public.max_guests' | translate }}</span>
+              <span class="price">{{ property()!.pricePerNight | currency:'EUR':'symbol':'1.0-0' }} {{ 'public.price_per_night' | translate }}</span>
               @if (property()!.cleaningFee && property()!.cleaningFee! > 0) {
-                <span>Frais de ménage : {{ property()!.cleaningFee | currency:'EUR':'symbol':'1.0-0' }}</span>
+                <span>{{ 'public.cleaning_fee' | translate }} {{ property()!.cleaningFee | currency:'EUR':'symbol':'1.0-0' }}</span>
               }
             </div>
           </div>
         </div>
 
         <mat-card class="booking-card">
-          <mat-card-header><mat-card-title>Réserver ce logement</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'public.book_title' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
             <div class="form-row">
               <mat-form-field appearance="outline">
-                <mat-label>Arrivée</mat-label>
+                <mat-label>{{ 'public.arrival' | translate }}</mat-label>
                 <input matInput [matDatepicker]="checkInPicker" [(ngModel)]="checkInDate" (ngModelChange)="checkIn = fromDate($event); checkAvailability()">
                 <mat-datepicker-toggle matIconSuffix [for]="checkInPicker"></mat-datepicker-toggle>
                 <mat-datepicker #checkInPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Départ</mat-label>
+                <mat-label>{{ 'public.departure' | translate }}</mat-label>
                 <input matInput [matDatepicker]="checkOutPicker" [(ngModel)]="checkOutDate" (ngModelChange)="checkOut = fromDate($event); checkAvailability()">
                 <mat-datepicker-toggle matIconSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
                 <mat-datepicker #checkOutPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Voyageurs</mat-label>
+                <mat-label>{{ 'common.guests' | translate }}</mat-label>
                 <input matInput type="number" [(ngModel)]="guestCount" min="1" [max]="property()!.maxGuests ?? null">
               </mat-form-field>
             </div>
@@ -76,32 +78,32 @@ import { Property } from '../../core/models/booking.model';
               @if (isAvailable()) {
                 <div class="availability ok">
                   <mat-icon>check_circle</mat-icon>
-                  Disponible ! Total estimé : {{ estimatedTotal() | currency:'EUR':'symbol':'1.0-0' }}
-                  ({{ nightsCount() }} nuit(s))
+                  {{ 'public.available' | translate }} {{ estimatedTotal() | currency:'EUR':'symbol':'1.0-0' }}
+                  ({{ nightsCount() }} {{ 'common.nights' | translate }})
                 </div>
               } @else {
                 <div class="availability error">
-                  <mat-icon>cancel</mat-icon> Ces dates ne sont pas disponibles
+                  <mat-icon>cancel</mat-icon> {{ 'public.not_available' | translate }}
                 </div>
               }
             }
 
-            <h3>Vos coordonnées</h3>
+            <h3>{{ 'public.your_details' | translate }}</h3>
             <div class="form-row">
               <mat-form-field appearance="outline">
-                <mat-label>Prénom</mat-label>
+                <mat-label>{{ 'public.first_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="guest.firstName">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Nom</mat-label>
+                <mat-label>{{ 'public.last_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="guest.lastName">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Email</mat-label>
+                <mat-label>{{ 'common.email' | translate }}</mat-label>
                 <input matInput type="email" [(ngModel)]="guest.email">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Téléphone</mat-label>
+                <mat-label>{{ 'common.phone' | translate }}</mat-label>
                 <input matInput [(ngModel)]="guest.phone">
               </mat-form-field>
             </div>
@@ -109,7 +111,7 @@ import { Property } from '../../core/models/booking.model';
             <button mat-raised-button color="primary" (click)="book()"
                     [disabled]="!canBook() || booking()">
               @if (booking()) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { Réserver et payer }
+              @else { {{ 'public.book_button' | translate }} }
             </button>
           </mat-card-content>
         </mat-card>
@@ -155,7 +157,8 @@ export class PropertyDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private publicService: PublicService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -215,7 +218,7 @@ export class PropertyDetailComponent implements OnInit {
         }
       },
       error: (err) => {
-        this.snackBar.open(err.error?.message || 'Erreur lors de la réservation', 'OK', { duration: 5000 });
+        this.snackBar.open(err.error?.message || this.t.instant('public.booking_error'), this.t.instant('common.ok'), { duration: 5000 });
         this.booking.set(false);
       }
     });

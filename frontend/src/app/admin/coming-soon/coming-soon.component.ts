@@ -1,16 +1,17 @@
 import { Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-coming-soon',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, TranslateModule],
   template: `
     <div class="coming-soon-container">
       <mat-icon class="coming-soon-icon">construction</mat-icon>
       <h2>{{ title }}</h2>
-      <p>Cette fonctionnalité est en cours de développement.</p>
+      <p>{{ 'common.coming_soon_msg' | translate }}</p>
     </div>
   `,
   styles: [`

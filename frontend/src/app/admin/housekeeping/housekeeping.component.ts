@@ -17,6 +17,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
@@ -82,19 +84,26 @@ interface InterventionDraft {
 
 interface Property { id: number; name: string; city?: string; }
 
-const TYPE_LABELS: Record<string, string> = {
-  CHECKOUT_CLEANING: 'Nettoyage départ',
-  CHECKIN_PREP: 'Préparation arrivée',
-  CLEANING: 'Nettoyage',
-  MAINTENANCE: 'Maintenance',
-  INSPECTION: 'Inspection'
+const TYPE_KEYS: Record<string, string> = {
+  CHECKOUT_CLEANING: 'housekeeping.type_checkout_cleaning',
+  CHECKIN_PREP:      'housekeeping.type_checkin_prep',
+  CLEANING:          'housekeeping.type_cleaning',
+  MAINTENANCE:       'housekeeping.type_maintenance',
+  INSPECTION:        'housekeeping.type_inspection'
 };
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING:     { label: 'À faire',     color: '#f57c00' },
-  IN_PROGRESS: { label: 'En cours',    color: '#1976d2' },
-  DONE:        { label: 'Terminé',     color: '#2e7d32' },
-  SKIPPED:     { label: 'Ignoré',      color: '#757575' }
+const STATUS_COLORS: Record<string, string> = {
+  PENDING:     '#f57c00',
+  IN_PROGRESS: '#1976d2',
+  DONE:        '#2e7d32',
+  SKIPPED:     '#757575'
+};
+
+const STATUS_KEYS: Record<string, string> = {
+  PENDING:     'housekeeping.status_pending',
+  IN_PROGRESS: 'housekeeping.status_in_progress',
+  DONE:        'housekeeping.status_done',
+  SKIPPED:     'housekeeping.status_skipped'
 };
 
 @Component({
@@ -105,43 +114,43 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule,
-    LinenComponent
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule,
+    LinenComponent, TranslateModule
   ],
   template: `
     <mat-tab-group animationDuration="150ms">
 
       <!-- ══════════════ ONGLET TÂCHES ══════════════ -->
-      <mat-tab label="Tâches">
+      <mat-tab [label]="'housekeeping.tasks_tab' | translate">
         <div class="tab-content">
 
           <div class="header-row">
             <mat-button-toggle-group [value]="taskCategory()" (change)="setTaskCategory($event.value)" hideSingleSelectionIndicator>
               <mat-button-toggle value="menage">
                 <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">cleaning_services</mat-icon>
-                Ménages
+                {{ 'housekeeping.cleanings' | translate }}
               </mat-button-toggle>
               <mat-button-toggle value="depannage">
                 <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:4px">build</mat-icon>
-                Dépannage
+                {{ 'housekeeping.repairs' | translate }}
                 @if (unassignedDepannageCount()) {
                   <span class="depannage-alert">{{ unassignedDepannageCount() }}</span>
                 }
               </mat-button-toggle>
             </mat-button-toggle-group>
             <button mat-flat-button color="primary" (click)="openNewTaskForm()">
-              <mat-icon>add</mat-icon> Nouvelle tâche
+              <mat-icon>add</mat-icon> {{ 'housekeeping.new_task' | translate }}
             </button>
           </div>
 
           <!-- Formulaire création -->
           @if (showForm) {
             <mat-card class="create-form">
-              <mat-card-header><mat-card-title>{{ editingTask ? 'Modifier la tâche' : 'Créer une tâche' }}</mat-card-title></mat-card-header>
+              <mat-card-header><mat-card-title>{{ editingTask ? ('housekeeping.edit_task_title' | translate) : ('housekeeping.create_task_title' | translate) }}</mat-card-title></mat-card-header>
               <mat-card-content>
                 <div class="form-row">
                   <mat-form-field>
-                    <mat-label>Logement</mat-label>
+                    <mat-label>{{ 'common.property' | translate }}</mat-label>
                     <mat-select [ngModel]="newTask.propertyId" (ngModelChange)="onNewPropertyChange($event)">
                       @for (p of properties(); track p.id) {
                         <mat-option [value]="p.id">{{ p.name }}</mat-option>
@@ -149,7 +158,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Type</mat-label>
+                    <mat-label>{{ 'common.type' | translate }}</mat-label>
                     <mat-select [ngModel]="newTask.type" (ngModelChange)="onNewTypeChange($event)">
                       @for (t of filteredTaskTypes(); track t.value) {
                         <mat-option [value]="t.value">{{ t.label }}</mat-option>
@@ -158,49 +167,49 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </mat-form-field>
                   <div class="hk-datetime-pair">
                     <mat-form-field>
-                      <mat-label>Date</mat-label>
+                      <mat-label>{{ 'common.date' | translate }}</mat-label>
                       <input matInput [matDatepicker]="schedPicker" [(ngModel)]="newTaskDate"
                              (ngModelChange)="newTask.scheduledDate = fromDate($event)">
                       <mat-datepicker-toggle matIconSuffix [for]="schedPicker"></mat-datepicker-toggle>
                       <mat-datepicker #schedPicker></mat-datepicker>
                     </mat-form-field>
                     <mat-form-field class="hk-time-field">
-                      <mat-label>Heure</mat-label>
+                      <mat-label>{{ 'common.time' | translate }}</mat-label>
                       <input matInput type="time" [(ngModel)]="newTaskTime">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="form-row">
                   <mat-form-field class="flex2">
-                    <mat-label>Prestataire</mat-label>
+                    <mat-label>{{ 'housekeeping.provider' | translate }}</mat-label>
                     <mat-select [ngModel]="newTask.housekeeperId" (ngModelChange)="onNewHousekeeperChange($event)">
-                      <mat-option [value]="null">— Non assigné —</mat-option>
+                      <mat-option [value]="null">{{ 'housekeeping.unassigned_option' | translate }}</mat-option>
                       @for (h of housekeepers(); track h.id) {
                         <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Heures d'intervention</mat-label>
+                    <mat-label>{{ 'housekeeping.intervention_hours' | translate }}</mat-label>
                     <input matInput type="number" min="0" step="0.5" [(ngModel)]="newTask.extraHours" placeholder="Ex : 3">
-                    <span matTextSuffix>h</span>
+                    <span matTextSuffix>{{ 'housekeeping.hours_unit' | translate }}</span>
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Taux horaire</mat-label>
+                    <mat-label>{{ 'housekeeping.hourly_rate' | translate }}</mat-label>
                     <input matInput type="number" min="0" step="0.5" [(ngModel)]="newTask.hourlyRate" placeholder="Ex : 15">
-                    <span matTextSuffix>€/h</span>
+                    <span matTextSuffix>{{ 'housekeeping.rate_unit' | translate }}</span>
                   </mat-form-field>
                 </div>
                 @if (newTask.extraHours && newTask.hourlyRate) {
                   <div class="task-total">
                     <mat-icon>calculate</mat-icon>
-                    Total estimé : <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
+                    {{ 'housekeeping.estimated_total' | translate }} <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
                   </div>
                 }
                 @if (taskLinenItems().length > 0) {
                   <div class="task-linen-preset">
                     <div class="task-linen-title">
-                      <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                      <mat-icon>local_laundry_service</mat-icon> {{ 'housekeeping.linen_used' | translate }}
                     </div>
                     @for (item of taskLinenItems(); track item.linenItemId) {
                       <div class="task-linen-row">
@@ -214,37 +223,45 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   </div>
                 }
                 <mat-form-field style="width:100%">
-                  <mat-label>Notes</mat-label>
-                  <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" placeholder="Instructions particulières…"></textarea>
+                  <mat-label>{{ 'common.notes' | translate }}</mat-label>
+                  <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" [placeholder]="'housekeeping.notes_placeholder' | translate"></textarea>
                 </mat-form-field>
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
-                  {{ editingTask ? 'Modifier' : 'Créer' }}
+                  {{ editingTask ? ('common.edit' | translate) : ('common.create' | translate) }}
                 </button>
-                <button mat-button (click)="cancelTaskForm()">Annuler</button>
+                <button mat-button (click)="cancelTaskForm()">{{ 'common.cancel' | translate }}</button>
               </mat-card-actions>
             </mat-card>
     }
 
           <!-- Filtres -->
           <div class="filters">
+      <mat-button-toggle-group [(ngModel)]="houseDateMode" (change)="onHouseDateModeChange()">
+        <mat-button-toggle value="all">{{ 'expenses.filter_all_dates' | translate }}</mat-button-toggle>
+        <mat-button-toggle value="range">{{ 'expenses.filter_period' | translate }}</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (houseDateMode === 'range') {
+        <mat-form-field>
+          <mat-label>{{ 'common.from' | translate }}</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (ngModelChange)="filterFrom = fromDate($event); load()">
+          <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>{{ 'common.to' | translate }}</mat-label>
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="filterToDate" (ngModelChange)="filterTo = fromDate($event); load()">
+          <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+      }
+
       <mat-form-field>
-        <mat-label>Du</mat-label>
-        <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (ngModelChange)="filterFrom = fromDate($event); load()">
-        <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
-        <mat-datepicker #fromPicker></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field>
-        <mat-label>Au</mat-label>
-        <input matInput [matDatepicker]="toPicker" [(ngModel)]="filterToDate" (ngModelChange)="filterTo = fromDate($event); load()">
-        <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
-        <mat-datepicker #toPicker></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field>
-        <mat-label>Statut</mat-label>
+        <mat-label>{{ 'common.status' | translate }}</mat-label>
         <mat-select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
-          <mat-option value="">Tous</mat-option>
+          <mat-option value="">{{ 'common.all' | translate }}</mat-option>
           @for (s of statuses; track s.value) {
             <mat-option [value]="s.value">{{ s.label }}</mat-option>
           }
@@ -256,7 +273,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           @if (loading()) {
             <div class="center"><mat-spinner diameter="40" /></div>
           } @else if (displayedTasks().length === 0) {
-            <p class="empty">Aucune tâche sur cette période.</p>
+            <p class="empty">{{ 'housekeeping.no_tasks' | translate }}</p>
           } @else {
             <div class="tasks-grid">
               @for (task of displayedTasks(); track task.id) {
@@ -290,10 +307,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     </div>
                   }
                   @if (!task.housekeeper && (task.status === 'PENDING' || task.status === 'IN_PROGRESS')) {
-                    <div class="task-unassigned"><mat-icon>person_off</mat-icon> Non attribuée</div>
+                    <div class="task-unassigned"><mat-icon>person_off</mat-icon> {{ 'housekeeping.unassigned' | translate }}</div>
                   }
                   @if (task.hasIncident) {
-                    <div class="task-incident"><mat-icon>warning</mat-icon> Incident signalé</div>
+                    <div class="task-incident"><mat-icon>warning</mat-icon> {{ 'housekeeping.incident_reported' | translate }}</div>
                   }
                   @if (task.reportComment) {
                     <div class="task-report-preview">{{ task.reportComment }}</div>
@@ -305,34 +322,34 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     @if (task.status === 'PENDING' || task.status === 'IN_PROGRESS') {
                       @if (task.status === 'PENDING') {
                         <button mat-stroked-button (click)="updateStatus(task, 'IN_PROGRESS')">
-                          <mat-icon>play_arrow</mat-icon> Démarrer
+                          <mat-icon>play_arrow</mat-icon> {{ 'housekeeping.start' | translate }}
                         </button>
                       }
                       @if (task.status === 'IN_PROGRESS') {
                         <button mat-flat-button color="primary" (click)="updateStatus(task, 'DONE')">
-                          <mat-icon>check</mat-icon> Terminer
+                          <mat-icon>check</mat-icon> {{ 'housekeeping.complete' | translate }}
                         </button>
                       }
                     } @else if (task.status === 'DONE') {
                       <span class="completed-at">
-                        Terminé {{ task.completedAt | date:'dd/MM HH:mm' }}
+                        {{ 'housekeeping.completed_prefix' | translate }} {{ task.completedAt | date:'dd/MM HH:mm' }}
                       </span>
                     } @else if (task.status === 'SKIPPED') {
-                      <span class="skipped-label">Abandonnée</span>
-                      <button mat-icon-button (click)="updateStatus(task, 'PENDING')" title="Réactiver" style="color:#1976d2">
+                      <span class="skipped-label">{{ 'housekeeping.skipped_label' | translate }}</span>
+                      <button mat-icon-button (click)="updateStatus(task, 'PENDING')" [title]="'housekeeping.reactivate' | translate" style="color:#1976d2">
                         <mat-icon>replay</mat-icon>
                       </button>
                     }
                     @if (task.housekeeper) {
-                      <button mat-icon-button (click)="openReport(task)" title="Rapport & photos"
+                      <button mat-icon-button (click)="openReport(task)" [title]="'housekeeping.photos_reports' | translate"
                               [style.color]="task.hasIncident ? '#e65100' : '#1976d2'">
                         <mat-icon>photo_library</mat-icon>
                       </button>
                     }
-                    <button mat-icon-button (click)="openEditTaskForm(task)" title="Modifier la tâche" style="color:#555">
+                    <button mat-icon-button (click)="openEditTaskForm(task)" [title]="'housekeeping.edit_task_title' | translate" style="color:#555">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="deleteTask(task)" title="Supprimer la tâche" style="color:#c62828">
+                    <button mat-icon-button (click)="deleteTask(task)" [title]="'housekeeping.delete_confirm' | translate" style="color:#c62828">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -348,7 +365,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon style="margin-right:6px;font-size:18px;width:18px;height:18px">engineering</mat-icon>
-          Prestataires
+          {{ 'housekeeping.providers_tab' | translate }}
           @if (housekeepers().length) { <span class="hk-count">{{ housekeepers().length }}</span> }
         </ng-template>
 
@@ -356,51 +373,51 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           <div class="header-row">
             <span></span>
             <button mat-flat-button color="primary" (click)="startNewHousekeeper()">
-              <mat-icon>person_add</mat-icon> Nouveau prestataire
+              <mat-icon>person_add</mat-icon> {{ 'housekeeping.new_provider' | translate }}
             </button>
           </div>
 
           @if (editingHk) {
             <mat-card class="create-form">
               <mat-card-header>
-                <mat-card-title>{{ editingHk.id ? 'Modifier' : 'Nouveau prestataire' }}</mat-card-title>
+                <mat-card-title>{{ editingHk.id ? ('housekeeping.edit_provider_title' | translate) : ('housekeeping.new_provider' | translate) }}</mat-card-title>
               </mat-card-header>
               <mat-card-content>
                 <div class="form-row">
                   <mat-form-field>
-                    <mat-label>Nom *</mat-label>
+                    <mat-label>{{ 'housekeeping.name_required' | translate }}</mat-label>
                     <input matInput [(ngModel)]="editingHk.name" placeholder="Marie D." autocomplete="off">
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Téléphone</mat-label>
+                    <mat-label>{{ 'common.phone' | translate }}</mat-label>
                     <input matInput [(ngModel)]="editingHk.phone" type="tel" autocomplete="off">
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Email</mat-label>
+                    <mat-label>{{ 'common.email' | translate }}</mat-label>
                     <input matInput [(ngModel)]="editingHk.email" type="email" autocomplete="off">
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Taux horaire (€/h)</mat-label>
+                    <mat-label>{{ 'housekeeping.hourly_rate_field' | translate }}</mat-label>
                     <input matInput [(ngModel)]="editingHk.hourlyRate" type="number" min="0" step="0.50" placeholder="15">
-                    <span matTextSuffix>€/h</span>
+                    <span matTextSuffix>{{ 'housekeeping.rate_unit' | translate }}</span>
                   </mat-form-field>
                 </div>
                 <mat-form-field style="width:100%">
-                  <mat-label>Notes</mat-label>
+                  <mat-label>{{ 'common.notes' | translate }}</mat-label>
                   <input matInput [(ngModel)]="editingHk.notes">
                 </mat-form-field>
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="saveHousekeeper()" [disabled]="!editingHk.name?.trim()">
-                  Enregistrer
+                  {{ 'common.save' | translate }}
                 </button>
-                <button mat-button (click)="editingHk = null">Annuler</button>
+                <button mat-button (click)="editingHk = null">{{ 'common.cancel' | translate }}</button>
               </mat-card-actions>
             </mat-card>
           }
 
           @if (housekeepers().length === 0 && !editingHk) {
-            <p class="empty">Aucun prestataire enregistré.</p>
+            <p class="empty">{{ 'housekeeping.no_providers' | translate }}</p>
           }
           <div class="hk-list">
             @for (h of housekeepers(); track h.id) {
@@ -428,42 +445,42 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                   }
                 </div>
                 <div class="hk-actions">
-                  <button mat-icon-button (click)="editHousekeeper(h)" matTooltip="Modifier">
+                  <button mat-icon-button (click)="editHousekeeper(h)" [matTooltip]="'common.edit' | translate">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" (click)="deleteHousekeeper(h)" matTooltip="Supprimer">
+                  <button mat-icon-button color="warn" (click)="deleteHousekeeper(h)" [matTooltip]="'common.delete' | translate">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
                 <!-- Badge portail actif -->
                 @if (h.linkedUser) {
                   <div class="portal-badge active">
-                    <mat-icon>lock_open</mat-icon> Portail actif — {{ h.linkedUser.email }}
-                    <button mat-icon-button color="warn" (click)="deactivatePortal(h)" matTooltip="Révoquer l'accès">
+                    <mat-icon>lock_open</mat-icon> {{ 'housekeeping.portal_active' | translate }} — {{ h.linkedUser.email }}
+                    <button mat-icon-button color="warn" (click)="deactivatePortal(h)" [matTooltip]="'housekeeping.revoke_access' | translate">
                       <mat-icon>no_accounts</mat-icon>
                     </button>
                   </div>
                 } @else {
                   <div class="portal-badge inactive" (click)="toggleActivate(h)">
-                    <mat-icon>lock</mat-icon> Activer le portail prestataire
+                    <mat-icon>lock</mat-icon> {{ 'housekeeping.activate_portal' | translate }}
                     <mat-icon class="expand-icon">{{ activatingHk === h.id ? 'expand_less' : 'chevron_right' }}</mat-icon>
                   </div>
                   @if (activatingHk === h.id) {
                     <div class="activate-form">
                       <mat-form-field>
-                        <mat-label>Email de connexion</mat-label>
+                        <mat-label>{{ 'housekeeping.portal_email' | translate }}</mat-label>
                         <input matInput [(ngModel)]="activateEmail" type="email" autocomplete="off">
                       </mat-form-field>
                       <mat-form-field>
-                        <mat-label>Mot de passe temporaire</mat-label>
+                        <mat-label>{{ 'housekeeping.portal_password' | translate }}</mat-label>
                         <input matInput [(ngModel)]="activatePassword" type="password" autocomplete="new-password">
                       </mat-form-field>
                       <div class="activate-actions">
                         <button mat-flat-button color="primary" (click)="activatePortal(h)"
                                 [disabled]="!activateEmail.trim() || !activatePassword.trim()">
-                          Créer le compte
+                          {{ 'housekeeping.create_account' | translate }}
                         </button>
-                        <button mat-button (click)="activatingHk = null">Annuler</button>
+                        <button mat-button (click)="activatingHk = null">{{ 'common.cancel' | translate }}</button>
                       </div>
                     </div>
                   }
@@ -478,14 +495,14 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
             <div class="charges-header">
               <div class="charges-title">
                 <mat-icon>payments</mat-icon>
-                <span>Charges mensuelles</span>
+                <span>{{ 'housekeeping.monthly_charges' | translate }}</span>
               </div>
               <div class="charges-nav">
-                <button mat-icon-button (click)="prevChargesMonth()" title="Mois précédent">
+                <button mat-icon-button (click)="prevChargesMonth()" [title]="'housekeeping.prev_month' | translate">
                   <mat-icon>chevron_left</mat-icon>
                 </button>
                 <span class="charges-month-label">{{ chargesMonthLabel() }}</span>
-                <button mat-icon-button (click)="nextChargesMonth()" title="Mois suivant">
+                <button mat-icon-button (click)="nextChargesMonth()" [title]="'housekeeping.next_month' | translate">
                   <mat-icon>chevron_right</mat-icon>
                 </button>
               </div>
@@ -494,7 +511,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
             @if (chargesLoading()) {
               <div class="center"><mat-spinner diameter="36"/></div>
             } @else if (housekeeperCharges().length === 0) {
-              <p class="empty">Aucune tâche terminée ce mois-ci.</p>
+              <p class="empty">{{ 'housekeeping.no_tasks_month' | translate }}</p>
             } @else {
               @for (entry of housekeeperCharges(); track entry.hk.id) {
                 <mat-card class="charges-card">
@@ -504,7 +521,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                       {{ entry.hk.name }}
                     </div>
                     <div class="charges-hk-totals">
-                      <span class="charges-badge-count">{{ entry.tasks.length }} tâche{{ entry.tasks.length > 1 ? 's' : '' }}</span>
+                      <span class="charges-badge-count">{{ entry.tasks.length }} {{ entry.tasks.length > 1 ? ('housekeeping.task_plural' | translate) : ('housekeeping.task_singular' | translate) }}</span>
                       @if (entry.totalHours > 0) {
                         <span class="charges-badge-hours">{{ entry.totalHours | number:'1.0-1' }} h</span>
                       }
@@ -538,7 +555,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               }
               @if (housekeeperCharges().length > 1) {
                 <div class="charges-grand-total">
-                  <span>Total</span>
+                  <span>{{ 'common.total' | translate }}</span>
                   <div class="charges-hk-totals">
                     @if (chargesTotalHours() > 0) {
                       <span class="charges-badge-hours">{{ chargesTotalHours() | number:'1.0-1' }} h</span>
@@ -558,7 +575,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon style="margin-right:6px;font-size:18px;width:18px;height:18px">local_laundry_service</mat-icon>
-          Blanchisserie
+          {{ 'housekeeping.laundry_tab' | translate }}
         </ng-template>
         <div class="tab-content">
           <app-linen />
@@ -580,17 +597,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
         <mat-dialog-content class="rdialog-content">
           @if (reportPanel()!.reportComment) {
             <div class="rsection">
-              <div class="rsection-label"><mat-icon>description</mat-icon> Rapport</div>
+              <div class="rsection-label"><mat-icon>description</mat-icon> {{ 'housekeeping.report_title' | translate }}</div>
               <div class="rcomment-text">{{ reportPanel()!.reportComment }}</div>
             </div>
           }
           @if (reportPanel()!.hasIncident) {
             <div class="rsection rincident">
               <div class="rsection-label" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-                <span><mat-icon>warning</mat-icon> Incident signalé</span>
+                <span><mat-icon>warning</mat-icon> {{ 'housekeeping.incident_reported' | translate }}</span>
                 @if (!interventionDraft().show) {
                   <button mat-stroked-button color="warn" type="button" (click)="openInterventionForm()">
-                    <mat-icon>build</mat-icon> Créer une tâche d'intervention
+                    <mat-icon>build</mat-icon> {{ 'housekeeping.create_intervention' | translate }}
                   </button>
                 }
               </div>
@@ -599,9 +616,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
               }
               @if (interventionDraft().show) {
                 <div class="intervention-form">
-                  <div class="intervention-title"><mat-icon>build</mat-icon> Nouvelle tâche d'intervention</div>
+                  <div class="intervention-title"><mat-icon>build</mat-icon> {{ 'housekeeping.new_intervention_title' | translate }}</div>
                   <mat-form-field appearance="outline" class="full">
-                    <mat-label>Prestataire</mat-label>
+                    <mat-label>{{ 'housekeeping.provider' | translate }}</mat-label>
                     <mat-select [ngModel]="interventionDraft().housekeeperId"
                                 (ngModelChange)="setInterventionHousekeeper($event)">
                       @for (hk of housekeepers(); track hk.id) {
@@ -610,7 +627,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="full">
-                    <mat-label>Date d'intervention</mat-label>
+                    <mat-label>{{ 'housekeeping.intervention_date' | translate }}</mat-label>
                     <input matInput [matDatepicker]="interventionPicker"
                            [ngModel]="interventionDraft().date"
                            (ngModelChange)="setInterventionDate($event)">
@@ -618,7 +635,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                     <mat-datepicker #interventionPicker/>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="full">
-                    <mat-label>Notes</mat-label>
+                    <mat-label>{{ 'common.notes' | translate }}</mat-label>
                     <textarea matInput rows="2"
                               [ngModel]="interventionDraft().notes"
                               (ngModelChange)="setInterventionNotes($event)"></textarea>
@@ -628,10 +645,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                             [disabled]="!interventionDraft().housekeeperId || !interventionDraft().date || interventionDraft().saving">
                       @if (interventionDraft().saving) { <mat-spinner diameter="18" style="display:inline-block"/> }
                       @else { <mat-icon>check</mat-icon> }
-                      Créer
+                      {{ 'common.create' | translate }}
                     </button>
                     <button mat-stroked-button type="button" (click)="cancelIntervention()">
-                      Annuler
+                      {{ 'common.cancel' | translate }}
                     </button>
                   </div>
                 </div>
@@ -643,19 +660,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
           } @else {
             <div class="rsection">
               <div class="rsection-label" style="display:flex;align-items:center;justify-content:space-between">
-                <span><mat-icon>photo_library</mat-icon> Photos ({{ reportPanel()!.photos.length }})</span>
+                <span><mat-icon>photo_library</mat-icon> {{ 'housekeeper.photos' | translate }} ({{ reportPanel()!.photos.length }})</span>
                 @if (adminUploadingPhoto()) {
                   <span class="admin-upload-progress"><mat-spinner diameter="18"></mat-spinner> {{ adminUploadProgress() }}</span>
                 } @else {
                   <span class="admin-photo-btns">
                     <button mat-stroked-button type="button" (click)="triggerAdminPhoto('BEFORE', adminPhotoInput)">
-                      <mat-icon>photo_camera</mat-icon> Avant
+                      <mat-icon>photo_camera</mat-icon> {{ 'housekeeping.photo_before' | translate }}
                     </button>
                     <button mat-stroked-button type="button" (click)="triggerAdminPhoto('AFTER', adminPhotoInput)">
-                      <mat-icon>photo_camera</mat-icon> Après
+                      <mat-icon>photo_camera</mat-icon> {{ 'housekeeping.photo_after' | translate }}
                     </button>
                     <button mat-stroked-button color="warn" type="button" (click)="triggerAdminPhoto('INCIDENT', adminPhotoInput)">
-                      <mat-icon>warning</mat-icon> Incident
+                      <mat-icon>warning</mat-icon> {{ 'housekeeping.incident' | translate }}
                     </button>
                     <input #adminPhotoInput type="file" accept="image/*,image/heic,image/heif"
                            multiple style="display:none" (change)="onAdminPhotoSelected($event)">
@@ -663,7 +680,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
                 }
               </div>
               @if (reportPanel()!.photos.length === 0) {
-                <p class="rno-photos">Aucune photo pour cette tâche.</p>
+                <p class="rno-photos">{{ 'housekeeping.no_photos' | translate }}</p>
               } @else {
                 <div class="rphotos-grid">
                   @for (photo of reportPanel()!.photos; track photo.id) {
@@ -692,8 +709,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     .form-row mat-form-field { flex: 1; }
     .form-row .flex2 { flex: 2; }
     mat-card-actions { padding: 8px 16px; }
-    .filters { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
     .filters mat-form-field { flex: 1; min-width: 140px; max-width: 220px; }
+    .filters mat-button-toggle-group { height: 40px; }
     @media (max-width: 768px) {
       .header-row { flex-wrap: wrap; gap: 8px; }
       .form-row { flex-direction: column; gap: 0; }
@@ -808,7 +826,7 @@ export class HousekeepingComponent implements OnInit {
   loading = signal(false);
   reportPanel = signal<ReportPanel | null>(null);
   adminUploadingPhoto = signal(false);
-  adminUploadProgress = signal('Envoi en cours…');
+  adminUploadProgress = signal('');
   private adminPhotoType = 'AFTER';
   interventionDraft = signal<InterventionDraft>({ show: false, housekeeperId: null, date: null, notes: '', saving: false });
 
@@ -852,8 +870,9 @@ export class HousekeepingComponent implements OnInit {
   editingTask: Task | null = null;
   editingHk: Partial<HousekeeperProfile> | null = null;
 
-  filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
-  filterTo   = localDateStr(new Date(Date.now() + 30 * 86400000));
+  houseDateMode: 'all' | 'range' = 'all';
+  filterFrom = '2000-01-01';
+  filterTo   = '2099-12-31';
   filterFromDate: Date = new Date(Date.now() - 7 * 86400000);
   filterToDate: Date   = new Date(Date.now() + 30 * 86400000);
   filterStatus = '';
@@ -865,8 +884,8 @@ export class HousekeepingComponent implements OnInit {
   activateEmail = '';
   activatePassword = '';
 
-  taskTypes = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
-  statuses  = Object.entries(STATUS_LABELS).map(([value, { label }]) => ({ value, label }));
+  taskTypes: { value: string; label: string }[] = [];
+  statuses:  { value: string; label: string }[] = [];
 
   private readonly MENAGE_TYPES = new Set(['CHECKOUT_CLEANING', 'CHECKIN_PREP', 'CLEANING']);
   taskCategory = signal<'menage' | 'depannage'>('menage');
@@ -900,10 +919,13 @@ export class HousekeepingComponent implements OnInit {
     private housekeeperService: HousekeeperService,
     private bookingService: BookingService,
     private snack: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
+    this.taskTypes = Object.entries(TYPE_KEYS).map(([value, key]) => ({ value, label: this.t.instant(key) }));
+    this.statuses  = Object.entries(STATUS_KEYS).map(([value, key]) => ({ value, label: this.t.instant(key) }));
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
     this.http.get<any[]>(`${this.base}/admin/property-configs`).subscribe({
@@ -954,6 +976,19 @@ export class HousekeepingComponent implements OnInit {
   taskCost(task: Task): number {
     if (!task.extraHours) return 0;
     return task.extraHours * Number(task.hourlyRate ?? task.housekeeper?.hourlyRate ?? 0);
+  }
+
+  onHouseDateModeChange(): void {
+    if (this.houseDateMode === 'all') {
+      this.filterFrom = '2000-01-01';
+      this.filterTo   = '2099-12-31';
+    } else {
+      this.filterFrom = localDateStr(new Date(Date.now() - 7 * 86400000));
+      this.filterTo   = localDateStr(new Date(Date.now() + 30 * 86400000));
+      this.filterFromDate = new Date(Date.now() - 7 * 86400000);
+      this.filterToDate   = new Date(Date.now() + 30 * 86400000);
+    }
+    this.load();
   }
 
   load(): void {
@@ -1068,7 +1103,7 @@ export class HousekeepingComponent implements OnInit {
         if (aD !== bD) return aD - bD;
         const da = (a.scheduledDate ?? '');
         const db = (b.scheduledDate ?? '');
-        return da < db ? -1 : da > db ? 1 : 0;
+        return da > db ? -1 : da < db ? 1 : 0;
       })
     );
   }
@@ -1203,7 +1238,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   deleteTask(task: Task): void {
-    if (!confirm(`Supprimer la tâche "${this.typeLabel(task.type)}" du ${task.scheduledDate} ?`)) return;
+    if (!confirm(`${this.t.instant('housekeeping.delete_confirm')} "${this.typeLabel(task.type)}" ?`)) return;
     this.http.delete(`${this.base}/admin/housekeeping/${task.id}`).subscribe(() => {
       this.tasks.update(all => all.filter(t => t.id !== task.id));
       this.applyFilter();
@@ -1216,13 +1251,17 @@ export class HousekeepingComponent implements OnInit {
     return p?.name ?? undefined;
   }
 
-  typeLabel(type: string): string   { return TYPE_LABELS[type] ?? type; }
-  statusLabel(s: string): string    { return STATUS_LABELS[s]?.label ?? s; }
-  statusColor(s: string): string    { return STATUS_LABELS[s]?.color ?? '#888'; }
+  typeLabel(type: string): string   { return TYPE_KEYS[type] ? this.t.instant(TYPE_KEYS[type]) : type; }
+  statusLabel(s: string): string    { return STATUS_KEYS[s] ? this.t.instant(STATUS_KEYS[s]) : s; }
+  statusColor(s: string): string    { return STATUS_COLORS[s] ?? '#888'; }
 
   photoTypeLabel(type: string): string {
-    const labels: Record<string, string> = { BEFORE: 'Avant', AFTER: 'Après', INCIDENT: 'Incident' };
-    return labels[type] ?? type;
+    const map: Record<string, string> = {
+      BEFORE:   'housekeeping.photo_before',
+      AFTER:    'housekeeping.photo_after',
+      INCIDENT: 'housekeeping.photo_incident'
+    };
+    return map[type] ? this.t.instant(map[type]) : type;
   }
 
   openReport(task: Task): void {
@@ -1302,11 +1341,11 @@ export class HousekeepingComponent implements OnInit {
         this.tasks.update(all => [task, ...all]);
         this.applyFilter();
         this.interventionDraft.update(d => ({ ...d, show: false, saving: false }));
-        this.snack.open('Tâche d\'intervention créée', '', { duration: 3000 });
+        this.snack.open(this.t.instant('housekeeping.intervention_created'), '', { duration: 3000 });
       },
       error: () => {
         this.interventionDraft.update(d => ({ ...d, saving: false }));
-        this.snack.open('Erreur lors de la création', 'Fermer', { duration: 4000 });
+        this.snack.open(this.t.instant('housekeeping.intervention_error'), this.t.instant('common.close'), { duration: 4000 });
       }
     });
   }
@@ -1328,11 +1367,11 @@ export class HousekeepingComponent implements OnInit {
   private uploadAdminFilesSequentially(files: File[], taskId: number, index: number): void {
     if (index >= files.length) {
       this.adminUploadingPhoto.set(false);
-      this.snack.open(files.length > 1 ? `${files.length} photos ajoutées` : 'Photo ajoutée', '', { duration: 2000 });
+      this.snack.open(files.length > 1 ? this.t.instant('housekeeper.photos_added', { count: files.length }) : this.t.instant('housekeeper.photo_added'), '', { duration: 2000 });
       return;
     }
     this.adminUploadingPhoto.set(true);
-    this.adminUploadProgress.set(files.length > 1 ? `Envoi ${index + 1}/${files.length}…` : 'Envoi en cours…');
+    this.adminUploadProgress.set(files.length > 1 ? this.t.instant('housekeeper.uploading_n', { current: index + 1, total: files.length }) : this.t.instant('housekeeping.upload_in_progress'));
     this.compressImage(files[index]).then(base64 => {
       this.http.post<TaskPhoto>(`${this.base}/admin/housekeeping/${taskId}/photos`,
         { photoType: this.adminPhotoType, data: base64, caption: '' }
@@ -1343,12 +1382,12 @@ export class HousekeepingComponent implements OnInit {
         },
         error: () => {
           this.adminUploadingPhoto.set(false);
-          this.snack.open('Erreur upload', 'Fermer', { duration: 4000 });
+          this.snack.open(this.t.instant('housekeeping.upload_error'), this.t.instant('common.close'), { duration: 4000 });
         }
       });
     }).catch(() => {
       this.adminUploadingPhoto.set(false);
-      this.snack.open('Impossible de lire l\'image', 'Fermer', { duration: 3000 });
+      this.snack.open(this.t.instant('housekeeping.read_error'), this.t.instant('common.close'), { duration: 3000 });
     });
   }
 
@@ -1357,7 +1396,7 @@ export class HousekeepingComponent implements OnInit {
     if (!panel) return;
     this.http.delete(`${this.base}/admin/housekeeping/${panel.taskId}/photos/${photo.id}`).subscribe({
       next: () => this.reportPanel.update(p => p ? { ...p, photos: p.photos.filter(ph => ph.id !== photo.id) } : null),
-      error: () => this.snack.open('Erreur suppression', 'Fermer', { duration: 3000 })
+      error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -1407,17 +1446,17 @@ export class HousekeepingComponent implements OnInit {
       next: updated => {
         this.housekeepers.update(all => all.map(x => x.id === updated.id ? updated : x));
         this.activatingHk = null;
-        this.snack.open('Compte portail créé — ' + this.activateEmail.trim(), '', { duration: 3000 });
+        this.snack.open(this.t.instant('housekeeping.portal_created') + ' — ' + this.activateEmail.trim(), '', { duration: 3000 });
       },
       error: (err) => this.snack.open(err.error ?? 'Erreur', '', { duration: 3000 })
     });
   }
 
   deactivatePortal(h: HousekeeperProfile): void {
-    if (!confirm(`Révoquer l'accès portail de "${h.name}" ?`)) return;
+    if (!confirm(`${this.t.instant('housekeeping.revoke_access')} "${h.name}" ?`)) return;
     this.housekeeperService.deactivatePortal(h.id).subscribe(updated => {
       this.housekeepers.update(all => all.map(x => x.id === updated.id ? updated : x));
-      this.snack.open('Accès portail révoqué', '', { duration: 2500 });
+      this.snack.open(this.t.instant('housekeeping.access_revoked'), '', { duration: 2500 });
     });
   }
 
@@ -1442,22 +1481,22 @@ export class HousekeepingComponent implements OnInit {
       this.housekeeperService.update(this.editingHk.id, data).subscribe(updated => {
         this.housekeepers.update(all => all.map(h => h.id === updated.id ? updated : h));
         this.editingHk = null;
-        this.snack.open('Prestataire mis à jour', '', { duration: 2500 });
+        this.snack.open(this.t.instant('housekeeping.housekeeper_updated'), '', { duration: 2500 });
       });
     } else {
       this.housekeeperService.create(data).subscribe(created => {
         this.housekeepers.update(all => [...all, created]);
         this.editingHk = null;
-        this.snack.open('Prestataire ajouté', '', { duration: 2500 });
+        this.snack.open(this.t.instant('housekeeping.housekeeper_added'), '', { duration: 2500 });
       });
     }
   }
 
   deleteHousekeeper(h: HousekeeperProfile): void {
-    if (!confirm(`Supprimer "${h.name}" ?`)) return;
+    if (!confirm(`${this.t.instant('common.delete')} "${h.name}" ?`)) return;
     this.housekeeperService.delete(h.id).subscribe(() => {
       this.housekeepers.update(all => all.filter(x => x.id !== h.id));
-      this.snack.open('Prestataire supprimé', '', { duration: 2500 });
+      this.snack.open(this.t.instant('housekeeping.housekeeper_deleted'), '', { duration: 2500 });
     });
   }
 

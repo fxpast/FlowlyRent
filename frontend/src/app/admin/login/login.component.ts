@@ -7,13 +7,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
   template: `
     <div class="login-container">
       <mat-card class="login-card">
@@ -23,12 +24,12 @@ import { UserService } from '../../core/services/user.service';
         <mat-card-content>
           <form (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Email FlowlyRent</mat-label>
+              <mat-label>{{ 'login.email' | translate }}</mat-label>
               <input matInput type="email" [(ngModel)]="username" name="email" required autocomplete="email">
               <mat-icon matSuffix>email</mat-icon>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Mot de passe FlowlyRent</mat-label>
+              <mat-label>{{ 'login.password' | translate }}</mat-label>
               <input matInput [(ngModel)]="password" name="password" type="password" required autocomplete="current-password">
               <mat-icon matSuffix>lock</mat-icon>
             </mat-form-field>
@@ -37,13 +38,13 @@ import { UserService } from '../../core/services/user.service';
             }
             <button mat-raised-button color="primary" type="submit" class="full-width" [disabled]="loading()">
               @if (loading()) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { Connexion }
+              @else { {{ 'login.sign_in' | translate }} }
             </button>
           </form>
         </mat-card-content>
         <mat-card-footer class="footer">
-          Pas encore de compte ?
-          <a routerLink="/admin/register">S'inscrire gratuitement</a>
+          {{ 'login.no_account' | translate }}
+          <a routerLink="/admin/register">{{ 'login.sign_up' | translate }}</a>
         </mat-card-footer>
       </mat-card>
     </div>
@@ -69,7 +70,7 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private auth: AuthService, private userService: UserService, private router: Router) {}
+  constructor(private auth: AuthService, private userService: UserService, private router: Router, private t: TranslateService) {}
 
   onSubmit(): void {
     if (!this.username || !this.password) return;
@@ -91,7 +92,7 @@ export class LoginComponent {
         });
       },
       error: () => {
-        this.error.set('Identifiants incorrects');
+        this.error.set(this.t.instant('login.error'));
         this.loading.set(false);
       }
     });

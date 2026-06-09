@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { TranslateModule } from '@ngx-translate/core';
 
 export interface PriceDialogData {
   propertyName: string;
@@ -30,27 +31,27 @@ export interface PriceDialogResult {
   imports: [
     CommonModule, FormsModule, MatDialogModule,
     MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule,
-    MatDatepickerModule, MatNativeDateModule
+    MatDatepickerModule, MatNativeDateModule, TranslateModule
   ],
   template: `
     <div class="dialog-header">
       <mat-icon class="header-icon" [style.color]="data.field === 'price' ? '#2e7d32' : '#0288d1'">
         {{ data.field === 'price' ? 'euro' : 'schedule' }}
       </mat-icon>
-      <span>{{ data.field === 'price' ? 'Prix' : 'Durée minimum' }}</span>
+      <span>{{ (data.field === 'price' ? 'calendar.price_title' : 'calendar.minstay_title') | translate }}</span>
     </div>
 
     <mat-dialog-content>
       <div class="prop-label">{{ data.propertyName }}</div>
       <div class="row-2">
         <mat-form-field appearance="outline">
-          <mat-label>Date début</mat-label>
+          <mat-label>{{ 'calendar.date_start' | translate }}</mat-label>
           <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDateVal" (ngModelChange)="from = fromDate($event)">
           <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
           <mat-datepicker #fromPicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Date fin</mat-label>
+          <mat-label>{{ 'calendar.date_end' | translate }}</mat-label>
           <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDateVal" (ngModelChange)="to = fromDate($event)">
           <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
           <mat-datepicker #toPicker></mat-datepicker>
@@ -58,13 +59,13 @@ export interface PriceDialogResult {
       </div>
       @if (data.field === 'price') {
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Prix (€)</mat-label>
+          <mat-label>{{ 'calendar.price_label' | translate }}</mat-label>
           <input matInput type="number" min="0" step="0.01" [(ngModel)]="price" placeholder="—">
           <mat-icon matSuffix>euro</mat-icon>
         </mat-form-field>
       } @else {
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Durée minimum (nuits)</mat-label>
+          <mat-label>{{ 'calendar.minstay_label' | translate }}</mat-label>
           <input matInput type="number" min="1" step="1" [(ngModel)]="minStay" placeholder="—">
           <mat-icon matSuffix>schedule</mat-icon>
         </mat-form-field>
@@ -72,9 +73,9 @@ export interface PriceDialogResult {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Annuler</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="!from || !to">
-        <mat-icon>save</mat-icon> Enregistrer
+        <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
       </button>
     </mat-dialog-actions>
   `,

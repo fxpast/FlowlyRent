@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { HttpClient } from '@angular/common/http';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
 import { environment } from '../../../environments/environment';
 
@@ -32,13 +33,14 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
     CommonModule, FormsModule, ReactiveFormsModule, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatSnackBarModule, MatProgressSpinnerModule,
-    MatTooltipModule, MatDatepickerModule, MatNativeDateModule
+    MatTooltipModule, MatDatepickerModule, MatNativeDateModule,
+    TranslateModule
   ],
   template: `
     <div class="header">
-      <h1>{{ isEdit() ? 'Modifier la réservation' : 'Nouvelle réservation directe' }}</h1>
+      <h1>{{ isEdit() ? ('booking_form.edit_title' | translate) : ('booking_form.new_title' | translate) }}</h1>
       <button mat-button type="button" (click)="goBack()">
-        <mat-icon>arrow_back</mat-icon> Retour
+        <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
       </button>
     </div>
 
@@ -46,31 +48,31 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
       <mat-card-content>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
-          <h3>Voyageur</h3>
+          <h3>{{ 'booking_form.guest_section' | translate }}</h3>
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Prénom *</mat-label>
+              <mat-label>{{ 'booking_form.first_name' | translate }}</mat-label>
               <input matInput formControlName="guestFirstName">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Nom</mat-label>
+              <mat-label>{{ 'booking_form.last_name' | translate }}</mat-label>
               <input matInput formControlName="guestLastName">
             </mat-form-field>
             <mat-form-field appearance="outline"
               [class.contact-required]="submitted && form.hasError('requireContact')">
-              <mat-label>Email <span class="contact-or">*</span></mat-label>
+              <mat-label>{{ 'booking_form.email' | translate }}</mat-label>
               <input matInput formControlName="guestEmail" type="email" autocomplete="off">
               @if (form.get('guestEmail')?.hasError('email') && form.get('guestEmail')?.touched) {
-                <mat-error>Format d'email invalide</mat-error>
+                <mat-error>{{ 'booking_form.invalid_email' | translate }}</mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline"
               [class.contact-required]="submitted && form.hasError('requireContact')">
-              <mat-label>Téléphone <span class="contact-or">*</span></mat-label>
+              <mat-label>{{ 'booking_form.phone' | translate }}</mat-label>
               <input matInput formControlName="guestPhone" autocomplete="off">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Pays</mat-label>
+              <mat-label>{{ 'booking_form.country' | translate }}</mat-label>
               <input matInput formControlName="guestCountry">
             </mat-form-field>
           </div>
@@ -78,17 +80,17 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
           @if (submitted && form.hasError('requireContact')) {
             <div class="contact-error">
               <mat-icon>error_outline</mat-icon>
-              Email ou téléphone obligatoire — veuillez renseigner au moins un moyen de contact.
+              {{ 'booking_form.contact_required' | translate }}
             </div>
           }
 
-          <h3>Réservation</h3>
+          <h3>{{ 'booking_form.booking_section' | translate }}</h3>
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Logement</mat-label>
+              <mat-label>{{ 'common.property' | translate }}</mat-label>
               <mat-select formControlName="propId" required>
                 @if (loadingProps()) {
-                  <mat-option value="">Chargement…</mat-option>
+                  <mat-option value="">{{ 'common.loading' | translate }}</mat-option>
                 } @else {
                   @for (p of properties(); track p.id) {
                     <mat-option [value]="p.id">{{ p.name }}</mat-option>
@@ -98,35 +100,35 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
             </mat-form-field>
             <div class="datetime-pair">
               <mat-form-field appearance="outline" class="date-part">
-                <mat-label>Arrivée</mat-label>
+                <mat-label>{{ 'booking_form.arrival' | translate }}</mat-label>
                 <input matInput [matDatepicker]="arrivalPicker" formControlName="arrival" required [min]="isEdit() ? null : today">
                 <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
                 <mat-datepicker #arrivalPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline" class="time-part">
-                <mat-label>Heure</mat-label>
+                <mat-label>{{ 'common.time' | translate }}</mat-label>
                 <input matInput type="time" [(ngModel)]="arrivalTime" [ngModelOptions]="{standalone: true}">
               </mat-form-field>
             </div>
             <div class="datetime-pair">
               <mat-form-field appearance="outline" class="date-part">
-                <mat-label>Départ</mat-label>
+                <mat-label>{{ 'booking_form.departure' | translate }}</mat-label>
                 <input matInput [matDatepicker]="departurePicker" formControlName="departure"
                        required [min]="minDeparture">
                 <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
                 <mat-datepicker #departurePicker [startAt]="form.get('arrival')?.value"></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline" class="time-part">
-                <mat-label>Heure</mat-label>
+                <mat-label>{{ 'common.time' | translate }}</mat-label>
                 <input matInput type="time" [(ngModel)]="departureTime" [ngModelOptions]="{standalone: true}">
               </mat-form-field>
             </div>
             <mat-form-field appearance="outline">
-              <mat-label>Adultes</mat-label>
+              <mat-label>{{ 'booking_form.adults' | translate }}</mat-label>
               <input matInput formControlName="numAdult" type="number" min="1">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Enfants</mat-label>
+              <mat-label>{{ 'booking_form.children' | translate }}</mat-label>
               <input matInput formControlName="numChild" type="number" min="0">
             </mat-form-field>
           </div>
@@ -141,62 +143,62 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
           @if (checkingOverlap()) {
             <div class="checking-overlap">
               <mat-spinner diameter="16"></mat-spinner>
-              <span>Vérification des disponibilités…</span>
+              <span>{{ 'booking_form.checking_availability' | translate }}</span>
             </div>
           }
 
-          <h3>Tarification</h3>
+          <h3>{{ 'booking_form.pricing_section' | translate }}</h3>
           <div class="form-row pricing-row">
             <mat-form-field appearance="outline">
-              <mat-label>Frais de ménage (€)</mat-label>
+              <mat-label>{{ 'booking_form.cleaning_fee' | translate }}</mat-label>
               <input matInput formControlName="fraisMenage" type="number" min="0" step="0.01">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Taxe de séjour (€)</mat-label>
+              <mat-label>{{ 'booking_form.city_tax' | translate }}</mat-label>
               <input matInput formControlName="taxeSejour" type="number" min="0" step="0.01">
               @if (estimateResult()) {
-                <mat-hint>{{ estimateResult()!.nights }} nuit(s) · {{ estimateResult()!.nightsPrice | number:'1.2-2' }} € nuits</mat-hint>
+                <mat-hint>{{ estimateResult()!.nights }} {{ 'common.nights' | translate }} · {{ estimateResult()!.nightsPrice | number:'1.2-2' }} €</mat-hint>
               }
             </mat-form-field>
             <div class="calc-col">
               <button mat-stroked-button type="button"
                       [disabled]="!canEstimate || calculating()"
                       (click)="calculateEstimate()"
-                      matTooltip="Calcule le prix à partir du calendrier Beds24">
+                      [matTooltip]="'booking_form.estimate_tooltip' | translate">
                 @if (calculating()) {
                   <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
                 } @else {
                   <mat-icon>calculate</mat-icon>
                 }
-                Estimer
+                {{ 'booking_form.estimate' | translate }}
               </button>
             </div>
             <mat-form-field appearance="outline" class="total-field">
-              <mat-label>Prix total (€)</mat-label>
+              <mat-label>{{ 'booking_form.total_price' | translate }}</mat-label>
               <input matInput formControlName="totalPrice" type="number" step="0.01" required>
-              <mat-hint>Modifiable manuellement</mat-hint>
+              <mat-hint>{{ 'booking_form.manual_hint' | translate }}</mat-hint>
             </mat-form-field>
           </div>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Notes</mat-label>
+            <mat-label>{{ 'common.notes' | translate }}</mat-label>
             <textarea matInput formControlName="notes" rows="3"></textarea>
           </mat-form-field>
 
           <div class="actions">
-            <button mat-button type="button" (click)="goBack()">Retour</button>
+            <button mat-button type="button" (click)="goBack()">{{ 'common.back' | translate }}</button>
             @if (isEdit()) {
               <button mat-stroked-button color="warn" type="button" (click)="cancelBooking()" [disabled]="saving()">
-                <mat-icon>cancel</mat-icon> Annuler la réservation
+                <mat-icon>cancel</mat-icon> {{ 'booking_form.cancel_booking' | translate }}
               </button>
             }
             <button mat-raised-button color="primary" type="submit"
                     [disabled]="form.invalid || saving() || checkingOverlap() || !!overlapError()">
               @if (checkingOverlap()) {
                 <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
-                Vérification…
+                {{ 'booking_form.checking' | translate }}
               } @else {
-                {{ isEdit() ? 'Enregistrer' : 'Créer la réservation' }}
+                {{ isEdit() ? ('common.save' | translate) : ('booking_form.create' | translate) }}
               }
             </button>
           </div>
@@ -292,6 +294,7 @@ export class BookingFormComponent implements OnInit {
     private router: Router,
     private location: Location,
     private snackBar: MatSnackBar,
+    private t: TranslateService,
   ) {
     this.form = this.fb.group({
       guestFirstName: ['', Validators.required],
@@ -343,7 +346,7 @@ export class BookingFormComponent implements OnInit {
       } else {
         this.bookingService.getById(id).subscribe({
           next: (b: any) => this.patchBooking(b),
-          error: () => this.snackBar.open('Impossible de charger la réservation', 'Fermer', { duration: 4000 })
+          error: () => this.snackBar.open(this.t.instant('booking_form.load_error'), this.t.instant('common.close'), { duration: 4000 })
         });
       }
     }
@@ -391,8 +394,8 @@ export class BookingFormComponent implements OnInit {
         this.calculating.set(false);
       },
       error: (err) => {
-        const msg = err.error?.error || err.error?.detail || err.error?.title || err.statusText || 'Erreur lors du calcul';
-        this.snackBar.open(msg, 'Fermer', { duration: 6000 });
+        const msg = err.error?.error || err.error?.detail || err.error?.title || err.statusText || this.t.instant('booking_form.calc_error');
+        this.snackBar.open(msg, this.t.instant('common.close'), { duration: 6000 });
         this.calculating.set(false);
       }
     });
@@ -402,15 +405,16 @@ export class BookingFormComponent implements OnInit {
 
   cancelBooking(): void {
     const name = `${this.form.value.guestFirstName} ${this.form.value.guestLastName}`.trim();
-    if (!confirm(`Annuler la réservation de ${name || 'ce voyageur'} ?`)) return;
+    const confirmMsg = this.t.instant('booking_form.cancel_confirm', { name: name || this.t.instant('booking_form.this_guest') });
+    if (!confirm(confirmMsg)) return;
     this.saving.set(true);
     this.bookingService.cancel(this.bookingId!).subscribe({
       next: () => {
-        this.snackBar.open('Réservation annulée', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t.instant('booking_form.cancelled_ok'), this.t.instant('common.ok'), { duration: 3000 });
         this.goBack();
       },
       error: err => {
-        this.snackBar.open(err.error?.error ?? 'Erreur lors de l\'annulation', 'Fermer', { duration: 4000 });
+        this.snackBar.open(err.error?.error ?? this.t.instant('booking_form.cancel_error'), this.t.instant('common.close'), { duration: 4000 });
         this.saving.set(false);
       }
     });
@@ -424,7 +428,7 @@ export class BookingFormComponent implements OnInit {
     const departure = this.toDateStr(v.departure);
 
     if (!this.isEdit() && arrival < this.toDateStr(this.today)) {
-      this.overlapError.set('La date d\'arrivée ne peut pas être dans le passé.');
+      this.overlapError.set(this.t.instant('booking_form.past_date_error'));
       return;
     }
 
@@ -437,7 +441,7 @@ export class BookingFormComponent implements OnInit {
       next: conflicts => {
         this.checkingOverlap.set(false);
         if (conflicts.length > 0) {
-          this.overlapError.set('Période non disponible.');
+          this.overlapError.set(this.t.instant('booking_form.unavailable'));
           return;
         }
         this.doSave(v, arrival, departure);
@@ -460,11 +464,11 @@ export class BookingFormComponent implements OnInit {
 
     this.bookingService.save([payload]).subscribe({
       next: () => {
-        this.snackBar.open(this.isEdit() ? 'Réservation modifiée' : 'Réservation créée', 'OK', { duration: 3000 });
+        this.snackBar.open(this.isEdit() ? this.t.instant('booking_form.updated_ok') : this.t.instant('booking_form.created_ok'), this.t.instant('common.ok'), { duration: 3000 });
         this.goBack();
       },
       error: (err: any) => {
-        this.snackBar.open(err.error?.error || 'Erreur lors de la sauvegarde', 'OK', { duration: 5000 });
+        this.snackBar.open(err.error?.error || this.t.instant('booking_form.save_error'), this.t.instant('common.ok'), { duration: 5000 });
         this.saving.set(false);
       }
     });

@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-payment-redirect',
   standalone: true,
+  imports: [TranslateModule],
   template: `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#555">
       <div style="font-size:32px;margin-bottom:16px">⏳</div>
-      <p style="font-size:16px">Redirection vers la page de paiement…</p>
+      <p style="font-size:16px">{{ 'public.payment_redirect' | translate }}</p>
     </div>
   `
 })

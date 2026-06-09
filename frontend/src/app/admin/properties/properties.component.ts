@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
 import { BookingService } from '../../core/services/booking.service';
@@ -37,21 +38,22 @@ interface OccupancyStatus {
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule,
-    MatTooltipModule, MatSnackBarModule, MatDividerModule
+    MatTooltipModule, MatSnackBarModule, MatDividerModule,
+    TranslateModule
   ],
   template: `
     <div class="page-header">
-      <h1>Logements</h1>
+      <h1>{{ 'properties.title' | translate }}</h1>
       <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Rechercher</mat-label>
+        <mat-label>{{ 'properties.search' | translate }}</mat-label>
         <input matInput [(ngModel)]="searchDraft" placeholder="Nom, ville…"
                autocomplete="off" (keydown.enter)="applySearch()">
         @if (search()) {
-          <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer">
+          <button mat-icon-button matSuffix (click)="clearSearch()" [matTooltip]="'common.clear' | translate">
             <mat-icon>close</mat-icon>
           </button>
         } @else {
-          <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher">
+          <button mat-icon-button matSuffix (click)="applySearch()" [matTooltip]="'common.search' | translate">
             <mat-icon>search</mat-icon>
           </button>
         }
@@ -63,7 +65,7 @@ interface OccupancyStatus {
     } @else if (filtered().length === 0) {
       <div class="empty">
         <mat-icon>home_work</mat-icon>
-        <p>Aucun logement synchronisé depuis Beds24.</p>
+        <p>{{ 'properties.no_properties' | translate }}</p>
       </div>
     } @else {
       <p class="count">{{ filtered().length }} logement{{ filtered().length !== 1 ? 's' : '' }}</p>
@@ -119,13 +121,13 @@ interface OccupancyStatus {
                 @if (roomCount(p)) {
                   <div class="info-row">
                     <mat-icon>bed</mat-icon>
-                    <span>{{ roomCount(p) }} chambre{{ roomCount(p) !== 1 ? 's' : '' }}</span>
+                    <span>{{ roomCount(p) }} {{ 'properties.beds' | translate }}</span>
                   </div>
                 }
                 @if (p['maxGuests'] || p['maxPeople']) {
                   <div class="info-row">
                     <mat-icon>group</mat-icon>
-                    <span>{{ p['maxGuests'] || p['maxPeople'] }} personnes max.</span>
+                    <span>{{ p['maxGuests'] || p['maxPeople'] }} {{ 'public.max_guests' | translate }}</span>
                   </div>
                 }
                 <div class="info-row">
@@ -139,12 +141,12 @@ interface OccupancyStatus {
               <!-- Nom court -->
               <div class="code-section">
                 <div class="code-label">
-                  <mat-icon matTooltip="Remplace le nom Beds24 dans toute l'application si renseigné">label</mat-icon>
-                  <strong>Nom court</strong>
+                  <mat-icon [matTooltip]="'properties.short_name_hint' | translate">label</mat-icon>
+                  <strong>{{ 'properties.short_name' | translate }}</strong>
                   @if (isShortNameDirty(p['id'])) {
                     <button mat-flat-button color="primary" class="save-btn"
                             (click)="saveShortName(p['id'])">
-                      <mat-icon>save</mat-icon> Enregistrer
+                      <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
                     </button>
                   }
                 </div>
@@ -161,9 +163,9 @@ interface OccupancyStatus {
               <div class="code-section">
                 <div class="code-label">
                   <mat-icon>vpn_key</mat-icon>
-                  <strong>Code d'accès boîte à clé</strong>
+                  <strong>{{ 'properties.access_code_box' | translate }}</strong>
                   @if (isDirty(p['id'])) {
-                    <span class="unsaved-dot" matTooltip="Modifications non enregistrées"></span>
+                    <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
                   }
                 </div>
                 <div class="code-row">
@@ -173,27 +175,27 @@ interface OccupancyStatus {
                            [class.code-masked]="!codeVisible[p['id']]"
                            [(ngModel)]="codeDraft[p['id']]"
                            autocomplete="off"
-                           placeholder="Non configuré"
+                           [placeholder]="'common.none' | translate"
                            maxlength="20"
                            (keydown.enter)="$event.preventDefault()">
                     <button type="button" mat-icon-button matSuffix (click)="toggleVisible(p['id'])"
-                            [matTooltip]="codeVisible[p['id']] ? 'Masquer' : 'Afficher'">
+                            [matTooltip]="(codeVisible[p['id']] ? 'common.hide' : 'common.show') | translate">
                       <mat-icon>{{ codeVisible[p['id']] ? 'visibility_off' : 'visibility' }}</mat-icon>
                     </button>
                   </mat-form-field>
                   <button type="button" mat-icon-button color="primary" (click)="saveCode(p['id'])"
-                          matTooltip="Enregistrer le code"
+                          [matTooltip]="'properties.save_config' | translate"
                           [disabled]="!isDirty(p['id'])">
                     <mat-icon>save</mat-icon>
                   </button>
                   <button type="button" mat-icon-button (click)="regenerateCode(p['id'])"
-                          matTooltip="Générer un nouveau code 4 chiffres">
+                          [matTooltip]="'properties.regenerate_code' | translate">
                     <mat-icon>casino</mat-icon>
                   </button>
                 </div>
                 @if (prevCodes[p['id']]) {
                   <div class="prev-code">
-                    <mat-icon>history</mat-icon> Précédent : {{ prevCodes[p['id']] }}
+                    <mat-icon>history</mat-icon> {{ 'properties.prev_code' | translate }} : {{ prevCodes[p['id']] }}
                   </div>
                 }
               </div>
@@ -204,9 +206,9 @@ interface OccupancyStatus {
               <div class="cleaning-section">
                 <div class="cleaning-label">
                   <mat-icon>cleaning_services</mat-icon>
-                  <strong>Durée ménage standard</strong>
+                  <strong>{{ 'properties.cleaning_duration' | translate }}</strong>
                   @if (isCleaningDirty(p['id'])) {
-                    <span class="unsaved-dot" matTooltip="Modifications non enregistrées"></span>
+                    <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
                   }
                 </div>
                 <div class="cleaning-row">
@@ -219,7 +221,7 @@ interface OccupancyStatus {
                   </mat-form-field>
                   <button type="button" mat-icon-button color="primary"
                           (click)="saveCleaning(p['id'])"
-                          matTooltip="Enregistrer la durée"
+                          [matTooltip]="'properties.cleaning_saved' | translate"
                           [disabled]="!isCleaningDirty(p['id'])">
                     <mat-icon>save</mat-icon>
                   </button>
@@ -231,7 +233,7 @@ interface OccupancyStatus {
               <div class="inventory-section">
                 <div class="inventory-header" (click)="toggleInventory(p['id'])">
                   <mat-icon class="inv-icon">inventory_2</mat-icon>
-                  <strong>Inventaire & Équipements</strong>
+                  <strong>{{ 'properties.inventory_label' | translate }}</strong>
                   @if (inventoryMap()[p['id']]?.length) {
                     <span class="inv-count">
                       {{ inventoryMap()[p['id']].length }} article{{ inventoryMap()[p['id']].length > 1 ? 's' : '' }}
@@ -255,7 +257,7 @@ interface OccupancyStatus {
                             @if (item.details) {
                               <span class="inv-details">{{ item.details }}</span>
                             }
-                            <button mat-icon-button class="inv-del" (click)="deleteItem(p['id'], item)" matTooltip="Supprimer">
+                            <button mat-icon-button class="inv-del" (click)="deleteItem(p['id'], item)" [matTooltip]="'common.delete' | translate">
                               <mat-icon>close</mat-icon>
                             </button>
                           </div>
@@ -268,7 +270,7 @@ interface OccupancyStatus {
                   }
 
                   <!-- Ajout rapide -->
-                  <div class="inv-quick-title">Ajout rapide</div>
+                  <div class="inv-quick-title">{{ 'properties.quick_add' | translate }}</div>
                   <div class="inv-quick-list">
                     @for (s of quickSuggestions(); track s.label + s.details) {
                       <button mat-stroked-button class="inv-quick-btn" (click)="quickAdd(p['id'], s)">
@@ -281,7 +283,7 @@ interface OccupancyStatus {
                   @if (newItemMap()[p['id']]; as ni) {
                     <div class="inv-custom-form">
                       <mat-form-field appearance="outline" class="inv-cat-field">
-                        <mat-label>Catégorie</mat-label>
+                        <mat-label>{{ 'common.type' | translate }}</mat-label>
                         <mat-select [(ngModel)]="ni.category">
                           @for (c of categories; track c.value) {
                             <mat-option [value]="c.value">{{ c.label }}</mat-option>
@@ -289,7 +291,7 @@ interface OccupancyStatus {
                         </mat-select>
                       </mat-form-field>
                       <mat-form-field appearance="outline" class="inv-label-field">
-                        <mat-label>Équipement</mat-label>
+                        <mat-label>{{ 'properties.item_label' | translate }}</mat-label>
                         <input matInput [(ngModel)]="ni.label" placeholder="Nom…">
                       </mat-form-field>
                       <mat-form-field appearance="outline" class="inv-detail-field">
@@ -297,7 +299,7 @@ interface OccupancyStatus {
                         <input matInput [(ngModel)]="ni.details" placeholder="160x200, 55″…">
                       </mat-form-field>
                       <mat-form-field appearance="outline" class="inv-qty-field">
-                        <mat-label>Qté</mat-label>
+                        <mat-label>{{ 'properties.item_qty' | translate }}</mat-label>
                         <input matInput type="number" min="1" [(ngModel)]="ni.quantity">
                       </mat-form-field>
                       <button mat-flat-button color="primary" (click)="addItem(p['id'])"
@@ -312,7 +314,7 @@ interface OccupancyStatus {
 
             @if (p['active'] === false) {
               <div class="inactive-banner">
-                <mat-icon>pause_circle</mat-icon> Logement inactif sur Beds24
+                <mat-icon>pause_circle</mat-icon> {{ 'properties.inactive' | translate }}
               </div>
             }
           </mat-card>
@@ -580,7 +582,7 @@ export class PropertiesComponent implements OnInit {
     }).subscribe(item => {
       this.inventoryMap.update(m => ({ ...m, [propId]: [...(m[propId] ?? []), item] }));
       this.newItemMap.update(m => ({ ...m, [propId]: { category: form.category, label: '', details: '', quantity: 1 } }));
-      this.snackBar.open('Équipement ajouté', '', { duration: 1500 });
+      this.snackBar.open(this.t.instant('properties.item_equipment_added'), '', { duration: 1500 });
     });
   }
 
@@ -596,7 +598,8 @@ export class PropertiesComponent implements OnInit {
     private propConfigService: PropertyConfigService,
     private bookingService: BookingService,
     private inventoryService: PropertyInventoryService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -680,13 +683,13 @@ export class PropertiesComponent implements OnInit {
         if (n1 && n2 && n1 === n2) {
           const nextDep = d10(nextBook['departure']);
           const depLabel = daysDiff(nextDep) > 0
-            ? `départ dans ${daysDiff(nextDep)} j · ${fmt(nextDep)}`
-            : `départ le ${fmt(nextDep)}`;
-          map[id] = { type: 'occupied', label: 'Occupé', sublabel: depLabel,
+            ? this.t.instant('properties.occ_dep_in_days', { n: daysDiff(nextDep), date: fmt(nextDep) })
+            : this.t.instant('properties.occ_dep_on', { date: fmt(nextDep) });
+          map[id] = { type: 'occupied', label: this.t.instant('properties.occ_occupied'), sublabel: depLabel,
             color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
             sortKey: '3_' + nextDep,
-            tips: ['Le même voyageur prolonge son séjour.',
-                   'Pensez à mettre à jour les dates dans Beds24 si nécessaire.'] };
+            tips: [this.t.instant('properties.occ_same_guest_extends'),
+                   this.t.instant('properties.occ_same_guest_update')] };
           continue;
         }
       }
@@ -696,25 +699,25 @@ export class PropertiesComponent implements OnInit {
       const arrUrgent    = arrDays !== null && arrDays <= 1;
       const checkinToday = current !== null && d10(current['arrival']) === today;
       if (depUrgent || arrUrgent || checkinToday) {
-        const depLabel = depDays === 0 ? 'Départ aujourd\'hui' : 'Départ demain';
-        const arrLabel = arrDays === 0 ? 'Arrivée aujourd\'hui' : 'Arrivée demain';
+        const depLabel = depDays === 0 ? this.t.instant('properties.occ_dep_today') : this.t.instant('properties.occ_dep_tomorrow');
+        const arrLabel = arrDays === 0 ? this.t.instant('properties.occ_arr_today') : this.t.instant('properties.occ_arr_tomorrow');
         let label: string;
         if (checkinToday && !depUrgent && !arrUrgent) {
-          label = 'Arrivée aujourd\'hui';
+          label = this.t.instant('properties.occ_arr_today');
         } else {
           label = (depUrgent && arrUrgent) ? (depLabel + ' · ' + arrLabel) : (depUrgent ? depLabel : arrLabel);
         }
         const tips = (depUrgent && arrUrgent)
-          ? ['Gérez le départ puis préparez l\'arrivée.',
-             'Vérifiez que le ménage est planifié entre les deux séjours.',
-             'Confirmez l\'heure d\'arrivée avec le prochain voyageur.']
+          ? [this.t.instant('properties.occ_tip_manage_dep_arr'),
+             this.t.instant('properties.occ_tip_cleaning_between'),
+             this.t.instant('properties.occ_tip_confirm_arr_next')]
           : depUrgent
-          ? ['Planifiez le ménage dès la sortie du voyageur.',
-             'Vérifiez l\'état du logement et rechargez les consommables (linge, café, etc.).',
-             'Mettez à jour vos disponibilités sur les plateformes si nécessaire.']
-          : ['Envoyez les instructions de check-in si ce n\'est pas encore fait.',
-             'Vérifiez le bon fonctionnement du code d\'accès.',
-             'Confirmez l\'heure d\'arrivée avec le voyageur.'];
+          ? [this.t.instant('properties.occ_tip_plan_cleaning'),
+             this.t.instant('properties.occ_tip_check_property'),
+             this.t.instant('properties.occ_tip_update_avail')]
+          : [this.t.instant('properties.occ_tip_send_checkin'),
+             this.t.instant('properties.occ_tip_check_code'),
+             this.t.instant('properties.occ_tip_confirm_arr')];
         const sortRef = depUrgent ? d10(current!['departure']) : (nextBook ? d10(nextBook['arrival']) : today);
         map[id] = { type: 'urgent', label,
           color: '#b71c1c', bg: '#ffebee', icon: 'priority_high',
@@ -725,30 +728,32 @@ export class PropertiesComponent implements OnInit {
       // ── Vert : occupé, départ dans 2+ jours ──
       if (current) {
         const depLabel = depDays !== null && depDays > 0
-          ? `départ dans ${depDays} j · ${fmt(d10(current['departure']))}`
-          : `départ le ${fmt(d10(current['departure']))}`;
-        map[id] = { type: 'occupied', label: 'Occupé',
+          ? this.t.instant('properties.occ_dep_in_days', { n: depDays, date: fmt(d10(current['departure'])) })
+          : this.t.instant('properties.occ_dep_on', { date: fmt(d10(current['departure'])) });
+        map[id] = { type: 'occupied', label: this.t.instant('properties.occ_occupied'),
           sublabel: depLabel,
           color: '#1b5e20', bg: '#e8f5e9', icon: 'check_circle',
           sortKey: '3_' + d10(current['departure']),
-          tips: ['Séjour en cours, rien d\'urgent à faire.',
-                 'Pensez à envoyer un message de mi-séjour pour fidéliser le voyageur.',
-                 'Profitez-en pour vérifier vos prix sur les dates après le départ.'],
+          tips: [this.t.instant('properties.occ_tip_ongoing'),
+                 this.t.instant('properties.occ_tip_midstay'),
+                 this.t.instant('properties.occ_tip_check_prices')],
           };
         continue;
       }
 
       // ── Orange foncé : libre 15+ jours ──
       if (arrDays === null || arrDays >= 15) {
-        const sub = arrDays !== null ? `prochaine arrivée le ${fmt(d10(nextBook!['arrival']))}` : 'aucune réservation à venir';
-        map[id] = { type: 'vacant_long', label: 'Libre 15+ jours',
+        const sub = arrDays !== null
+          ? this.t.instant('properties.occ_next_arr', { date: fmt(d10(nextBook!['arrival'])) })
+          : this.t.instant('properties.occ_no_bookings');
+        map[id] = { type: 'vacant_long', label: this.t.instant('properties.occ_vacant_long'),
           sublabel: sub,
           color: '#bf360c', bg: '#fbe9e7', icon: 'trending_down',
           sortKey: '1_' + (arrDays !== null ? d10(nextBook!['arrival']) : '9999'),
-          tips: ['Baissez vos tarifs ou lancez une promotion pour ces dates.',
-                 'Réduisez la durée minimum de séjour pour attirer des courts séjours.',
-                 'Activez la visibilité boostée sur vos plateformes (Airbnb, Booking…).',
-                 'Vérifiez que votre calendrier est bien ouvert et à jour.'],
+          tips: [this.t.instant('properties.occ_tip_lower_rates'),
+                 this.t.instant('properties.occ_tip_reduce_minstay'),
+                 this.t.instant('properties.occ_tip_boost_visibility'),
+                 this.t.instant('properties.occ_tip_check_calendar')],
           };
         continue;
       }
@@ -756,13 +761,15 @@ export class PropertiesComponent implements OnInit {
       // ── Orange clair : libre 2-14 jours ──
       const arrFmt = fmt(d10(nextBook!['arrival']));
       map[id] = { type: 'vacant_short',
-        label: arrDays === 2 ? 'Arrivée après-demain' : `Arrivée dans ${arrDays} j`,
+        label: arrDays === 2
+          ? this.t.instant('properties.occ_arr_after_tomorrow')
+          : this.t.instant('properties.occ_arr_in_days', { n: arrDays }),
         sublabel: arrFmt,
         color: '#e65100', bg: '#fff3e0', icon: 'event',
         sortKey: '2_' + d10(nextBook!['arrival']),
-        tips: ['Vérifiez vos prix pour les nuits encore libres avant cette arrivée.',
-               'Une offre last-minute peut éviter des nuits vides.',
-               'Préparez le logement et confirmez les détails avec le prochain voyageur.'],
+        tips: [this.t.instant('properties.occ_tip_check_prices_before'),
+               this.t.instant('properties.occ_tip_lastminute'),
+               this.t.instant('properties.occ_tip_prepare_next')],
         };
     }
     return map;
@@ -797,9 +804,9 @@ export class PropertiesComponent implements OnInit {
         this.shortNameSaved[propId] = cfg.shortName ?? '';
         this.shortNameDraft[propId] = cfg.shortName ?? '';
         this.bookingService.clearPropsCache();
-        this.snackBar.open('Nom court enregistré', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t.instant('properties.short_name_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
-      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -813,9 +820,9 @@ export class PropertiesComponent implements OnInit {
         this.codeSaved[propId] = cfg.accessCode         ?? '';
         this.codeDraft[propId] = cfg.accessCode         ?? '';
         this.prevCodes[propId] = cfg.previousAccessCode ?? '';
-        this.snackBar.open('Code enregistré', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t.instant('properties.code_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
-      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -829,9 +836,9 @@ export class PropertiesComponent implements OnInit {
         const v = cfg.cleaningHours != null ? String(cfg.cleaningHours) : '';
         this.cleaningSaved[propId] = v;
         this.cleaningDraft[propId] = v;
-        this.snackBar.open('Durée ménage enregistrée', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t.instant('properties.cleaning_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
-      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -841,9 +848,9 @@ export class PropertiesComponent implements OnInit {
         this.codeSaved[propId] = cfg.accessCode         ?? '';
         this.codeDraft[propId] = cfg.accessCode         ?? '';
         this.prevCodes[propId] = cfg.previousAccessCode ?? '';
-        this.snackBar.open(`Nouveau code : ${cfg.accessCode}`, 'OK', { duration: 3000 });
+        this.snackBar.open(`${this.t.instant('properties.new_code')} : ${cfg.accessCode}`, this.t.instant('common.ok'), { duration: 3000 });
       },
-      error: () => this.snackBar.open('Erreur', 'Fermer', { duration: 3000 })
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 }

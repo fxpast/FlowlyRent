@@ -1,14 +1,17 @@
 package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
+import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.HousekeeperProfile;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.TaskPhoto;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
+import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
+import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.CloudinaryService;
 import com.flowlyrent.service.LinenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,8 +23,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/housekeeper")
@@ -30,12 +35,20 @@ import java.util.Map;
 @Tag(name = "Portail prestataire")
 public class HousekeeperPortalController {
 
+    private static final Set<String> PRICE_KEYS = Set.of(
+        "price", "totalPrice", "total", "deposit", "balance", "paid",
+        "commission", "bookingFee", "cleaningFee", "taxAmount", "tax",
+        "invoice", "refund", "creditCard", "currency"
+    );
+
     private final HousekeeperProfileRepository profileRepo;
     private final HousekeepingTaskRepository taskRepo;
     private final TaskPhotoRepository photoRepo;
     private final CloudinaryService cloudinaryService;
     private final LinenService linenService;
     private final SecurityUtils securityUtils;
+    private final Beds24ApiClient beds24;
+    private final Beds24AccountRepository accountRepo;
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
@@ -176,5 +189,66 @@ public class HousekeeperPortalController {
         });
         photoRepo.deleteById(photoId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/arrivals")
+    public ResponseEntity<?> arrivals() {
+        try {
+            HousekeeperProfile profile = myProfile();
+            Beds24Account account = accountRepo.findByAppUserId(profile.getUser().getId())
+                    .orElse(null);
+            if (account == null) return ResponseEntity.ok(List.of());
+            String token = beds24.tokenFor(account);
+            LocalDate today = LocalDate.now();
+            Map<String, String> params = Map.of(
+                    "arrivalFrom", today.toString(),
+                    "arrivalTo",   today.plusDays(6).toString()
+            );
+            List<Map<String, Object>> bookings = beds24.getBookings(token, params);
+            return ResponseEntity.ok(bookings.stream().map(this::stripPrices).toList());
+        } catch (Exception e) {
+            log.error("arrivals error: {}", e.getMessage(), e);
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/departures")
+    public ResponseEntity<?> departures() {
+        try {
+            HousekeeperProfile profile = myProfile();
+            Beds24Account account = accountRepo.findByAppUserId(profile.getUser().getId())
+                    .orElse(null);
+            if (account == null) return ResponseEntity.ok(List.of());
+            String token = beds24.tokenFor(account);
+            LocalDate today = LocalDate.now();
+            Map<String, String> params = Map.of(
+                    "departureFrom", today.toString(),
+                    "departureTo",   today.plusDays(6).toString()
+            );
+            List<Map<String, Object>> bookings = beds24.getBookings(token, params);
+            return ResponseEntity.ok(bookings.stream().map(this::stripPrices).toList());
+        } catch (Exception e) {
+            log.error("departures error: {}", e.getMessage(), e);
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    private Map<String, Object> stripPrices(Map<String, Object> booking) {
+        Map<String, Object> safe = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : booking.entrySet()) {
+            String key = entry.getKey();
+            boolean isPrice = PRICE_KEYS.contains(key)
+                    || key.toLowerCase().contains("price")
+                    || key.toLowerCase().contains("amount")
+                    || key.toLowerCase().contains("fee")
+                    || key.toLowerCase().contains("deposit")
+                    || key.toLowerCase().contains("balance")
+                    || key.toLowerCase().contains("commission")
+                    || key.toLowerCase().contains("tax")
+                    || key.toLowerCase().contains("invoice")
+                    || key.toLowerCase().contains("paid");
+            if (!isPrice) safe.put(key, entry.getValue());
+        }
+        return safe;
     }
 }

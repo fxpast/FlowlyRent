@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule } from '@ngx-translate/core';
 import { PublicService } from '../../core/services/public.service';
 import { Booking } from '../../core/models/booking.model';
 import { Message } from '../../core/models/message.model';
@@ -14,10 +15,10 @@ import { Message } from '../../core/models/message.model';
 @Component({
   selector: 'app-public-booking',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatInputModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatInputModule, MatSnackBarModule, TranslateModule],
   template: `
     <div class="navbar">
-      <a mat-button routerLink="/public/home"><mat-icon>arrow_back</mat-icon> Accueil</a>
+      <a mat-button routerLink="/public/home"><mat-icon>arrow_back</mat-icon> {{ 'public.home_title_short' | translate }}</a>
       <span class="title">FlowlyRent</span>
     </div>
 
@@ -25,8 +26,8 @@ import { Message } from '../../core/models/message.model';
       <div class="success-banner">
         <mat-icon>check_circle</mat-icon>
         <div>
-          <h2>Paiement confirmé !</h2>
-          <p>Votre réservation {{ booking()?.confirmationCode }} est confirmée.</p>
+          <h2>{{ 'public.booking_success' | translate }}</h2>
+          <p>{{ 'public.booking_your' | translate }} {{ booking()?.confirmationCode }} {{ 'public.booking_confirmed' | translate }}</p>
         </div>
       </div>
     }
@@ -35,7 +36,7 @@ import { Message } from '../../core/models/message.model';
       <div class="container">
         <mat-card class="booking-summary">
           <mat-card-header>
-            <mat-card-title>Récapitulatif de votre réservation</mat-card-title>
+            <mat-card-title>{{ 'public.booking_summary' | translate }}</mat-card-title>
             <mat-card-subtitle>{{ booking()!.confirmationCode }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -50,35 +51,35 @@ import { Message } from '../../core/models/message.model';
               <div class="info-item">
                 <mat-icon>event</mat-icon>
                 <div>
-                  <strong>Arrivée</strong>
+                  <strong>{{ 'public.arrival' | translate }}</strong>
                   <span>{{ booking()!.checkIn | date:'EEEE d MMMM yyyy':'':'fr' }}</span>
                 </div>
               </div>
               <div class="info-item">
                 <mat-icon>event_available</mat-icon>
                 <div>
-                  <strong>Départ</strong>
+                  <strong>{{ 'public.departure' | translate }}</strong>
                   <span>{{ booking()!.checkOut | date:'EEEE d MMMM yyyy':'':'fr' }}</span>
                 </div>
               </div>
               <div class="info-item">
                 <mat-icon>nights_stay</mat-icon>
                 <div>
-                  <strong>Durée</strong>
-                  <span>{{ booking()!.nightsCount }} nuit(s)</span>
+                  <strong>{{ 'public.duration' | translate }}</strong>
+                  <span>{{ booking()!.nightsCount }} {{ 'common.nights' | translate }}</span>
                 </div>
               </div>
               <div class="info-item">
                 <mat-icon>people</mat-icon>
                 <div>
-                  <strong>Voyageurs</strong>
+                  <strong>{{ 'common.guests' | translate }}</strong>
                   <span>{{ booking()!.guestCount }}</span>
                 </div>
               </div>
               <div class="info-item">
                 <mat-icon>euro</mat-icon>
                 <div>
-                  <strong>Total</strong>
+                  <strong>{{ 'public.total' | translate }}</strong>
                   <span>{{ booking()!.totalAmount | currency:'EUR':'symbol':'1.0-0' }}</span>
                 </div>
               </div>
@@ -87,24 +88,24 @@ import { Message } from '../../core/models/message.model';
         </mat-card>
 
         <mat-card class="messages-card">
-          <mat-card-header><mat-card-title>Messages</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'public.messages' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
             <div class="messages">
               @for (m of messages(); track m.id) {
                 <div class="message" [class.host-msg]="m.sender === 'HOST'" [class.guest-msg]="m.sender === 'GUEST'">
                   <div class="bubble">
                     <p>{{ m.content }}</p>
-                    <small>{{ m.sender === 'HOST' ? 'Hôte' : 'Vous' }} · {{ m.createdAt | date:'dd/MM HH:mm' }}</small>
+                    <small>{{ m.sender === 'HOST' ? ('public.host' | translate) : ('public.you' | translate) }} · {{ m.createdAt | date:'dd/MM HH:mm' }}</small>
                   </div>
                 </div>
               }
               @if (messages().length === 0) {
-                <p class="empty-msg">Pas encore de messages. Posez vos questions à l'hôte !</p>
+                <p class="empty-msg">{{ 'public.no_messages' | translate }}</p>
               }
             </div>
             <div class="send-row">
               <mat-form-field appearance="outline" class="msg-input">
-                <mat-label>Votre message</mat-label>
+                <mat-label>{{ 'public.your_message' | translate }}</mat-label>
                 <textarea matInput [(ngModel)]="newMsg" rows="2"></textarea>
               </mat-form-field>
               <button mat-raised-button color="primary" (click)="sendMessage()" [disabled]="!newMsg.trim()">

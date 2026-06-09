@@ -79,4 +79,12 @@ export class HousekeeperPortalService {
       { headers: this.authHeaders() }
     );
   }
+
+  getArrivals(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/arrivals`);
+  }
+
+  getDepartures(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/departures`);
+  }
 }

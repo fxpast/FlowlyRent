@@ -14,6 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 
 interface AppUser {
@@ -43,32 +44,32 @@ interface Notification {
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule,
     MatChipsModule, MatSnackBarModule, MatDividerModule,
-    MatProgressSpinnerModule, MatTooltipModule
+    MatProgressSpinnerModule, MatTooltipModule, TranslateModule
   ],
   template: `
     <div class="page">
       <h1 class="page-title">
         <mat-icon>campaign</mat-icon>
-        Notifications utilisateurs
+        {{ 'superadmin.notifications_title' | translate }}
       </h1>
-      <p class="page-sub">Envoyez un message à des utilisateurs spécifiques ou à tous.</p>
+      <p class="page-sub">{{ 'superadmin.notif_subtitle' | translate }}</p>
 
       <!-- Formulaire de composition -->
       <mat-card class="compose-card">
-        <mat-card-header><mat-card-title>Nouvelle notification</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'superadmin.send_notification_title' | translate }}</mat-card-title></mat-card-header>
         <mat-card-content>
 
           <!-- Destinataires -->
           <div class="target-section">
-            <div class="target-label">Destinataires</div>
+            <div class="target-label">{{ 'superadmin.notif_recipients' | translate }}</div>
             <div class="target-options">
               <mat-checkbox [(ngModel)]="form.targetAll" (ngModelChange)="onTargetAllChange($event)">
-                Tous les utilisateurs
+                {{ 'superadmin.notif_target_all' | translate }}
               </mat-checkbox>
             </div>
             @if (!form.targetAll) {
               <mat-form-field appearance="outline" class="full" style="margin-top:12px">
-                <mat-label>Sélectionner les utilisateurs</mat-label>
+                <mat-label>{{ 'superadmin.notif_target_specific' | translate }}</mat-label>
                 <mat-select multiple [(ngModel)]="form.selectedUserIds">
                   @for (u of users(); track u.id) {
                     @if (u.role !== 'ADMIN') {
@@ -82,7 +83,7 @@ interface Notification {
                   }
                 </mat-select>
                 @if (!form.selectedUserIds.length) {
-                  <mat-hint>Aucun utilisateur sélectionné — la notification ne sera envoyée à personne.</mat-hint>
+                  <mat-hint>{{ 'superadmin.notif_no_selection_hint' | translate }}</mat-hint>
                 }
               </mat-form-field>
 
@@ -98,15 +99,14 @@ interface Notification {
 
           <!-- Objet -->
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Objet (facultatif)</mat-label>
-            <input matInput [(ngModel)]="form.subject" placeholder="Ex : Maintenance prévue le 15 juin">
+            <mat-label>{{ 'superadmin.notif_subject_label' | translate }}</mat-label>
+            <input matInput [(ngModel)]="form.subject">
           </mat-form-field>
 
           <!-- Message -->
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Message *</mat-label>
-            <textarea matInput rows="5" [(ngModel)]="form.content"
-                      placeholder="Rédigez votre message ici…"></textarea>
+            <mat-label>{{ 'superadmin.notif_content_label' | translate }}</mat-label>
+            <textarea matInput rows="5" [(ngModel)]="form.content"></textarea>
           </mat-form-field>
 
         </mat-card-content>
@@ -119,9 +119,9 @@ interface Notification {
               <mat-icon>send</mat-icon>
             }
             @if (form.targetAll) {
-              Envoyer à tous les utilisateurs
+              {{ 'superadmin.notif_send_all' | translate }}
             } @else {
-              Envoyer à {{ form.selectedUserIds.length }} utilisateur{{ form.selectedUserIds.length > 1 ? 's' : '' }}
+              {{ 'superadmin.notif_send_n_before' | translate }} {{ form.selectedUserIds.length }} {{ 'superadmin.notif_send_n_after' | translate }}
             }
           </button>
         </mat-card-actions>
@@ -131,13 +131,13 @@ interface Notification {
       <mat-divider style="margin: 32px 0 24px"></mat-divider>
       <h2 class="section-title">
         <mat-icon>history</mat-icon>
-        Notifications envoyées
+        {{ 'superadmin.notif_history' | translate }}
       </h2>
 
       @if (loading()) {
         <div class="center"><mat-spinner diameter="36" /></div>
       } @else if (notifications().length === 0) {
-        <p class="empty">Aucune notification envoyée pour le moment.</p>
+        <p class="empty">{{ 'superadmin.notif_no_history' | translate }}</p>
       } @else {
         <div class="notif-list">
           @for (n of notifications(); track n.id) {
@@ -152,12 +152,12 @@ interface Notification {
                 <div class="notif-actions">
                   <span class="target-badge" [class.target-all]="n.targetAll">
                     <mat-icon>{{ n.targetAll ? 'groups' : 'person' }}</mat-icon>
-                    {{ n.targetAll ? 'Tous' : n.targetEmails.length + ' destinataire' + (n.targetEmails.length > 1 ? 's' : '') }}
+                    {{ n.targetAll ? ('superadmin.notif_target_all_badge' | translate) : (n.targetEmails.length + ' ' + ('superadmin.notif_recipients_badge' | translate)) }}
                   </span>
                   <span class="read-badge">
-                    <mat-icon>visibility</mat-icon> {{ n.readCount }} lu{{ n.readCount > 1 ? 's' : '' }}
+                    <mat-icon>visibility</mat-icon> {{ n.readCount }} {{ 'superadmin.notif_read_badge' | translate }}
                   </span>
-                  <button mat-icon-button color="warn" (click)="delete(n)" matTooltip="Supprimer">
+                  <button mat-icon-button color="warn" (click)="delete(n)" [matTooltip]="'common.delete' | translate">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
@@ -227,7 +227,7 @@ export class SuperadminNotificationsComponent implements OnInit {
     selectedUserIds: []
   };
 
-  constructor(private http: HttpClient, private snack: MatSnackBar) {}
+  constructor(private http: HttpClient, private snack: MatSnackBar, private t: TranslateService) {}
 
   ngOnInit(): void {
     this.load();
@@ -273,20 +273,20 @@ export class SuperadminNotificationsComponent implements OnInit {
         this.notifications.update(list => [n, ...list]);
         this.form = { subject: '', content: '', targetAll: true, selectedUserIds: [] };
         this.sending.set(false);
-        this.snack.open('Notification envoyée', 'OK', { duration: 3000 });
+        this.snack.open(this.t.instant('superadmin.notif_sent_ok'), this.t.instant('common.ok'), { duration: 3000 });
       },
       error: () => {
         this.sending.set(false);
-        this.snack.open('Erreur lors de l\'envoi', 'Fermer', { duration: 3000 });
+        this.snack.open(this.t.instant('superadmin.notif_send_error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
 
   delete(n: Notification): void {
-    if (!confirm('Supprimer cette notification ?')) return;
+    if (!confirm(this.t.instant('superadmin.notif_delete_confirm'))) return;
     this.http.delete(`${this.base}/superadmin/notifications/${n.id}`).subscribe({
       next: () => this.notifications.update(list => list.filter(x => x.id !== n.id)),
-      error: () => this.snack.open('Erreur suppression', 'Fermer', { duration: 3000 })
+      error: () => this.snack.open(this.t.instant('superadmin.notif_delete_error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 }

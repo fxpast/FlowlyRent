@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 interface Stats {
@@ -26,22 +27,22 @@ interface Stats {
 @Component({
   selector: 'app-superadmin-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatButtonToggleModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatButtonToggleModule, TranslateModule],
   template: `
-    <h2>Dashboard Admin</h2>
+    <h2>{{ 'superadmin.dashboard_title' | translate }}</h2>
 
     @if (error()) {
       <div class="error-state">
         <mat-icon>lock</mat-icon>
-        <p>Accès refusé — vérifiez que votre compte a bien le rôle ADMIN, puis reconnectez-vous.</p>
+        <p>{{ 'superadmin.access_denied' | translate }}</p>
       </div>
     } @else if (!stats()) {
       <div class="loading"><mat-spinner diameter="40" /></div>
     } @else {
       <div class="period-toggle">
         <mat-button-toggle-group [(value)]="period">
-          <mat-button-toggle value="7">7 jours</mat-button-toggle>
-          <mat-button-toggle value="30">30 jours</mat-button-toggle>
+          <mat-button-toggle value="7">{{ 'superadmin.days_7' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="30">{{ 'superadmin.days_30' | translate }}</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
 
@@ -51,8 +52,8 @@ interface Stats {
           <div class="kpi-icon blue"><mat-icon>group_add</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ period === '7' ? stats()!.newUsersLast7Days : stats()!.newUsersLast30Days }}</div>
-            <div class="kpi-label">Nouveaux utilisateurs</div>
-            <div class="kpi-sub">Total : {{ stats()!.totalUsers }}</div>
+            <div class="kpi-label">{{ 'superadmin.new_users_kpi' | translate }}</div>
+            <div class="kpi-sub">{{ 'superadmin.total_prefix' | translate }} {{ stats()!.totalUsers }}</div>
           </div>
         </mat-card>
 
@@ -60,8 +61,8 @@ interface Stats {
           <div class="kpi-icon green"><mat-icon>login</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ period === '7' ? stats()!.loginsLast7Days : stats()!.loginsLast30Days }}</div>
-            <div class="kpi-label">Connexions</div>
-            <div class="kpi-sub">Sur {{ period }} jours</div>
+            <div class="kpi-label">{{ 'superadmin.logins_kpi' | translate }}</div>
+            <div class="kpi-sub">{{ 'superadmin.over_period' | translate : { period: period } }}</div>
           </div>
         </mat-card>
 
@@ -69,8 +70,8 @@ interface Stats {
           <div class="kpi-icon orange"><mat-icon>ads_click</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ period === '7' ? stats()!.clicksLast7Days : stats()!.clicksLast30Days }}</div>
-            <div class="kpi-label">Clicks</div>
-            <div class="kpi-sub">Sur {{ period }} jours</div>
+            <div class="kpi-label">{{ 'superadmin.clicks_kpi' | translate }}</div>
+            <div class="kpi-sub">{{ 'superadmin.over_period' | translate : { period: period } }}</div>
           </div>
         </mat-card>
 
@@ -78,8 +79,8 @@ interface Stats {
           <div class="kpi-icon purple"><mat-icon>visibility</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ period === '7' ? stats()!.anonymousVisitsLast7Days : stats()!.anonymousVisitsLast30Days }}</div>
-            <div class="kpi-label">Visiteurs anonymes</div>
-            <div class="kpi-sub">flowlyrent.com — {{ period }} jours</div>
+            <div class="kpi-label">{{ 'superadmin.anonymous_kpi' | translate }}</div>
+            <div class="kpi-sub">flowlyrent.com — {{ period }} {{ 'superadmin.days_label' | translate }}</div>
           </div>
         </mat-card>
 
@@ -87,8 +88,8 @@ interface Stats {
           <div class="kpi-icon teal"><mat-icon>star</mat-icon></div>
           <div class="kpi-body">
             <div class="kpi-value">{{ topPageName() }}</div>
-            <div class="kpi-label">Page la plus consultée</div>
-            <div class="kpi-sub">{{ stats()!.topPages[0].count || 0 }} vues</div>
+            <div class="kpi-label">{{ 'superadmin.top_page_kpi' | translate }}</div>
+            <div class="kpi-sub">{{ stats()!.topPages[0].count || 0 }} {{ 'superadmin.views' | translate }}</div>
           </div>
         </mat-card>
       </div>
@@ -98,11 +99,11 @@ interface Stats {
         <mat-card class="table-card">
           <mat-card-header>
             <mat-icon mat-card-avatar>bar_chart</mat-icon>
-            <mat-card-title>Pages les plus consultées <span class="period-badge">(30j)</span></mat-card-title>
+            <mat-card-title>{{ 'superadmin.top_pages_title' | translate }} <span class="period-badge">{{ 'superadmin.period_30d' | translate }}</span></mat-card-title>
           </mat-card-header>
           <mat-card-content>
             @if (stats()!.topPages.length === 0) {
-              <p class="empty">Aucune donnée encore collectée.</p>
+              <p class="empty">{{ 'superadmin.no_data' | translate }}</p>
             } @else {
               <table mat-table [dataSource]="stats()!.topPages" class="full-width">
                 <ng-container matColumnDef="rank">
@@ -110,11 +111,11 @@ interface Stats {
                   <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
                 </ng-container>
                 <ng-container matColumnDef="page">
-                  <th mat-header-cell *matHeaderCellDef>Page</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'superadmin.page_header' | translate }}</th>
                   <td mat-cell *matCellDef="let row"><code>{{ row.page }}</code></td>
                 </ng-container>
                 <ng-container matColumnDef="count">
-                  <th mat-header-cell *matHeaderCellDef>Vues</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'superadmin.views_header' | translate }}</th>
                   <td mat-cell *matCellDef="let row"><strong>{{ row.count }}</strong></td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="['rank','page','count']"></tr>
@@ -128,11 +129,11 @@ interface Stats {
         <mat-card class="table-card">
           <mat-card-header>
             <mat-icon mat-card-avatar>trending_up</mat-icon>
-            <mat-card-title>Nouveaux utilisateurs <span class="period-badge">(30j)</span></mat-card-title>
+            <mat-card-title>{{ 'superadmin.user_growth_title' | translate }} <span class="period-badge">{{ 'superadmin.period_30d' | translate }}</span></mat-card-title>
           </mat-card-header>
           <mat-card-content>
             @if (stats()!.userGrowthLast30Days.length === 0) {
-              <p class="empty">Aucune donnée encore collectée.</p>
+              <p class="empty">{{ 'superadmin.no_data' | translate }}</p>
             } @else {
               <div class="mini-chart">
                 @for (d of stats()!.userGrowthLast30Days; track d.date) {

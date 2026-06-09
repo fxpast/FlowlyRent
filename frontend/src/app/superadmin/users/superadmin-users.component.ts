@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 interface UserRow {
@@ -31,10 +32,10 @@ interface UserRow {
     CommonModule, FormsModule,
     MatCardModule, MatIconModule, MatTableModule, MatChipsModule,
     MatProgressSpinnerModule, MatButtonModule, MatInputModule,
-    MatFormFieldModule, MatTooltipModule
+    MatFormFieldModule, MatTooltipModule, TranslateModule
   ],
   template: `
-    <h2>Utilisateurs <span class="count">({{ users().length }})</span></h2>
+    <h2>{{ 'superadmin.users_title' | translate }} <span class="count">({{ users().length }})</span></h2>
 
     @if (loading()) {
       <div class="loading"><mat-spinner diameter="40" /></div>
@@ -55,7 +56,7 @@ interface UserRow {
               <td mat-cell *matCellDef="let u">{{ u.email }}</td>
             </ng-container>
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nom</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | translate }}</th>
               <td mat-cell *matCellDef="let u">{{ u.firstName }} {{ u.lastName }}</td>
             </ng-container>
             <ng-container matColumnDef="plan">
@@ -65,7 +66,7 @@ interface UserRow {
               </td>
             </ng-container>
             <ng-container matColumnDef="role">
-              <th mat-header-cell *matHeaderCellDef>Rôle</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.role' | translate }}</th>
               <td mat-cell *matCellDef="let u">
                 <span class="chip" [class.chip-admin]="u.role === 'ADMIN'" [class.chip-user]="u.role === 'USER'">
                   {{ u.role }}
@@ -73,7 +74,7 @@ interface UserRow {
               </td>
             </ng-container>
             <ng-container matColumnDef="createdAt">
-              <th mat-header-cell *matHeaderCellDef>Inscrit le</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.registered_on' | translate }}</th>
               <td mat-cell *matCellDef="let u">{{ u.createdAt | date:'dd/MM/yyyy' }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
@@ -82,7 +83,7 @@ interface UserRow {
                 @if (editingId() === u.id) {
                   <div class="pwd-inline">
                     <mat-form-field appearance="outline" class="pwd-field">
-                      <mat-label>Nouveau mot de passe</mat-label>
+                      <mat-label>{{ 'superadmin.new_password_label' | translate }}</mat-label>
                       <input matInput [type]="showPwd() ? 'text' : 'password'"
                              [(ngModel)]="newPwd" autocomplete="new-password" />
                       <button mat-icon-button matSuffix (click)="showPwd.set(!showPwd())" type="button">
@@ -92,9 +93,9 @@ interface UserRow {
                     <button mat-flat-button color="primary"
                       [disabled]="saving() || newPwd.length < 8"
                       (click)="savePassword(u.id)">
-                      @if (saving()) { <mat-spinner diameter="16" /> } @else { Enregistrer }
+                      @if (saving()) { <mat-spinner diameter="16" /> } @else { {{ 'common.save' | translate }} }
                     </button>
-                    <button mat-icon-button (click)="cancelEdit()" matTooltip="Annuler">
+                    <button mat-icon-button (click)="cancelEdit()" [matTooltip]="'common.cancel' | translate">
                       <mat-icon>close</mat-icon>
                     </button>
                   </div>
@@ -103,10 +104,10 @@ interface UserRow {
                   }
                 } @else {
                   <div class="action-row">
-                    <button mat-icon-button (click)="startEdit(u.id)" matTooltip="Changer le mot de passe">
+                    <button mat-icon-button (click)="startEdit(u.id)" [matTooltip]="'superadmin.reset_password' | translate">
                       <mat-icon>lock_reset</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="deleteUser(u)" matTooltip="Supprimer le compte">
+                    <button mat-icon-button color="warn" (click)="deleteUser(u)" [matTooltip]="'common.delete' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -151,13 +152,13 @@ export class SuperadminUsersComponent implements OnInit {
   pwdError = signal(false);
   showPwd = signal(false);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private t: TranslateService) {}
 
   ngOnInit(): void {
     this.http.get<UserRow[]>(`${environment.apiUrl}/superadmin/users`).subscribe({
       next: u => { this.users.set(u); this.loading.set(false); },
       error: err => {
-        this.errorMsg.set(`Erreur ${err.status} — ${err.error?.message ?? err.message ?? 'impossible de charger les utilisateurs'}`);
+        this.errorMsg.set(`${this.t.instant('common.error')} ${err.status} — ${err.error?.message ?? err.message ?? this.t.instant('superadmin.notif_error_loading')}`);
         this.loading.set(false);
       }
     });
@@ -177,10 +178,10 @@ export class SuperadminUsersComponent implements OnInit {
   }
 
   deleteUser(u: UserRow): void {
-    if (!confirm(`Supprimer définitivement le compte "${u.email}" ? Cette action est irréversible.`)) return;
+    if (!confirm(this.t.instant('superadmin.delete_user_confirm') + ' (' + u.email + ')')) return;
     this.http.delete(`${environment.apiUrl}/superadmin/users/${u.id}`).subscribe({
       next: () => this.users.update(all => all.filter(x => x.id !== u.id)),
-      error: err => alert('Erreur : ' + (err.error?.message ?? 'suppression impossible (contraintes FK)'))
+      error: err => alert(this.t.instant('common.error') + ': ' + (err.error?.message ?? this.t.instant('superadmin.notif_delete_error')))
     });
   }
 
@@ -190,13 +191,13 @@ export class SuperadminUsersComponent implements OnInit {
     this.http.patch(`${environment.apiUrl}/superadmin/users/${id}/password`, { newPassword: this.newPwd }).subscribe({
       next: () => {
         this.saving.set(false);
-        this.pwdMsg.set('Mot de passe mis à jour');
+        this.pwdMsg.set(this.t.instant('superadmin.password_reset_ok'));
         this.pwdError.set(false);
         setTimeout(() => this.cancelEdit(), 1500);
       },
       error: err => {
         this.saving.set(false);
-        this.pwdMsg.set(err.error?.error ?? 'Erreur lors de la mise à jour');
+        this.pwdMsg.set(err.error?.error ?? this.t.instant('common.error'));
         this.pwdError.set(true);
       }
     });

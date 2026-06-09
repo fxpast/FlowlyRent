@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { TranslateModule } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
@@ -14,37 +15,37 @@ import { localDateStr } from '../../core/utils/date.utils';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatDialogModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule],
+  imports: [CommonModule, RouterLink, MatDialogModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, TranslateModule],
   template: `
-    <h1>Tableau de bord</h1>
+    <h1>{{ 'dashboard.title' | translate }}</h1>
 
     <div class="stats-grid">
       <mat-card class="stat-card primary clickable-card" routerLink="/admin/today">
         <mat-card-content>
           <mat-icon>event_available</mat-icon>
           <div class="stat-value">{{ arrivalsToday().length }}</div>
-          <div class="stat-label">Arrivées aujourd'hui</div>
+          <div class="stat-label">{{ 'dashboard.arrivals_today' | translate }}</div>
         </mat-card-content>
       </mat-card>
       <mat-card class="stat-card accent clickable-card" routerLink="/admin/today">
         <mat-card-content>
           <mat-icon>flight_takeoff</mat-icon>
           <div class="stat-value">{{ departuresToday().length }}</div>
-          <div class="stat-label">Départs aujourd'hui</div>
+          <div class="stat-label">{{ 'dashboard.departures_today' | translate }}</div>
         </mat-card-content>
       </mat-card>
       <mat-card class="stat-card warn clickable-card" routerLink="/admin/messages">
         <mat-card-content>
           <mat-icon>chat</mat-icon>
           <div class="stat-value">{{ unreadMessages() }}</div>
-          <div class="stat-label">Messages non lus</div>
+          <div class="stat-label">{{ 'dashboard.unread_messages' | translate }}</div>
         </mat-card-content>
       </mat-card>
       <mat-card class="stat-card success clickable-card" routerLink="/admin/arrivals">
         <mat-card-content>
           <mat-icon>book_online</mat-icon>
           <div class="stat-value">{{ weekArrivals().length }}</div>
-          <div class="stat-label">Arrivées sur 7 jours</div>
+          <div class="stat-label">{{ 'dashboard.arrivals_week' | translate }}</div>
         </mat-card-content>
       </mat-card>
     </div>
@@ -52,8 +53,8 @@ import { localDateStr } from '../../core/utils/date.utils';
     <div class="section-row">
       <mat-card class="list-card">
         <mat-card-header>
-          <mat-card-title>Arrivées sur 7 jours</mat-card-title>
-          <a mat-button color="primary" routerLink="/admin/arrivals">Voir tout</a>
+          <mat-card-title>{{ 'dashboard.arrivals_week' | translate }}</mat-card-title>
+          <a mat-button color="primary" routerLink="/admin/arrivals">{{ 'common.see_all' | translate }}</a>
         </mat-card-header>
         <mat-card-content>
           @for (b of weekArrivals(); track b['id']) {
@@ -63,19 +64,19 @@ import { localDateStr } from '../../core/utils/date.utils';
                 <span class="date">{{ b['arrival'] | date:'dd/MM' }}</span>
               </div>
               <div class="prop-name">{{ propLabel(b) }}</div>
-              <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+              <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
             </div>
           }
           @empty {
-            <p class="empty">Aucune arrivée sur 7 jours</p>
+            <p class="empty">{{ 'dashboard.no_arrivals' | translate }}</p>
           }
         </mat-card-content>
       </mat-card>
 
       <mat-card class="list-card">
         <mat-card-header>
-          <mat-card-title>Départs sur 7 jours</mat-card-title>
-          <a mat-button color="primary" routerLink="/admin/departures">Voir tout</a>
+          <mat-card-title>{{ 'dashboard.departures_week' | translate }}</mat-card-title>
+          <a mat-button color="primary" routerLink="/admin/departures">{{ 'common.see_all' | translate }}</a>
         </mat-card-header>
         <mat-card-content>
           @for (b of weekDepartures(); track b['id']) {
@@ -85,11 +86,11 @@ import { localDateStr } from '../../core/utils/date.utils';
                 <span class="date">{{ b['departure'] | date:'dd/MM' }}</span>
               </div>
               <div class="prop-name">{{ propLabel(b) }}</div>
-              <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+              <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
             </div>
           }
           @empty {
-            <p class="empty">Aucun départ sur 7 jours</p>
+            <p class="empty">{{ 'dashboard.no_departures' | translate }}</p>
           }
         </mat-card-content>
       </mat-card>

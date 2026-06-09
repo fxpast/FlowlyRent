@@ -32,6 +32,7 @@ import { environment } from '@env/environment';
 import { Subscription, from, of, Observable } from 'rxjs';
 import { concatMap, tap } from 'rxjs/operators';
 import { TranslationService } from '../../core/services/translation.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-booking-detail-dialog',
@@ -41,7 +42,7 @@ import { TranslationService } from '../../core/services/translation.service';
     MatButtonModule, MatIconModule, MatChipsModule, MatDividerModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule,
     MatTabsModule, MatBadgeModule, MatProgressSpinnerModule, MatTooltipModule,
-    MatDatepickerModule, MatNativeDateModule, TextFieldModule
+    MatDatepickerModule, MatNativeDateModule, TextFieldModule, TranslateModule
   ],
   template: `
     <div class="dialog-header">
@@ -49,24 +50,24 @@ import { TranslationService } from '../../core/services/translation.service';
       <span class="booking-id">#{{ draft['id'] }}</span>
       <div class="header-actions">
         @if (activeTab() === 0 && draft['status'] !== 'cancelled') {
-          <button mat-icon-button color="warn" (click)="cancelBooking()" [disabled]="saving()" matTooltip="Annuler la réservation">
+          <button mat-icon-button color="warn" (click)="cancelBooking()" [disabled]="saving()" [matTooltip]="'booking_dialog.cancel_booking_tooltip' | translate">
             <mat-icon>cancel</mat-icon>
           </button>
         }
         @if (activeTab() === 0) {
           <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
-            <mat-icon>save</mat-icon> {{ saving() ? '…' : 'Enregistrer' }}
+            <mat-icon>save</mat-icon> {{ saving() ? '…' : ('common.save' | translate) }}
           </button>
         }
         @if (activeTab() === 2 && !loadingTask()) {
           <button mat-flat-button color="primary" (click)="createTask()" [disabled]="savingTask()">
-            <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : 'Créer' }}
+            <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : ('common.create' | translate) }}
           </button>
         }
-        <button mat-icon-button (click)="goCreateInvoice()" matTooltip="Créer une facture">
+        <button mat-icon-button (click)="goCreateInvoice()" [matTooltip]="'booking_dialog.create_invoice' | translate">
           <mat-icon>receipt_long</mat-icon>
         </button>
-        <button mat-icon-button mat-dialog-close [disabled]="saving()" matTooltip="Fermer">
+        <button mat-icon-button mat-dialog-close [disabled]="saving()" [matTooltip]="'booking_dialog.close_tooltip' | translate">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -75,41 +76,41 @@ import { TranslationService } from '../../core/services/translation.service';
     <mat-tab-group animationDuration="150ms" (selectedIndexChange)="onTabChange($event)">
 
       <!-- ── Onglet Détails ───────────────────────────────────────── -->
-      <mat-tab label="Détails">
+      <mat-tab [label]="'booking_dialog.tab_details' | translate">
         <mat-dialog-content>
           <div class="edit-grid">
             <div class="prop-row">
               <mat-icon>home</mat-icon>
-              <span>{{ draft['propName'] || draft['propertyName'] || ('Propriété ' + (draft['propId'] || draft['propertyId'] || '—')) }}</span>
+              <span>{{ draft['propName'] || draft['propertyName'] || (('common.property' | translate) + ' ' + (draft['propId'] || draft['propertyId'] || '—')) }}</span>
             </div>
             <mat-divider/>
             <div class="row-2">
               <mat-form-field appearance="outline">
-                <mat-label>Prénom</mat-label>
+                <mat-label>{{ 'booking_dialog.first_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="draft['guestFirstName']">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Nom</mat-label>
+                <mat-label>{{ 'booking_dialog.last_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="draft['guestLastName']">
               </mat-form-field>
             </div>
             <div class="row-2">
               <mat-form-field appearance="outline">
-                <mat-label>Email</mat-label>
+                <mat-label>{{ 'common.email' | translate }}</mat-label>
                 <input matInput [(ngModel)]="draft['guestEmail']" type="email">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Téléphone</mat-label>
+                <mat-label>{{ 'common.phone' | translate }}</mat-label>
                 <input matInput [(ngModel)]="draft['guestPhone']">
               </mat-form-field>
             </div>
             <div class="row-3">
               <mat-form-field appearance="outline">
-                <mat-label>Pays</mat-label>
+                <mat-label>{{ 'booking_dialog.country' | translate }}</mat-label>
                 <input matInput [(ngModel)]="draft['guestCountry']">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Langue</mat-label>
+                <mat-label>{{ 'booking_dialog.language' | translate }}</mat-label>
                 <mat-select [(ngModel)]="draft['lang']">
                   <mat-option value="">—</mat-option>
                   <mat-option value="fr">Français</mat-option>
@@ -123,28 +124,28 @@ import { TranslationService } from '../../core/services/translation.service';
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Statut</mat-label>
+                <mat-label>{{ 'common.status' | translate }}</mat-label>
                 <mat-select [(ngModel)]="draft['status']">
-                  <mat-option value="new">Nouveau</mat-option>
-                  <mat-option value="confirmed">Confirmé</mat-option>
-                  <mat-option value="request">Demande</mat-option>
-                  <mat-option value="inquiry">Renseignement</mat-option>
-                  <mat-option value="black">Bloqué</mat-option>
-                  <mat-option value="cancelled">Annulé</mat-option>
+                  <mat-option value="new">{{ 'booking_dialog.status_new' | translate }}</mat-option>
+                  <mat-option value="confirmed">{{ 'booking_dialog.status_confirmed' | translate }}</mat-option>
+                  <mat-option value="request">{{ 'booking_dialog.status_request' | translate }}</mat-option>
+                  <mat-option value="inquiry">{{ 'booking_dialog.status_inquiry' | translate }}</mat-option>
+                  <mat-option value="black">{{ 'booking_dialog.status_black' | translate }}</mat-option>
+                  <mat-option value="cancelled">{{ 'booking_dialog.status_cancelled' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>
             <mat-divider/>
             <div class="row-2">
               <mat-form-field appearance="outline">
-                <mat-label>Arrivée</mat-label>
+                <mat-label>{{ 'booking_dialog.arrival' | translate }}</mat-label>
                 <input matInput [matDatepicker]="arrivalPicker" [(ngModel)]="arrivalDate"
                        (ngModelChange)="draft['arrival'] = fromDate($event)">
                 <mat-datepicker-toggle matIconSuffix [for]="arrivalPicker"></mat-datepicker-toggle>
                 <mat-datepicker #arrivalPicker></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Départ</mat-label>
+                <mat-label>{{ 'booking_dialog.departure' | translate }}</mat-label>
                 <input matInput [matDatepicker]="departurePicker" [(ngModel)]="departureDate"
                        (ngModelChange)="draft['departure'] = fromDate($event)">
                 <mat-datepicker-toggle matIconSuffix [for]="departurePicker"></mat-datepicker-toggle>
@@ -155,9 +156,9 @@ import { TranslationService } from '../../core/services/translation.service';
             <div class="horaires-section">
               <div class="horaires-header">
                 <mat-icon class="h-icon">schedule</mat-icon>
-                <span class="h-title">Horaires</span>
+                <span class="h-title">{{ 'booking_dialog.times_title' | translate }}</span>
                 @if (hasCustomTimes) {
-                  <span class="arrangement-badge">Arrangement particulier</span>
+                  <span class="arrangement-badge">{{ 'booking_dialog.arrangement_badge' | translate }}</span>
                 }
               </div>
               <div class="horaires-chips">
@@ -166,7 +167,7 @@ import { TranslationService } from '../../core/services/translation.service';
                   <span class="h-label">Check-in</span>
                   <input type="time" [(ngModel)]="arrivalTime" class="time-chip-input">
                   @if (hasCustomCheckin) {
-                    <span class="h-default">standard {{ DEFAULT_CHECKIN }}</span>
+                    <span class="h-default">{{ 'booking_dialog.standard' | translate }} {{ DEFAULT_CHECKIN }}</span>
                   }
                 </div>
                 <div class="horaire-chip" [class.custom]="hasCustomCheckout">
@@ -174,48 +175,48 @@ import { TranslationService } from '../../core/services/translation.service';
                   <span class="h-label">Check-out</span>
                   <input type="time" [(ngModel)]="departureTime" class="time-chip-input">
                   @if (hasCustomCheckout) {
-                    <span class="h-default">standard {{ DEFAULT_CHECKOUT }}</span>
+                    <span class="h-default">{{ 'booking_dialog.standard' | translate }} {{ DEFAULT_CHECKOUT }}</span>
                   }
                 </div>
               </div>
               @if (hasCustomTimes) {
                 <mat-form-field appearance="outline" class="full motif-field">
-                  <mat-label>Motif de l'arrangement</mat-label>
+                  <mat-label>{{ 'booking_dialog.arrangement_reason' | translate }}</mat-label>
                   <input matInput [(ngModel)]="customTimeComment"
-                         placeholder="Ex : Early check-in accordé — vol à 10h, départ tardif souhaité…">
+                         [placeholder]="'booking_dialog.arrangement_reason_placeholder' | translate">
                   <mat-icon matPrefix>chat_bubble_outline</mat-icon>
                 </mat-form-field>
               }
               <div class="horaires-actions">
                 @if (hasCustomTimes) {
                   <button mat-flat-button color="accent" (click)="confirmTimes()" [disabled]="savingTimes()">
-                    <mat-icon>check</mat-icon> {{ savingTimes() ? 'Enregistrement…' : 'Confirmer les horaires' }}
+                    <mat-icon>check</mat-icon> {{ savingTimes() ? ('booking_dialog.saving' | translate) : ('booking_dialog.confirm_times' | translate) }}
                   </button>
                   <button mat-stroked-button (click)="resetTimes()" [disabled]="savingTimes()">
-                    <mat-icon>restart_alt</mat-icon> Réinitialiser
+                    <mat-icon>restart_alt</mat-icon> {{ 'booking_dialog.reset_times' | translate }}
                   </button>
                 } @else {
-                  <span class="h-standard">Horaires standard</span>
+                  <span class="h-standard">{{ 'booking_dialog.standard_times' | translate }}</span>
                 }
               </div>
             </div>
 
             <div class="row-3">
               <mat-form-field appearance="outline">
-                <mat-label>Adultes</mat-label>
+                <mat-label>{{ 'booking_dialog.adults' | translate }}</mat-label>
                 <input matInput type="number" min="0" [(ngModel)]="draft['numAdult']">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Enfants</mat-label>
+                <mat-label>{{ 'booking_dialog.children' | translate }}</mat-label>
                 <input matInput type="number" min="0" [(ngModel)]="draft['numChild']">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Montant (€)</mat-label>
+                <mat-label>{{ 'booking_dialog.amount_label' | translate }}</mat-label>
                 <input matInput type="number" step="0.01" [(ngModel)]="draft['totalPrice']">
               </mat-form-field>
             </div>
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Notes</mat-label>
+              <mat-label>{{ 'common.notes' | translate }}</mat-label>
               <textarea matInput rows="2" [(ngModel)]="draft['notes']"></textarea>
             </mat-form-field>
 
@@ -223,34 +224,34 @@ import { TranslationService } from '../../core/services/translation.service';
             <div class="payment-section">
               <div class="payment-header">
                 <mat-icon class="pay-icon">payment</mat-icon>
-                <span>Demande de paiement</span>
+                <span>{{ 'booking_dialog.payment_request' | translate }}</span>
               </div>
               <div class="payment-row">
                 <mat-form-field appearance="outline" class="pay-amount" subscriptSizing="dynamic">
-                  <mat-label>Montant €</mat-label>
+                  <mat-label>{{ 'booking_dialog.amount_eur' | translate }}</mat-label>
                   <input matInput type="number" min="1" step="0.01"
                          [(ngModel)]="payAmount" (ngModelChange)="payLink.set('')">
                 </mat-form-field>
                 <button mat-stroked-button color="primary"
                         [disabled]="!payAmount || !beds24Id"
                         (click)="generatePayLink('payment')"
-                        matTooltip="Encaissement immédiat">
-                  <mat-icon>euro</mat-icon> Paiement
+                        [matTooltip]="'booking_dialog.pay_immediate_tooltip' | translate">
+                  <mat-icon>euro</mat-icon> {{ 'booking_dialog.pay_btn' | translate }}
                 </button>
                 <button mat-stroked-button
                         [disabled]="!payAmount || !beds24Id"
                         (click)="generatePayLink('deposit')"
-                        matTooltip="Pré-autorisation sans débit (caution)">
-                  <mat-icon>shield</mat-icon> Caution
+                        [matTooltip]="'booking_dialog.deposit_tooltip' | translate">
+                  <mat-icon>shield</mat-icon> {{ 'booking_dialog.deposit_btn' | translate }}
                 </button>
               </div>
               @if (payLink()) {
                 <div class="pay-link-box">
                   <a [href]="payLink()" target="_blank" class="pay-link-text">{{ payLink() }}</a>
-                  <button mat-icon-button (click)="copyPayLink()" matTooltip="Copier le lien">
+                  <button mat-icon-button (click)="copyPayLink()" [matTooltip]="'booking_dialog.copy_link_tooltip' | translate">
                     <mat-icon>{{ payLinkCopied() ? 'check' : 'content_copy' }}</mat-icon>
                   </button>
-                  <a mat-icon-button [href]="payLink()" target="_blank" matTooltip="Ouvrir">
+                  <a mat-icon-button [href]="payLink()" target="_blank" [matTooltip]="'booking_dialog.open_link' | translate">
                     <mat-icon>open_in_new</mat-icon>
                   </a>
                 </div>
@@ -264,7 +265,7 @@ import { TranslationService } from '../../core/services/translation.service';
       <!-- ── Onglet Messages ─────────────────────────────────────── -->
       <mat-tab>
         <ng-template mat-tab-label>
-          Messages
+          {{ 'nav.messages' | translate }}
           @if (unreadCount() > 0) {
             <span class="msg-badge">{{ unreadCount() }}</span>
           }
@@ -275,28 +276,28 @@ import { TranslationService } from '../../core/services/translation.service';
             <mat-icon class="ch-icon">{{ channelIcon() }}</mat-icon>
             <span class="ch-label">{{ channelLabel() }}</span>
             @if (!isDirect()) {
-              <span class="ch-note">— messages transmis via Beds24</span>
+              <span class="ch-note">— {{ 'booking_dialog.via_beds24' | translate }}</span>
             } @else {
-              <span class="ch-note">— Email · SMS · WhatsApp</span>
+              <span class="ch-note">— {{ 'booking_dialog.direct_note' | translate }}</span>
             }
           </div>
 
           <div class="chat-area" #chatArea>
             @if (loadingMessages()) {
-              <p class="msg-loading">Chargement…</p>
+              <p class="msg-loading">{{ 'common.loading' | translate }}</p>
             }
             @for (m of messages(); track m.id) {
               <div class="bubble-row" [class.host]="m.sender === 'HOST'" [class.guest]="m.sender === 'GUEST'">
                 <div class="bubble">
                   @if (m.sender === 'GUEST' && dlgTranslating().has(m.id!)) {
-                    <div class="bubble-text tl-pending">Traduction…</div>
+                    <div class="bubble-text tl-pending">{{ 'booking_dialog.translating' | translate }}</div>
                   } @else if (m.sender === 'GUEST' && dlgTranslations().has(m.id!) && !dlgShowOriginal().has(m.id!)) {
                     <div class="bubble-text">{{ dlgTranslations().get(m.id!) }}</div>
-                    <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">Voir original</button></div>
+                    <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">{{ 'booking_dialog.see_original' | translate }}</button></div>
                   } @else {
                     <div class="bubble-text">{{ m.content }}</div>
                     @if (m.sender === 'GUEST' && dlgTranslations().has(m.id!)) {
-                      <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">Voir traduction</button></div>
+                      <div class="tl-bar"><button class="tl-btn" (click)="toggleDlgOriginal(m.id!)">{{ 'booking_dialog.see_translation' | translate }}</button></div>
                     } @else if (m.sender === 'GUEST' && !dlgTranslating().has(m.id!)) {
                       <div class="tl-bar"><button class="tl-btn" (click)="dlgTranslateOnDemand(m)"><mat-icon class="tl-icon">translate</mat-icon></button></div>
                     }
@@ -306,16 +307,16 @@ import { TranslationService } from '../../core/services/translation.service';
               </div>
             }
             @if (!loadingMessages() && messages().length === 0) {
-              <p class="msg-empty">Aucun message</p>
+              <p class="msg-empty">{{ 'booking_dialog.no_messages' | translate }}</p>
             }
           </div>
 
           @if (templates().length > 0) {
             <div class="template-bar">
               <mat-form-field appearance="outline" class="tpl-select" subscriptSizing="dynamic">
-                <mat-label><mat-icon class="tpl-icon">auto_fix_high</mat-icon> Modèle</mat-label>
+                <mat-label><mat-icon class="tpl-icon">auto_fix_high</mat-icon> {{ 'booking_dialog.template_label' | translate }}</mat-label>
                 <mat-select [(ngModel)]="selectedTemplate" (ngModelChange)="applyTemplate($event)">
-                  <mat-option [value]="null">— Aucun modèle —</mat-option>
+                  <mat-option [value]="null">{{ 'booking_dialog.no_template' | translate }}</mat-option>
                   @for (t of templates(); track t.id) {
                     <mat-option [value]="t">{{ t.name }}@if (t.contentEn) { &nbsp;·&nbsp;EN }</mat-option>
                   }
@@ -323,7 +324,7 @@ import { TranslationService } from '../../core/services/translation.service';
               </mat-form-field>
               <button mat-stroked-button class="tpl-lang-btn"
                       (click)="toggleTemplateLang()"
-                      [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
+                      [matTooltip]="templateLang() === 'fr' ? ('booking_dialog.switch_to_en' | translate) : ('booking_dialog.switch_to_fr' | translate)">
                 {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
               </button>
             </div>
@@ -332,29 +333,29 @@ import { TranslationService } from '../../core/services/translation.service';
           <div class="chat-input-bar">
             <mat-form-field appearance="outline" class="chat-field">
               <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"
-                        [(ngModel)]="newMessage" placeholder="Écrire un message…"></textarea>
+                        [(ngModel)]="newMessage" [placeholder]="'booking_dialog.write_message' | translate"></textarea>
             </mat-form-field>
-            <button mat-icon-button title="Copier dans le presse-papier"
+            <button mat-icon-button [title]="'booking_dialog.copy_clipboard_tooltip' | translate"
                     (click)="copyToClipboard()" [disabled]="!newMessage.trim()">
               <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
             </button>
             @if (isDirect()) {
               <div class="direct-btns">
-                <button mat-icon-button class="btn-email" title="Envoyer par Email"
+                <button mat-icon-button class="btn-email" [title]="'booking_dialog.send_email' | translate"
                         (click)="sendDirect('email')" [disabled]="!newMessage.trim() || sendingMsg()">
                   <mat-icon>email</mat-icon>
                 </button>
-                <button mat-icon-button class="btn-sms" title="Envoyer par SMS"
+                <button mat-icon-button class="btn-sms" [title]="'booking_dialog.send_sms' | translate"
                         (click)="sendDirect('sms')" [disabled]="!newMessage.trim() || sendingMsg()">
                   <mat-icon>sms</mat-icon>
                 </button>
-                <button mat-icon-button class="btn-whatsapp" title="Envoyer par WhatsApp"
+                <button mat-icon-button class="btn-whatsapp" [title]="'booking_dialog.send_whatsapp' | translate"
                         (click)="sendDirect('whatsapp')" [disabled]="!newMessage.trim() || sendingMsg()">
                   <mat-icon>chat</mat-icon>
                 </button>
               </div>
             } @else {
-              <button mat-icon-button color="primary" title="Envoyer via Beds24"
+              <button mat-icon-button color="primary" [title]="'booking_dialog.send_via_beds24' | translate"
                       (click)="sendMessage()" [disabled]="!newMessage.trim() || sendingMsg()">
                 <mat-icon>send</mat-icon>
               </button>
@@ -365,7 +366,7 @@ import { TranslationService } from '../../core/services/translation.service';
       </mat-tab>
 
       <!-- ── Onglet Entretien ────────────────────────────────────── -->
-      <mat-tab label="Entretien">
+      <mat-tab [label]="'booking_dialog.tab_housekeeping' | translate">
         <mat-dialog-content class="menage-content">
 
           @if (loadingTask()) {
@@ -389,7 +390,7 @@ import { TranslationService } from '../../core/services/translation.service';
                   </div>
                   <div class="ti-row">
                     <mat-icon>person</mat-icon>
-                    <span>{{ task.housekeeper?.name || 'Non assigné' }}</span>
+                    <span>{{ task.housekeeper?.name || ('booking_dialog.not_assigned' | translate) }}</span>
                     @if (task.housekeeper?.hourlyRate != null) {
                       <span class="ti-badge green">{{ task.housekeeper.hourlyRate | number:'1.2-2' }} €/h</span>
                     }
@@ -397,7 +398,7 @@ import { TranslationService } from '../../core/services/translation.service';
                   @if (task.extraHours != null) {
                     <div class="ti-row">
                       <mat-icon>schedule</mat-icon>
-                      <span>{{ task.extraHours }} h prévues</span>
+                      <span>{{ task.extraHours }} {{ 'booking_dialog.planned_h' | translate }}</span>
                       @if (task.hourlyRate != null) {
                         <span class="ti-badge green">= {{ task.extraHours * task.hourlyRate | number:'1.2-2' }} €</span>
                       }
@@ -414,7 +415,7 @@ import { TranslationService } from '../../core/services/translation.service';
                       <mat-icon>assignment</mat-icon>
                       <div class="report-inline">
                         @if (task.hasIncident) {
-                          <span class="incident-inline"><mat-icon>warning</mat-icon> Incident</span>
+                          <span class="incident-inline"><mat-icon>warning</mat-icon> {{ 'booking_dialog.incident' | translate }}</span>
                         }
                         @if (task.reportComment) {
                           <span>{{ task.reportComment }}</span>
@@ -432,42 +433,42 @@ import { TranslationService } from '../../core/services/translation.service';
               @if (existingTasks().length === 0) {
                 <p class="task-hint">
                   <mat-icon>info</mat-icon>
-                  Aucune mission créée pour ce départ. Remplissez les informations ci-dessous.
+                  {{ 'booking_dialog.no_task_hint' | translate }}
                 </p>
               } @else {
                 <div class="new-task-header">
                   <mat-icon>add_task</mat-icon>
-                  <span>Nouvelle tâche</span>
+                  <span>{{ 'booking_dialog.new_task_title' | translate }}</span>
                 </div>
               }
               <div class="row-2">
                 <div class="datetime-pair">
                   <mat-form-field appearance="outline" class="date-part">
-                    <mat-label>Date</mat-label>
+                    <mat-label>{{ 'common.date' | translate }}</mat-label>
                     <input matInput [matDatepicker]="taskPicker" [(ngModel)]="taskDate">
                     <mat-datepicker-toggle matIconSuffix [for]="taskPicker"></mat-datepicker-toggle>
                     <mat-datepicker #taskPicker></mat-datepicker>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="time-part">
-                    <mat-label>Heure</mat-label>
+                    <mat-label>{{ 'common.time' | translate }}</mat-label>
                     <input matInput type="time" [(ngModel)]="taskTime">
                   </mat-form-field>
                 </div>
                 <mat-form-field appearance="outline">
-                  <mat-label>Type</mat-label>
+                  <mat-label>{{ 'common.type' | translate }}</mat-label>
                   <mat-select [(ngModel)]="taskForm.type">
-                    <mat-option value="CHECKOUT_CLEANING">Nettoyage départ</mat-option>
-                    <mat-option value="CHECKIN_PREP">Préparation arrivée</mat-option>
-                    <mat-option value="CLEANING">Nettoyage général</mat-option>
-                    <mat-option value="MAINTENANCE">Maintenance</mat-option>
-                    <mat-option value="INSPECTION">Inspection</mat-option>
+                    <mat-option value="CHECKOUT_CLEANING">{{ 'booking_dialog.task_type_checkout' | translate }}</mat-option>
+                    <mat-option value="CHECKIN_PREP">{{ 'booking_dialog.task_type_checkin' | translate }}</mat-option>
+                    <mat-option value="CLEANING">{{ 'booking_dialog.task_type_cleaning' | translate }}</mat-option>
+                    <mat-option value="MAINTENANCE">{{ 'booking_dialog.task_type_maintenance' | translate }}</mat-option>
+                    <mat-option value="INSPECTION">{{ 'booking_dialog.task_type_inspection' | translate }}</mat-option>
                   </mat-select>
                 </mat-form-field>
               </div>
               <mat-form-field appearance="outline" class="full">
-                <mat-label>Prestataire</mat-label>
+                <mat-label>{{ 'booking_dialog.task_provider' | translate }}</mat-label>
                 <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
-                  <mat-option [value]="null">— Non assigné —</mat-option>
+                  <mat-option [value]="null">{{ 'booking_dialog.task_unassigned' | translate }}</mat-option>
                   @for (h of housekeepers(); track h.id) {
                     <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
                   }
@@ -475,28 +476,28 @@ import { TranslationService } from '../../core/services/translation.service';
               </mat-form-field>
               <div class="row-2">
                 <mat-form-field appearance="outline">
-                  <mat-label>Heures d'intervention</mat-label>
+                  <mat-label>{{ 'booking_dialog.task_hours' | translate }}</mat-label>
                   <input matInput type="number" min="0" step="0.5" [(ngModel)]="taskForm.extraHours"
-                         placeholder="Ex : 3">
+                         [placeholder]="'booking_dialog.task_hours_placeholder' | translate">
                   <span matTextSuffix>h</span>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
-                  <mat-label>Taux horaire</mat-label>
+                  <mat-label>{{ 'booking_dialog.task_rate' | translate }}</mat-label>
                   <input matInput type="number" min="0" step="0.5" [(ngModel)]="taskForm.hourlyRate"
-                         placeholder="Ex : 15">
+                         [placeholder]="'booking_dialog.task_rate_placeholder' | translate">
                   <span matTextSuffix>€/h</span>
                 </mat-form-field>
               </div>
               @if (taskForm.extraHours && taskForm.hourlyRate) {
                 <div class="task-total">
                   <mat-icon>calculate</mat-icon>
-                  Total estimé : <strong>{{ +taskForm.extraHours * +taskForm.hourlyRate | number:'1.2-2' }} €</strong>
+                  {{ 'booking_dialog.total_estimated' | translate }} <strong>{{ +taskForm.extraHours * +taskForm.hourlyRate | number:'1.2-2' }} €</strong>
                 </div>
               }
               @if (taskLinenItems.length > 0) {
                 <div class="task-linen-preset">
                   <div class="task-linen-title">
-                    <mat-icon>local_laundry_service</mat-icon> Linge utilisé (partira en blanchisserie)
+                    <mat-icon>local_laundry_service</mat-icon> {{ 'booking_dialog.linen_used' | translate }}
                   </div>
                   @for (item of taskLinenItems; track item.linenItemId) {
                     <div class="task-linen-row">
@@ -510,9 +511,9 @@ import { TranslationService } from '../../core/services/translation.service';
                 </div>
               }
               <mat-form-field appearance="outline" class="full">
-                <mat-label>Notes</mat-label>
+                <mat-label>{{ 'common.notes' | translate }}</mat-label>
                 <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="taskForm.notes"
-                          placeholder="Instructions particulières…"></textarea>
+                          [placeholder]="'booking_dialog.task_notes_placeholder' | translate"></textarea>
               </mat-form-field>
             </div>
           }
@@ -765,7 +766,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     private translationService: TranslationService,
     private http: HttpClient,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private t: TranslateService
   ) {
     const d: Record<string, any> = { ...data };
     d['guestFirstName'] = d['guestFirstName'] || d['firstName'] || '';
@@ -1010,7 +1012,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   guestName(): string {
     const first = this.draft['guestFirstName'] || '';
     const last  = this.draft['guestLastName']  || '';
-    return (first + ' ' + last).trim() || this.data['guestName'] || 'Voyageur';
+    return (first + ' ' + last).trim() || this.data['guestName'] || this.t.instant('booking_dialog.guest_default');
   }
 
   save(): void {
@@ -1020,26 +1022,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (payload['departure']) payload['departure'] = payload['departure'].substring(0, 10) + 'T' + this.DEFAULT_CHECKOUT;
     this.bookingService.save([payload]).subscribe({
       next: () => {
-        this.snackBar.open('Réservation mise à jour', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t.instant('booking_dialog.booking_updated'), 'OK', { duration: 3000 });
         this.dialogRef.close({ updated: true });
       },
       error: err => {
-        this.snackBar.open(err.error?.error ?? 'Erreur lors de la mise à jour', 'Fermer', { duration: 4000 });
+        this.snackBar.open(err.error?.error ?? this.t.instant('booking_dialog.booking_update_error'), this.t.instant('common.close'), { duration: 4000 });
         this.saving.set(false);
       }
     });
   }
 
   cancelBooking(): void {
-    if (!confirm(`Annuler la réservation de ${this.guestName()} ?`)) return;
+    if (!confirm(this.t.instant('booking_dialog.cancel_booking_confirm', { name: this.guestName() }))) return;
     this.saving.set(true);
     this.bookingService.cancel(String(this.draft['id'])).subscribe({
       next: () => {
-        this.snackBar.open('Réservation annulée', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t.instant('booking_dialog.booking_cancelled'), 'OK', { duration: 3000 });
         this.dialogRef.close({ cancelled: true });
       },
       error: err => {
-        this.snackBar.open(err.error?.error ?? 'Erreur', 'Fermer', { duration: 4000 });
+        this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 });
         this.saving.set(false);
       }
     });
@@ -1152,7 +1154,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.savingTask()) return;
     const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
     if (!pid || !this.taskDate) {
-      this.snackBar.open('Propriété ou date manquante', 'Fermer', { duration: 3000 });
+      this.snackBar.open(this.t.instant('booking_dialog.missing_prop_date'), this.t.instant('common.close'), { duration: 3000 });
       return;
     }
     this.savingTask.set(true);
@@ -1175,34 +1177,34 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.existingTasks.update(list => [...list, task]);
         this.resetTaskForm();
         this.savingTask.set(false);
-        this.snackBar.open('Mission créée', 'OK', { duration: 2500 });
+        this.snackBar.open(this.t.instant('booking_dialog.task_created'), 'OK', { duration: 2500 });
       },
       error: () => {
         this.savingTask.set(false);
-        this.snackBar.open('Erreur lors de la création', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.t.instant('booking_dialog.task_create_error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
 
   taskStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      PENDING:     'En attente',
-      IN_PROGRESS: 'En cours',
-      DONE:        'Terminée',
-      SKIPPED:     'Abandonnée',
+    const keys: Record<string, string> = {
+      PENDING:     'booking_dialog.status_pending',
+      IN_PROGRESS: 'booking_dialog.status_in_progress',
+      DONE:        'booking_dialog.status_done',
+      SKIPPED:     'booking_dialog.status_skipped',
     };
-    return labels[status] ?? status;
+    return keys[status] ? this.t.instant(keys[status]) : status;
   }
 
   taskTypeLabel(type: string): string {
-    const labels: Record<string, string> = {
-      CHECKOUT_CLEANING: 'Nettoyage départ',
-      CHECKIN_PREP:      'Préparation arrivée',
-      CLEANING:          'Nettoyage général',
-      MAINTENANCE:       'Maintenance',
-      INSPECTION:        'Inspection',
+    const keys: Record<string, string> = {
+      CHECKOUT_CLEANING: 'booking_dialog.task_type_checkout',
+      CHECKIN_PREP:      'booking_dialog.task_type_checkin',
+      CLEANING:          'booking_dialog.task_type_cleaning',
+      MAINTENANCE:       'booking_dialog.task_type_maintenance',
+      INSPECTION:        'booking_dialog.task_type_inspection',
     };
-    return labels[type] ?? type;
+    return keys[type] ? this.t.instant(keys[type]) : type;
   }
 
   private resetTaskForm(): void {
@@ -1251,11 +1253,11 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: () => {
         this.savingTimes.set(false);
-        this.snackBar.open('Horaires enregistrés', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t.instant('booking_dialog.times_saved'), 'OK', { duration: 2000 });
       },
       error: () => {
         this.savingTimes.set(false);
-        this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.t.instant('booking_dialog.times_save_error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -1268,7 +1270,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.taskTime           = this.DEFAULT_CHECKOUT;
     if (!bookingId) return;
     this.timeOverrideService.delete(bookingId).subscribe({
-      next: () => this.snackBar.open('Horaires réinitialisés', '', { duration: 2000 }),
+      next: () => this.snackBar.open(this.t.instant('booking_dialog.times_reset'), '', { duration: 2000 }),
       error: () => {}
     });
   }
@@ -1280,14 +1282,14 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   isDirect(): boolean { return this.channel === 'direct' || this.channel === ''; }
 
   channelLabel(): string {
-    const labels: Record<string, string> = {
-      direct:  'Réservation directe',
-      airbnb:  'Airbnb',
-      booking: 'Booking.com',
-      abritel: 'Abritel / Vrbo',
-      beds24:  'Beds24',
+    const keys: Record<string, string> = {
+      direct:  'booking_dialog.channel_direct',
+      airbnb:  'booking_dialog.channel_airbnb',
+      booking: 'booking_dialog.channel_booking',
+      abritel: 'booking_dialog.channel_abritel',
+      beds24:  'booking_dialog.channel_beds24',
     };
-    return labels[this.channel] ?? this.channel;
+    return keys[this.channel] ? this.t.instant(keys[this.channel]) : this.channel;
   }
 
   channelColor(): string {

@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SyncService } from '../../core/services/sync.service';
 import { Channel } from '../../core/models/booking.model';
 
@@ -19,30 +20,30 @@ import { Channel } from '../../core/models/booking.model';
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatInputModule, MatSelectModule, MatChipsModule, MatSnackBarModule, MatProgressSpinnerModule
+    MatInputModule, MatSelectModule, MatChipsModule, MatSnackBarModule, MatProgressSpinnerModule,
+    TranslateModule
   ],
   template: `
     <div class="header">
-      <h1>Synchronisation des plateformes</h1>
+      <h1>{{ 'sync.title' | translate }}</h1>
       <button mat-raised-button color="primary" (click)="syncAll()" [disabled]="syncing()">
         @if (syncing()) { <mat-spinner diameter="20"></mat-spinner> }
         @else { <mat-icon>sync</mat-icon> }
-        Tout synchroniser
+        {{ 'sync.sync_all' | translate }}
       </button>
     </div>
 
     <div class="info-box">
       <mat-icon>info</mat-icon>
-      <p>La synchronisation iCal importe automatiquement les réservations depuis Booking.com, Airbnb et Abritel toutes les 2 heures.
-      Collez l'URL iCal de chaque plateforme pour activer la synchronisation.</p>
+      <p>{{ 'sync.info' | translate }}</p>
     </div>
 
     <mat-card class="add-channel">
-      <mat-card-header><mat-card-title>Ajouter un canal de synchronisation</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'sync.add_channel_title' | translate }}</mat-card-title></mat-card-header>
       <mat-card-content>
         <div class="form-row">
           <mat-form-field appearance="outline">
-            <mat-label>Plateforme</mat-label>
+            <mat-label>{{ 'sync.platform' | translate }}</mat-label>
             <mat-select [(ngModel)]="newChannel.platform">
               <mat-option value="BOOKING_COM">Booking.com</mat-option>
               <mat-option value="AIRBNB">Airbnb</mat-option>
@@ -50,53 +51,53 @@ import { Channel } from '../../core/models/booking.model';
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>ID Logement</mat-label>
+            <mat-label>{{ 'sync.property_id' | translate }}</mat-label>
             <input matInput [(ngModel)]="newChannel.propertyId" type="number">
           </mat-form-field>
           <mat-form-field appearance="outline" class="ical-url">
-            <mat-label>URL iCal</mat-label>
+            <mat-label>{{ 'sync.ical_url' | translate }}</mat-label>
             <input matInput [(ngModel)]="newChannel.icalUrl" placeholder="https://...">
           </mat-form-field>
           <button mat-raised-button color="accent" (click)="addChannel()">
-            <mat-icon>add</mat-icon> Ajouter
+            <mat-icon>add</mat-icon> {{ 'common.add' | translate }}
           </button>
         </div>
       </mat-card-content>
     </mat-card>
 
     <mat-card>
-      <mat-card-header><mat-card-title>Canaux configurés</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'sync.configured_channels' | translate }}</mat-card-title></mat-card-header>
       <mat-card-content>
         <table mat-table [dataSource]="channels()" class="full-width">
           <ng-container matColumnDef="platform">
-            <th mat-header-cell *matHeaderCellDef>Plateforme</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'sync.platform' | translate }}</th>
             <td mat-cell *matCellDef="let c">
               <mat-chip>{{ platformLabel(c.platform) }}</mat-chip>
             </td>
           </ng-container>
           <ng-container matColumnDef="property">
-            <th mat-header-cell *matHeaderCellDef>Logement</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.property' | translate }}</th>
             <td mat-cell *matCellDef="let c">{{ c.property?.name || 'ID: ' + c.property?.id }}</td>
           </ng-container>
           <ng-container matColumnDef="icalUrl">
-            <th mat-header-cell *matHeaderCellDef>URL iCal</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'sync.ical_url' | translate }}</th>
             <td mat-cell *matCellDef="let c">
-              <small>{{ c.icalUrl ? (c.icalUrl.substring(0, 50) + '...') : 'Non configurée' }}</small>
+              <small>{{ c.icalUrl ? (c.icalUrl.substring(0, 50) + '...') : ('sync.not_configured' | translate) }}</small>
             </td>
           </ng-container>
           <ng-container matColumnDef="lastSync">
-            <th mat-header-cell *matHeaderCellDef>Dernière sync</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'sync.last_sync' | translate }}</th>
             <td mat-cell *matCellDef="let c">
-              {{ c.lastSync ? (c.lastSync | date:'dd/MM HH:mm') : 'Jamais' }}<br>
+              {{ c.lastSync ? (c.lastSync | date:'dd/MM HH:mm') : ('sync.never' | translate) }}<br>
               @if (c.lastSyncStatus) {
                 <mat-chip [class]="c.lastSyncStatus === 'OK' ? 'status-ok' : 'status-error'">
-                  {{ c.lastSyncStatus === 'OK' ? c.lastSyncBookingsCount + ' importé(s)' : 'Erreur' }}
+                  {{ c.lastSyncStatus === 'OK' ? c.lastSyncBookingsCount + ' ' + ('sync.imported' | translate) : ('common.error' | translate) }}
                 </mat-chip>
               }
             </td>
           </ng-container>
           <ng-container matColumnDef="active">
-            <th mat-header-cell *matHeaderCellDef>Actif</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'sync.active' | translate }}</th>
             <td mat-cell *matCellDef="let c">
               <mat-icon [style.color]="c.active ? '#2e7d32' : '#c62828'">
                 {{ c.active ? 'check_circle' : 'cancel' }}
@@ -104,9 +105,9 @@ import { Channel } from '../../core/models/booking.model';
             </td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.actions' | translate }}</th>
             <td mat-cell *matCellDef="let c">
-              <button mat-icon-button color="primary" (click)="triggerSync(c)" title="Synchroniser maintenant">
+              <button mat-icon-button color="primary" (click)="triggerSync(c)" [title]="'sync.trigger_now' | translate">
                 <mat-icon>sync</mat-icon>
               </button>
             </td>
@@ -116,7 +117,7 @@ import { Channel } from '../../core/models/booking.model';
           <tr mat-row *matRowDef="let row; columns: columns;"></tr>
         </table>
         @if (channels().length === 0) {
-          <p class="empty">Aucun canal configuré. Ajoutez une URL iCal pour commencer.</p>
+          <p class="empty">{{ 'sync.empty' | translate }}</p>
         }
       </mat-card-content>
     </mat-card>
@@ -142,7 +143,7 @@ export class SyncComponent implements OnInit {
   newChannel: Partial<Channel> = { platform: 'BOOKING_COM' };
   columns = ['platform', 'property', 'icalUrl', 'lastSync', 'active', 'actions'];
 
-  constructor(private syncService: SyncService, private snackBar: MatSnackBar) {}
+  constructor(private syncService: SyncService, private snackBar: MatSnackBar, private t: TranslateService) {}
 
   ngOnInit(): void {
     this.loadChannels();
@@ -155,7 +156,7 @@ export class SyncComponent implements OnInit {
   addChannel(): void {
     if (!this.newChannel.platform || !this.newChannel.propertyId) return;
     this.syncService.createChannel(this.newChannel as Channel).subscribe(() => {
-      this.snackBar.open('Canal ajouté', 'OK', { duration: 3000 });
+      this.snackBar.open(this.t.instant('sync.channel_added'), this.t.instant('common.ok'), { duration: 3000 });
       this.newChannel = { platform: 'BOOKING_COM' };
       this.loadChannels();
     });
@@ -165,9 +166,9 @@ export class SyncComponent implements OnInit {
     if (!channel.id) return;
     this.syncService.syncChannel(channel.id).subscribe(res => {
       const msg = res.status === 'OK'
-        ? `Synchronisation OK : ${res.bookingsImported} réservation(s) importée(s)`
-        : `Erreur : ${res.error}`;
-      this.snackBar.open(msg, 'OK', { duration: 5000 });
+        ? `${this.t.instant('sync.ok_prefix')} ${res.bookingsImported} ${this.t.instant('sync.ok_suffix')}`
+        : `${this.t.instant('common.error')} : ${res.error}`;
+      this.snackBar.open(msg, this.t.instant('common.ok'), { duration: 5000 });
       this.loadChannels();
     });
   }
@@ -176,7 +177,7 @@ export class SyncComponent implements OnInit {
     this.syncing.set(true);
     this.syncService.syncAll().subscribe({
       next: () => {
-        this.snackBar.open('Synchronisation globale lancée', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t.instant('sync.sync_all_launched'), this.t.instant('common.ok'), { duration: 3000 });
         setTimeout(() => { this.syncing.set(false); this.loadChannels(); }, 3000);
       },
       error: () => this.syncing.set(false)

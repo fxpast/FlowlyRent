@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TextFieldModule } from '@angular/cdk/text-field';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, forkJoin, from, of, Observable } from 'rxjs';
 import { concatMap, tap } from 'rxjs/operators';
 import { MessageService } from '../../core/services/message.service';
@@ -27,10 +28,10 @@ import { localDateStr } from '../../core/utils/date.utils';
 
 const TPL_PLACEHOLDER = 'Bonjour {{nom}}, votre check-in est le {{arrivee}}…';
 
-const TYPE_LABELS: Record<string, string> = {
-  CHECKIN: 'Check-in',
-  CHECKOUT: 'Check-out',
-  CUSTOM: 'Personnalisé'
+const TYPE_KEYS: Record<string, string> = {
+  CHECKIN:  'messages.type_checkin',
+  CHECKOUT: 'messages.type_checkout',
+  CUSTOM:   'messages.type_custom'
 };
 
 @Component({
@@ -40,10 +41,11 @@ const TYPE_LABELS: Record<string, string> = {
     CommonModule, FormsModule,
     MatCardModule, MatTabsModule, MatListModule, MatInputModule, MatButtonModule,
     MatIconModule, MatDividerModule, MatSelectModule, MatFormFieldModule,
-    MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatSnackBarModule, TextFieldModule
+    MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatSnackBarModule, TextFieldModule,
+    TranslateModule
   ],
   template: `
-    <h1>Messages</h1>
+    <h1>{{ 'messages.title' | translate }}</h1>
 
     <div class="messages-layout">
 
@@ -55,37 +57,37 @@ const TYPE_LABELS: Record<string, string> = {
           <!-- ── Onglet Plateformes ── -->
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon class="ti">public</mat-icon> Plateformes
+              <mat-icon class="ti">public</mat-icon> {{ 'messages.platforms' | translate }}
               @if (platformBookings().length) { <span class="badge">{{ platformBookings().length }}</span> }
             </ng-template>
             <ng-container *ngTemplateOutlet="filtersBlock"></ng-container>
-            <ng-container *ngTemplateOutlet="convList; context: { $implicit: platformBookings(), empty: 'Aucune réservation plateforme', type: 'platform' }"></ng-container>
+            <ng-container *ngTemplateOutlet="convList; context: { $implicit: platformBookings(), empty: ('messages.no_platform' | translate), type: 'platform' }"></ng-container>
           </mat-tab>
 
           <!-- ── Onglet Direct ── -->
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon class="ti">edit_note</mat-icon> Direct
+              <mat-icon class="ti">edit_note</mat-icon> {{ 'messages.direct' | translate }}
               @if (directBookings().length) { <span class="badge">{{ directBookings().length }}</span> }
             </ng-template>
             <ng-container *ngTemplateOutlet="filtersBlock"></ng-container>
-            <ng-container *ngTemplateOutlet="convList; context: { $implicit: directBookings(), empty: 'Aucune réservation directe', type: 'direct' }"></ng-container>
+            <ng-container *ngTemplateOutlet="convList; context: { $implicit: directBookings(), empty: ('messages.no_direct' | translate), type: 'direct' }"></ng-container>
           </mat-tab>
 
           <!-- ── Onglet Modèles ── -->
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon class="ti">auto_fix_high</mat-icon> Modèles
+              <mat-icon class="ti">auto_fix_high</mat-icon> {{ 'messages.templates' | translate }}
             </ng-template>
             <div class="tpl-toolbar">
               <button mat-stroked-button color="primary" (click)="newTemplate()">
-                <mat-icon>add</mat-icon> Nouveau modèle
+                <mat-icon>add</mat-icon> {{ 'messages.new_template' | translate }}
               </button>
             </div>
             @if (loadingTemplates()) {
               <div class="center"><mat-spinner diameter="28"></mat-spinner></div>
             } @else if (templates().length === 0) {
-              <p class="empty-list">Aucun modèle. Créez-en un !</p>
+              <p class="empty-list">{{ 'messages.no_templates' | translate }}</p>
             } @else {
               <div class="tpl-list">
                 @for (t of templates(); track t.id) {
@@ -98,19 +100,19 @@ const TYPE_LABELS: Record<string, string> = {
                         @if (t.beds24PropertyId) {
                           <span class="prop-badge">{{ propNameById(t.beds24PropertyId) }}</span>
                         } @else {
-                          <span class="prop-badge all">Tous logements</span>
+                          <span class="prop-badge all">{{ 'messages.all_properties' | translate }}</span>
                         }
                       </div>
                     </div>
                     <p class="tpl-preview">{{ t.contentFr }}</p>
                     <div class="tpl-actions">
-                      <button mat-icon-button (click)="duplicateTemplate(t)" matTooltip="Dupliquer">
+                      <button mat-icon-button (click)="duplicateTemplate(t)" [matTooltip]="'messages.copy_clipboard' | translate">
                         <mat-icon>content_copy</mat-icon>
                       </button>
-                      <button mat-icon-button color="primary" (click)="editTemplate(t)" matTooltip="Modifier">
+                      <button mat-icon-button color="primary" (click)="editTemplate(t)" [matTooltip]="'common.edit' | translate">
                         <mat-icon>edit</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteTemplate(t)" matTooltip="Supprimer">
+                      <button mat-icon-button color="warn" (click)="deleteTemplate(t)" [matTooltip]="'common.delete' | translate">
                         <mat-icon>delete</mat-icon>
                       </button>
                     </div>
@@ -128,31 +130,31 @@ const TYPE_LABELS: Record<string, string> = {
         <!-- Éditeur de modèle -->
         <mat-card class="chat-panel editor-panel">
           <div class="editor-header">
-            <h2>{{ editingTemplate()!.id ? 'Modifier le modèle' : 'Nouveau modèle' }}</h2>
-            <button mat-icon-button (click)="cancelEdit()" matTooltip="Annuler"><mat-icon>close</mat-icon></button>
+            <h2>{{ editingTemplate()!.id ? ('messages.edit_template_title' | translate) : ('messages.new_template' | translate) }}</h2>
+            <button mat-icon-button (click)="cancelEdit()" [matTooltip]="'common.cancel' | translate"><mat-icon>close</mat-icon></button>
           </div>
           <mat-divider></mat-divider>
           <div class="editor-body">
 
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Nom du modèle</mat-label>
-              <input matInput [(ngModel)]="editForm.name" placeholder="Ex. : Bienvenue Check-in Appt A">
+              <mat-label>{{ 'messages.template_name' | translate }}</mat-label>
+              <input matInput [(ngModel)]="editForm.name" [placeholder]="'messages.template_name_placeholder' | translate">
             </mat-form-field>
 
             <div class="row-2">
               <mat-form-field appearance="outline">
-                <mat-label>Type</mat-label>
+                <mat-label>{{ 'common.type' | translate }}</mat-label>
                 <mat-select [(ngModel)]="editForm.type">
-                  <mat-option value="CHECKIN">Check-in</mat-option>
-                  <mat-option value="CHECKOUT">Check-out</mat-option>
-                  <mat-option value="CUSTOM">Personnalisé</mat-option>
+                  <mat-option value="CHECKIN">{{ 'messages.type_checkin' | translate }}</mat-option>
+                  <mat-option value="CHECKOUT">{{ 'messages.type_checkout' | translate }}</mat-option>
+                  <mat-option value="CUSTOM">{{ 'messages.type_custom' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Logement (optionnel)</mat-label>
+                <mat-label>{{ 'messages.property_optional' | translate }}</mat-label>
                 <mat-select [(ngModel)]="editForm.beds24PropertyId">
-                  <mat-option value="">Tous les logements</mat-option>
+                  <mat-option value="">{{ 'messages.all_properties' | translate }}</mat-option>
                   @for (p of properties(); track p.id) {
                     <mat-option [value]="p.id">{{ p.name }}</mat-option>
                   }
@@ -161,31 +163,31 @@ const TYPE_LABELS: Record<string, string> = {
             </div>
 
             <div class="var-hint">
-              Variables disponibles :
+              {{ 'messages.variables' | translate }}
               <code (click)="insertVar('{{nom}}')">{{'{{'}}nom{{'}}'}}</code>
               <code (click)="insertVar('{{arrivee}}')">{{'{{'}}arrivee{{'}}'}}</code>
               <code (click)="insertVar('{{depart}}')">{{'{{'}}depart{{'}}'}}</code>
               <code (click)="insertVar('{{logement}}')">{{'{{'}}logement{{'}}'}}</code>
               <code (click)="insertVar('{{code_acces}}')">{{'{{'}}code_acces{{'}}'}}</code>
-              <code (click)="insertVar('{{code_acces_precedent}}')" matTooltip="Ancien code d'accès (avant régénération)">{{'{{'}}code_acces_precedent{{'}}'}}</code>
-              <code (click)="insertVar('{{heure_checkin}}')" matTooltip="Heure d'arrivée (standard ou arrangement particulier)">{{'{{'}}heure_checkin{{'}}'}}</code>
-              <code (click)="insertVar('{{heure_checkout}}')" matTooltip="Heure de départ (standard ou arrangement particulier)">{{'{{'}}heure_checkout{{'}}'}}</code>
-              <button mat-icon-button (click)="insertVar(genCode())" matTooltip="Générer un code 4 chiffres et l'insérer">
+              <code (click)="insertVar('{{code_acces_precedent}}')" [matTooltip]="'messages.var_prev_code_hint' | translate">{{'{{'}}code_acces_precedent{{'}}'}}</code>
+              <code (click)="insertVar('{{heure_checkin}}')" [matTooltip]="'messages.var_checkin_hint' | translate">{{'{{'}}heure_checkin{{'}}'}}</code>
+              <code (click)="insertVar('{{heure_checkout}}')" [matTooltip]="'messages.var_checkout_hint' | translate">{{'{{'}}heure_checkout{{'}}'}}</code>
+              <button mat-icon-button (click)="insertVar(genCode())" [matTooltip]="'messages.gen_code_hint' | translate">
                 <mat-icon>casino</mat-icon>
               </button>
             </div>
 
             <div class="lang-tabs">
               <button mat-button [class.lang-active]="editorLang() === 'fr'" (click)="editorLang.set('fr')">
-                FR — Français
+                {{ 'messages.content_fr' | translate }}
               </button>
               <button mat-button [class.lang-active]="editorLang() === 'en'" (click)="editorLang.set('en')">
-                EN — English
+                {{ 'messages.content_en' | translate }}
               </button>
             </div>
 
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Contenu du message ({{ editorLang() === 'fr' ? 'Français' : 'English' }})</mat-label>
+              <mat-label>{{ 'messages.content_label' | translate }}</mat-label>
               <textarea #contentArea matInput
                         [ngModel]="activeContent" (ngModelChange)="setActiveContent($event)"
                         rows="10" [placeholder]="editorLang() === 'fr' ? tplPlaceholder : 'Hello {{nom}}, your check-in is on {{arrivee}}…'"></textarea>
@@ -194,10 +196,10 @@ const TYPE_LABELS: Record<string, string> = {
           </div>
           <mat-divider></mat-divider>
           <div class="editor-footer">
-            <button mat-button (click)="cancelEdit()">Annuler</button>
+            <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
             <button mat-raised-button color="primary" (click)="saveTemplate()"
                     [disabled]="!editForm.name || !editForm.contentFr">
-              <mat-icon>save</mat-icon> Enregistrer
+              <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
             </button>
           </div>
         </mat-card>
@@ -218,7 +220,7 @@ const TYPE_LABELS: Record<string, string> = {
             </div>
             @if (selectedBooking()?.['guestPhone'] || selectedBooking()?.['phone']) {
               <a class="phone-link" [href]="'tel:' + (selectedBooking()?.['guestPhone'] || selectedBooking()?.['phone'])"
-                 matTooltip="Appeler">
+                 [matTooltip]="'messages.call' | translate">
                 <mat-icon>phone</mat-icon>
                 {{ selectedBooking()?.['guestPhone'] || selectedBooking()?.['phone'] }}
               </a>
@@ -233,27 +235,27 @@ const TYPE_LABELS: Record<string, string> = {
             } @else if (messages().length === 0) {
               <div class="no-messages">
                 <mat-icon>chat_bubble_outline</mat-icon>
-                <p>Aucun message pour cette réservation</p>
+                <p>{{ 'messages.no_messages' | translate }}</p>
               </div>
             } @else {
               @for (m of messages(); track m['id']) {
                 <div class="message" [class.host-msg]="isHost(m)" [class.guest-msg]="!isHost(m)">
                   <div class="bubble">
                     @if (!isHost(m) && translating().has(m['id'])) {
-                      <p class="tl-pending">Traduction…</p>
+                      <p class="tl-pending">{{ 'messages.translating' | translate }}</p>
                     } @else if (!isHost(m) && translations().has(m['id']) && !showOriginal().has(m['id'])) {
                       <p>{{ translations().get(m['id']) }}</p>
-                      <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">Voir original</button></div>
+                      <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">{{ 'messages.see_original' | translate }}</button></div>
                     } @else {
                       <p>{{ m['content'] || m['message'] }}</p>
                       @if (!isHost(m) && translations().has(m['id'])) {
-                        <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">Voir traduction</button></div>
+                        <div class="tl-bar"><button class="tl-btn" (click)="toggleOriginal(m['id'])">{{ 'messages.see_translation' | translate }}</button></div>
                       } @else if (!isHost(m) && !translating().has(m['id'])) {
                         <div class="tl-bar"><button class="tl-btn" (click)="translateOnDemand(m)"><mat-icon class="tl-icon">translate</mat-icon></button></div>
                       }
                     }
                     <small>
-                      {{ isHost(m) ? 'Vous' : guestName(selectedBooking()) }}
+                      {{ isHost(m) ? ('messages.you' | translate) : guestName(selectedBooking()) }}
                       · {{ (m['createdAt'] || m['time']) | date:'dd/MM HH:mm' }}
                     </small>
                   </div>
@@ -266,7 +268,7 @@ const TYPE_LABELS: Record<string, string> = {
 
           <div class="reply-box">
             <!-- Bouton modèles -->
-            <button mat-icon-button [matMenuTriggerFor]="tplMenu" matTooltip="Utiliser un modèle"
+            <button mat-icon-button [matMenuTriggerFor]="tplMenu" [matTooltip]="'messages.use_template' | translate"
                     [disabled]="bookingTemplates().length === 0">
               <mat-icon>auto_fix_high</mat-icon>
             </button>
@@ -282,18 +284,18 @@ const TYPE_LABELS: Record<string, string> = {
             <!-- Toggle langue -->
             <button mat-stroked-button class="lang-btn"
                     (click)="toggleTemplateLang()"
-                    [matTooltip]="templateLang() === 'fr' ? 'Passer en anglais' : 'Switch to French'">
+                    [matTooltip]="templateLang() === 'fr' ? ('booking_dialog.switch_to_en' | translate) : ('booking_dialog.switch_to_fr' | translate)">
               {{ templateLang() === 'fr' ? 'FR' : 'EN' }}
             </button>
 
             <mat-form-field appearance="outline" class="reply-input">
               <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="8"
                         [(ngModel)]="newMessage"
-                        placeholder="Écrire un message… (Shift+Entrée pour sauter une ligne)"
+                        [placeholder]="'messages.reply_placeholder_hint' | translate"
                         (keydown.enter)="onEnter($event)"></textarea>
             </mat-form-field>
 
-            <button mat-icon-button matTooltip="Copier dans le presse-papier"
+            <button mat-icon-button [matTooltip]="'messages.copy_clipboard' | translate"
                     [disabled]="!newMessage.trim()" (click)="copyToClipboard()">
               <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
             </button>
@@ -303,19 +305,19 @@ const TYPE_LABELS: Record<string, string> = {
               <div class="ext-channels">
                 <button mat-icon-button class="ch-email"
                         [disabled]="!newMessage.trim() || !guestEmail(selectedBooking())"
-                        [matTooltip]="guestEmail(selectedBooking()) ? 'Envoyer par email' : 'Email non renseigné'"
+                        [matTooltip]="guestEmail(selectedBooking()) ? ('messages.send_email' | translate) : ('messages.no_email' | translate)"
                         (click)="sendVia('email')">
                   <mat-icon>email</mat-icon>
                 </button>
                 <button mat-icon-button class="ch-whatsapp"
                         [disabled]="!newMessage.trim() || !guestPhone(selectedBooking())"
-                        [matTooltip]="guestPhone(selectedBooking()) ? 'Envoyer via WhatsApp' : 'Téléphone non renseigné'"
+                        [matTooltip]="guestPhone(selectedBooking()) ? ('messages.send_whatsapp' | translate) : ('messages.no_phone' | translate)"
                         (click)="sendVia('whatsapp')">
                   <mat-icon>chat</mat-icon>
                 </button>
                 <button mat-icon-button class="ch-sms"
                         [disabled]="!newMessage.trim() || !guestPhone(selectedBooking())"
-                        [matTooltip]="guestPhone(selectedBooking()) ? 'Envoyer par SMS' : 'Téléphone non renseigné'"
+                        [matTooltip]="guestPhone(selectedBooking()) ? ('messages.send_sms' | translate) : ('messages.no_phone' | translate)"
                         (click)="sendVia('sms')">
                   <mat-icon>sms</mat-icon>
                 </button>
@@ -324,7 +326,7 @@ const TYPE_LABELS: Record<string, string> = {
               <!-- Réservation plateforme : envoi interne -->
               <button mat-fab color="primary" (click)="send()"
                       [disabled]="!newMessage.trim() || sending()"
-                      matTooltip="Envoyer">
+                      [matTooltip]="'common.send' | translate">
                 <mat-icon>send</mat-icon>
               </button>
             }
@@ -334,7 +336,7 @@ const TYPE_LABELS: Record<string, string> = {
       } @else {
         <mat-card class="chat-panel empty-state">
           <mat-icon>forum</mat-icon>
-          <p>Sélectionnez une réservation pour voir les messages</p>
+          <p>{{ 'messages.select_booking' | translate }}</p>
         </mat-card>
       }
     </div>
@@ -343,22 +345,22 @@ const TYPE_LABELS: Record<string, string> = {
     <ng-template #filtersBlock>
       <div class="panel-filters">
         <mat-form-field appearance="outline" class="prop-filter">
-          <mat-label>Logement</mat-label>
+          <mat-label>{{ 'common.property' | translate }}</mat-label>
           <mat-select [ngModel]="filterPropId()" (ngModelChange)="filterPropId.set($event)">
-            <mat-option value="">Tous les logements</mat-option>
+            <mat-option value="">{{ 'messages.all_properties' | translate }}</mat-option>
             @for (p of properties(); track p.id) {
               <mat-option [value]="p.id">{{ p.name }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="search-filter">
-          <mat-label>Rechercher</mat-label>
-          <input matInput [(ngModel)]="searchDraft" placeholder="Nom du voyageur…"
+          <mat-label>{{ 'common.search' | translate }}</mat-label>
+          <input matInput [(ngModel)]="searchDraft" [placeholder]="'messages.guest_placeholder' | translate"
                  autocomplete="off" (keydown.enter)="applySearch()">
           @if (searchText()) {
-            <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer"><mat-icon>close</mat-icon></button>
+            <button mat-icon-button matSuffix (click)="clearSearch()" [matTooltip]="'common.clear' | translate"><mat-icon>close</mat-icon></button>
           } @else {
-            <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher"><mat-icon>search</mat-icon></button>
+            <button mat-icon-button matSuffix (click)="applySearch()" [matTooltip]="'common.search' | translate"><mat-icon>search</mat-icon></button>
           }
         </mat-form-field>
       </div>
@@ -385,14 +387,14 @@ const TYPE_LABELS: Record<string, string> = {
                 </div>
                 <div class="conv-status">
                   <span class="status-badge status-{{ b['status'] }}">{{ b['status'] }}</span>
-                  <span class="conv-channel">{{ b['channel'] || 'Direct' }}</span>
+                  <span class="conv-channel">{{ b['channel'] || ('messages.direct' | translate) }}</span>
                 </div>
               </div>
             </div>
           }
         </div>
       }
-      <div class="conv-count">{{ list.length }} conversation{{ list.length !== 1 ? 's' : '' }}</div>
+      <div class="conv-count">{{ list.length }} {{ 'messages.conversations' | translate }}</div>
     </ng-template>
   `,
   styles: [`
@@ -661,7 +663,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private propConfigService: PropertyConfigService,
     private timeOverrideService: BookingTimeOverrideService,
     private translationService: TranslationService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -718,7 +721,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     let url = '';
     switch (channel) {
       case 'email': {
-        const subject = encodeURIComponent(`Votre séjour — ${prop}`);
+        const subject = encodeURIComponent(`${this.t.instant('messages.email_subject_prefix')} — ${prop}`);
         url = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(text)}`;
         break;
       }
@@ -847,8 +850,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   saveTemplate(): void {
     this.templateService.save(this.editForm).subscribe({
-      next: () => { this.loadTemplates(); this.editingTemplate.set(null); this.snackBar.open('Modèle enregistré', 'OK', { duration: 2500 }); },
-      error: () => this.snackBar.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 })
+      next: () => { this.loadTemplates(); this.editingTemplate.set(null); this.snackBar.open(this.t.instant('messages.saved'), 'OK', { duration: 2500 }); },
+      error: () => this.snackBar.open(this.t.instant('messages.save_error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -862,12 +865,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
       channel:          t.channel
     };
     this.templateService.save(copy).subscribe({
-      next: () => { this.loadTemplates(); this.snackBar.open('Modèle dupliqué', '', { duration: 1500 }); }
+      next: () => { this.loadTemplates(); this.snackBar.open(this.t.instant('messages.duplicated'), '', { duration: 1500 }); }
     });
   }
 
   deleteTemplate(t: MessageTemplate): void {
-    if (!t.id || !confirm(`Supprimer le modèle "${t.name}" ?`)) return;
+    if (!t.id || !confirm(`${this.t.instant('messages.delete_confirm')} "${t.name}" ?`)) return;
     this.templateService.delete(t.id).subscribe({ next: () => this.loadTemplates() });
   }
 
@@ -893,7 +896,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   genCode(): string { return this.templateService.genCode(); }
 
-  typeLabel(type: string): string { return TYPE_LABELS[type] ?? type; }
+  typeLabel(type: string): string { return TYPE_KEYS[type] ? this.t.instant(TYPE_KEYS[type]) : type; }
 
   propNameById(id: string): string {
     return this.properties().find(p => p.id === id)?.name ?? '#' + id;

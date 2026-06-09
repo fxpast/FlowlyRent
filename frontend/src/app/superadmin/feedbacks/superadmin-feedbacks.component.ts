@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 interface Feedback {
@@ -40,17 +41,17 @@ const CATEGORY_ICONS: Record<string, string> = {
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatIconModule, MatButtonModule,
-    MatChipsModule, MatProgressSpinnerModule, MatSelectModule
+    MatChipsModule, MatProgressSpinnerModule, MatSelectModule, TranslateModule
   ],
   template: `
-    <h2>Feedbacks utilisateurs</h2>
+    <h2>{{ 'superadmin.feedbacks_title' | translate }}</h2>
 
     @if (loading()) {
       <div class="loading"><mat-spinner diameter="40" /></div>
     } @else if (feedbacks().length === 0) {
       <mat-card class="empty-card">
         <mat-icon>inbox</mat-icon>
-        <p>Aucun feedback reçu pour l'instant.</p>
+        <p>{{ 'superadmin.no_feedbacks' | translate }}</p>
       </mat-card>
     } @else {
       <div class="count">{{ feedbacks().length }} feedback{{ feedbacks().length > 1 ? 's' : '' }}</div>
@@ -67,10 +68,10 @@ const CATEGORY_ICONS: Record<string, string> = {
               <div class="fb-status">
                 <mat-select [(ngModel)]="fb.status" (ngModelChange)="updateStatus(fb)"
                   class="status-select" [style.color]="statusColor(fb.status)">
-                  <mat-option value="NEW">Nouveau</mat-option>
-                  <mat-option value="IN_PROGRESS">En cours</mat-option>
-                  <mat-option value="DONE">Traité</mat-option>
-                  <mat-option value="REJECTED">Rejeté</mat-option>
+                  <mat-option value="NEW">{{ 'superadmin.feedback_status_new' | translate }}</mat-option>
+                  <mat-option value="IN_PROGRESS">{{ 'superadmin.feedback_status_in_progress' | translate }}</mat-option>
+                  <mat-option value="DONE">{{ 'superadmin.feedback_status_done' | translate }}</mat-option>
+                  <mat-option value="REJECTED">{{ 'superadmin.feedback_status_rejected' | translate }}</mat-option>
                 </mat-select>
               </div>
             </div>

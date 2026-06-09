@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 
 interface AdminNotification {
@@ -22,14 +23,14 @@ interface AdminNotification {
   imports: [
     CommonModule,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatSnackBarModule
+    MatProgressSpinnerModule, MatSnackBarModule, TranslateModule
   ],
   template: `
     <div class="page-header">
-      <h2>Notifications</h2>
+      <h2>{{ 'notifications.title' | translate }}</h2>
       @if (unread() > 0) {
         <button mat-stroked-button (click)="markAllRead()">
-          <mat-icon>done_all</mat-icon> Tout marquer comme lu
+          <mat-icon>done_all</mat-icon> {{ 'notifications.mark_all_read' | translate }}
         </button>
       }
     </div>
@@ -39,7 +40,7 @@ interface AdminNotification {
     } @else if (notifications().length === 0) {
       <div class="empty">
         <mat-icon>notifications_none</mat-icon>
-        <p>Aucune notification pour le moment.</p>
+        <p>{{ 'notifications.empty' | translate }}</p>
       </div>
     } @else {
       <div class="notif-list">
@@ -85,7 +86,7 @@ export class NotificationsComponent implements OnInit {
   loading = signal(false);
   unread = () => this.notifications().filter(n => !n.isRead).length;
 
-  constructor(private http: HttpClient, private snack: MatSnackBar) {}
+  constructor(private http: HttpClient, private snack: MatSnackBar, private t: TranslateService) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -111,9 +112,9 @@ export class NotificationsComponent implements OnInit {
     this.http.post(`${this.base}/admin/notifications/read-all`, {}).subscribe({
       next: () => {
         this.notifications.update(list => list.map(x => ({ ...x, isRead: true })));
-        this.snack.open('Toutes les notifications lues', '', { duration: 2000 });
+        this.snack.open(this.t.instant('notifications.all_read'), '', { duration: 2000 });
       },
-      error: () => this.snack.open('Erreur', 'Fermer', { duration: 3000 })
+      error: () => this.snack.open(this.t.instant('notifications.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 }

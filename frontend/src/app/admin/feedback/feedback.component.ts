@@ -9,13 +9,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 const CATEGORIES = [
-  { value: 'bug',         label: 'Bug / Problème', icon: 'bug_report' },
-  { value: 'amélioration', label: 'Amélioration',  icon: 'trending_up' },
-  { value: 'suggestion',  label: 'Nouvelle fonctionnalité', icon: 'lightbulb' },
-  { value: 'autre',       label: 'Autre',          icon: 'help_outline' },
+  { value: 'bug',          labelKey: 'feedback.category_bug',          icon: 'bug_report' },
+  { value: 'amélioration', labelKey: 'feedback.category_amélioration', icon: 'trending_up' },
+  { value: 'suggestion',   labelKey: 'feedback.category_suggestion',   icon: 'lightbulb' },
+  { value: 'autre',        labelKey: 'feedback.category_autre',        icon: 'help_outline' },
 ];
 
 @Component({
@@ -24,20 +25,21 @@ const CATEGORIES = [
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSelectModule, MatProgressSpinnerModule
+    MatButtonModule, MatIconModule, MatSelectModule, MatProgressSpinnerModule,
+    TranslateModule
   ],
   template: `
-    <h2>Feedback & Suggestions</h2>
-    <p class="subtitle">Cette version est en bêta MVP. Votre retour nous aide à améliorer FlowlyRent.</p>
+    <h2>{{ 'feedback.title' | translate }}</h2>
+    <p class="subtitle">{{ 'feedback.subtitle' | translate }}</p>
 
     @if (sent()) {
       <mat-card class="success-card">
         <mat-icon>check_circle</mat-icon>
         <div>
-          <strong>Merci pour votre retour !</strong>
-          <p>Votre message a bien été transmis à l'équipe FlowlyRent.</p>
+          <strong>{{ 'feedback.thanks_title' | translate }}</strong>
+          <p>{{ 'feedback.thanks_body' | translate }}</p>
         </div>
-        <button mat-stroked-button (click)="reset()">Envoyer un autre feedback</button>
+        <button mat-stroked-button (click)="reset()">{{ 'feedback.send_another' | translate }}</button>
       </mat-card>
     } @else {
       <mat-card class="feedback-card">
@@ -47,15 +49,15 @@ const CATEGORIES = [
               <button class="cat-btn" [class.selected]="form.category === cat.value"
                       (click)="form.category = cat.value">
                 <mat-icon>{{ cat.icon }}</mat-icon>
-                <span>{{ cat.label }}</span>
+                <span>{{ cat.labelKey | translate }}</span>
               </button>
             }
           </div>
 
           <mat-form-field class="full-width" appearance="outline">
-            <mat-label>Votre message</mat-label>
+            <mat-label>{{ 'feedback.message_label' | translate }}</mat-label>
             <textarea matInput [(ngModel)]="form.message" rows="6"
-              placeholder="Décrivez le problème, l'amélioration ou la fonctionnalité souhaitée..."></textarea>
+              [placeholder]="'feedback.message_label' | translate"></textarea>
             <mat-hint align="end">{{ form.message.length }} / 2000</mat-hint>
           </mat-form-field>
 
@@ -67,7 +69,7 @@ const CATEGORIES = [
           <button mat-flat-button color="primary" (click)="submit()"
             [disabled]="loading() || !form.category || form.message.trim().length < 10">
             @if (loading()) { <mat-spinner diameter="18" /> }
-            @else { <mat-icon>send</mat-icon> Envoyer }
+            @else { <mat-icon>send</mat-icon> {{ 'common.send' | translate }} }
           </button>
         </mat-card-actions>
       </mat-card>
@@ -109,15 +111,15 @@ export class FeedbackComponent {
   error = signal('');
   sent = signal(false);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private t: TranslateService) {}
 
   submit(): void {
-    if (this.form.message.length > 2000) { this.error.set('Message trop long (2000 caractères max)'); return; }
+    if (this.form.message.length > 2000) { this.error.set(this.t.instant('feedback.msg_too_long')); return; }
     this.loading.set(true);
     this.error.set('');
     this.http.post(`${environment.apiUrl}/user/feedback`, this.form).subscribe({
       next: () => { this.loading.set(false); this.sent.set(true); },
-      error: () => { this.loading.set(false); this.error.set('Erreur lors de l\'envoi, veuillez réessayer.'); }
+      error: () => { this.loading.set(false); this.error.set(this.t.instant('feedback.send_error')); }
     });
   }
 

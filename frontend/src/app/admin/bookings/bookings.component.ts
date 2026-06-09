@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
 import { forkJoin } from 'rxjs';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
@@ -27,13 +28,13 @@ import { localDateStr } from '../../core/utils/date.utils';
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatTableModule, MatSortModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatInputModule, MatSelectModule, MatCardModule, MatSnackBarModule, MatFormFieldModule,
-    MatTooltipModule, MatPaginatorModule
+    MatTooltipModule, MatPaginatorModule, TranslateModule
   ],
   template: `
     <div class="header">
-      <h1>Réservations</h1>
+      <h1>{{ 'bookings.title' | translate }}</h1>
       <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
-        <mat-icon>add</mat-icon> Nouvelle réservation
+        <mat-icon>add</mat-icon> {{ 'bookings.new' | translate }}
       </a>
     </div>
 
@@ -41,37 +42,37 @@ import { localDateStr } from '../../core/utils/date.utils';
       <mat-card-content>
         <div class="filters">
           <mat-form-field appearance="outline">
-            <mat-label>Rechercher</mat-label>
-            <input matInput [(ngModel)]="searchDraft" placeholder="Nom, prénom, id…"
+            <mat-label>{{ 'common.search' | translate }}</mat-label>
+            <input matInput [(ngModel)]="searchDraft" [placeholder]="'bookings.search_placeholder' | translate"
                    autocomplete="off" (keydown.enter)="applySearch()">
             @if (searchText()) {
-              <button mat-icon-button matSuffix (click)="clearSearch()" matTooltip="Effacer"><mat-icon>close</mat-icon></button>
+              <button mat-icon-button matSuffix (click)="clearSearch()" [matTooltip]="'common.clear' | translate"><mat-icon>close</mat-icon></button>
             } @else {
-              <button mat-icon-button matSuffix (click)="applySearch()" matTooltip="Rechercher"><mat-icon>search</mat-icon></button>
+              <button mat-icon-button matSuffix (click)="applySearch()" [matTooltip]="'common.search' | translate"><mat-icon>search</mat-icon></button>
             }
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Statut</mat-label>
+            <mat-label>{{ 'common.status' | translate }}</mat-label>
             <mat-select [ngModel]="filterStatus()" (ngModelChange)="onStatusFilter($event)">
-              <mat-option value="">Tous</mat-option>
-              <mat-option value="new">Nouveau</mat-option>
-              <mat-option value="confirmed">Confirmé</mat-option>
-              <mat-option value="request">Demande</mat-option>
-              <mat-option value="inquiry">Renseignement</mat-option>
-              <mat-option value="black">Bloqué</mat-option>
-              <mat-option value="cancelled">Annulé</mat-option>
+              <mat-option value="">{{ 'common.all' | translate }}</mat-option>
+              <mat-option value="new">{{ 'status.new' | translate }}</mat-option>
+              <mat-option value="confirmed">{{ 'status.confirmed' | translate }}</mat-option>
+              <mat-option value="request">{{ 'status.request' | translate }}</mat-option>
+              <mat-option value="inquiry">{{ 'status.inquiry' | translate }}</mat-option>
+              <mat-option value="black">{{ 'status.black' | translate }}</mat-option>
+              <mat-option value="cancelled">{{ 'status.cancelled' | translate }}</mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Canal</mat-label>
+            <mat-label>{{ 'bookings.source' | translate }}</mat-label>
             <mat-select [ngModel]="filterChannel()" (ngModelChange)="onChannelFilter($event)">
-              <mat-option value="">Tous</mat-option>
+              <mat-option value="">{{ 'common.all' | translate }}</mat-option>
               <mat-option value="Airbnb">Airbnb</mat-option>
               <mat-option value="Booking.com">Booking.com</mat-option>
-              <mat-option value="Direct">Direct</mat-option>
+              <mat-option value="Direct">{{ 'bookings.channel_direct' | translate }}</mat-option>
             </mat-select>
           </mat-form-field>
-          <span class="total-count">{{ sortedFiltered().length }} réservation(s)</span>
+          <span class="total-count">{{ sortedFiltered().length }} {{ 'bookings.count' | translate }}</span>
         </div>
 
         <!-- Cartes mobile -->
@@ -85,14 +86,14 @@ import { localDateStr } from '../../core/utils/date.utils';
                     <div class="mc-email">{{ b['guestEmail'] || b['email'] }}</div>
                   }
                 </div>
-                <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+                <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
               </div>
               <div class="mc-meta">
                 <span><mat-icon>home</mat-icon>{{ propLabel(b) }}</span>
                 <span><mat-icon>login</mat-icon>{{ b['arrival'] | date:'dd/MM/yy' }}</span>
                 <span><mat-icon>logout</mat-icon>{{ b['departure'] | date:'dd/MM/yy' }}</span>
-                <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} nuit(s)</span>
-                <span><mat-icon>sell</mat-icon>{{ b['channel'] || 'Direct' }}</span>
+                <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} {{ 'common.nights' | translate }}</span>
+                <span><mat-icon>sell</mat-icon>{{ b['channel'] || ('bookings.channel_direct' | translate) }}</span>
                 @if (b['totalPrice']) {
                   <span><mat-icon>euro</mat-icon>{{ b['totalPrice'] | currency:'EUR':'symbol':'1.0-0' }}</span>
                 }
@@ -100,7 +101,7 @@ import { localDateStr } from '../../core/utils/date.utils';
             </mat-card>
           }
           @if (sortedFiltered().length === 0) {
-            <p class="empty">Aucune réservation trouvée</p>
+            <p class="empty">{{ 'bookings.no_results' | translate }}</p>
           }
           <mat-paginator
             [length]="sortedFiltered().length"
@@ -120,43 +121,43 @@ import { localDateStr } from '../../core/utils/date.utils';
               <td mat-cell *matCellDef="let b">{{ b['id'] }}</td>
             </ng-container>
             <ng-container matColumnDef="guest">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Voyageur</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'bookings.guest' | translate }}</th>
               <td mat-cell *matCellDef="let b">
                 {{ guestName(b) }}<br>
                 <small>{{ b['guestEmail'] || b['email'] }}</small>
               </td>
             </ng-container>
             <ng-container matColumnDef="property">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Logement</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'common.property' | translate }}</th>
               <td mat-cell *matCellDef="let b">{{ propLabel(b) }}</td>
             </ng-container>
             <ng-container matColumnDef="dates">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Dates</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'bookings.dates' | translate }}</th>
               <td mat-cell *matCellDef="let b">
                 {{ b['arrival'] | date:'dd/MM/yy' }} → {{ b['departure'] | date:'dd/MM/yy' }}<br>
-                <small>{{ nights(b) }} nuit(s)</small>
+                <small>{{ nights(b) }} {{ 'common.nights' | translate }}</small>
               </td>
             </ng-container>
             <ng-container matColumnDef="channel">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Canal</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'bookings.source' | translate }}</th>
               <td mat-cell *matCellDef="let b">
-                <mat-chip class="source-chip">{{ b['channel'] || 'Direct' }}</mat-chip>
+                <mat-chip class="source-chip">{{ b['channel'] || ('bookings.channel_direct' | translate) }}</mat-chip>
               </td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'common.status' | translate }}</th>
               <td mat-cell *matCellDef="let b">
-                <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+                <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
               </td>
             </ng-container>
             <ng-container matColumnDef="amount">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Montant</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'common.amount' | translate }}</th>
               <td mat-cell *matCellDef="let b">{{ b['totalPrice'] | currency:'EUR':'symbol':'1.0-0' }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
-                <button mat-icon-button color="warn" (click)="cancelBooking(b)" matTooltip="Annuler">
+                <button mat-icon-button color="warn" (click)="cancelBooking(b)" [matTooltip]="'common.cancel' | translate">
                   <mat-icon>cancel</mat-icon>
                 </button>
               </td>
@@ -166,7 +167,7 @@ import { localDateStr } from '../../core/utils/date.utils';
             <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openDetail(row)"></tr>
           </table>
           @if (sortedFiltered().length === 0) {
-            <p class="empty">Aucune réservation trouvée</p>
+            <p class="empty">{{ 'bookings.no_results' | translate }}</p>
           }
           <mat-paginator
             [length]="sortedFiltered().length"
@@ -243,7 +244,8 @@ export class BookingsComponent implements OnInit {
     private bookingService: BookingService,
     private snackBar: MatSnackBar,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void { this.load(); }
@@ -260,7 +262,7 @@ export class BookingsComponent implements OnInit {
           return b;
         }));
       },
-      error: err => this.snackBar.open(err.error?.error ?? 'Erreur chargement', 'Fermer', { duration: 4000 })
+      error: err => this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 })
     });
   }
 
@@ -357,10 +359,10 @@ export class BookingsComponent implements OnInit {
 
   cancelBooking(b: any): void {
     const name = this.guestName(b);
-    if (!confirm(`Annuler la réservation de ${name} ?`)) return;
+    if (!confirm(`${this.t.instant('bookings.cancel_confirm')} ${name} ?`)) return;
     this.bookingService.cancel(String(b['id'])).subscribe({
-      next: () => { this.snackBar.open('Réservation annulée', 'OK', { duration: 3000 }); this.load(); },
-      error: err => this.snackBar.open(err.error?.error ?? 'Erreur lors de l\'annulation', 'Fermer', { duration: 4000 })
+      next: () => { this.snackBar.open(this.t.instant('bookings.cancelled_ok'), this.t.instant('common.ok'), { duration: 3000 }); this.load(); },
+      error: err => this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 })
     });
   }
 }

@@ -4,14 +4,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { HousekeeperPortalService, PortalTask, TaskPhoto } from '../../core/services/housekeeper-portal.service';
 
-const TYPE_LABELS: Record<string, string> = {
-  CHECKOUT_CLEANING: 'Nettoyage départ',
-  CHECKIN_PREP: 'Préparation arrivée',
-  CLEANING: 'Nettoyage',
-  MAINTENANCE: 'Maintenance',
-  INSPECTION: 'Inspection'
+const TASK_TYPE_KEYS: Record<string, string> = {
+  CHECKOUT_CLEANING: 'task_type.CHECKOUT_CLEANING',
+  CHECKIN_PREP:      'task_type.CHECKIN_PREP',
+  CLEANING:          'task_type.CLEANING',
+  MAINTENANCE:       'task_type.MAINTENANCE',
+  INSPECTION:        'task_type.INSPECTION'
 };
 
 interface IncidentTask extends PortalTask {
@@ -23,20 +24,20 @@ interface IncidentTask extends PortalTask {
 @Component({
   selector: 'app-housekeeper-reports',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, TranslateModule],
   template: `
     @if (loading()) {
       <div class="center"><mat-spinner diameter="40"/></div>
     } @else if (incidents().length === 0) {
       <div class="empty-state">
         <mat-icon>check_circle</mat-icon>
-        <p>Aucun incident signalé sur les 90 derniers jours.</p>
+        <p>{{ 'housekeeper.no_incidents' | translate }}</p>
       </div>
     } @else {
       <div class="section-header">
         <mat-icon>warning</mat-icon>
-        {{ incidents().length }} signalement{{ incidents().length > 1 ? 's' : '' }}
-        <span class="period">— 90 derniers jours</span>
+        {{ incidents().length }} {{ 'housekeeper.report_unit' | translate }}
+        <span class="period">— {{ 'housekeeper.last_90_days' | translate }}</span>
       </div>
 
       @for (task of incidents(); track task.id) {
@@ -60,17 +61,17 @@ interface IncidentTask extends PortalTask {
             <div class="incident-detail">
               @if (task.incidentDescription) {
                 <div class="incident-desc">
-                  <strong>Description :</strong> {{ task.incidentDescription }}
+                  <strong>{{ 'housekeeper.incident_description_label' | translate }}</strong> {{ task.incidentDescription }}
                 </div>
               }
               @if (task.reportComment) {
                 <div class="incident-comment">
-                  <strong>Commentaire :</strong> {{ task.reportComment }}
+                  <strong>{{ 'housekeeper.comment_label' | translate }}</strong> {{ task.reportComment }}
                 </div>
               }
               @if (task.reportedAt) {
                 <div class="incident-date">
-                  Signalé le {{ task.reportedAt | date:'dd/MM/yyyy à HH:mm' }}
+                  {{ 'housekeeper.reported_at' | translate }} {{ task.reportedAt | date:'dd/MM/yyyy à HH:mm' }}
                 </div>
               }
 
@@ -87,7 +88,7 @@ interface IncidentTask extends PortalTask {
                   }
                 </div>
               } @else {
-                <div class="no-photos">Aucune photo jointe</div>
+                <div class="no-photos">{{ 'housekeeper.no_photos' | translate }}</div>
               }
             </div>
           }
@@ -138,7 +139,7 @@ export class HousekeeperReportsComponent implements OnInit {
   loading = signal(true);
   lightbox = signal<TaskPhoto | null>(null);
 
-  constructor(private svc: HousekeeperPortalService) {}
+  constructor(private svc: HousekeeperPortalService, private t: TranslateService) {}
 
   ngOnInit(): void {
     const from = new Date();
@@ -156,8 +157,12 @@ export class HousekeeperReportsComponent implements OnInit {
     });
   }
 
-  typeLabel(t: string) { return TYPE_LABELS[t] ?? t; }
-  photoLabel(t: string) { return t === 'BEFORE' ? 'Avant' : t === 'AFTER' ? 'Après' : 'Incident'; }
+  typeLabel(type: string): string { return this.t.instant(TASK_TYPE_KEYS[type] ?? type); }
+  photoLabel(type: string): string {
+    if (type === 'BEFORE')    return this.t.instant('housekeeper.photo_before');
+    if (type === 'AFTER')     return this.t.instant('housekeeper.photo_after');
+    return this.t.instant('housekeeper.photo_incident');
+  }
 
   toggle(task: IncidentTask): void {
     task.expanded = !task.expanded;

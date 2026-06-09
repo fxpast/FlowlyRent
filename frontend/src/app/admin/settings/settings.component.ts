@@ -13,6 +13,7 @@ import { QontoService, QontoStatus } from '../../core/services/qonto.service';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-settings',
@@ -21,18 +22,19 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     CommonModule, FormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatDividerModule,
-    MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule
+    MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule,
+    TranslateModule
   ],
   template: `
-    <h2>Paramètres</h2>
+    <h2>{{ 'settings.title' | translate }}</h2>
 
     <!-- Connexion Beds24 — mise en avant -->
     @if (beds24Status() && !beds24Status()!.connected) {
       <div class="beds24-banner">
         <mat-icon class="beds24-banner-icon">sync</mat-icon>
         <div class="beds24-banner-text">
-          <strong>Connectez votre compte Beds24 pour commencer</strong>
-          <span>Synchronisez automatiquement vos propriétés et réservations depuis Beds24.</span>
+          <strong>{{ 'settings.beds24_title' | translate }}</strong>
+          <span>{{ 'settings.beds24_subtitle' | translate }}</span>
         </div>
         <mat-icon class="beds24-banner-arrow">arrow_downward</mat-icon>
       </div>
@@ -42,15 +44,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     <mat-card class="section-card" [class.beds24-highlight]="beds24Status() && !beds24Status()!.connected">
       <mat-card-header>
         <mat-icon mat-card-avatar>sync</mat-icon>
-        <mat-card-title>Connexion Beds24</mat-card-title>
-        <mat-card-subtitle>Synchronisez automatiquement vos propriétés et réservations</mat-card-subtitle>
+        <mat-card-title>{{ 'settings.beds24_title' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'settings.beds24_subtitle' | translate }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         @if (beds24Status()) {
           @if (beds24Status()!.connected) {
             <div class="status-connected">
               <mat-icon color="primary">check_circle</mat-icon>
-              <span>Compte Beds24 connecté</span>
+              <span>{{ 'settings.beds24_connected' | translate }}</span>
             </div>
 
             <!-- URL Webhook à copier dans Beds24 -->
@@ -58,8 +60,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
               <div class="webhook-box">
                 <div class="webhook-label">
                   <mat-icon>webhook</mat-icon>
-                  <strong>URL Webhook Beds24</strong>
-                  <span class="webhook-hint">À coller dans Beds24 : Settings → Properties → Access → Booking Webhook</span>
+                  <strong>{{ 'settings.webhook_url' | translate }}</strong>
+                  <span class="webhook-hint">{{ 'settings.webhook_hint' | translate }}</span>
                 </div>
                 <div class="webhook-url-row">
                   <code class="webhook-url">{{ webhookUrl() }}</code>
@@ -72,7 +74,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           } @else {
             <div class="status-disconnected">
               <mat-icon color="warn">cancel</mat-icon>
-              <span>Aucun compte Beds24 connecté</span>
+              <span>{{ 'settings.beds24_disconnected' | translate }}</span>
             </div>
 
             <div class="connect-steps">
@@ -101,18 +103,18 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             </div>
 
             <mat-form-field class="full-width">
-              <mat-label>Code d'invitation Beds24</mat-label>
+              <mat-label>{{ 'settings.invite_code' | translate }}</mat-label>
               <input matInput [(ngModel)]="b24SetupToken" autocomplete="off"
                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
               <mat-icon matSuffix>vpn_key</mat-icon>
-              <mat-hint>Généré dans Beds24 → Settings → MarketPlace → API</mat-hint>
+              <mat-hint>{{ 'settings.invite_code_hint' | translate }}</mat-hint>
             </mat-form-field>
 
             @if (connectMsg()) {
               <div class="connect-error">
                 <mat-icon>error_outline</mat-icon>
                 <div>
-                  <strong>Connexion échouée</strong>
+                  <strong>{{ 'settings.connect_failed' | translate }}</strong>
                   <p>{{ connectMsg() }}</p>
                 </div>
               </div>
@@ -125,14 +127,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       <mat-card-actions>
         @if (beds24Status()?.connected) {
           <button mat-flat-button color="accent" (click)="syncNow()" [disabled]="syncing()">
-            @if (syncing()) { <mat-spinner diameter="18" /> } @else { <mat-icon>sync</mat-icon> Synchroniser maintenant }
+            @if (syncing()) { <mat-spinner diameter="18" /> } @else { <mat-icon>sync</mat-icon> {{ 'settings.sync_now' | translate }} }
           </button>
           <button mat-stroked-button color="warn" (click)="disconnect()" style="margin-left:8px">
-            Déconnecter
+            {{ 'common.disconnect' | translate }}
           </button>
         } @else {
           <button mat-flat-button color="primary" (click)="connectBeds24()" [disabled]="connecting() || !b24SetupToken">
-            @if (connecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> Connecter }
+            @if (connecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> {{ 'common.connect' | translate }} }
           </button>
         }
       </mat-card-actions>
@@ -142,15 +144,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     <mat-card class="section-card">
       <mat-card-header>
         <mat-icon mat-card-avatar>account_balance</mat-icon>
-        <mat-card-title>Connexion Qonto</mat-card-title>
-        <mat-card-subtitle>Synchronisez vos transactions bancaires pour catégoriser vos dépenses</mat-card-subtitle>
+        <mat-card-title>{{ 'settings.qonto_title' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'settings.qonto_subtitle' | translate }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         @if (qontoStatus()) {
           @if (qontoStatus()!.connected) {
             <div class="status-connected">
               <mat-icon color="primary">check_circle</mat-icon>
-              <span>Compte Qonto connecté</span>
+              <span>{{ 'settings.qonto_connected' | translate }}</span>
             </div>
             @if (qontoStatus()!.lastSync) {
               <p class="sync-info">Dernière sync : {{ qontoStatus()!.lastSync }}</p>
@@ -158,7 +160,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           } @else {
             <div class="status-disconnected">
               <mat-icon color="warn">cancel</mat-icon>
-              <span>Aucun compte Qonto connecté</span>
+              <span>{{ 'settings.qonto_disconnected' | translate }}</span>
             </div>
             <div class="connect-steps">
               <div class="step">
@@ -177,13 +179,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
               </div>
             </div>
             <mat-form-field class="full-width">
-              <mat-label>Login Qonto</mat-label>
+              <mat-label>{{ 'settings.qonto_login' | translate }}</mat-label>
               <input matInput [(ngModel)]="qontoLogin" autocomplete="off"
                      placeholder="votre-entreprise-slug" />
               <mat-icon matSuffix>person</mat-icon>
             </mat-form-field>
             <mat-form-field class="full-width">
-              <mat-label>Clé secrète</mat-label>
+              <mat-label>{{ 'settings.qonto_secret' | translate }}</mat-label>
               <input matInput [type]="showQontoKey() ? 'text' : 'password'"
                      [(ngModel)]="qontoSecretKey" autocomplete="off" />
               <button mat-icon-button matSuffix (click)="showQontoKey.set(!showQontoKey())">
@@ -207,12 +209,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       <mat-card-actions>
         @if (qontoStatus()?.connected) {
           <button mat-stroked-button color="warn" (click)="disconnectQonto()">
-            Déconnecter
+            {{ 'common.disconnect' | translate }}
           </button>
         } @else {
           <button mat-flat-button color="primary" (click)="connectQonto()"
                   [disabled]="qontoConnecting() || !qontoLogin || !qontoSecretKey">
-            @if (qontoConnecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> Connecter }
+            @if (qontoConnecting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>link</mat-icon> {{ 'common.connect' | translate }} }
           </button>
         }
       </mat-card-actions>
@@ -222,26 +224,26 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     <mat-card class="section-card">
       <mat-card-header>
         <mat-icon mat-card-avatar>lock</mat-icon>
-        <mat-card-title>Mot de passe</mat-card-title>
+        <mat-card-title>{{ 'settings.password_title' | translate }}</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         <mat-form-field class="full-width">
-          <mat-label>Mot de passe actuel</mat-label>
+          <mat-label>{{ 'settings.current_password' | translate }}</mat-label>
           <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.current" autocomplete="current-password" />
           <button mat-icon-button matSuffix (click)="showPwd.set(!showPwd())">
             <mat-icon>{{ showPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
         </mat-form-field>
         <mat-form-field class="full-width">
-          <mat-label>Nouveau mot de passe</mat-label>
+          <mat-label>{{ 'settings.new_password' | translate }}</mat-label>
           <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.new" autocomplete="new-password" />
-          <mat-hint>8 caractères minimum</mat-hint>
+          <mat-hint>{{ 'settings.password_hint' | translate }}</mat-hint>
         </mat-form-field>
         <mat-form-field class="full-width">
-          <mat-label>Confirmer le nouveau mot de passe</mat-label>
+          <mat-label>{{ 'settings.confirm_password' | translate }}</mat-label>
           <input matInput [type]="showPwd() ? 'text' : 'password'" [(ngModel)]="pwd.confirm" autocomplete="new-password" />
           @if (pwd.confirm && pwd.new !== pwd.confirm) {
-            <mat-error>Les mots de passe ne correspondent pas</mat-error>
+            <mat-error>{{ 'settings.password_mismatch' | translate }}</mat-error>
           }
         </mat-form-field>
         @if (pwdMsg()) {
@@ -251,7 +253,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       <mat-card-actions>
         <button mat-flat-button color="primary" (click)="changePassword()"
           [disabled]="savingPwd() || !pwd.current || pwd.new.length < 8 || pwd.new !== pwd.confirm">
-          @if (savingPwd()) { <mat-spinner diameter="18" /> } @else { Changer le mot de passe }
+          @if (savingPwd()) { <mat-spinner diameter="18" /> } @else { {{ 'settings.change_password' | translate }} }
         </button>
       </mat-card-actions>
     </mat-card>
@@ -260,28 +262,28 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     <mat-card class="section-card">
       <mat-card-header>
         <mat-icon mat-card-avatar>person</mat-icon>
-        <mat-card-title>Profil</mat-card-title>
+        <mat-card-title>{{ 'settings.profile_title' | translate }}</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         @if (profile()) {
           <div class="form-row">
             <mat-form-field>
-              <mat-label>Prénom</mat-label>
+              <mat-label>{{ 'settings.first_name' | translate }}</mat-label>
               <input matInput [(ngModel)]="profileEdit.firstName" />
             </mat-form-field>
             <mat-form-field>
-              <mat-label>Nom</mat-label>
+              <mat-label>{{ 'settings.last_name' | translate }}</mat-label>
               <input matInput [(ngModel)]="profileEdit.lastName" />
             </mat-form-field>
           </div>
           <mat-form-field class="full-width">
-            <mat-label>Slug du site public</mat-label>
+            <mat-label>{{ 'settings.slug' | translate }}</mat-label>
             <input matInput [(ngModel)]="profileEdit.publicSiteSlug" />
             <mat-hint>URL : /public/{{ profileEdit.publicSiteSlug }}/properties</mat-hint>
           </mat-form-field>
           <div class="plan-info">
             <mat-icon>stars</mat-icon>
-            Plan actuel : <strong>{{ profile()!.plan }}</strong>
+            {{ 'settings.current_plan' | translate }} <strong>{{ profile()!.plan }}</strong>
             &nbsp;·&nbsp; {{ profile()!.email }}
           </div>
           @if (profileMsg()) {
@@ -293,7 +295,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-content>
       <mat-card-actions>
         <button mat-flat-button color="primary" (click)="saveProfile()" [disabled]="savingProfile()">
-          @if (savingProfile()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
+          @if (savingProfile()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
         </button>
       </mat-card-actions>
     </mat-card>
@@ -302,8 +304,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     <mat-card class="section-card">
       <mat-card-header>
         <mat-icon mat-card-avatar>receipt_long</mat-icon>
-        <mat-card-title>Facturation</mat-card-title>
-        <mat-card-subtitle>Informations affichées en en-tête de vos factures</mat-card-subtitle>
+        <mat-card-title>{{ 'invoices.section_issuer' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'invoices.billing_hint_before' | translate }}{{ 'invoices.section_issuer' | translate }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         @if (profile()) {
@@ -331,7 +333,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       </mat-card-content>
       <mat-card-actions>
         <button mat-flat-button color="primary" (click)="saveBilling()" [disabled]="savingBilling()">
-          @if (savingBilling()) { <mat-spinner diameter="18" /> } @else { Enregistrer }
+          @if (savingBilling()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
         </button>
       </mat-card-actions>
     </mat-card>
@@ -414,12 +416,13 @@ export class SettingsComponent implements OnInit {
     private userService: UserService,
     private qontoService: QontoService,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   copyWebhookUrl(): void {
     navigator.clipboard.writeText(this.webhookUrl()).then(() =>
-      this.snackBar.open('URL copiée !', '', { duration: 2000 })
+      this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })
     );
   }
 
@@ -449,12 +452,12 @@ export class SettingsComponent implements OnInit {
       next: p => {
         this.profile.set(p);
         this.savingProfile.set(false);
-        this.profileMsg.set('Profil mis à jour');
+        this.profileMsg.set(this.t.instant('settings.profile_updated'));
         this.profileError.set(false);
       },
       error: () => {
         this.savingProfile.set(false);
-        this.profileMsg.set('Erreur lors de la mise à jour (le slug est peut-être déjà utilisé)');
+        this.profileMsg.set(this.t.instant('settings.profile_error'));
         this.profileError.set(true);
       }
     });
@@ -471,12 +474,12 @@ export class SettingsComponent implements OnInit {
       next: p => {
         this.profile.set(p);
         this.savingBilling.set(false);
-        this.billingMsg.set('Informations de facturation enregistrées');
+        this.billingMsg.set(this.t.instant('settings.billing_saved'));
         this.billingError.set(false);
       },
       error: () => {
         this.savingBilling.set(false);
-        this.billingMsg.set('Erreur lors de l\'enregistrement');
+        this.billingMsg.set(this.t.instant('settings.billing_error'));
         this.billingError.set(true);
       }
     });
@@ -488,13 +491,13 @@ export class SettingsComponent implements OnInit {
     this.userService.changePassword(this.pwd.current, this.pwd.new).subscribe({
       next: () => {
         this.savingPwd.set(false);
-        this.pwdMsg.set('Mot de passe mis à jour');
+        this.pwdMsg.set(this.t.instant('settings.password_updated'));
         this.pwdError.set(false);
         this.pwd = { current: '', new: '', confirm: '' };
       },
       error: err => {
         this.savingPwd.set(false);
-        this.pwdMsg.set(err.error?.error ?? 'Mot de passe actuel incorrect');
+        this.pwdMsg.set(err.error?.error ?? this.t.instant('settings.password_error'));
         this.pwdError.set(true);
       }
     });
@@ -559,7 +562,7 @@ export class SettingsComponent implements OnInit {
           this.qontoLogin = '';
           this.qontoSecretKey = '';
           this.loadQontoStatus();
-          this.snackBar.open('Compte Qonto connecté !', '', { duration: 3000 });
+          this.snackBar.open(this.t.instant('settings.qonto_connected'), '', { duration: 3000 });
         }
       },
       error: err => {

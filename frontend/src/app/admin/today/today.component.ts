@@ -9,6 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { MessageReminderService } from '../../core/services/message-reminder.service';
@@ -20,15 +21,15 @@ import { localDateStr } from '../../core/utils/date.utils';
   imports: [
     CommonModule, MatCardModule, MatIconModule, MatButtonModule,
     MatChipsModule, MatProgressSpinnerModule, MatDividerModule, MatDialogModule,
-    MatTooltipModule
+    MatTooltipModule, TranslateModule
   ],
   template: `
     <div class="page-header">
       <h2>
         <mat-icon>today</mat-icon>
-        Aujourd'hui — {{ todayLabel }}
+        {{ 'common.today' | translate }} — {{ todayLabel() }}
       </h2>
-      <button mat-icon-button (click)="load()" title="Rafraîchir">
+      <button mat-icon-button (click)="load()" [title]="'common.refresh' | translate">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
@@ -42,12 +43,12 @@ import { localDateStr } from '../../core/utils/date.utils';
         <mat-card class="section-card depart-card">
           <mat-card-header>
             <mat-icon mat-card-avatar class="section-icon depart-icon">flight_takeoff</mat-icon>
-            <mat-card-title>Départs du jour</mat-card-title>
-            <mat-card-subtitle>{{ departures().length }} départ{{ departures().length !== 1 ? 's' : '' }}</mat-card-subtitle>
+            <mat-card-title>{{ 'today.departures_title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ departures().length }} {{ 'today.departure_unit' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (departures().length === 0) {
-              <p class="empty">Aucun départ aujourd'hui</p>
+              <p class="empty">{{ 'today.no_departures' | translate }}</p>
             } @else {
               @for (b of departures(); track b.id) {
                 <div class="booking-row" (click)="openBooking(b)">
@@ -55,7 +56,7 @@ import { localDateStr } from '../../core/utils/date.utils';
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
                       @if (!reminder.hasSent(b.id)) {
-                        <mat-icon class="msg-reminder" matTooltip="Message check-out non envoyé">mark_email_unread</mat-icon>
+                        <mat-icon class="msg-reminder" [matTooltip]="'today.checkout_msg_pending' | translate">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
                     </span>
@@ -79,12 +80,12 @@ import { localDateStr } from '../../core/utils/date.utils';
         <mat-card class="section-card arrival-card">
           <mat-card-header>
             <mat-icon mat-card-avatar class="section-icon arrival-icon">event_available</mat-icon>
-            <mat-card-title>Arrivées du jour</mat-card-title>
-            <mat-card-subtitle>{{ arrivals().length }} arrivée{{ arrivals().length !== 1 ? 's' : '' }}</mat-card-subtitle>
+            <mat-card-title>{{ 'today.arrivals_title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ arrivals().length }} {{ 'today.arrival_unit' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (arrivals().length === 0) {
-              <p class="empty">Aucune arrivée aujourd'hui</p>
+              <p class="empty">{{ 'today.no_arrivals' | translate }}</p>
             } @else {
               @for (b of arrivals(); track b.id) {
                 <div class="booking-row" (click)="openBooking(b)">
@@ -92,7 +93,7 @@ import { localDateStr } from '../../core/utils/date.utils';
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
                       @if (!reminder.hasSent(b.id)) {
-                        <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
+                        <mat-icon class="msg-reminder" [matTooltip]="'today.checkin_msg_pending' | translate">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
                     </span>
@@ -116,12 +117,12 @@ import { localDateStr } from '../../core/utils/date.utils';
         <mat-card class="section-card ongoing-card">
           <mat-card-header>
             <mat-icon mat-card-avatar class="section-icon ongoing-icon">hotel</mat-icon>
-            <mat-card-title>Réservations en cours</mat-card-title>
-            <mat-card-subtitle>{{ ongoing().length }} séjour{{ ongoing().length !== 1 ? 's' : '' }}</mat-card-subtitle>
+            <mat-card-title>{{ 'today.ongoing_title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ ongoing().length }} {{ 'today.ongoing_unit' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (ongoing().length === 0) {
-              <p class="empty">Aucun séjour en cours</p>
+              <p class="empty">{{ 'today.no_ongoing' | translate }}</p>
             } @else {
               @for (b of ongoing(); track b.id) {
                 <div class="booking-row" (click)="openBooking(b)">
@@ -188,7 +189,6 @@ import { localDateStr } from '../../core/utils/date.utils';
 })
 export class TodayComponent implements OnInit {
   today = localDateStr();
-  todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   loading    = signal(false);
   arrivals   = signal<any[]>([]);
@@ -197,7 +197,11 @@ export class TodayComponent implements OnInit {
 
   private propNames: Record<string, string> = {};
 
-  constructor(private bookingService: BookingService, private dialog: MatDialog, readonly reminder: MessageReminderService) {}
+  constructor(private bookingService: BookingService, private dialog: MatDialog, readonly reminder: MessageReminderService, private t: TranslateService) {}
+
+  todayLabel(): string {
+    return new Date().toLocaleDateString(this.t.currentLang || 'fr', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
 
   ngOnInit(): void { this.load(); }
 
@@ -235,7 +239,7 @@ export class TodayComponent implements OnInit {
   guestName(b: any): string {
     const first = b.guestFirstName || b.firstName || '';
     const last  = b.guestLastName  || b.lastName  || '';
-    return (first + ' ' + last).trim() || b.guestName || 'Voyageur';
+    return (first + ' ' + last).trim() || b.guestName || this.t.instant('booking_dialog.guest_default');
   }
 
   propName(b: any): string {

@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { MessageReminderService } from '../../core/services/message-reminder.service';
@@ -17,15 +18,15 @@ import { localDateStr } from '../../core/utils/date.utils';
 @Component({
   selector: 'app-arrivals',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatCardModule, MatTableModule, MatChipsModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule],
+  imports: [CommonModule, MatDialogModule, MatCardModule, MatTableModule, MatChipsModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule, TranslateModule],
   template: `
-    <h1>Arrivées</h1>
+    <h1>{{ 'arrivals.title' | translate }}</h1>
 
     <div class="week-nav">
       <button mat-icon-button (click)="prevWeek()"><mat-icon>chevron_left</mat-icon></button>
       <span class="week-label">{{ weekLabel() }}</span>
       <button mat-icon-button (click)="nextWeek()"><mat-icon>chevron_right</mat-icon></button>
-      <button mat-button (click)="goToCurrentWeek()">Aujourd'hui</button>
+      <button mat-button (click)="goToCurrentWeek()">{{ 'common.today' | translate }}</button>
     </div>
 
     <!-- Cartes mobile -->
@@ -41,23 +42,23 @@ import { localDateStr } from '../../core/utils/date.utils';
             </div>
             <div style="display:flex;align-items:center;gap:6px">
               @if (!isPast(b['arrival']) && !reminder.hasSent(b['id'])) {
-                <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
+                <mat-icon class="msg-reminder" [matTooltip]="'arrivals.checkin_message_unsent' | translate">mark_email_unread</mat-icon>
               }
-              <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+              <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
             </div>
           </div>
           <div class="mc-meta">
             <span><mat-icon>home</mat-icon>{{ propLabel(b) }}</span>
             <span><mat-icon>login</mat-icon>{{ dayName(b['arrival']) }} {{ b['arrival'] | date:'dd/MM' }}</span>
             <span><mat-icon>logout</mat-icon>{{ dayName(b['departure']) }} {{ b['departure'] | date:'dd/MM' }}</span>
-            <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} nuit(s)</span>
+            <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} {{ 'common.nights' | translate }}</span>
             <span><mat-icon>group</mat-icon>{{ (b['numAdult'] || 0) + (b['numChild'] || 0) }} pers.</span>
-            <span><mat-icon>sell</mat-icon>{{ b['channel'] || 'Direct' }}</span>
+            <span><mat-icon>sell</mat-icon>{{ b['channel'] || ('bookings.channel_direct' | translate) }}</span>
           </div>
         </mat-card>
       }
       @if (arrivals().length === 0) {
-        <p class="empty">Aucune arrivée cette semaine</p>
+        <p class="empty">{{ 'arrivals.no_arrivals' | translate }}</p>
       }
     </div>
 
@@ -66,50 +67,50 @@ import { localDateStr } from '../../core/utils/date.utils';
       <mat-card-content>
         <table mat-table [dataSource]="arrivals()" class="full-width">
           <ng-container matColumnDef="date">
-            <th mat-header-cell *matHeaderCellDef>Date d'arrivée</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'arrivals.checkin_date' | translate }}</th>
             <td mat-cell *matCellDef="let b">{{ dayName(b['arrival']) }} {{ b['arrival'] | date:'dd/MM' }}</td>
           </ng-container>
           <ng-container matColumnDef="guest">
-            <th mat-header-cell *matHeaderCellDef>Voyageur</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'bookings.guest' | translate }}</th>
             <td mat-cell *matCellDef="let b">
               {{ guestName(b) }}<br>
               <small>{{ b['guestPhone'] || b['phone'] }}</small>
             </td>
           </ng-container>
           <ng-container matColumnDef="property">
-            <th mat-header-cell *matHeaderCellDef>Logement</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.property' | translate }}</th>
             <td mat-cell *matCellDef="let b">{{ propLabel(b) }}</td>
           </ng-container>
           <ng-container matColumnDef="checkout">
-            <th mat-header-cell *matHeaderCellDef>Départ prévu</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'arrivals.checkout_date' | translate }}</th>
             <td mat-cell *matCellDef="let b">{{ dayName(b['departure']) }} {{ b['departure'] | date:'dd/MM' }}</td>
           </ng-container>
           <ng-container matColumnDef="nights">
-            <th mat-header-cell *matHeaderCellDef>Nuits</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.nights' | translate }}</th>
             <td mat-cell *matCellDef="let b">{{ nights(b) }}</td>
           </ng-container>
           <ng-container matColumnDef="guests">
-            <th mat-header-cell *matHeaderCellDef>Voyageurs</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.guests' | translate }}</th>
             <td mat-cell *matCellDef="let b">{{ (b['numAdult'] || 0) + (b['numChild'] || 0) }}</td>
           </ng-container>
           <ng-container matColumnDef="channel">
-            <th mat-header-cell *matHeaderCellDef>Canal</th>
-            <td mat-cell *matCellDef="let b"><mat-chip>{{ b['channel'] || 'Direct' }}</mat-chip></td>
+            <th mat-header-cell *matHeaderCellDef>{{ 'bookings.source' | translate }}</th>
+            <td mat-cell *matCellDef="let b"><mat-chip>{{ b['channel'] || ('bookings.channel_direct' | translate) }}</mat-chip></td>
           </ng-container>
           <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | translate }}</th>
             <td mat-cell *matCellDef="let b">
-              <mat-chip [class]="'status-' + b['status']">{{ b['status'] }}</mat-chip>
+              <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
             </td>
           </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
               @if (!isPast(b['arrival']) && !reminder.hasSent(b['id'])) {
-                <mat-icon class="msg-reminder" matTooltip="Message check-in non envoyé">mark_email_unread</mat-icon>
+                <mat-icon class="msg-reminder" [matTooltip]="'arrivals.checkin_message_unsent' | translate">mark_email_unread</mat-icon>
               }
               @if (b['status'] !== 'cancelled') {
-                <button mat-icon-button color="warn" (click)="cancelBooking(b)" matTooltip="Annuler">
+                <button mat-icon-button color="warn" (click)="cancelBooking(b)" [matTooltip]="'common.cancel' | translate">
                   <mat-icon>cancel</mat-icon>
                 </button>
               }
@@ -120,7 +121,7 @@ import { localDateStr } from '../../core/utils/date.utils';
           <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openDetail(row)"></tr>
         </table>
         @if (arrivals().length === 0) {
-          <p class="empty">Aucune arrivée cette semaine</p>
+          <p class="empty">{{ 'arrivals.no_arrivals' | translate }}</p>
         }
       </mat-card-content>
     </mat-card>
@@ -164,7 +165,7 @@ export class ArrivalsComponent implements OnInit {
   weekStart = signal(new Date(new Date().toDateString()));
   columns = ['date', 'guest', 'property', 'checkout', 'nights', 'guests', 'channel', 'status', 'actions'];
 
-  constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router, readonly reminder: MessageReminderService) {}
+  constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router, readonly reminder: MessageReminderService, private t: TranslateService) {}
 
   ngOnInit(): void { this.load(); }
 
@@ -214,13 +215,14 @@ export class ArrivalsComponent implements OnInit {
   goToCurrentWeek(): void { this.weekStart.set(new Date(new Date().toDateString())); this.load(); }
 
   weekLabel(): string {
+    const lang = this.t.currentLang || 'fr';
     const start = this.weekStart();
     const today = new Date(new Date().toDateString());
     const end   = new Date(start); end.setDate(end.getDate() + 6);
     const startStr = start.getTime() === today.getTime()
-      ? "Aujourd'hui"
-      : start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-    return `${startStr} — ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+      ? this.t.instant('common.today')
+      : start.toLocaleDateString(lang, { day: '2-digit', month: 'short' });
+    return `${startStr} — ${end.toLocaleDateString(lang, { day: '2-digit', month: 'short', year: 'numeric' })}`;
   }
 
   openDetail(b: any): void {
@@ -234,26 +236,21 @@ export class ArrivalsComponent implements OnInit {
 
   cancelBooking(b: any): void {
     const name = this.guestName(b);
-    if (!confirm(`Annuler la réservation de ${name} ?`)) return;
+    if (!confirm(`${this.t.instant('arrivals.cancel_confirm')} ${name} ?`)) return;
     this.bookingService.cancel(String(b['id'])).subscribe({
-      next: () => { this.snackBar.open('Réservation annulée', 'OK', { duration: 3000 }); this.load(); },
-      error: err => this.snackBar.open(err.error?.error ?? 'Erreur', 'Fermer', { duration: 4000 })
+      next: () => { this.snackBar.open(this.t.instant('bookings.cancelled_ok'), this.t.instant('common.ok'), { duration: 3000 }); this.load(); },
+      error: err => this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 })
     });
   }
 
   dayName(dateStr: string): string {
     if (!dateStr) return '';
+    const lang  = this.t.currentLang || 'fr';
     const d     = new Date(dateStr.substring(0, 10) + 'T12:00:00');
     const today = new Date(); today.setHours(12, 0, 0, 0);
     const diff  = Math.round((d.getTime() - today.getTime()) / 86400000);
-    if (diff === 0) return "Aujourd'hui";
-    if (diff === 1) return 'Demain';
-    return ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][d.getDay()];
-  }
-
-  private getMonday(d: Date): Date {
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
+    if (diff === 0) return this.t.instant('common.today');
+    if (diff === 1) return this.t.instant('common.tomorrow');
+    return d.toLocaleDateString(lang, { weekday: 'short' });
   }
 }

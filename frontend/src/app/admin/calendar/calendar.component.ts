@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
@@ -44,11 +45,11 @@ interface DayCell {
   override?: number;
 }
 
-const BLOCK_LABELS: Record<string, string> = {
-  OWNER_STAY:  'Séjour propriétaire',
-  MAINTENANCE: 'Maintenance',
-  CLEANING:    'Nettoyage',
-  OTHER:       'Blocage'
+const BLOCK_TYPE_KEYS: Record<string, string> = {
+  OWNER_STAY:  'calendar.block_owner_stay',
+  MAINTENANCE: 'calendar.block_maintenance',
+  CLEANING:    'calendar.block_cleaning',
+  OTHER:       'calendar.block_other'
 };
 
 const CHANNEL_COLORS: Record<string, string> = {
@@ -65,13 +66,13 @@ const CHANNEL_COLORS: Record<string, string> = {
   imports: [
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatButtonModule, MatIconModule, MatSelectModule, MatFormFieldModule,
-    MatTooltipModule, MatProgressSpinnerModule
+    MatTooltipModule, MatProgressSpinnerModule, TranslateModule
   ],
   template: `
     <div class="cal-header">
-      <h2>Calendrier des disponibilités</h2>
+      <h2>{{ 'calendar.page_title' | translate }}</h2>
       <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
-        <mat-icon>add</mat-icon> Nouvelle réservation
+        <mat-icon>add</mat-icon> {{ 'calendar.new_booking' | translate }}
       </a>
     </div>
 
@@ -80,11 +81,11 @@ const CHANNEL_COLORS: Record<string, string> = {
       <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
       <span class="month-label">{{ monthLabel() }}</span>
       <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
-      <button mat-stroked-button (click)="goToday()" style="margin-left:12px">Aujourd'hui</button>
+      <button mat-stroked-button (click)="goToday()" style="margin-left:12px">{{ 'common.today' | translate }}</button>
 
       <mat-form-field appearance="outline" class="prop-filter" subscriptSizing="dynamic">
         <mat-select [value]="selectedPropertyId()" (selectionChange)="selectedPropertyId.set($event.value)">
-          <mat-option value="all">Toutes les propriétés</mat-option>
+          <mat-option value="all">{{ 'calendar.all_properties' | translate }}</mat-option>
           @for (p of properties(); track p.id) {
             <mat-option [value]="p.id">{{ p.name }}</mat-option>
           }
@@ -98,7 +99,7 @@ const CHANNEL_COLORS: Record<string, string> = {
         <span class="leg"><span class="dot" style="background:#FF5A5F"></span> Airbnb</span>
         <span class="leg"><span class="dot" style="background:#003580"></span> Booking</span>
         <span class="leg"><span class="dot" style="background:#E8572A"></span> Abritel</span>
-        <span class="leg"><span class="dot blackout-dot"></span> Blackout</span>
+        <span class="leg"><span class="dot blackout-dot"></span> {{ 'calendar.legend_blackout' | translate }}</span>
       </div>
     </div>
 
@@ -113,9 +114,9 @@ const CHANNEL_COLORS: Record<string, string> = {
           <tr>
             <th class="prop-col">
               <div class="prop-col-head">
-                <span class="prop-col-label">Logement</span>
+                <span class="prop-col-label">{{ 'common.property' | translate }}</span>
                 <button class="toggle-sidebar-btn" (click)="sidebarCollapsed.set(!sidebarCollapsed())"
-                        [title]="sidebarCollapsed() ? 'Afficher les logements' : 'Réduire'">
+                        [title]="sidebarCollapsed() ? ('calendar.show_properties' | translate) : ('calendar.collapse_sidebar' | translate)">
                   <mat-icon>{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
                 </button>
               </div>
@@ -147,7 +148,7 @@ const CHANNEL_COLORS: Record<string, string> = {
                     [class.block-first]="cell.isBlockFirst"
                     [class.block-last]="cell.isBlockLast"
                     [class.in-drag]="isDragRange(row.property.id, cell.date)"
-                    [title]="cell.blockId ? cellTooltip(cell) : 'Cliquer-glisser pour bloquer des dates'"
+                    [title]="cell.blockId ? cellTooltip(cell) : dragToBlockLabel"
                     (mousedown)="onBlackoutMouseDown(row.property, cell, $event)"
                     (mouseenter)="onBlackoutMouseEnter(row.property, cell)"
                     (mouseup)="onBlackoutMouseUp(row.property, cell)">
@@ -181,7 +182,7 @@ const CHANNEL_COLORS: Record<string, string> = {
             </tr>
             <!-- Ligne réservations -->
             <tr class="last-subrow">
-              <td class="type-cell">Rés.</td>
+              <td class="type-cell">{{ 'calendar.bookings_abbr' | translate }}</td>
               @for (cell of row.cells; track cell.date) {
                 <td class="day-cell"
                     [class.weekend]="cell.isWeekend"
@@ -216,7 +217,7 @@ const CHANNEL_COLORS: Record<string, string> = {
           }
           @if (filteredGrid().length === 0) {
             <tr><td [attr.colspan]="days().length + 2" class="empty-row">
-              Aucun logement. Connectez votre compte Beds24 ou créez des propriétés.
+              {{ 'calendar.no_properties_hint' | translate }}
             </td></tr>
           }
         </tbody>
@@ -412,7 +413,11 @@ export class CalendarComponent implements OnInit {
     return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   });
 
-  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService) {}
+  dragToBlockLabel = '';
+
+  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService) {
+    this.t.get('calendar.drag_to_block').subscribe(v => this.dragToBlockLabel = v);
+  }
 
   ngOnInit(): void { this.load(); }
 
@@ -571,7 +576,7 @@ export class CalendarComponent implements OnInit {
     return cell.date;
   }
 
-  blockLabel(type: string): string { return BLOCK_LABELS[type] ?? type; }
+  blockLabel(type: string): string { return this.t.instant(BLOCK_TYPE_KEYS[type] ?? type); }
 
   getDayName(date: string): string {
     return new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }).slice(0, 2);

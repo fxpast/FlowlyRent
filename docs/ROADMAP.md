@@ -1,0 +1,59 @@
+# FlowlyRent — Objectifs MVP
+
+## Statut
+
+- [x] Authentification JWT multi-tenant (register / login)
+- [x] Connexion compte Beds24 par user (username+password → refresh token)
+- [x] Synchronisation automatique propriétés depuis Beds24
+- [x] Synchronisation automatique chambres/unités depuis Beds24
+- [x] Synchronisation automatique réservations depuis Beds24 (incrémentale)
+- [x] Génération automatique tâches ménage à chaque checkout
+- [x] Blocages manuels de dates (AvailabilityBlock)
+- [x] Synchronisation avec Booking.com / Airbnb / Abritel (iCal)
+- [x] Liste des arrivées de la semaine (navigation semaine)
+- [x] Liste des départs de la semaine (navigation semaine)
+- [x] Réservations directes admin (création + liste + modification)
+- [x] Paiement Stripe admin (lien Checkout)
+- [x] Messagerie temps réel hôte ↔ voyageur (WebSocket)
+- [x] Site de réservation public par slug (`/public/{slug}/properties`)
+- [x] Interface admin — paramètres Beds24 (connexion / sync manuelle)
+- [x] Interface admin — tâches ménage
+- [x] Interface admin — calendrier des disponibilités
+- [x] Notifications email (confirmation réservation, reçu paiement, rappel J-1)
+- [x] Tableau de bord revenus / statistiques
+- [x] Rôles utilisateurs (USER / ADMIN / HOUSEKEEPER) — JWT claim "role"
+- [x] Dashboard superadmin — KPIs filtrés (utilisateurs, connexions, clics, visiteurs anonymes)
+- [x] Tracking analytique automatique (PAGE_VIEW tous visiteurs + LOGIN)
+- [x] Feedback utilisateurs — formulaire + gestion superadmin
+- [x] Changement de mot de passe — auto (paramètres) + admin (superadmin)
+- [x] Suppression compte utilisateur (superadmin)
+- [x] Auto-création compte ADMIN au démarrage (AdminBootstrap + env vars)
+- [x] Prestataires ménage — CRUD admin + onglet dédié dans housekeeping
+- [x] Portail prestataire — espace personnel `/housekeeper/tasks` (rôle HOUSEKEEPER)
+- [x] Activation portail prestataire — création compte AppUser lié au profil
+- [x] Rapport de tâche — commentaire + signalement incident
+- [x] Photos tâche — avant/après/incident (caméra mobile → Cloudinary)
+- [x] Consultation photos prestataire depuis le menu Ménage admin (MatDialog)
+- [x] Logo SVG + favicon maison bleue
+- [x] Domaine personnalisé flowlyrent.com
+- [x] Inventaire équipements par logement (BEDS, APPLIANCES, TECH, KITCHEN, BATHROOM, OUTDOOR, OTHER)
+- [x] Override horaires check-in/check-out par réservation (avec motif)
+- [x] Modèles de messages FR + EN avec variables : nom, arrivee, depart, logement, code_acces, code_acces_precedent, heure_checkin, heure_checkout
+- [x] Filtrage automatique modèles par langue de la réservation (champ `lang` Beds24)
+- [x] Nom court de propriété — substitue le nom Beds24 partout dans l'app
+- [x] Champ langue (lang) dans le détail de réservation (ISO 639-1 — envoyé vers Beds24)
+- [x] Badge notification feedbacks NEW dans le layout superadmin
+- [x] Dialogs plein écran sur mobile (≤600px)
+- [x] Règles d'occupation logements : Départ aujourd'hui · Arrivée aujourd'hui, prolongation même voyageur → Occupé vert
+- [x] Messages triés chronologiquement (plus ancien en haut, scroll automatique après envoi)
+- [x] Charges mensuelles par prestataire — listing DONE tasks groupé par housekeeper, navigation mois
+- [x] Auto-notes ménage — pré-remplissage notes à la sélection du prestataire (type CHECKOUT_CLEANING)
+- [x] Abandon / réactivation de tâches ménage (statut SKIPPED ↔ PENDING) sans suppression
+- [x] Formulaire nouvelle tâche enrichi — heures, taux horaire, notes auto
+- [x] Tri tâches : terminées et abandonnées reléguées en bas (admin + portail prestataire)
+- [x] Distinction ménages / dépannage dans le menu Entretien (onglets séparés)
+- [x] Tâche maintenance auto créée sur signalement d'incident — badge « non attribuées »
+- [x] Gestion blanchisserie — stock de linge par logement, catégories, mouvements CLEAN_IN / TO_LAUNDRY
+- [x] Sets de linge par défaut par logement — pré-remplissage à la création de tâche, déduction auto du stock à la fin (idempotent)
+- [x] Notifications superadmin → utilisateurs — envoi ciblé ou global, suivi lectures, badge non-lu dans le menu admin
+- [x] Internationalisation (i18n) — 5 langues : FR, EN, ES, DE, IT (`@ngx-translate/core`)

@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/services/auth.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 @Component({
@@ -16,7 +17,8 @@ import { environment } from '@env/environment';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink,
-    MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule
+    MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
+    TranslateModule
   ],
   template: `
     <div class="container">
@@ -24,30 +26,30 @@ import { environment } from '@env/environment';
         <mat-card-header>
           <mat-icon mat-card-avatar>home</mat-icon>
           <mat-card-title>FlowlyRent</mat-card-title>
-          <mat-card-subtitle>Créer un compte</mat-card-subtitle>
+          <mat-card-subtitle>{{ 'login.create_account' | translate }}</mat-card-subtitle>
         </mat-card-header>
 
         <mat-card-content>
           <form (ngSubmit)="onSubmit()">
             <div class="row">
               <mat-form-field appearance="outline">
-                <mat-label>Prénom</mat-label>
+                <mat-label>{{ 'public.first_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="form.firstName" name="firstName" required autocomplete="given-name" />
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Nom</mat-label>
+                <mat-label>{{ 'public.last_name' | translate }}</mat-label>
                 <input matInput [(ngModel)]="form.lastName" name="lastName" autocomplete="family-name" />
               </mat-form-field>
             </div>
 
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Email</mat-label>
+              <mat-label>{{ 'common.email' | translate }}</mat-label>
               <input matInput type="email" [(ngModel)]="form.email" name="email" required autocomplete="email" />
               <mat-icon matSuffix>email</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Mot de passe</mat-label>
+              <mat-label>{{ 'login.password' | translate }}</mat-label>
               <input matInput [type]="showPwd ? 'text' : 'password'"
                      [(ngModel)]="form.password" name="password" required autocomplete="new-password" />
               <button mat-icon-button matSuffix type="button" (click)="showPwd = !showPwd">
@@ -62,14 +64,14 @@ import { environment } from '@env/environment';
             <button mat-raised-button color="primary" type="submit" class="full submit-btn"
                     [disabled]="loading() || !form.email || !form.password || !form.firstName">
               @if (loading()) { <mat-spinner diameter="20" /> }
-              @else { Créer mon compte }
+              @else { {{ 'login.create_btn' | translate }} }
             </button>
           </form>
         </mat-card-content>
 
         <mat-card-footer class="footer">
-          Déjà un compte ?
-          <a routerLink="/admin/login">Se connecter</a>
+          {{ 'login.have_account' | translate }}
+          <a routerLink="/admin/login">{{ 'login.sign_in' | translate }}</a>
         </mat-card-footer>
       </mat-card>
     </div>
@@ -99,7 +101,7 @@ export class RegisterComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
+  constructor(private http: HttpClient, private auth: AuthService, private router: Router, private t: TranslateService) {}
 
   onSubmit(): void {
     this.loading.set(true);
@@ -118,7 +120,7 @@ export class RegisterComponent {
         this.router.navigate(['/admin/dashboard']);
       },
       error: err => {
-        this.error.set(err.error?.error ?? 'Erreur lors de la création du compte');
+        this.error.set(err.error?.error ?? this.t.instant('login.register_error'));
         this.loading.set(false);
       }
     });

@@ -15,6 +15,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 
@@ -33,7 +34,7 @@ const COLOR_PALETTE = [
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatChipsModule, MatTooltipModule,
     MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatDividerModule, TranslateModule
+    MatSnackBarModule, MatDividerModule, MatButtonToggleModule, TranslateModule
   ],
   template: `
     <div class="page-header">
@@ -60,23 +61,31 @@ const COLOR_PALETTE = [
         <mat-tab [label]="'expenses.transactions' | translate">
           <div class="tab-content">
             <div class="filters">
-              <mat-form-field>
-                <mat-label>{{ 'expenses.filter_from' | translate }}</mat-label>
-                <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="filterFromDate"
-                       (dateChange)="loadTransactions()" readonly />
-                <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
-                <mat-datepicker #pickerFrom />
-              </mat-form-field>
-              <mat-form-field>
-                <mat-label>{{ 'expenses.filter_to' | translate }}</mat-label>
-                <input matInput [matDatepicker]="pickerTo" [(ngModel)]="filterToDate"
-                       (dateChange)="loadTransactions()" readonly />
-                <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
-                <mat-datepicker #pickerTo />
-              </mat-form-field>
+              <mat-button-toggle-group [(ngModel)]="dateMode" (change)="onDateModeChange()">
+                <mat-button-toggle value="all">{{ 'expenses.filter_all_dates' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="range">{{ 'expenses.filter_period' | translate }}</mat-button-toggle>
+              </mat-button-toggle-group>
+
+              @if (dateMode === 'range') {
+                <mat-form-field>
+                  <mat-label>{{ 'expenses.filter_from' | translate }}</mat-label>
+                  <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="filterFromDate"
+                         (dateChange)="loadTransactions()" readonly />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
+                  <mat-datepicker #pickerFrom />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>{{ 'expenses.filter_to' | translate }}</mat-label>
+                  <input matInput [matDatepicker]="pickerTo" [(ngModel)]="filterToDate"
+                         (dateChange)="loadTransactions()" readonly />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
+                  <mat-datepicker #pickerTo />
+                </mat-form-field>
+              }
+
               <mat-form-field>
                 <mat-label>{{ 'expenses.filter_category' | translate }}</mat-label>
-                <mat-select [(ngModel)]="filterCategory" (selectionChange)="loadTransactions()">
+                <mat-select [(ngModel)]="filterCategory">
                   <mat-option value="">{{ 'expenses.filter_all_cat' | translate }}</mat-option>
                   @for (cat of uniqueCategories(); track cat) {
                     <mat-option [value]="cat">{{ cat }}</mat-option>
@@ -86,7 +95,7 @@ const COLOR_PALETTE = [
               </mat-form-field>
               <mat-form-field>
                 <mat-label>{{ 'expenses.filter_type' | translate }}</mat-label>
-                <mat-select [(ngModel)]="filterSide" (selectionChange)="loadTransactions()">
+                <mat-select [(ngModel)]="filterSide">
                   <mat-option value="">{{ 'expenses.filter_all_types' | translate }}</mat-option>
                   <mat-option value="debit">{{ 'expenses.filter_debit' | translate }}</mat-option>
                   <mat-option value="credit">{{ 'expenses.filter_credit' | translate }}</mat-option>
@@ -324,8 +333,9 @@ const COLOR_PALETTE = [
     .connect-banner a { color: #1976d2; }
 
     /* Filters */
-    .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 16px; }
+    .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
     .filters mat-form-field { width: 140px; }
+    .filters mat-button-toggle-group { height: 40px; }
 
     /* Transactions */
     .tx-summary { display: flex; gap: 16px; margin-bottom: 12px; font-size: 13px; color: #555; flex-wrap: wrap; }
@@ -408,6 +418,7 @@ export class ExpensesComponent implements OnInit {
   // Transactions
   transactions = signal<QontoTransaction[]>([]);
   loadingTx = signal(false);
+  dateMode: 'all' | 'range' = 'all';
   filterFromDate: Date | null = null;
   filterToDate: Date | null = null;
   filterCategory = '';
@@ -447,11 +458,15 @@ export class ExpensesComponent implements OnInit {
   loadTransactions(): void {
     this.loadingTx.set(true);
     const params: Record<string, string> = {};
-    if (this.filterFromDate) params['from'] = this.toDateStr(this.filterFromDate);
-    if (this.filterToDate)   params['to']   = this.toDateStr(this.filterToDate);
-    if (this.filterCategory) params['category'] = this.filterCategory;
-    if (this.filterSide)     params['side']     = this.filterSide;
-
+    if (this.dateMode === 'all') {
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      params['from'] = this.toDateStr(fiveYearsAgo);
+      params['to']   = this.toDateStr(now);
+    } else {
+      if (this.filterFromDate) params['from'] = this.toDateStr(this.filterFromDate);
+      if (this.filterToDate)   params['to']   = this.toDateStr(this.filterToDate);
+    }
     this.qontoService.getTransactions(params).subscribe({
       next: txs => { this.transactions.set(txs); this.loadingTx.set(false); },
       error: () => this.loadingTx.set(false)
@@ -466,7 +481,16 @@ export class ExpensesComponent implements OnInit {
   }
 
   filteredTx(): QontoTransaction[] {
-    return this.transactions();
+    let txs = this.transactions();
+    if (this.filterCategory === 'NON_CATEGORISE') {
+      txs = txs.filter(t => !t.category);
+    } else if (this.filterCategory) {
+      txs = txs.filter(t => t.category === this.filterCategory);
+    }
+    if (this.filterSide) {
+      txs = txs.filter(t => t.side === this.filterSide);
+    }
+    return txs;
   }
 
   totalDebits(): number {
@@ -481,7 +505,14 @@ export class ExpensesComponent implements OnInit {
       .reduce((s, t) => s + (t.amount ?? 0), 0);
   }
 
+  onDateModeChange(): void {
+    this.filterFromDate = null;
+    this.filterToDate = null;
+    this.loadTransactions();
+  }
+
   clearFilters(): void {
+    this.dateMode = 'all';
     this.filterFromDate = null;
     this.filterToDate = null;
     this.filterCategory = '';

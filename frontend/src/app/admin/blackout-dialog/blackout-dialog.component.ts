@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { TranslateModule } from '@ngx-translate/core';
 
 export interface BlackoutDialogData {
   propertyName: string;
@@ -28,43 +29,43 @@ export interface BlackoutDialogResult {
   imports: [
     CommonModule, FormsModule, MatDialogModule,
     MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule,
-    MatDatepickerModule, MatNativeDateModule
+    MatDatepickerModule, MatNativeDateModule, TranslateModule
   ],
   template: `
     <div class="dialog-header">
       <mat-icon class="header-icon">block</mat-icon>
-      <span>Blocage calendrier</span>
+      <span>{{ 'calendar.block_dialog_title' | translate }}</span>
     </div>
 
     <mat-dialog-content>
       <div class="prop-label">{{ data.propertyName }}</div>
       <div class="row-2">
         <mat-form-field appearance="outline">
-          <mat-label>Date début</mat-label>
+          <mat-label>{{ 'calendar.date_start' | translate }}</mat-label>
           <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDateVal" (ngModelChange)="from = fromDate($event)">
           <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
           <mat-datepicker #fromPicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Date fin</mat-label>
+          <mat-label>{{ 'calendar.date_end' | translate }}</mat-label>
           <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDateVal" (ngModelChange)="to = fromDate($event)">
           <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
           <mat-datepicker #toPicker></mat-datepicker>
         </mat-form-field>
       </div>
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Type de blocage</mat-label>
+        <mat-label>{{ 'calendar.block_type' | translate }}</mat-label>
         <mat-select [(ngModel)]="override">
-          <mat-option value="blackout">Blackout (bloquer les dates)</mat-option>
-          <mat-option value="none">Aucun (supprimer le blocage)</mat-option>
+          <mat-option value="blackout">{{ 'calendar.block_blackout_option' | translate }}</mat-option>
+          <mat-option value="none">{{ 'calendar.block_none_option' | translate }}</mat-option>
         </mat-select>
       </mat-form-field>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Annuler</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="!from || !to">
-        <mat-icon>save</mat-icon> Enregistrer
+        <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
       </button>
     </mat-dialog-actions>
   `,

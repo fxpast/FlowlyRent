@@ -14,6 +14,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { BookingService } from '../../core/services/booking.service';
 import { localDateStr } from '../../core/utils/date.utils';
@@ -44,14 +45,14 @@ interface LinenMovement {
   linenItem: { id: number; label: string; category: string };
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  DRAPS:          'Draps',
-  SERVIETTES_BAIN: 'Serviettes bain',
-  SERVIETTES_MAIN: 'Serviettes main',
-  TAIES:           "Taies d'oreiller",
-  HOUSSES_COUETTE: 'Housses couette',
-  NAPPES:          'Nappes',
-  AUTRE:           'Autre'
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  DRAPS:           'linen.category_DRAPS',
+  SERVIETTES_BAIN: 'linen.category_SERVIETTES_BAIN',
+  SERVIETTES_MAIN: 'linen.category_SERVIETTES_MAIN',
+  TAIES:           'linen.category_TAIES',
+  HOUSSES_COUETTE: 'linen.category_HOUSSES_COUETTE',
+  NAPPES:          'linen.category_NAPPES',
+  AUTRE:           'linen.category_AUTRE'
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -72,14 +73,14 @@ const CATEGORY_ICONS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatFormFieldModule, MatInputModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatDividerModule, MatTooltipModule
+    MatSnackBarModule, MatDividerModule, MatTooltipModule, TranslateModule
   ],
   template: `
     <div class="linen-root">
 
       <!-- Sélecteur de logement -->
       <mat-form-field class="prop-select">
-        <mat-label>Logement</mat-label>
+        <mat-label>{{ 'common.property' | translate }}</mat-label>
         <mat-select [(ngModel)]="selectedPropId" (ngModelChange)="onPropertyChange($event)">
           @for (p of properties(); track p.id) {
             <mat-option [value]="strId(p.id)">{{ p.name }}</mat-option>
@@ -91,9 +92,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 
         <!-- ── En-tête articles ── -->
         <div class="section-header">
-          <span class="section-title"><mat-icon>inventory_2</mat-icon> Stock de linge</span>
+          <span class="section-title"><mat-icon>inventory_2</mat-icon> {{ 'linen.stock' | translate }}</span>
           <button mat-flat-button color="primary" (click)="openItemForm()">
-            <mat-icon>add</mat-icon> Ajouter un article
+            <mat-icon>add</mat-icon> {{ 'linen.add_item_btn' | translate }}
           </button>
         </div>
 
@@ -101,16 +102,16 @@ const CATEGORY_ICONS: Record<string, string> = {
         @if (itemForm.show) {
           <mat-card class="form-card">
             <mat-card-header>
-              <mat-card-title>{{ itemForm.editingId ? 'Modifier l\'article' : 'Nouvel article' }}</mat-card-title>
+              <mat-card-title>{{ (itemForm.editingId ? 'linen.edit_article' : 'linen.new_article') | translate }}</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <div class="form-row">
                 <mat-form-field class="flex2">
-                  <mat-label>Libellé *</mat-label>
+                  <mat-label>{{ 'linen.label_required' | translate }} *</mat-label>
                   <input matInput [(ngModel)]="itemForm.label" placeholder="Ex : Draps 2 personnes">
                 </mat-form-field>
                 <mat-form-field>
-                  <mat-label>Catégorie</mat-label>
+                  <mat-label>{{ 'linen.category' | translate }}</mat-label>
                   <mat-select [(ngModel)]="itemForm.category">
                     @for (c of categories; track c.value) {
                       <mat-option [value]="c.value">{{ c.label }}</mat-option>
@@ -120,30 +121,28 @@ const CATEGORY_ICONS: Record<string, string> = {
               </div>
               <div class="form-row">
                 <mat-form-field>
-                  <mat-label>Quantité totale *</mat-label>
+                  <mat-label>{{ 'linen.qty_total' | translate }} *</mat-label>
                   <input matInput type="number" min="1" [(ngModel)]="itemForm.totalQuantity">
                   <span matTextSuffix>pcs</span>
                 </mat-form-field>
                 <mat-form-field>
-                  <mat-label>Par ménage (défaut)</mat-label>
+                  <mat-label>{{ 'linen.per_cleaning' | translate }}</mat-label>
                   <input matInput type="number" min="0" [(ngModel)]="itemForm.defaultPerCleaning" placeholder="Ex : 1">
                   <span matTextSuffix>pcs</span>
-                  <mat-hint>Pré-rempli à la création de tâche</mat-hint>
                 </mat-form-field>
                 <mat-form-field>
-                  <mat-label>Alerte stock bas</mat-label>
+                  <mat-label>{{ 'linen.low_stock_threshold' | translate }}</mat-label>
                   <input matInput type="number" min="0" [(ngModel)]="itemForm.minThreshold" placeholder="Ex : 2">
                   <span matTextSuffix>pcs</span>
-                  <mat-hint>Alerte si disponible &lt; seuil</mat-hint>
                 </mat-form-field>
               </div>
             </mat-card-content>
             <mat-card-actions>
               <button mat-flat-button color="primary" (click)="saveItem()"
                       [disabled]="!itemForm.label.trim() || itemForm.totalQuantity < 1 || itemForm.saving">
-                {{ itemForm.editingId ? 'Modifier' : 'Créer' }}
+                {{ (itemForm.editingId ? 'common.edit' : 'common.create') | translate }}
               </button>
-              <button mat-button (click)="cancelItemForm()">Annuler</button>
+              <button mat-button (click)="cancelItemForm()">{{ 'common.cancel' | translate }}</button>
             </mat-card-actions>
           </mat-card>
         }
@@ -152,7 +151,7 @@ const CATEGORY_ICONS: Record<string, string> = {
         @if (itemsLoading()) {
           <div class="center"><mat-spinner diameter="36" /></div>
         } @else if (items().length === 0) {
-          <p class="empty">Aucun article configuré pour ce logement.</p>
+          <p class="empty">{{ 'linen.items_empty' | translate }}</p>
         } @else {
           <div class="items-grid">
             @for (item of items(); track item.id) {
@@ -166,10 +165,10 @@ const CATEGORY_ICONS: Record<string, string> = {
                     <div class="item-category">{{ categoryLabel(item.category) }}</div>
                   </div>
                   <div class="item-actions-top">
-                    <button mat-icon-button (click)="openItemForm(item)" matTooltip="Modifier">
+                    <button mat-icon-button (click)="openItemForm(item)" [matTooltip]="'common.edit' | translate">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="deleteItem(item)" matTooltip="Supprimer">
+                    <button mat-icon-button color="warn" (click)="deleteItem(item)" [matTooltip]="'common.delete' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -177,32 +176,32 @@ const CATEGORY_ICONS: Record<string, string> = {
 
                 <!-- Badges stock -->
                 <div class="stock-row">
-                  <div class="stock-badge total" matTooltip="Total possédé">
+                  <div class="stock-badge total">
                     <span class="badge-val">{{ item.totalQuantity }}</span>
-                    <span class="badge-lbl">total</span>
+                    <span class="badge-lbl">{{ 'linen.total_badge' | translate }}</span>
                   </div>
-                  <div class="stock-badge laundry" matTooltip="En blanchisserie">
+                  <div class="stock-badge laundry">
                     <mat-icon>local_laundry_service</mat-icon>
                     <span class="badge-val">{{ item.atLaundry }}</span>
-                    <span class="badge-lbl">blanchisserie</span>
+                    <span class="badge-lbl">{{ 'linen.laundry_badge' | translate }}</span>
                   </div>
-                  <div class="stock-badge" [class.available-ok]="!isAlert(item)" [class.available-alert]="isAlert(item)" matTooltip="Disponible au logement">
+                  <div class="stock-badge" [class.available-ok]="!isAlert(item)" [class.available-alert]="isAlert(item)">
                     <mat-icon>home</mat-icon>
                     <span class="badge-val">{{ item.atProperty }}</span>
-                    <span class="badge-lbl">disponible</span>
+                    <span class="badge-lbl">{{ 'linen.available_badge' | translate }}</span>
                   </div>
                   @if (item.minThreshold != null) {
-                    <div class="stock-badge threshold" matTooltip="Seuil d'alerte">
+                    <div class="stock-badge threshold">
                       <mat-icon>notification_important</mat-icon>
                       <span class="badge-val">{{ item.minThreshold }}</span>
-                      <span class="badge-lbl">seuil</span>
+                      <span class="badge-lbl">{{ 'linen.threshold_badge' | translate }}</span>
                     </div>
                   }
                 </div>
 
                 @if (isAlert(item)) {
                   <div class="alert-banner">
-                    <mat-icon>warning</mat-icon> Stock bas — pensez à récupérer du linge propre
+                    <mat-icon>warning</mat-icon> {{ 'linen.alert_low_stock' | translate }}
                   </div>
                 }
 
@@ -210,10 +209,10 @@ const CATEGORY_ICONS: Record<string, string> = {
                 @if (movementForm.itemId !== item.id) {
                   <div class="move-btns">
                     <button mat-stroked-button (click)="openMovementForm(item, 'TO_LAUNDRY')" [disabled]="item.atProperty === 0">
-                      <mat-icon>local_laundry_service</mat-icon> Parti en blanchisserie
+                      <mat-icon>local_laundry_service</mat-icon> {{ 'linen.to_laundry_btn' | translate }}
                     </button>
                     <button mat-stroked-button color="primary" (click)="openMovementForm(item, 'FROM_LAUNDRY')" [disabled]="item.atLaundry === 0">
-                      <mat-icon>check_circle</mat-icon> Retour propre
+                      <mat-icon>check_circle</mat-icon> {{ 'linen.from_laundry_btn' | translate }}
                     </button>
                   </div>
                 }
@@ -223,26 +222,26 @@ const CATEGORY_ICONS: Record<string, string> = {
                   <div class="mv-form">
                     <div class="mv-form-title">
                       @if (movementForm.direction === 'TO_LAUNDRY') {
-                        <mat-icon>local_laundry_service</mat-icon> Départ en blanchisserie
+                        <mat-icon>local_laundry_service</mat-icon> {{ 'linen.to_laundry_title' | translate }}
                       } @else {
-                        <mat-icon>check_circle</mat-icon> Retour de blanchisserie
+                        <mat-icon>check_circle</mat-icon> {{ 'linen.from_laundry_title' | translate }}
                       }
                     </div>
                     <div class="mv-form-row">
                       <mat-form-field class="qty-field">
-                        <mat-label>Quantité</mat-label>
+                        <mat-label>{{ 'linen.qty' | translate }}</mat-label>
                         <input matInput type="number" min="1" [(ngModel)]="movementForm.quantity">
                         <span matTextSuffix>pcs</span>
                       </mat-form-field>
                       <mat-form-field class="date-field">
-                        <mat-label>Date</mat-label>
+                        <mat-label>{{ 'common.date' | translate }}</mat-label>
                         <input matInput [matDatepicker]="mvPicker" [(ngModel)]="movementForm.date">
                         <mat-datepicker-toggle matIconSuffix [for]="mvPicker"></mat-datepicker-toggle>
                         <mat-datepicker #mvPicker></mat-datepicker>
                       </mat-form-field>
                     </div>
                     <mat-form-field style="width:100%">
-                      <mat-label>Notes (optionnel)</mat-label>
+                      <mat-label>{{ 'linen.notes_optional' | translate }}</mat-label>
                       <input matInput [(ngModel)]="movementForm.notes" placeholder="Ex : récupéré par Marie">
                     </mat-form-field>
                     <div class="mv-form-actions">
@@ -250,9 +249,9 @@ const CATEGORY_ICONS: Record<string, string> = {
                               [disabled]="movementForm.quantity < 1 || !movementForm.date || movementForm.saving">
                         @if (movementForm.saving) { <mat-spinner diameter="16" style="display:inline-block"/> }
                         @else { <mat-icon>check</mat-icon> }
-                        Enregistrer
+                        {{ 'common.save' | translate }}
                       </button>
-                      <button mat-button (click)="closeMovementForm()">Annuler</button>
+                      <button mat-button (click)="closeMovementForm()">{{ 'common.cancel' | translate }}</button>
                     </div>
                   </div>
                 }
@@ -263,12 +262,12 @@ const CATEGORY_ICONS: Record<string, string> = {
 
         <!-- ── Historique ── -->
         <mat-divider style="margin: 28px 0 20px"></mat-divider>
-        <div class="section-title"><mat-icon>history</mat-icon> Historique des mouvements</div>
+        <div class="section-title"><mat-icon>history</mat-icon> {{ 'linen.history_title' | translate }}</div>
 
         @if (movementsLoading()) {
           <div class="center" style="margin-top:20px"><mat-spinner diameter="32" /></div>
         } @else if (movements().length === 0) {
-          <p class="empty">Aucun mouvement enregistré.</p>
+          <p class="empty">{{ 'linen.no_movements' | translate }}</p>
         } @else {
           <div class="history-list">
             @for (mv of movements(); track mv.id) {
@@ -280,7 +279,7 @@ const CATEGORY_ICONS: Record<string, string> = {
                   <div class="mv-info">
                     <div class="mv-label">{{ mv.linenItem.label }}</div>
                     <div class="mv-sub">
-                      {{ mv.direction === 'TO_LAUNDRY' ? 'Parti en blanchisserie' : 'Retour de blanchisserie' }}
+                      {{ (mv.direction === 'TO_LAUNDRY' ? 'linen.to_laundry_btn' : 'linen.from_laundry_title') | translate }}
                       @if (mv.notes) { — {{ mv.notes }} }
                     </div>
                   </div>
@@ -290,7 +289,7 @@ const CATEGORY_ICONS: Record<string, string> = {
                     {{ mv.direction === 'TO_LAUNDRY' ? '-' : '+' }}{{ mv.quantity }}
                   </span>
                   <span class="mv-date">{{ mv.movementDate | date:'dd/MM/yyyy':'':'fr-FR' }}</span>
-                  <button mat-icon-button color="warn" (click)="deleteMovement(mv)" matTooltip="Supprimer">
+                  <button mat-icon-button color="warn" (click)="deleteMovement(mv)" [matTooltip]="'common.delete' | translate">
                     <mat-icon style="font-size:16px;width:16px;height:16px">delete</mat-icon>
                   </button>
                 </div>
@@ -392,7 +391,9 @@ export class LinenComponent implements OnInit {
   movementsLoading  = signal(false);
   selectedPropId    = '';
 
-  categories = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
+  get categories() {
+    return Object.entries(CATEGORY_LABEL_KEYS).map(([value, key]) => ({ value, label: this.t.instant(key) }));
+  }
 
   itemForm: {
     show: boolean;
@@ -417,7 +418,8 @@ export class LinenComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private bookingService: BookingService,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
+    private t: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -456,7 +458,7 @@ export class LinenComponent implements OnInit {
     return item.minThreshold != null ? item.atProperty < item.minThreshold : item.atProperty === 0 && item.totalQuantity > 0;
   }
 
-  categoryLabel(cat: string): string { return CATEGORY_LABELS[cat] ?? cat; }
+  categoryLabel(cat: string): string { return this.t.instant(CATEGORY_LABEL_KEYS[cat] ?? cat); }
   categoryIcon(cat: string): string  { return CATEGORY_ICONS[cat] ?? 'category'; }
 
   openItemForm(item?: LinenItem): void {
@@ -488,22 +490,23 @@ export class LinenComponent implements OnInit {
       : this.http.post<LinenItem>(`${this.base}/admin/linen/items`, payload);
     req.subscribe({
       next: () => {
+        const wasEditing = this.itemForm.editingId;
         this.itemForm = { ...this.itemForm, show: false, saving: false };
         this.loadItems();
-        this.snack.open(this.itemForm.editingId ? 'Article mis à jour' : 'Article ajouté', '', { duration: 2500 });
+        this.snack.open(this.t.instant(wasEditing ? 'linen.item_updated' : 'linen.item_added'), '', { duration: 2500 });
       },
       error: () => {
         this.itemForm.saving = false;
-        this.snack.open('Erreur lors de l\'enregistrement', 'Fermer', { duration: 3000 });
+        this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
 
   deleteItem(item: LinenItem): void {
-    if (!confirm(`Supprimer "${item.label}" et tous ses mouvements ?`)) return;
+    if (!confirm(`${this.t.instant('linen.delete_confirm')} "${item.label}" ?`)) return;
     this.http.delete(`${this.base}/admin/linen/items/${item.id}`).subscribe({
       next: () => { this.loadItems(); this.loadMovements(); },
-      error: () => this.snack.open('Erreur suppression', 'Fermer', { duration: 3000 })
+      error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -528,13 +531,13 @@ export class LinenComponent implements OnInit {
       next: () => {
         this.movementForm.itemId = null;
         this.movementForm.saving = false;
-        this.snack.open('Mouvement enregistré', '', { duration: 2000 });
+        this.snack.open(this.t.instant('linen.movement_saved'), '', { duration: 2000 });
         this.loadItems();
         this.loadMovements();
       },
       error: () => {
         this.movementForm.saving = false;
-        this.snack.open('Erreur', 'Fermer', { duration: 3000 });
+        this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -542,7 +545,7 @@ export class LinenComponent implements OnInit {
   deleteMovement(mv: LinenMovement): void {
     this.http.delete(`${this.base}/admin/linen/movements/${mv.id}`).subscribe({
       next: () => { this.loadItems(); this.loadMovements(); },
-      error: () => this.snack.open('Erreur suppression', 'Fermer', { duration: 3000 })
+      error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 }
