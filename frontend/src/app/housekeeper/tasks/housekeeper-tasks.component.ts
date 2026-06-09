@@ -442,11 +442,11 @@ export class HousekeeperTasksComponent implements OnInit {
       error: () => this.loading.set(false)
     });
     this.svc.getArrivals().subscribe({
-      next: a => { this.arrivals.set(a); this.loadingArrivals.set(false); },
+      next: a => { this.arrivals.set((a ?? []).sort((x, y) => (x['arrival'] ?? '').localeCompare(y['arrival'] ?? ''))); this.loadingArrivals.set(false); },
       error: () => this.loadingArrivals.set(false)
     });
     this.svc.getDepartures().subscribe({
-      next: d => { this.departures.set(d); this.loadingDepartures.set(false); },
+      next: d => { this.departures.set((d ?? []).sort((x, y) => (x['departure'] ?? '').localeCompare(y['departure'] ?? ''))); this.loadingDepartures.set(false); },
       error: () => this.loadingDepartures.set(false)
     });
   }
