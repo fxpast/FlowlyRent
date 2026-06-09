@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
+import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -77,12 +78,18 @@ public class WebPushService {
                         sub.getAuth(),
                         payload.getBytes()
                     );
-                    pushService.send(notification);
-                } catch (Exception e) {
-                    log.warn("Push échoué pour endpoint {} : {}", sub.getEndpoint(), e.getMessage());
-                    if (e.getMessage() != null && e.getMessage().contains("410")) {
+                    HttpResponse response = pushService.send(notification);
+                    int status = response.getStatusLine().getStatusCode();
+                    if (status == 410 || status == 404) {
+                        log.info("Subscription expirée ({}), suppression : {}", status, sub.getEndpoint());
                         subRepo.deleteByEndpoint(sub.getEndpoint());
+                    } else if (status >= 400) {
+                        log.warn("Push refusé HTTP {} pour userId={} endpoint={}", status, userId, sub.getEndpoint());
+                    } else {
+                        log.info("Push envoyé HTTP {} userId={} : {}", status, userId, title);
                     }
+                } catch (Exception e) {
+                    log.warn("Push exception pour userId={} endpoint={} : {}", userId, sub.getEndpoint(), e.getMessage());
                 }
             }
         } catch (Exception e) {
