@@ -649,7 +649,8 @@
     "incident_description_label": "Description :",
     "comment_label": "Commentaire :",
     "reported_at": "Signalé le",
-    "no_photos": "Aucune photo jointe"
+    "no_photos": "Aucune photo jointe",
+    "nav_incidents": "Signalements"
   },
   "public": {
     "home_title": "Gérez vos locations en toute simplicité",

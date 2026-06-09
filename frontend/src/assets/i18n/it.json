@@ -649,7 +649,8 @@
     "incident_description_label": "Descrizione:",
     "comment_label": "Commento:",
     "reported_at": "Segnalato il",
-    "no_photos": "Nessuna foto allegata"
+    "no_photos": "Nessuna foto allegata",
+    "nav_incidents": "Segnalazioni"
   },
   "public": {
     "home_title": "Gestisci i tuoi affitti con facilità",

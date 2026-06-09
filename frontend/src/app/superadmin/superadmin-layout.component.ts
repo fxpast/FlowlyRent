@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { HttpClient } from '@angular/common/http';
+import { TranslateModule } from '@ngx-translate/core';
+import { LangSwitcherComponent } from '../core/components/lang-switcher.component';
 import { AuthService } from '../core/services/auth.service';
 import { environment } from '../../environments/environment';
 import { filter } from 'rxjs';
@@ -13,7 +15,7 @@ import { filter } from 'rxjs';
 @Component({
   selector: 'app-superadmin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, MatBadgeModule],
+  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, MatBadgeModule, TranslateModule, LangSwitcherComponent],
   template: `
     <mat-toolbar color="primary" class="toolbar">
       <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
@@ -32,8 +34,9 @@ import { filter } from 'rxjs';
       <button mat-icon-button routerLink="/superadmin/notifications" matTooltip="Notifications utilisateurs">
         <mat-icon>campaign</mat-icon>
       </button>
+      <app-lang-switcher />
       <button mat-stroked-button (click)="logout()" style="margin-left:16px;color:white;border-color:rgba(255,255,255,.5)">
-        <mat-icon>logout</mat-icon> Déconnexion
+        <mat-icon>logout</mat-icon> {{ 'common.logout' | translate }}
       </button>
     </mat-toolbar>
     <main class="content">

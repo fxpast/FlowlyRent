@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AnalyticsService } from './core/services/analytics.service';
+import { LanguageService } from './core/services/language.service';
 
 @Component({
   selector: 'app-root',
@@ -11,5 +12,7 @@ import { AnalyticsService } from './core/services/analytics.service';
 export class AppComponent {
   constructor() {
     inject(AnalyticsService).init();
+    const lang = inject(LanguageService);
+    lang.use(lang.current());
   }
 }

@@ -649,7 +649,8 @@
     "incident_description_label": "Description:",
     "comment_label": "Comment:",
     "reported_at": "Reported on",
-    "no_photos": "No photos attached"
+    "no_photos": "No photos attached",
+    "nav_incidents": "Incidents"
   },
   "public": {
     "home_title": "Manage your rentals with ease",

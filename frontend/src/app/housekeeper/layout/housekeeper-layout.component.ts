@@ -3,19 +3,22 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule } from '@ngx-translate/core';
+import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 import { AuthService } from '../../core/services/auth.service';
 import { HousekeeperPortalService } from '../../core/services/housekeeper-portal.service';
 
 @Component({
   selector: 'app-housekeeper-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule, TranslateModule, LangSwitcherComponent],
   template: `
     <mat-toolbar color="primary" class="portal-toolbar">
       <mat-icon style="margin-right:10px">cleaning_services</mat-icon>
-      <span class="toolbar-title">{{ name() || 'Mon espace' }}</span>
+      <span class="toolbar-title">{{ name() || ('housekeeper.my_space' | translate) }}</span>
       <span style="flex:1"></span>
-      <button mat-icon-button (click)="logout()" title="Déconnexion">
+      <app-lang-switcher />
+      <button mat-icon-button (click)="logout()" [title]="'common.logout' | translate">
         <mat-icon>logout</mat-icon>
       </button>
     </mat-toolbar>
@@ -27,11 +30,11 @@ import { HousekeeperPortalService } from '../../core/services/housekeeper-portal
     <nav class="bottom-nav">
       <a routerLink="tasks" routerLinkActive="active">
         <mat-icon>cleaning_services</mat-icon>
-        <span>Missions</span>
+        <span>{{ 'housekeeper.title' | translate }}</span>
       </a>
       <a routerLink="reports" routerLinkActive="active">
         <mat-icon>warning</mat-icon>
-        <span>Signalements</span>
+        <span>{{ 'housekeeper.nav_incidents' | translate }}</span>
       </a>
     </nav>
   `,

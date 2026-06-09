@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
 import { HttpClient } from '@angular/common/http';
+import { TranslateModule } from '@ngx-translate/core';
+import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 import { AuthService } from '../../core/services/auth.service';
 import { MessageService } from '../../core/services/message.service';
 import { environment } from '../../../environments/environment';
@@ -20,7 +22,8 @@ interface NavItem { icon: string; label: string; route: string; }
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, CommonModule,
     MatSidenavModule, MatToolbarModule, MatIconModule,
-    MatButtonModule, MatListModule, MatBadgeModule
+    MatButtonModule, MatListModule, MatBadgeModule,
+    TranslateModule, LangSwitcherComponent
   ],
   template: `
     <mat-sidenav-container class="sidenav-container">
@@ -41,7 +44,7 @@ interface NavItem { icon: string; label: string; route: string; }
             <a mat-list-item [routerLink]="item.route" routerLinkActive="active-link"
                (click)="isMobile() && sidenav.close()">
               <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-              <span matListItemTitle>{{ item.label }}</span>
+              <span matListItemTitle>{{ item.label | translate }}</span>
               @if (item.route === 'messages' && unreadCount() > 0) {
                 <span class="badge">{{ unreadCount() }}</span>
               }
@@ -59,7 +62,8 @@ interface NavItem { icon: string; label: string; route: string; }
             <img src="assets/logo.svg" alt="FlowlyRent" class="toolbar-logo" />
           }
           <span class="toolbar-spacer"></span>
-          <button mat-icon-button (click)="auth.logout()" title="Déconnexion">
+          <app-lang-switcher />
+          <button mat-icon-button (click)="auth.logout()" [title]="'common.logout' | translate">
             <mat-icon>logout</mat-icon>
           </button>
         </mat-toolbar>
@@ -120,24 +124,24 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   private mqListener = (e: MediaQueryListEvent) => this.isMobile.set(e.matches);
 
   navItems: NavItem[] = [
-    { icon: 'dashboard',        label: 'Tableau de bord',  route: 'dashboard' },
-    { icon: 'today',             label: "Aujourd'hui",      route: 'today' },
-    { icon: 'event_available',  label: 'Arrivées',         route: 'arrivals' },
-    { icon: 'flight_takeoff',   label: 'Départs',          route: 'departures' },
-    { icon: 'home_work',         label: 'Logements',        route: 'properties' },
-    { icon: 'calendar_month',   label: 'Calendrier',       route: 'calendar' },
-    { icon: 'book_online',      label: 'Réservations',     route: 'bookings' },
-    { icon: 'chat',             label: 'Messages',         route: 'messages' },
-    { icon: 'home_repair_service', label: 'Entretien',        route: 'housekeeping' },
-    { icon: 'notifications',    label: 'Notifications',    route: 'notifications' },
-    { icon: 'receipt_long',      label: 'Factures',         route: 'invoices' },
-    { icon: 'account_balance',  label: 'Dépenses Qonto',   route: 'expenses' },
-    { icon: 'settings',         label: 'Paramètres',       route: 'settings' },
-    { icon: 'rate_review',      label: 'Feedback',         route: 'feedback' },
-    { icon: 'payment',          label: 'Paiements',        route: 'payments' },
-    { icon: 'sync',             label: 'Synchronisation',  route: 'sync' },
-    { icon: 'bar_chart',        label: 'Revenus',          route: 'stats' },
-    { icon: 'assessment',       label: 'Rapports',         route: 'reports' }
+    { icon: 'dashboard',          label: 'nav.dashboard',   route: 'dashboard' },
+    { icon: 'today',              label: 'nav.today',       route: 'today' },
+    { icon: 'event_available',   label: 'nav.arrivals',    route: 'arrivals' },
+    { icon: 'flight_takeoff',    label: 'nav.departures',  route: 'departures' },
+    { icon: 'home_work',          label: 'nav.properties',  route: 'properties' },
+    { icon: 'calendar_month',    label: 'nav.calendar',    route: 'calendar' },
+    { icon: 'book_online',       label: 'nav.bookings',    route: 'bookings' },
+    { icon: 'chat',              label: 'nav.messages',    route: 'messages' },
+    { icon: 'home_repair_service', label: 'nav.housekeeping', route: 'housekeeping' },
+    { icon: 'notifications',     label: 'nav.notifications', route: 'notifications' },
+    { icon: 'receipt_long',       label: 'nav.invoices',    route: 'invoices' },
+    { icon: 'account_balance',   label: 'nav.expenses',    route: 'expenses' },
+    { icon: 'settings',          label: 'nav.settings',    route: 'settings' },
+    { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
+    { icon: 'payment',           label: 'nav.payments',    route: 'payments' },
+    { icon: 'sync',              label: 'nav.sync',        route: 'sync' },
+    { icon: 'bar_chart',         label: 'nav.stats',       route: 'stats' },
+    { icon: 'assessment',        label: 'nav.reports',     route: 'reports' }
   ];
 
   constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient) {}

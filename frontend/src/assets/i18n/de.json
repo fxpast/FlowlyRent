@@ -649,7 +649,8 @@
     "incident_description_label": "Beschreibung:",
     "comment_label": "Kommentar:",
     "reported_at": "Gemeldet am",
-    "no_photos": "Keine Fotos beigefügt"
+    "no_photos": "Keine Fotos beigefügt",
+    "nav_incidents": "Vorfälle"
   },
   "public": {
     "home_title": "Verwalten Sie Ihre Vermietungen einfach",
