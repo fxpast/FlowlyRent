@@ -774,7 +774,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     d['guestLastName']  = d['guestLastName']  || d['lastName']  || '';
     d['guestEmail']     = d['guestEmail']     || d['email']     || '';
     d['guestPhone']     = d['guestPhone']     || d['phone']     || d['guestMobile'] || '';
-    d['guestCountry']   = d['guestCountry']   || '';
+    d['guestCountry']   = d['guestCountry']   || d['country'] || '';
     d['lang']           = d['lang']           || '';
     const bl = (d['lang'] || '').toLowerCase();
     this.templateLang.set(!bl || bl === 'fr' ? 'fr' : 'en');
