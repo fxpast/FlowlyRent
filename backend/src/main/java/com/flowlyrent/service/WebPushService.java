@@ -63,8 +63,8 @@ public class WebPushService {
                 "notification", Map.of(
                     "title", title,
                     "body",  body,
-                    "icon",  "/assets/logo.svg",
-                    "badge", "/assets/logo.svg",
+                    "icon",  "/assets/icons/icon-96x96.png",
+                    "badge", "/assets/icons/icon-96x96.png",
                     "data",  Map.of("url", url),
                     "vibrate", new int[]{200, 100, 200}
                 )
