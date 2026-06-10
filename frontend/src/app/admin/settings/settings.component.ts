@@ -281,6 +281,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <input matInput [(ngModel)]="profileEdit.publicSiteSlug" />
             <mat-hint>URL : /public/{{ profileEdit.publicSiteSlug }}/properties</mat-hint>
           </mat-form-field>
+          <mat-form-field class="full-width">
+            <mat-label>{{ 'settings.phone' | translate }}</mat-label>
+            <input matInput [(ngModel)]="profileEdit.phone" type="tel" placeholder="+33612345678" />
+            <mat-hint>{{ 'settings.phone_hint' | translate }}</mat-hint>
+          </mat-form-field>
           <div class="plan-info">
             <mat-icon>stars</mat-icon>
             {{ 'settings.current_plan' | translate }} <strong>{{ profile()!.plan }}</strong>
@@ -382,7 +387,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 })
 export class SettingsComponent implements OnInit {
   profile = signal<UserProfile | null>(null);
-  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
+  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', phone: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
   savingProfile = signal(false);
   profileMsg = signal('');
   profileError = signal(false);
@@ -431,7 +436,7 @@ export class SettingsComponent implements OnInit {
       this.profile.set(p);
       this.profileEdit = {
         firstName: p.firstName ?? '', lastName: p.lastName ?? '',
-        publicSiteSlug: p.publicSiteSlug ?? '',
+        publicSiteSlug: p.publicSiteSlug ?? '', phone: p.phone ?? '',
         siret: p.siret ?? '', companyName: p.companyName ?? '',
         companyAddress: p.companyAddress ?? '', companyLogoUrl: p.companyLogoUrl ?? ''
       };
@@ -447,7 +452,8 @@ export class SettingsComponent implements OnInit {
     this.userService.updateProfile({
       firstName: this.profileEdit.firstName,
       lastName: this.profileEdit.lastName,
-      publicSiteSlug: this.profileEdit.publicSiteSlug
+      publicSiteSlug: this.profileEdit.publicSiteSlug,
+      phone: this.profileEdit.phone
     }).subscribe({
       next: p => {
         this.profile.set(p);

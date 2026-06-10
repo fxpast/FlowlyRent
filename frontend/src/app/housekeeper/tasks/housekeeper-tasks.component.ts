@@ -164,6 +164,16 @@ interface ReportDraft {
                             <mat-label>{{ 'housekeeper.incident_desc' | translate }}</mat-label>
                             <textarea matInput rows="2" [(ngModel)]="draft.incidentDesc"></textarea>
                           </mat-form-field>
+                          @if (ownerPhone()) {
+                            <div class="whatsapp-hint">
+                              <mat-icon class="wa-icon">info_outline</mat-icon>
+                              <span>{{ 'housekeeper.whatsapp_hint' | translate }}</span>
+                              <button mat-flat-button class="wa-btn" (click)="openIncidentWhatsApp(task)">
+                                <mat-icon>chat</mat-icon>
+                                {{ 'housekeeper.whatsapp_send' | translate }}
+                              </button>
+                            </div>
+                          }
                         }
 
                         <div class="photo-section">
@@ -362,6 +372,10 @@ interface ReportDraft {
     .time-chip { background: #e3f2fd; color: #1565c0; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600; margin-left: 4px; }
     .booking-guests-count { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; }
     .booking-guests-count mat-icon { font-size: 16px; width: 16px; height: 16px; color: #888; }
+    .whatsapp-hint { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background: #e8f5e9; border-radius: 8px; padding: 10px 12px; margin: 8px 0 4px; font-size: 13px; color: #2e7d32; }
+    .wa-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+    .wa-btn { background: #25D366 !important; color: white !important; font-size: 13px; padding: 0 12px; height: 32px; line-height: 32px; margin-left: auto; }
+    .wa-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     .lightbox img { max-width: 95vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
     .lightbox-close { position: fixed; top: 16px; right: 16px; background: rgba(255,255,255,.2); border: none; color: white; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
@@ -380,6 +394,7 @@ export class HousekeeperTasksComponent implements OnInit {
   currentPhotoType = 'AFTER';
   uploadingPhoto = signal(false);
   uploadProgress = signal('');
+  ownerPhone = signal<string>('');
 
   draft: ReportDraft = { comment: '', hasIncident: false, incidentDesc: '' };
 
@@ -412,6 +427,10 @@ export class HousekeeperTasksComponent implements OnInit {
       next: t => { this.tasks.set(t); this.loading.set(false); },
       error: () => this.loading.set(false)
     });
+    this.svc.getOwnerPhone().subscribe({
+      next: r => this.ownerPhone.set(r.phone || ''),
+      error: () => {}
+    });
     this.svc.getArrivals().subscribe({
       next: a => { this.arrivals.set((a ?? []).sort((x, y) => (x['arrival'] ?? '').localeCompare(y['arrival'] ?? ''))); this.loadingArrivals.set(false); },
       error: () => this.loadingArrivals.set(false)
@@ -427,6 +446,15 @@ export class HousekeeperTasksComponent implements OnInit {
   statusColor(s: string) { return STATUS_META[s]?.color ?? '#888'; }
   statusIcon(s: string)  { return STATUS_META[s]?.icon ?? 'help'; }
   photoTypeLabel(t: string): string { return this.t.instant('housekeeper.photo_' + t.toLowerCase()); }
+
+  openIncidentWhatsApp(task: TaskWithPhotos): void {
+    const phone = this.ownerPhone().replace(/[^0-9]/g, '');
+    if (!phone) return;
+    const prop = task.propertyName ?? task.beds24PropertyId ?? '';
+    const desc = this.draft.incidentDesc?.trim() || task.incidentDescription?.trim() || '';
+    const msg = this.t.instant('housekeeper.whatsapp_msg', { prop, desc });
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
   formatTaskDate(dateStr: string): string {
     const lang = this.t.currentLang || 'fr';
     return new Date(dateStr).toLocaleString(lang, { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' });

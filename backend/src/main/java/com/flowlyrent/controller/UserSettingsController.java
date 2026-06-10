@@ -42,6 +42,7 @@ public class UserSettingsController {
         AppUser user = securityUtils.getCurrentUser();
         if (body.containsKey("firstName"))    user.setFirstName(body.get("firstName"));
         if (body.containsKey("lastName"))     user.setLastName(body.get("lastName"));
+        if (body.containsKey("phone"))        user.setPhone(body.get("phone"));
         if (body.containsKey("siret"))        user.setSiret(body.get("siret"));
         if (body.containsKey("companyName"))  user.setCompanyName(body.get("companyName"));
         if (body.containsKey("companyAddress")) user.setCompanyAddress(body.get("companyAddress"));
@@ -174,6 +175,7 @@ public class UserSettingsController {
         r.setLastName(user.getLastName());
         r.setPlan(user.getPlan());
         r.setPublicSiteSlug(user.getPublicSiteSlug());
+        r.setPhone(user.getPhone());
         r.setSiret(user.getSiret());
         r.setCompanyName(user.getCompanyName());
         r.setCompanyAddress(user.getCompanyAddress());

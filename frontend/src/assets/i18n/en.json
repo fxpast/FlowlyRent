@@ -252,6 +252,8 @@
     "report_incident": "Report an incident",
     "incident_desc": "Incident description",
     "create_intervention": "Create intervention task",
+    "whatsapp_hk": "Contact the housekeeper via WhatsApp",
+    "whatsapp_view_media": "View media on WhatsApp",
     "delete_confirm": "Delete task",
     "task_deleted": "Task deleted",
     "hours_unit": "h",
@@ -530,6 +532,8 @@
     "current_plan": "Current plan:",
     "profile_updated": "Profile updated",
     "profile_error": "Error (slug may already be taken)",
+    "phone": "Phone / WhatsApp",
+    "phone_hint": "International format e.g. +33612345678",
     "url_copied": "URL copied!",
     "billing_saved": "Billing information saved",
     "billing_error": "Error saving information"
@@ -726,7 +730,10 @@
     "no_arrivals": "No arrivals in the next 7 days.",
     "no_departures": "No departures in the next 7 days.",
     "checkin_date": "Arrival:",
-    "checkout_date": "Departure:"
+    "checkout_date": "Departure:",
+    "whatsapp_hint": "You can send videos, audio or photos via WhatsApp",
+    "whatsapp_send": "Send via WhatsApp",
+    "whatsapp_msg": "Incident reported — Property: {{prop}}\n\n{{desc}}\n\n(Media attached in this WhatsApp message)"
   },
   "public": {
     "home_title": "Manage your rentals with ease",

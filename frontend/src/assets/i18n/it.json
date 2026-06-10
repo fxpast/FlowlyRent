@@ -252,6 +252,8 @@
     "report_incident": "Segnala un incidente",
     "incident_desc": "Descrizione dell'incidente",
     "create_intervention": "Crea compito di intervento",
+    "whatsapp_hk": "Contatta il prestatore tramite WhatsApp",
+    "whatsapp_view_media": "Visualizza file multimediali su WhatsApp",
     "delete_confirm": "Elimina compito",
     "task_deleted": "Compito eliminato",
     "hours_unit": "h",
@@ -530,6 +532,8 @@
     "current_plan": "Piano attuale:",
     "profile_updated": "Profilo aggiornato",
     "profile_error": "Errore (lo slug potrebbe essere già in uso)",
+    "phone": "Telefono / WhatsApp",
+    "phone_hint": "Formato internazionale es: +33612345678",
     "url_copied": "URL copiato!",
     "billing_saved": "Informazioni di fatturazione salvate",
     "billing_error": "Errore durante il salvataggio"
@@ -726,7 +730,10 @@
     "no_arrivals": "Nessun arrivo nei prossimi 7 giorni.",
     "no_departures": "Nessuna partenza nei prossimi 7 giorni.",
     "checkin_date": "Arrivo:",
-    "checkout_date": "Partenza:"
+    "checkout_date": "Partenza:",
+    "whatsapp_hint": "Puoi inviare video, audio o foto tramite WhatsApp",
+    "whatsapp_send": "Invia via WhatsApp",
+    "whatsapp_msg": "Incidente segnalato — Alloggio: {{prop}}\n\n{{desc}}\n\n(File allegati in questo messaggio WhatsApp)"
   },
   "public": {
     "home_title": "Gestisci i tuoi affitti con facilità",

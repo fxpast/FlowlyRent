@@ -80,6 +80,10 @@ export class HousekeeperPortalService {
     );
   }
 
+  getOwnerPhone(): Observable<{ phone: string }> {
+    return this.http.get<{ phone: string }>(`${this.base}/owner-phone`);
+  }
+
   getArrivals(): Observable<any[]> {
     return this.http.get<any[]>(`${this.base}/arrivals`);
   }

@@ -70,6 +70,7 @@ interface ReportPanel {
   reportComment?: string;
   hasIncident?: boolean;
   incidentDescription?: string;
+  housekeeperPhone?: string;
   photos: TaskPhoto[];
   loading: boolean;
 }
@@ -302,6 +303,9 @@ const STATUS_KEYS: Record<string, string> = {
                       @if (task.housekeeper.phone) {
                         <a [href]="'tel:' + task.housekeeper.phone" class="hk-phone" (click)="$event.stopPropagation()">
                           <mat-icon>phone</mat-icon>
+                        </a>
+                        <a [href]="waUrl(task.housekeeper.phone)" target="_blank" class="hk-wa" [matTooltip]="'housekeeping.whatsapp_hk' | translate" (click)="$event.stopPropagation()">
+                          <mat-icon>chat</mat-icon>
                         </a>
                       }
                     </div>
@@ -614,6 +618,12 @@ const STATUS_KEYS: Record<string, string> = {
               @if (reportPanel()!.incidentDescription) {
                 <div class="rcomment-text">{{ reportPanel()!.incidentDescription }}</div>
               }
+              @if (reportPanel()!.housekeeperPhone) {
+                <a [href]="waUrl(reportPanel()!.housekeeperPhone!)" target="_blank" class="wa-media-link">
+                  <mat-icon>chat</mat-icon>
+                  {{ 'housekeeping.whatsapp_view_media' | translate }}
+                </a>
+              }
               @if (interventionDraft().show) {
                 <div class="intervention-form">
                   <div class="intervention-title"><mat-icon>build</mat-icon> {{ 'housekeeping.new_intervention_title' | translate }}</div>
@@ -758,6 +768,10 @@ const STATUS_KEYS: Record<string, string> = {
     .task-rate { font-size: 12px; font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
     .hk-phone { color: #1976d2; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hk-wa { color: #25D366; margin-left: 4px; display: inline-flex; align-items: center; }
+    .hk-wa mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .wa-media-link { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; text-decoration: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; margin-top: 10px; }
+    .wa-media-link mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .depannage-alert { display: inline-flex; align-items: center; justify-content: center; background: #d32f2f; color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; line-height: 1; }
     .task-unassigned { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #f57c00; font-weight: 600; margin: 4px 0; background: #fff3e0; border-radius: 4px; padding: 2px 6px; width: fit-content; }
     .task-unassigned mat-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -1254,6 +1268,7 @@ export class HousekeepingComponent implements OnInit {
   typeLabel(type: string): string   { return TYPE_KEYS[type] ? this.t.instant(TYPE_KEYS[type]) : type; }
   statusLabel(s: string): string    { return STATUS_KEYS[s] ? this.t.instant(STATUS_KEYS[s]) : s; }
   statusColor(s: string): string    { return STATUS_COLORS[s] ?? '#888'; }
+  waUrl(phone: string): string      { return `https://wa.me/${phone.replace(/[^0-9]/g, '')}`; }
 
   photoTypeLabel(type: string): string {
     const map: Record<string, string> = {
@@ -1275,6 +1290,7 @@ export class HousekeepingComponent implements OnInit {
       reportComment: task.reportComment,
       hasIncident: task.hasIncident,
       incidentDescription: task.incidentDescription,
+      housekeeperPhone: task.housekeeper?.phone,
       photos: [],
       loading: true
     });

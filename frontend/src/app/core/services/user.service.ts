@@ -23,6 +23,7 @@ export interface UserProfile {
   lastName: string;
   plan: string;
   publicSiteSlug: string;
+  phone?: string;
   siret?: string;
   companyName?: string;
   companyAddress?: string;
@@ -46,7 +47,7 @@ export class UserService {
     return this.http.get<UserProfile>(`${this.base}/user/profile`);
   }
 
-  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl'>>): Observable<UserProfile> {
+  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl'>>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.base}/user/profile`, data);
   }
 

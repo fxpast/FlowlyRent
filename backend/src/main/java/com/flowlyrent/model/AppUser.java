@@ -50,6 +50,8 @@ public class AppUser implements UserDetails {
     private String stripeSubscriptionId;
     private java.time.LocalDateTime planExpiresAt;
 
+    private String phone;
+
     private String siret;
     private String companyName;
 

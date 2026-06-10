@@ -63,6 +63,13 @@ public class HousekeeperPortalController {
         return ResponseEntity.ok(myProfile());
     }
 
+    @GetMapping("/owner-phone")
+    public ResponseEntity<Map<String, String>> ownerPhone() {
+        HousekeeperProfile profile = myProfile();
+        String phone = profile.getUser() != null ? profile.getUser().getPhone() : null;
+        return ResponseEntity.ok(Map.of("phone", phone != null ? phone : ""));
+    }
+
     @GetMapping("/tasks")
     public ResponseEntity<List<HousekeepingTask>> myTasks(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from) {

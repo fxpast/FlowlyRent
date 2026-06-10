@@ -252,6 +252,8 @@
     "report_incident": "Vorfall melden",
     "incident_desc": "Vorfallbeschreibung",
     "create_intervention": "Interventionsaufgabe erstellen",
+    "whatsapp_hk": "Dienstleister per WhatsApp kontaktieren",
+    "whatsapp_view_media": "Medien auf WhatsApp ansehen",
     "delete_confirm": "Aufgabe löschen",
     "task_deleted": "Aufgabe gelöscht",
     "hours_unit": "h",
@@ -530,6 +532,8 @@
     "current_plan": "Aktueller Plan:",
     "profile_updated": "Profil aktualisiert",
     "profile_error": "Fehler (Slug bereits vergeben)",
+    "phone": "Telefon / WhatsApp",
+    "phone_hint": "Internationales Format z.B. +33612345678",
     "url_copied": "URL kopiert!",
     "billing_saved": "Rechnungsdaten gespeichert",
     "billing_error": "Fehler beim Speichern"
@@ -726,7 +730,10 @@
     "no_arrivals": "Keine Ankünfte in den nächsten 7 Tagen.",
     "no_departures": "Keine Abreisen in den nächsten 7 Tagen.",
     "checkin_date": "Ankunft:",
-    "checkout_date": "Abreise:"
+    "checkout_date": "Abreise:",
+    "whatsapp_hint": "Sie können Videos, Audio oder Fotos per WhatsApp senden",
+    "whatsapp_send": "Per WhatsApp senden",
+    "whatsapp_msg": "Vorfall gemeldet — Unterkunft: {{prop}}\n\n{{desc}}\n\n(Medien in dieser WhatsApp-Nachricht angehängt)"
   },
   "public": {
     "home_title": "Verwalten Sie Ihre Vermietungen einfach",
