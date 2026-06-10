@@ -384,45 +384,16 @@ export class HousekeeperTasksComponent implements OnInit {
   draft: ReportDraft = { comment: '', hasIncident: false, incidentDesc: '' };
 
   grouped = computed(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const lang = this.t.currentLang || 'fr';
-    const groups: Array<{ label: string; tasks: TaskWithPhotos[] }> = [];
-    const map = new Map<string, { label: string; tasks: TaskWithPhotos[] }>();
-
-    for (const task of this.tasks()) {
-      const d = new Date(task.scheduledDate + 'T00:00:00');
-      let key: string;
-      let label: string;
-      if (d.getTime() === today.getTime()) {
-        key = '__today__'; label = this.t.instant('common.today');
-      } else if (d.getTime() === tomorrow.getTime()) {
-        key = '__tomorrow__'; label = this.t.instant('common.tomorrow');
-      } else if (d < today) {
-        key = '__past__'; label = this.t.instant('housekeeper.past');
-      } else {
-        key = task.scheduledDate;
-        label = d.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' });
-      }
-      if (!map.has(key)) map.set(key, { label, tasks: [] });
-      map.get(key)!.tasks.push(task);
-    }
-
     const done = new Set(['DONE', 'SKIPPED']);
-    const sortTasks = (ts: TaskWithPhotos[]) => [...ts].sort((a, b) => {
-      const aD = done.has(a.status) ? 1 : 0;
-      const bD = done.has(b.status) ? 1 : 0;
-      if (aD !== bD) return aD - bD;
-      return (a.scheduledDate ?? '') < (b.scheduledDate ?? '') ? -1 : 1;
-    });
+    const byDateDesc = (a: TaskWithPhotos, b: TaskWithPhotos) =>
+      (b.scheduledDate ?? '') < (a.scheduledDate ?? '') ? -1 : 1;
 
-    for (const k of ['__today__', '__tomorrow__']) {
-      if (map.has(k)) { const g = map.get(k)!; groups.push({ label: g.label, tasks: sortTasks(g.tasks) }); map.delete(k); }
-    }
-    for (const [key, g] of map) {
-      if (key !== '__past__') groups.push({ label: g.label, tasks: sortTasks(g.tasks) });
-    }
-    if (map.has('__past__')) { const g = map.get('__past__')!; groups.push({ label: g.label, tasks: sortTasks(g.tasks) }); }
+    const todo = this.tasks().filter(t => !done.has(t.status)).sort(byDateDesc);
+    const finished = this.tasks().filter(t => done.has(t.status)).sort(byDateDesc);
+
+    const groups: Array<{ label: string; tasks: TaskWithPhotos[] }> = [];
+    if (todo.length) groups.push({ label: this.t.instant('housekeeper.tasks_todo'), tasks: todo });
+    if (finished.length) groups.push({ label: this.t.instant('housekeeper.tasks_done'), tasks: finished });
     return groups;
   });
 

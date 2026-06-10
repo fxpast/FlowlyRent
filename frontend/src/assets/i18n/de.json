@@ -682,6 +682,8 @@
     "my_space": "Mein Bereich",
     "no_tasks": "Momentan keine zugewiesenen Aufgaben.",
     "past": "Vergangene",
+    "tasks_todo": "Zu erledigen",
+    "tasks_done": "Abgeschlossen",
     "start": "Starten",
     "complete": "Abschließen",
     "completed_on": "Abgeschlossen am",

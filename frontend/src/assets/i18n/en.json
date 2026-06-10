@@ -682,6 +682,8 @@
     "my_space": "My workspace",
     "no_tasks": "No tasks assigned at the moment.",
     "past": "Past",
+    "tasks_todo": "To do",
+    "tasks_done": "Completed",
     "start": "Start",
     "complete": "Complete",
     "completed_on": "Completed on",

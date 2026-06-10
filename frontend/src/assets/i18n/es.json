@@ -682,6 +682,8 @@
     "my_space": "Mi espacio",
     "no_tasks": "Sin tareas asignadas por el momento.",
     "past": "Pasadas",
+    "tasks_todo": "Por hacer",
+    "tasks_done": "Completadas",
     "start": "Iniciar",
     "complete": "Completar",
     "completed_on": "Completado el",
