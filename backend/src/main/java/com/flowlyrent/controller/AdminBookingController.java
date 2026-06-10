@@ -58,37 +58,53 @@ public class AdminBookingController {
             List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
 
             String pId = idStr(propId);
-            log.info("[estimate] propId={} numAdult={} rooms={}", pId, numAdult, rooms.size());
+            log.info("[estimate] propId={} numAdult={} totalRooms={}", pId, numAdult, rooms.size());
 
-            double nightsPrice = 0.0;
+            // Construire la liste des entrées calendrier pour ce logement
+            List<Map<String, Object>> cal = new java.util.ArrayList<>();
             for (Map<String, Object> room : rooms) {
-                if (!pId.equals(idStr(room.get("propertyId")))) continue;
+                String roomPropId = idStr(room.get("propertyId"));
+                log.info("[estimate] room keys={} propertyId={} roomId={}", room.keySet(), roomPropId, room.get("roomId"));
+                if (!pId.equals(roomPropId)) continue;
                 Object calObj = room.get("calendar");
-                if (!(calObj instanceof List)) continue;
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> cal = (List<Map<String, Object>>) calObj;
+                if (calObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> entries = (List<Map<String, Object>>) calObj;
+                    log.info("[estimate] {} calendar entries for room {}", entries.size(), room.get("roomId"));
+                    for (int i = 0; i < Math.min(entries.size(), 10); i++) {
+                        log.info("[estimate]   entry[{}] = {}", i, entries.get(i));
+                    }
+                    cal.addAll(entries);
+                }
+            }
+            log.info("[estimate] total cal entries for prop {}: {}", pId, cal.size());
+
+            // Itérer nuit par nuit comme la référence PHP :
+            // while ($debut < $fin) { prix[$date] += prix_jour; $debut += 1 jour; }
+            double nightsPrice = 0.0;
+            for (LocalDate night = arrDate; night.isBefore(depDate); night = night.plusDays(1)) {
+                boolean found = false;
                 for (Map<String, Object> entry : cal) {
                     Object p = entry.get("price1");
                     if (p == null) continue;
                     double price;
                     try { price = Double.parseDouble(p.toString()); } catch (Exception ignored) { continue; }
-                    long n;
                     try {
                         LocalDate from = LocalDate.parse(entry.get("from").toString().substring(0, 10));
                         LocalDate to   = LocalDate.parse(entry.get("to").toString().substring(0, 10));
-                        LocalDate eff_from = from.isBefore(arrDate) ? arrDate : from;
-                        LocalDate eff_to   = to.isAfter(depDate)   ? depDate : to;
-                        n = java.time.temporal.ChronoUnit.DAYS.between(eff_from, eff_to);
-                    } catch (Exception ignored) { n = 1; }
-                    if (n <= 0) continue;
-                    nightsPrice += price * n;
-
-                    // Frais supplémentaire par personne si dépassement du seuil
-                    if (cfg != null && cfg.getExtraPersonThreshold() != null && cfg.getExtraPersonFee() != null) {
-                        int extra = numAdult - cfg.getExtraPersonThreshold();
-                        if (extra > 0) nightsPrice += extra * cfg.getExtraPersonFee() * n;
-                    }
+                        if (!night.isBefore(from) && !night.isAfter(to)) {
+                            log.info("[estimate]   night {} → price1={} (entry from={} to={})", night, price, from, to);
+                            nightsPrice += price;
+                            if (cfg != null && cfg.getExtraPersonThreshold() != null && cfg.getExtraPersonFee() != null) {
+                                int extra = numAdult - cfg.getExtraPersonThreshold();
+                                if (extra > 0) nightsPrice += extra * cfg.getExtraPersonFee();
+                            }
+                            found = true;
+                            break;
+                        }
+                    } catch (Exception ignored) {}
                 }
+                if (!found) log.warn("[estimate]   night {} → NO price found in cal", night);
             }
 
             // Réductions long séjour
