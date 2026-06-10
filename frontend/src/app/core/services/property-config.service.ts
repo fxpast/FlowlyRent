@@ -10,6 +10,11 @@ export interface PropertyConfig {
   accessCode?: string;
   previousAccessCode?: string;
   cleaningHours?: number | null;
+  cleaningFee?: number | null;
+  extraPersonThreshold?: number | null;
+  extraPersonFee?: number | null;
+  discount7Nights?: number | null;
+  discount28Nights?: number | null;
   updatedAt?: string;
 }
 
@@ -33,6 +38,16 @@ export class PropertyConfigService {
 
   updateCleaningHours(propId: string, hours: string): Observable<PropertyConfig> {
     return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { cleaningHours: hours });
+  }
+
+  updatePricing(propId: string, pricing: {
+    cleaningFee?: string;
+    extraPersonThreshold?: string;
+    extraPersonFee?: string;
+    discount7Nights?: string;
+    discount28Nights?: string;
+  }): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, pricing);
   }
 
   regenerate(propId: string): Observable<PropertyConfig> {

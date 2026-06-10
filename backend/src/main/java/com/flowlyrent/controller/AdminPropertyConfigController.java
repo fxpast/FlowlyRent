@@ -48,6 +48,26 @@ public class AdminPropertyConfigController {
             String v = body.get("cleaningHours");
             cfg.setCleaningHours(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
         }
+        if (body.containsKey("cleaningFee")) {
+            String v = body.get("cleaningFee");
+            cfg.setCleaningFee(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
+        }
+        if (body.containsKey("extraPersonThreshold")) {
+            String v = body.get("extraPersonThreshold");
+            cfg.setExtraPersonThreshold(v != null && !v.isBlank() ? Integer.parseInt(v) : null);
+        }
+        if (body.containsKey("extraPersonFee")) {
+            String v = body.get("extraPersonFee");
+            cfg.setExtraPersonFee(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
+        }
+        if (body.containsKey("discount7Nights")) {
+            String v = body.get("discount7Nights");
+            cfg.setDiscount7Nights(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
+        }
+        if (body.containsKey("discount28Nights")) {
+            String v = body.get("discount28Nights");
+            cfg.setDiscount28Nights(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
+        }
         return ResponseEntity.ok(repo.save(cfg));
     }
 

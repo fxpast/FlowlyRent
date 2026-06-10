@@ -2,7 +2,9 @@ package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +29,14 @@ public class AdminBookingController {
 
     private final Beds24ApiClient beds24;
     private final Beds24AccountRepository accountRepo;
+    private final PropertyConfigRepository propConfigRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/estimate")
     public ResponseEntity<?> estimate(@RequestParam String propId,
                                        @RequestParam String arrival,
-                                       @RequestParam String departure) {
+                                       @RequestParam String departure,
+                                       @RequestParam(defaultValue = "1") int numAdult) {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
@@ -42,6 +46,10 @@ public class AdminBookingController {
             long nights = java.time.temporal.ChronoUnit.DAYS.between(arrDate, depDate);
             if (nights <= 0) return ResponseEntity.badRequest().body(Map.of("error", "Dates invalides"));
 
+            PropertyConfig cfg = propConfigRepo
+                    .findByUserIdAndBeds24PropertyId(securityUtils.getCurrentUserId(), propId)
+                    .orElse(null);
+
             Map<String, String> calParams = new HashMap<>();
             calParams.put("startDate",      arrDate.toString());
             calParams.put("endDate",        depDate.minusDays(1).toString());
@@ -50,13 +58,13 @@ public class AdminBookingController {
             List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
 
             String pId = idStr(propId);
-            log.info("[estimate] propId={} rooms={}", pId, rooms.size());
+            log.info("[estimate] propId={} numAdult={} rooms={}", pId, numAdult, rooms.size());
 
             double nightsPrice = 0.0;
             for (Map<String, Object> room : rooms) {
                 if (!pId.equals(idStr(room.get("propertyId")))) continue;
                 Object calObj = room.get("calendar");
-                if (!(calObj instanceof List)) { log.info("[estimate] no calendar array in room {}", room.get("roomId")); continue; }
+                if (!(calObj instanceof List)) continue;
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> cal = (List<Map<String, Object>>) calObj;
                 for (Map<String, Object> entry : cal) {
@@ -64,25 +72,43 @@ public class AdminBookingController {
                     if (p == null) continue;
                     double price;
                     try { price = Double.parseDouble(p.toString()); } catch (Exception ignored) { continue; }
+                    long n;
                     try {
                         LocalDate from = LocalDate.parse(entry.get("from").toString().substring(0, 10));
                         LocalDate to   = LocalDate.parse(entry.get("to").toString().substring(0, 10));
                         LocalDate eff_from = from.isBefore(arrDate) ? arrDate : from;
                         LocalDate eff_to   = to.isAfter(depDate)   ? depDate : to;
-                        long n = java.time.temporal.ChronoUnit.DAYS.between(eff_from, eff_to);
-                        if (n > 0) nightsPrice += price * n;
-                    } catch (Exception ignored) { nightsPrice += price; }
+                        n = java.time.temporal.ChronoUnit.DAYS.between(eff_from, eff_to);
+                    } catch (Exception ignored) { n = 1; }
+                    if (n <= 0) continue;
+                    nightsPrice += price * n;
+
+                    // Frais supplémentaire par personne si dépassement du seuil
+                    if (cfg != null && cfg.getExtraPersonThreshold() != null && cfg.getExtraPersonFee() != null) {
+                        int extra = numAdult - cfg.getExtraPersonThreshold();
+                        if (extra > 0) nightsPrice += extra * cfg.getExtraPersonFee() * n;
+                    }
                 }
             }
+
+            // Réductions long séjour
+            if (nights >= 28 && cfg != null && cfg.getDiscount28Nights() != null && cfg.getDiscount28Nights() > 0) {
+                nightsPrice = nightsPrice * (100.0 - cfg.getDiscount28Nights()) / 100.0;
+            } else if (nights >= 7 && cfg != null && cfg.getDiscount7Nights() != null && cfg.getDiscount7Nights() > 0) {
+                nightsPrice = nightsPrice * (100.0 - cfg.getDiscount7Nights()) / 100.0;
+            }
+
             log.info("[estimate] nights={} nightsPrice={}", nights, nightsPrice);
 
             double taxeSejour = Math.round(nightsPrice * 0.0275 * 100.0) / 100.0;
+            double cleaningFee = cfg != null && cfg.getCleaningFee() != null ? cfg.getCleaningFee() : 0.0;
 
-            return ResponseEntity.ok(Map.of(
-                    "nights",      nights,
-                    "nightsPrice", Math.round(nightsPrice * 100.0) / 100.0,
-                    "taxeSejour",  taxeSejour
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("nights",      nights);
+            result.put("nightsPrice", Math.round(nightsPrice * 100.0) / 100.0);
+            result.put("taxeSejour",  taxeSejour);
+            result.put("cleaningFee", Math.round(cleaningFee * 100.0) / 100.0);
+            return ResponseEntity.ok(result);
         } catch (Exception e) { return error(e); }
     }
 

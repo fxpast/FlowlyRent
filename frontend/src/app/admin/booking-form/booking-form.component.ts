@@ -280,7 +280,7 @@ export class BookingFormComponent implements OnInit {
   overlapError = signal<string | null>(null);
   readonly today = new Date();
   properties = signal<{ id: string; name: string }[]>([]);
-  estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number } | null>(null);
+  estimateResult = signal<{ nights: number; nightsPrice: number; taxeSejour: number; cleaningFee: number } | null>(null);
   bookingId: string | null = null;
   submitted = false;
   arrivalTime   = '16:00';
@@ -396,13 +396,14 @@ export class BookingFormComponent implements OnInit {
     const departure = this.toDateStr(v.departure);
     this.calculating.set(true);
     this.http.get<any>(`${environment.apiUrl}/admin/bookings/estimate`, {
-      params: { propId: v.propId, arrival, departure }
+      params: { propId: v.propId, arrival, departure, numAdult: String(v.numAdult || 1) }
     }).subscribe({
       next: (res) => {
         this.estimateResult.set(res);
-        const menage = +(this.form.value.fraisMenage || 0);
+        const menage = +(res.cleaningFee ?? this.form.value.fraisMenage ?? 0);
         const total = (res.nightsPrice || 0) + menage + (res.taxeSejour || 0);
         this.form.patchValue({
+          fraisMenage: Math.round(menage * 100) / 100,
           taxeSejour: res.taxeSejour,
           totalPrice: Math.round(total * 100) / 100
         });

@@ -31,6 +31,16 @@ public class PropertyConfig {
 
     private Float cleaningHours;
 
+    private Float cleaningFee;
+
+    private Integer extraPersonThreshold;
+
+    private Float extraPersonFee;
+
+    private Float discount7Nights;
+
+    private Float discount28Nights;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

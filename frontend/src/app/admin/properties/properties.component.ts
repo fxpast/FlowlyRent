@@ -229,6 +229,61 @@ interface OccupancyStatus {
               </div>
               <mat-divider class="divider"></mat-divider>
 
+              <!-- Tarification directe -->
+              <div class="cleaning-section">
+                <div class="cleaning-label">
+                  <mat-icon>euro</mat-icon>
+                  <strong>{{ 'properties.pricing_label' | translate }}</strong>
+                  @if (isPricingDirty(p['id'])) {
+                    <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
+                  }
+                </div>
+                <div class="pricing-grid">
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.cleaning_fee' | translate }}</mat-label>
+                    <input matInput type="number" min="0" step="1"
+                           [value]="(pricingDraft[p['id']] || ensurePricingDraft(p['id']))?.cleaningFee || ''"
+                           (input)="pricingDraft[p['id']].cleaningFee = $any($event.target).value">
+                    <span matTextSuffix>€</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.extra_person_threshold' | translate }}</mat-label>
+                    <input matInput type="number" min="1" step="1"
+                           [value]="pricingDraft[p['id']]?.extraPersonThreshold || ''"
+                           (input)="pricingDraft[p['id']].extraPersonThreshold = $any($event.target).value">
+                    <span matTextSuffix>pers.</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.extra_person_fee' | translate }}</mat-label>
+                    <input matInput type="number" min="0" step="1"
+                           [value]="pricingDraft[p['id']]?.extraPersonFee || ''"
+                           (input)="pricingDraft[p['id']].extraPersonFee = $any($event.target).value">
+                    <span matTextSuffix>€/pers/nuit</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.discount_7' | translate }}</mat-label>
+                    <input matInput type="number" min="0" max="100" step="1"
+                           [value]="pricingDraft[p['id']]?.discount7Nights || ''"
+                           (input)="pricingDraft[p['id']].discount7Nights = $any($event.target).value">
+                    <span matTextSuffix>%</span>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.discount_28' | translate }}</mat-label>
+                    <input matInput type="number" min="0" max="100" step="1"
+                           [value]="pricingDraft[p['id']]?.discount28Nights || ''"
+                           (input)="pricingDraft[p['id']].discount28Nights = $any($event.target).value">
+                    <span matTextSuffix>%</span>
+                  </mat-form-field>
+                  <button type="button" mat-icon-button color="primary"
+                          (click)="savePricing(p['id'])"
+                          [matTooltip]="'common.save' | translate"
+                          [disabled]="!isPricingDirty(p['id'])">
+                    <mat-icon>save</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <mat-divider class="divider"></mat-divider>
+
               <!-- Inventaire & Équipements -->
               <div class="inventory-section">
                 <div class="inventory-header" (click)="toggleInventory(p['id'])">
@@ -391,6 +446,7 @@ interface OccupancyStatus {
     .cleaning-label mat-icon { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
     .cleaning-row { display: flex; align-items: center; gap: 6px; }
     .cleaning-input { width: 120px; }
+    .pricing-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
     .occ-banner {
       display: flex; align-items: center; gap: 6px;
@@ -480,6 +536,8 @@ export class PropertiesComponent implements OnInit {
   codeVisible: Record<string, boolean> = {};
   cleaningDraft: Record<string, string> = {};
   cleaningSaved: Record<string, string> = {};
+  pricingDraft: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
+  pricingSaved: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
 
   filtered = computed(() => {
     const q   = this.search().toLowerCase().trim();
@@ -624,6 +682,15 @@ export class PropertiesComponent implements OnInit {
           const ch = c.cleaningHours != null ? String(c.cleaningHours) : '';
           this.cleaningSaved[c.beds24PropertyId] = ch;
           this.cleaningDraft[c.beds24PropertyId] = ch;
+          const pricing = {
+            cleaningFee:          c.cleaningFee != null ? String(c.cleaningFee) : '',
+            extraPersonThreshold: c.extraPersonThreshold != null ? String(c.extraPersonThreshold) : '',
+            extraPersonFee:       c.extraPersonFee != null ? String(c.extraPersonFee) : '',
+            discount7Nights:      c.discount7Nights != null ? String(c.discount7Nights) : '',
+            discount28Nights:     c.discount28Nights != null ? String(c.discount28Nights) : ''
+          };
+          this.pricingSaved[c.beds24PropertyId] = { ...pricing };
+          this.pricingDraft[c.beds24PropertyId] = { ...pricing };
         }
         this.loading.set(false);
       },
@@ -837,6 +904,42 @@ export class PropertiesComponent implements OnInit {
         this.cleaningSaved[propId] = v;
         this.cleaningDraft[propId] = v;
         this.snackBar.open(this.t.instant('properties.cleaning_saved'), this.t.instant('common.ok'), { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  isPricingDirty(propId: string): boolean {
+    const d = this.pricingDraft[propId];
+    const s = this.pricingSaved[propId];
+    if (!d || !s) return false;
+    return d.cleaningFee !== s.cleaningFee || d.extraPersonThreshold !== s.extraPersonThreshold
+        || d.extraPersonFee !== s.extraPersonFee || d.discount7Nights !== s.discount7Nights
+        || d.discount28Nights !== s.discount28Nights;
+  }
+
+  ensurePricingDraft(propId: string): void {
+    if (!this.pricingDraft[propId]) {
+      this.pricingDraft[propId] = { cleaningFee: '', extraPersonThreshold: '', extraPersonFee: '', discount7Nights: '', discount28Nights: '' };
+      this.pricingSaved[propId] = { ...this.pricingDraft[propId] };
+    }
+  }
+
+  savePricing(propId: string): void {
+    const d = this.pricingDraft[propId];
+    if (!d) return;
+    this.propConfigService.updatePricing(String(propId), d).subscribe({
+      next: cfg => {
+        const pricing = {
+          cleaningFee:          cfg.cleaningFee != null ? String(cfg.cleaningFee) : '',
+          extraPersonThreshold: cfg.extraPersonThreshold != null ? String(cfg.extraPersonThreshold) : '',
+          extraPersonFee:       cfg.extraPersonFee != null ? String(cfg.extraPersonFee) : '',
+          discount7Nights:      cfg.discount7Nights != null ? String(cfg.discount7Nights) : '',
+          discount28Nights:     cfg.discount28Nights != null ? String(cfg.discount28Nights) : ''
+        };
+        this.pricingSaved[propId] = { ...pricing };
+        this.pricingDraft[propId] = { ...pricing };
+        this.snackBar.open(this.t.instant('properties.pricing_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
