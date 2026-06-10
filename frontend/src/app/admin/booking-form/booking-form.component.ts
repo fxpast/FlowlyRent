@@ -75,6 +75,20 @@ function requireContact(group: AbstractControl): ValidationErrors | null {
               <mat-label>{{ 'booking_form.country' | translate }}</mat-label>
               <input matInput formControlName="guestCountry">
             </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'booking_form.language' | translate }}</mat-label>
+              <mat-select formControlName="lang">
+                <mat-option value="">—</mat-option>
+                <mat-option value="fr">Français</mat-option>
+                <mat-option value="en">English</mat-option>
+                <mat-option value="de">Deutsch</mat-option>
+                <mat-option value="nl">Nederlands</mat-option>
+                <mat-option value="es">Español</mat-option>
+                <mat-option value="it">Italiano</mat-option>
+                <mat-option value="pt">Português</mat-option>
+                <mat-option value="ru">Русский</mat-option>
+              </mat-select>
+            </mat-form-field>
           </div>
 
           @if (submitted && form.hasError('requireContact')) {
@@ -302,6 +316,7 @@ export class BookingFormComponent implements OnInit {
       guestEmail:     ['', Validators.email],
       guestPhone:     [''],
       guestCountry:   [''],
+      lang:           [''],
       propId:         ['', Validators.required],
       arrival:        [null, Validators.required],
       departure:      [null, Validators.required],

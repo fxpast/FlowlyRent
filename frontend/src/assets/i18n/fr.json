@@ -939,6 +939,7 @@
     "email": "Email *",
     "phone": "Téléphone *",
     "country": "Pays",
+    "language": "Langue du voyageur",
     "contact_required": "Email ou téléphone obligatoire — veuillez renseigner au moins un moyen de contact.",
     "invalid_email": "Format d'email invalide",
     "arrival": "Arrivée",

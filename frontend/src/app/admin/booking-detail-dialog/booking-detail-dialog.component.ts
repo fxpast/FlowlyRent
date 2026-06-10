@@ -111,7 +111,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'booking_dialog.language' | translate }}</mat-label>
-                <mat-select [(ngModel)]="draft['lang']">
+                <mat-select [(ngModel)]="draft['lang']" (ngModelChange)="onLangChange($event)">
                   <mat-option value="">—</mat-option>
                   <mat-option value="fr">Français</mat-option>
                   <mat-option value="en">English</mat-option>
@@ -1234,6 +1234,11 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   toggleTemplateLang(): void { this.templateLang.set(this.templateLang() === 'fr' ? 'en' : 'fr'); }
+
+  onLangChange(lang: string): void {
+    const bl = (lang || '').toLowerCase();
+    this.templateLang.set(!bl || bl === 'fr' ? 'fr' : 'en');
+  }
 
   copyToClipboard(): void {
     navigator.clipboard.writeText(this.newMessage.trim()).then(() => {
