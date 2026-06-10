@@ -52,7 +52,7 @@ public class AdminBookingController {
 
             Map<String, String> calParams = new HashMap<>();
             calParams.put("startDate",      arrDate.toString());
-            calParams.put("endDate",        depDate.minusDays(1).toString());
+            calParams.put("endDate",        depDate.toString());
             calParams.put("includePrices",  "1");
             calParams.put("includeMinStay", "1");
             List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
