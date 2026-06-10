@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "FlowlyRent",
   "short_name": "FlowlyRent",
   "description": "Gestion de location saisonnière",
@@ -31,12 +32,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "assets/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }
