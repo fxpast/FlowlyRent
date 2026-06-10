@@ -15,6 +15,8 @@ public class LoginResponse {
     private String publicSiteSlug;
     private UserRole role;
     private String phone;
+    private String listingsSlug;
+    private String beds24OwnerId;
     private String siret;
     private String companyName;
     private String companyAddress;

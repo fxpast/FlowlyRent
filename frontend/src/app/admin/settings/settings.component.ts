@@ -286,6 +286,38 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <input matInput [(ngModel)]="profileEdit.phone" type="tel" placeholder="+33612345678" />
             <mat-hint>{{ 'settings.phone_hint' | translate }}</mat-hint>
           </mat-form-field>
+          <mat-divider style="margin:16px 0"></mat-divider>
+          <div class="webhook-label" style="margin-bottom:10px">
+            <mat-icon>event_seat</mat-icon>
+            <strong>{{ 'settings.beds24_booking_pages' | translate }}</strong>
+            <span class="webhook-hint">{{ 'settings.beds24_booking_pages_hint' | translate }}</span>
+          </div>
+          <div class="form-row">
+            <mat-form-field>
+              <mat-label>{{ 'settings.beds24_owner_id' | translate }}</mat-label>
+              <input matInput [(ngModel)]="profileEdit.beds24OwnerId" placeholder="73803" />
+              <mat-hint>{{ 'settings.beds24_owner_id_hint' | translate }}</mat-hint>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>{{ 'settings.listings_slug' | translate }}</mat-label>
+              <input matInput [(ngModel)]="profileEdit.listingsSlug" placeholder="annonces" />
+              <mat-hint>{{ 'settings.listings_slug_hint' | translate }}</mat-hint>
+            </mat-form-field>
+          </div>
+          @if (listingsUrl()) {
+            <div class="webhook-box">
+              <div class="webhook-label">
+                <mat-icon>link</mat-icon>
+                <strong>{{ 'settings.listings_url' | translate }}</strong>
+              </div>
+              <div class="webhook-url-row">
+                <code class="webhook-url">{{ listingsUrl() }}</code>
+                <button mat-icon-button (click)="copyListingsUrl()" matTooltip="Copier">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
           <div class="plan-info">
             <mat-icon>stars</mat-icon>
             {{ 'settings.current_plan' | translate }} <strong>{{ profile()!.plan }}</strong>
@@ -387,7 +419,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 })
 export class SettingsComponent implements OnInit {
   profile = signal<UserProfile | null>(null);
-  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', phone: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
+  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', phone: '', listingsSlug: '', beds24OwnerId: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
   savingProfile = signal(false);
   profileMsg = signal('');
   profileError = signal(false);
@@ -425,6 +457,21 @@ export class SettingsComponent implements OnInit {
     private t: TranslateService
   ) {}
 
+  listingsUrl(): string {
+    const slug = this.profileEdit.publicSiteSlug;
+    const ls = this.profileEdit.listingsSlug;
+    if (!slug || !ls) return '';
+    return `${window.location.origin}/${slug}/${ls}`;
+  }
+
+  copyListingsUrl(): void {
+    const url = this.listingsUrl();
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() =>
+      this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })
+    );
+  }
+
   copyWebhookUrl(): void {
     navigator.clipboard.writeText(this.webhookUrl()).then(() =>
       this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })
@@ -437,6 +484,7 @@ export class SettingsComponent implements OnInit {
       this.profileEdit = {
         firstName: p.firstName ?? '', lastName: p.lastName ?? '',
         publicSiteSlug: p.publicSiteSlug ?? '', phone: p.phone ?? '',
+        listingsSlug: p.listingsSlug ?? '', beds24OwnerId: p.beds24OwnerId ?? '',
         siret: p.siret ?? '', companyName: p.companyName ?? '',
         companyAddress: p.companyAddress ?? '', companyLogoUrl: p.companyLogoUrl ?? ''
       };
@@ -453,7 +501,9 @@ export class SettingsComponent implements OnInit {
       firstName: this.profileEdit.firstName,
       lastName: this.profileEdit.lastName,
       publicSiteSlug: this.profileEdit.publicSiteSlug,
-      phone: this.profileEdit.phone
+      phone: this.profileEdit.phone,
+      listingsSlug: this.profileEdit.listingsSlug,
+      beds24OwnerId: this.profileEdit.beds24OwnerId
     }).subscribe({
       next: p => {
         this.profile.set(p);

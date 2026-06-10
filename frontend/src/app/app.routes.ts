@@ -43,6 +43,10 @@ export const routes: Routes = [
     loadComponent: () => import('./public/payment-redirect/payment-redirect.component').then(m => m.PaymentRedirectComponent)
   },
   {
+    path: ':userSlug/:pageSlug',
+    loadComponent: () => import('./public/page-resolver/page-resolver.component').then(m => m.PageResolverComponent)
+  },
+  {
     path: '**',
     redirectTo: '/public/home'
   }

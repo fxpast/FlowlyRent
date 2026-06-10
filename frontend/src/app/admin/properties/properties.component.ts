@@ -17,6 +17,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
 import { BookingService } from '../../core/services/booking.service';
+import { UserService } from '../../core/services/user.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
@@ -284,6 +285,24 @@ interface OccupancyStatus {
               </div>
               <mat-divider class="divider"></mat-divider>
 
+              <!-- Lien réservation Beds24 -->
+              @if (shortNameSaved[p['id']]) {
+                <div class="code-section">
+                  <div class="code-label">
+                    <mat-icon>link</mat-icon>
+                    <strong>{{ 'properties.booking_link' | translate }}</strong>
+                  </div>
+                  <div class="booking-url-row">
+                    <code class="booking-url-code">{{ bookingUrl(p['id']) }}</code>
+                    <button mat-icon-button (click)="copyBookingUrl(p['id'])"
+                            [matTooltip]="'common.copy' | translate">
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                  </div>
+                </div>
+                <mat-divider class="divider"></mat-divider>
+              }
+
               <!-- Inventaire & Équipements -->
               <div class="inventory-section">
                 <div class="inventory-header" (click)="toggleInventory(p['id'])">
@@ -507,6 +526,10 @@ interface OccupancyStatus {
     .inv-detail-field { flex: 1; min-width: 80px; }
     .inv-qty-field { width: 60px; flex-shrink: 0; }
 
+    .booking-url-row { display: flex; align-items: center; gap: 6px; }
+    .booking-url-code { font-size: 11px; background: #f5f5f5; border: 1px solid #e0e0e0;
+      border-radius: 4px; padding: 5px 8px; flex: 1; word-break: break-all; color: #0288d1; }
+
     .inactive-banner {
       display: flex; align-items: center; gap: 6px;
       background: #fff3e0; color: #e65100; font-size: 12px;
@@ -524,6 +547,7 @@ export class PropertiesComponent implements OnInit {
   properties = signal<any[]>([]);
   loading    = signal(false);
   search     = signal('');
+  publicSiteSlug = signal('');
 
   searchDraft = '';
   tipsOpen:   Record<string, boolean> = {};
@@ -656,11 +680,13 @@ export class PropertiesComponent implements OnInit {
     private propConfigService: PropertyConfigService,
     private bookingService: BookingService,
     private inventoryService: PropertyInventoryService,
+    private userService: UserService,
     private snackBar: MatSnackBar,
     private t: TranslateService
   ) {}
 
   ngOnInit(): void {
+    this.userService.getProfile().subscribe({ next: p => this.publicSiteSlug.set(p.publicSiteSlug ?? ''), error: () => {} });
     this.loading.set(true);
     const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     forkJoin([
@@ -950,6 +976,25 @@ export class PropertiesComponent implements OnInit {
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
+  }
+
+  slugify(text: string): string {
+    return text.normalize('NFD').replace(/\p{M}/gu, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  bookingUrl(propId: string): string {
+    const sn = this.shortNameSaved[propId];
+    if (!sn || !this.publicSiteSlug()) return '';
+    return `${window.location.origin}/${this.publicSiteSlug()}/${this.slugify(sn)}`;
+  }
+
+  copyBookingUrl(propId: string): void {
+    const url = this.bookingUrl(propId);
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() =>
+      this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })
+    );
   }
 
   regenerateCode(propId: string): void {

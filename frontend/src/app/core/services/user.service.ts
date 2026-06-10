@@ -24,6 +24,8 @@ export interface UserProfile {
   plan: string;
   publicSiteSlug: string;
   phone?: string;
+  listingsSlug?: string;
+  beds24OwnerId?: string;
   siret?: string;
   companyName?: string;
   companyAddress?: string;
@@ -47,7 +49,7 @@ export class UserService {
     return this.http.get<UserProfile>(`${this.base}/user/profile`);
   }
 
-  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl'>>): Observable<UserProfile> {
+  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'listingsSlug' | 'beds24OwnerId' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl'>>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.base}/user/profile`, data);
   }
 

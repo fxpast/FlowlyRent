@@ -427,6 +427,7 @@
     "discount_7": "7-night discount",
     "discount_28": "28-night discount",
     "pricing_saved": "Pricing saved",
+    "booking_link": "Beds24 booking link",
     "new_code": "New code",
     "search": "Search",
     "beds": "room(s)",
@@ -536,7 +537,14 @@
     "phone_hint": "International format e.g. +33612345678",
     "url_copied": "URL copied!",
     "billing_saved": "Billing information saved",
-    "billing_error": "Error saving information"
+    "billing_error": "Error saving information",
+    "beds24_booking_pages": "Beds24 booking pages",
+    "beds24_booking_pages_hint": "Create custom URLs for your Beds24 booking pages",
+    "beds24_owner_id": "Beds24 owner ID",
+    "beds24_owner_id_hint": "Find your ownerid in Beds24 → Account",
+    "listings_slug": "Page name (all properties)",
+    "listings_slug_hint": "E.g.: listings, properties, reservations",
+    "listings_url": "URL — all properties"
   },
   "stats": {
     "title": "Revenue & statistics",

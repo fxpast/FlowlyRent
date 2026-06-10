@@ -427,6 +427,7 @@
     "discount_7": "Descuento 7 noches",
     "discount_28": "Descuento 28 noches",
     "pricing_saved": "Tarificación guardada",
+    "booking_link": "Enlace de reserva Beds24",
     "new_code": "Nuevo código",
     "search": "Buscar",
     "beds": "habitación(es)",
@@ -536,7 +537,14 @@
     "phone_hint": "Formato internacional ej: +33612345678",
     "url_copied": "¡URL copiada!",
     "billing_saved": "Información de facturación guardada",
-    "billing_error": "Error al guardar"
+    "billing_error": "Error al guardar",
+    "beds24_booking_pages": "Páginas de reserva Beds24",
+    "beds24_booking_pages_hint": "Crea URLs personalizadas para tus páginas de reserva Beds24",
+    "beds24_owner_id": "ID propietario Beds24",
+    "beds24_owner_id_hint": "Encuentra tu ownerid en Beds24 → Account",
+    "listings_slug": "Nombre de página (todos los alojamientos)",
+    "listings_slug_hint": "Ej.: anuncios, alojamientos, reservas",
+    "listings_url": "URL — todos los alojamientos"
   },
   "stats": {
     "title": "Ingresos y estadísticas",

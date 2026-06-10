@@ -51,6 +51,8 @@ public class AppUser implements UserDetails {
     private java.time.LocalDateTime planExpiresAt;
 
     private String phone;
+    private String listingsSlug;
+    private String beds24OwnerId;
 
     private String siret;
     private String companyName;

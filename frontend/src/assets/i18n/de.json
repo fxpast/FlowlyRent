@@ -427,6 +427,7 @@
     "discount_7": "7-Nächte-Rabatt",
     "discount_28": "28-Nächte-Rabatt",
     "pricing_saved": "Preise gespeichert",
+    "booking_link": "Beds24-Buchungslink",
     "new_code": "Neuer Code",
     "search": "Suchen",
     "beds": "Zimmer",
@@ -536,7 +537,14 @@
     "phone_hint": "Internationales Format z.B. +33612345678",
     "url_copied": "URL kopiert!",
     "billing_saved": "Rechnungsdaten gespeichert",
-    "billing_error": "Fehler beim Speichern"
+    "billing_error": "Fehler beim Speichern",
+    "beds24_booking_pages": "Beds24-Buchungsseiten",
+    "beds24_booking_pages_hint": "Erstellen Sie benutzerdefinierte URLs für Ihre Beds24-Buchungsseiten",
+    "beds24_owner_id": "Beds24-Eigentümer-ID",
+    "beds24_owner_id_hint": "Ihre ownerid finden Sie in Beds24 → Account",
+    "listings_slug": "Seitenname (alle Unterkünfte)",
+    "listings_slug_hint": "Z.B.: inserate, unterkuenfte, buchungen",
+    "listings_url": "URL — alle Unterkünfte"
   },
   "stats": {
     "title": "Einnahmen & Statistiken",
