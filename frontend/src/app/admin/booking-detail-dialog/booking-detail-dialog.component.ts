@@ -1113,13 +1113,16 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
             const arrDate = (b['arrival'] || '').toString().substring(0, 10);
             return bpid === pid && arrDate === departure;
           });
-          let checkinTime: string | undefined;
-          if (next) {
-            const arrStr = (next['arrival'] || '').toString();
-            const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
-            checkinTime = (t && t !== '00:00') ? t : '16:00';
-          }
-          buildNotes(checkinTime);
+          if (!next) { buildNotes(); return; }
+          const arrStr = (next['arrival'] || '').toString();
+          const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
+          const rawTime = (t && t !== '00:00') ? t : '16:00';
+          const nextId = String(next['id'] ?? '');
+          if (!nextId) { buildNotes(rawTime); return; }
+          this.timeOverrideService.get(nextId).subscribe({
+            next: ov => buildNotes(ov.checkinTime || rawTime),
+            error: () => buildNotes(rawTime)
+          });
         },
         error: () => buildNotes()
       });
