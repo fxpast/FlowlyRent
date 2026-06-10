@@ -242,36 +242,36 @@ interface OccupancyStatus {
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.cleaning_fee' | translate }}</mat-label>
                     <input matInput type="number" min="0" step="1"
-                           [value]="(pricingDraft[p['id']] || ensurePricingDraft(p['id']))?.cleaningFee || ''"
-                           (input)="pricingDraft[p['id']].cleaningFee = $any($event.target).value">
+                           [value]="pricingDraft[p['id']]?.cleaningFee || ''"
+                           (input)="setPricingField(p['id'], 'cleaningFee', $any($event.target).value)">
                     <span matTextSuffix>€</span>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.extra_person_threshold' | translate }}</mat-label>
                     <input matInput type="number" min="1" step="1"
                            [value]="pricingDraft[p['id']]?.extraPersonThreshold || ''"
-                           (input)="pricingDraft[p['id']].extraPersonThreshold = $any($event.target).value">
+                           (input)="setPricingField(p['id'], 'extraPersonThreshold', $any($event.target).value)">
                     <span matTextSuffix>pers.</span>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.extra_person_fee' | translate }}</mat-label>
                     <input matInput type="number" min="0" step="1"
                            [value]="pricingDraft[p['id']]?.extraPersonFee || ''"
-                           (input)="pricingDraft[p['id']].extraPersonFee = $any($event.target).value">
+                           (input)="setPricingField(p['id'], 'extraPersonFee', $any($event.target).value)">
                     <span matTextSuffix>€/pers/nuit</span>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.discount_7' | translate }}</mat-label>
                     <input matInput type="number" min="0" max="100" step="1"
                            [value]="pricingDraft[p['id']]?.discount7Nights || ''"
-                           (input)="pricingDraft[p['id']].discount7Nights = $any($event.target).value">
+                           (input)="setPricingField(p['id'], 'discount7Nights', $any($event.target).value)">
                     <span matTextSuffix>%</span>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.discount_28' | translate }}</mat-label>
                     <input matInput type="number" min="0" max="100" step="1"
                            [value]="pricingDraft[p['id']]?.discount28Nights || ''"
-                           (input)="pricingDraft[p['id']].discount28Nights = $any($event.target).value">
+                           (input)="setPricingField(p['id'], 'discount28Nights', $any($event.target).value)">
                     <span matTextSuffix>%</span>
                   </mat-form-field>
                   <button type="button" mat-icon-button color="primary"
@@ -692,6 +692,14 @@ export class PropertiesComponent implements OnInit {
           this.pricingSaved[c.beds24PropertyId] = { ...pricing };
           this.pricingDraft[c.beds24PropertyId] = { ...pricing };
         }
+        for (const p of props ?? []) {
+          const id = String(p['id']);
+          if (!this.pricingDraft[id]) {
+            const empty = { cleaningFee: '', extraPersonThreshold: '', extraPersonFee: '', discount7Nights: '', discount28Nights: '' };
+            this.pricingDraft[id] = { ...empty };
+            this.pricingSaved[id] = { ...empty };
+          }
+        }
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
@@ -918,10 +926,9 @@ export class PropertiesComponent implements OnInit {
         || d.discount28Nights !== s.discount28Nights;
   }
 
-  ensurePricingDraft(propId: string): void {
-    if (!this.pricingDraft[propId]) {
-      this.pricingDraft[propId] = { cleaningFee: '', extraPersonThreshold: '', extraPersonFee: '', discount7Nights: '', discount28Nights: '' };
-      this.pricingSaved[propId] = { ...this.pricingDraft[propId] };
+  setPricingField(propId: string, field: 'cleaningFee' | 'extraPersonThreshold' | 'extraPersonFee' | 'discount7Nights' | 'discount28Nights', value: string): void {
+    if (this.pricingDraft[propId]) {
+      this.pricingDraft[propId][field] = value;
     }
   }
 
