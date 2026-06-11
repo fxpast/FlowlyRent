@@ -510,6 +510,27 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                   }
                 </div>
               }
+              @if (propAccessCode() !== undefined) {
+                <div class="code-section">
+                  <div class="code-row">
+                    <mat-icon class="code-icon">vpn_key</mat-icon>
+                    <span class="code-label">{{ 'properties.access_code' | translate }}</span>
+                    <span class="code-value">{{ propAccessCode() || '—' }}</span>
+                    <button mat-icon-button type="button" (click)="regenerateAccessCode()"
+                            [matTooltip]="'properties.regenerate_code' | translate"
+                            [disabled]="regeneratingCode()">
+                      <mat-icon>casino</mat-icon>
+                    </button>
+                  </div>
+                  @if (propPreviousAccessCode()) {
+                    <div class="code-prev">
+                      <mat-icon class="code-icon-sm">history</mat-icon>
+                      <span class="code-prev-label">{{ 'properties.prev_code' | translate }}</span>
+                      <span class="code-prev-value">{{ propPreviousAccessCode() }}</span>
+                    </div>
+                  }
+                </div>
+              }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>{{ 'common.notes' | translate }}</mat-label>
                 <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="taskForm.notes"
@@ -664,6 +685,15 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     }
     .pay-link-text:hover { text-decoration: underline; }
 
+    .code-section { margin: 0 0 10px; padding: 8px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
+    .code-row { display: flex; align-items: center; gap: 8px; }
+    .code-icon { font-size: 18px; width: 18px; height: 18px; color: #0288d1; flex-shrink: 0; }
+    .code-label { font-size: 12px; color: #666; flex-shrink: 0; }
+    .code-value { font-size: 14px; font-weight: 700; color: #111; flex: 1; letter-spacing: 1px; }
+    .code-prev { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .code-icon-sm { font-size: 14px; width: 14px; height: 14px; color: #999; flex-shrink: 0; }
+    .code-prev-label { font-size: 11px; color: #999; flex-shrink: 0; }
+    .code-prev-value { font-size: 12px; color: #888; text-decoration: line-through; }
     .task-linen-preset { margin: 0 0 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
     .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
     .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
@@ -688,6 +718,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   activeTab      = signal(0);
   propAccessCode         = signal<string | undefined>(undefined);
   propPreviousAccessCode = signal<string | undefined>(undefined);
+  regeneratingCode       = signal(false);
   draft: Record<string, any>;
 
   messages = signal<Message[]>([]);
@@ -868,6 +899,21 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       this.loadPropertyCleaningHours();
       if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
     }
+  }
+
+  regenerateAccessCode(): void {
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    if (!pid) return;
+    this.regeneratingCode.set(true);
+    this.propConfigService.regenerate(pid).subscribe({
+      next: cfg => {
+        this.propAccessCode.set(cfg.accessCode ?? '');
+        this.propPreviousAccessCode.set(cfg.previousAccessCode ?? '');
+        this.regeneratingCode.set(false);
+        this.snackBar.open(this.t.instant('properties.config_saved'), '', { duration: 2000 });
+      },
+      error: () => this.regeneratingCode.set(false)
+    });
   }
 
   private loadTemplates(): void {
