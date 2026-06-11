@@ -51,10 +51,15 @@ import { environment } from '@env/environment';
             <mat-form-field appearance="outline" class="full">
               <mat-label>{{ 'login.password' | translate }}</mat-label>
               <input matInput [type]="showPwd ? 'text' : 'password'"
-                     [(ngModel)]="form.password" name="password" required autocomplete="new-password" />
+                     [(ngModel)]="form.password" name="password" required minlength="8"
+                     #pwd="ngModel" autocomplete="new-password" />
               <button mat-icon-button matSuffix type="button" (click)="showPwd = !showPwd">
                 <mat-icon>{{ showPwd ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
+              <mat-hint>{{ 'settings.password_hint' | translate }}</mat-hint>
+              @if (pwd.errors?.['minlength']) {
+                <mat-error>{{ 'settings.password_hint' | translate }}</mat-error>
+              }
             </mat-form-field>
 
             @if (error()) {
@@ -62,7 +67,7 @@ import { environment } from '@env/environment';
             }
 
             <button mat-raised-button color="primary" type="submit" class="full submit-btn"
-                    [disabled]="loading() || !form.email || !form.password || !form.firstName">
+                    [disabled]="loading() || !form.email || !form.password || !form.firstName || pwd.invalid">
               @if (loading()) { <mat-spinner diameter="20" /> }
               @else { {{ 'login.create_btn' | translate }} }
             </button>
