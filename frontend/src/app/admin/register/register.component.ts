@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/services/auth.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
+import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 
 @Component({
   selector: 'app-register',
@@ -18,10 +19,17 @@ import { environment } from '@env/environment';
   imports: [
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    TranslateModule
+    TranslateModule, LangSwitcherComponent
   ],
   template: `
     <div class="container">
+      <div class="top-bar">
+        <a mat-button routerLink="/public/home" class="back-btn">
+          <mat-icon>arrow_back</mat-icon>
+          <span class="back-label">{{ 'public.home_title_short' | translate }}</span>
+        </a>
+        <app-lang-switcher />
+      </div>
       <mat-card class="card">
         <mat-card-header>
           <mat-icon mat-card-avatar>home</mat-icon>
@@ -83,10 +91,17 @@ import { environment } from '@env/environment';
   `,
   styles: [`
     .container {
+      position: relative;
       min-height: 100vh; display: flex; justify-content: center; align-items: center;
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
-      padding: 24px;
+      padding: 72px 16px 24px;
     }
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 8px;
+    }
+    .back-btn { color: white; display: flex; align-items: center; gap: 2px; }
     .card { width: 100%; max-width: 440px; padding: 24px; }
     mat-card-header { margin-bottom: 24px; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; color: #0288d1; }
@@ -98,6 +113,7 @@ import { environment } from '@env/environment';
     .footer { padding: 16px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
     .footer a { color: #0288d1; font-weight: 500; text-decoration: none; margin-left: 4px; }
     .footer a:hover { text-decoration: underline; }
+    @media (max-width: 480px) { .back-label { display: none; } }
   `]
 })
 export class RegisterComponent {

@@ -10,13 +10,21 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
+import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslateModule, LangSwitcherComponent],
   template: `
     <div class="login-container">
+      <div class="top-bar">
+        <a mat-button routerLink="/public/home" class="back-btn">
+          <mat-icon>arrow_back</mat-icon>
+          <span class="back-label">{{ 'public.home_title_short' | translate }}</span>
+        </a>
+        <app-lang-switcher />
+      </div>
       <mat-card class="login-card">
         <div class="login-logo">
           <img src="assets/logo.svg" alt="FlowlyRent" />
@@ -51,10 +59,18 @@ import { UserService } from '../../core/services/user.service';
   `,
   styles: [`
     .login-container {
-      display: flex; justify-content: center; align-items: center; height: 100vh;
+      position: relative;
+      display: flex; justify-content: center; align-items: center; min-height: 100vh;
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
+      padding: 72px 16px 24px;
     }
-    .login-card { width: 380px; padding: 24px; }
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 8px;
+    }
+    .back-btn { color: white; display: flex; align-items: center; gap: 2px; }
+    .login-card { width: 380px; max-width: 100%; padding: 24px; }
     .login-logo { text-align: center; padding: 16px 0 24px; }
     .login-logo img { width: 200px; height: auto; }
     .full-width { width: 100%; margin-bottom: 16px; }
@@ -62,6 +78,7 @@ import { UserService } from '../../core/services/user.service';
     .footer { padding: 16px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
     .footer a { color: #0288d1; font-weight: 500; text-decoration: none; margin-left: 4px; }
     .footer a:hover { text-decoration: underline; }
+    @media (max-width: 480px) { .back-label { display: none; } }
   `]
 })
 export class LoginComponent {
