@@ -99,8 +99,25 @@ mysql -u root -e "CREATE DATABASE IF NOT EXISTS flowlyrent CHARACTER SET utf8mb4
 - **Templates messages** : `MessageTemplateService.apply(content, booking, accessCode?, checkinTime?, checkoutTime?, previousAccessCode?)`
 - **Arrow functions dans templates Angular** : ne jamais utiliser `=>` ou `<` / `>` inline dans `(click)=""` — créer une méthode dans le composant
 - **Affichage notes multi-lignes** : `white-space: pre-wrap` + `cdkTextareaAutosize cdkAutosizeMinRows="5"`
+- **Validation formulaires** : aligner les contraintes Angular (`minlength`, `required`, `#ref="ngModel"`) sur les annotations Spring (`@Size`, `@NotBlank`) — évite de gérer le format `ProblemDetail` des erreurs de validation `@Valid`
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Git** : travailler sur `dev`, ne jamais toucher à `master`
+
+---
+
+## Portails de connexion
+
+La page d'accueil (`/public/home`) présente deux portails distincts :
+
+| Portail | Lien | Rôle accepté | Inscription |
+|---------|------|--------------|-------------|
+| Propriétaire / Hôte | `/admin/login?type=owner` | `USER` uniquement | Oui (`/admin/register`) |
+| Prestataire | `/admin/login?type=housekeeper` | `HOUSEKEEPER` uniquement | Non |
+
+- Le login enforcer le rôle via `ActivatedRoute.snapshot.queryParamMap.get('type')`
+- Si mauvais rôle : `localStorage` nettoyé + `auth.isLoggedIn.set(false)` + message d'erreur (sans appeler `auth.logout()` qui navigue vers home)
+- Après inscription ou connexion propriétaire : `getBeds24Status()` → `/admin/settings` si Beds24 non lié, sinon `/admin/dashboard`
+- Le superadmin (`isAdmin()`) passe toujours directement vers `/superadmin/dashboard`, quel que soit le `type`
 
 ---
 
