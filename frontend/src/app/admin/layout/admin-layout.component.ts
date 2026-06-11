@@ -145,6 +145,9 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'assessment',        label: 'nav.reports',     route: 'reports' }
   ];
 
+  private msgInterval?: ReturnType<typeof setInterval>;
+  private notifInterval?: ReturnType<typeof setInterval>;
+
   constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient, private push: PushNotificationService) {}
 
   ngOnInit(): void {
@@ -153,16 +156,18 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     this.push.init();
     this.loadUnreadCount();
     this.loadUnreadNotifCount();
-    setInterval(() => this.loadUnreadCount(), 30000);
-    setInterval(() => this.loadUnreadNotifCount(), 60000);
+    this.msgInterval   = setInterval(() => this.loadUnreadCount(), 30000);
+    this.notifInterval = setInterval(() => this.loadUnreadNotifCount(), 60000);
   }
 
   ngOnDestroy(): void {
     this.mq.removeEventListener('change', this.mqListener);
+    clearInterval(this.msgInterval);
+    clearInterval(this.notifInterval);
   }
 
   private loadUnreadCount(): void {
-    this.messageService.getUnreadCount().subscribe(r => this.unreadCount.set(r.count));
+    this.messageService.getUnreadCount().subscribe({ next: r => this.unreadCount.set(r.count), error: () => {} });
   }
 
   private loadUnreadNotifCount(): void {
