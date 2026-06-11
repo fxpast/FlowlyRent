@@ -139,6 +139,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'account_balance',   label: 'nav.expenses',    route: 'expenses' },
     { icon: 'settings',          label: 'nav.settings',    route: 'settings' },
     { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
+    { icon: 'quiz',              label: 'nav.faq',         route: 'faq' },
     { icon: 'payment',           label: 'nav.payments',    route: 'payments' },
     { icon: 'sync',              label: 'nav.sync',        route: 'sync' },
     { icon: 'bar_chart',         label: 'nav.stats',       route: 'stats' },

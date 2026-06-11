@@ -98,6 +98,10 @@ export const adminRoutes: Routes = [
       {
         path: 'expenses',
         loadComponent: () => import('./expenses/expenses.component').then(m => m.ExpensesComponent)
+      },
+      {
+        path: 'faq',
+        loadComponent: () => import('./faq/faq.component').then(m => m.AdminFaqComponent)
       }
     ]
   }
