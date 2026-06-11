@@ -45,6 +45,12 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
       </div>
     </div>
 
+    <div class="faq-link-bar">
+      <a mat-button routerLink="/public/faq" class="faq-link">
+        <mat-icon>quiz</mat-icon> {{ 'faq.title' | translate }}
+      </a>
+    </div>
+
     <div class="features">
       <div class="feature">
         <mat-icon>sync</mat-icon>
@@ -141,6 +147,9 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
     .feature h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
     .feature p { margin: 0; color: #555; line-height: 1.6; }
 
+    .faq-link-bar { text-align: center; padding: 24px 0 0; }
+    .faq-link { color: #0288d1; font-size: 15px; font-weight: 500; }
+    .faq-link mat-icon { vertical-align: middle; margin-right: 4px; font-size: 18px; height: 18px; width: 18px; }
     @media (max-width: 700px) {
       .features { grid-template-columns: 1fr; }
       .hero h1 { font-size: 26px; }

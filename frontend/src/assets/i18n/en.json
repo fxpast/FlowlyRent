@@ -1018,5 +1018,19 @@
     "sync_all_launched": "Global sync launched",
     "ok_prefix": "Sync OK:",
     "ok_suffix": "booking(s) imported"
+  },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "Frequently asked questions",
+    "no_items": "No questions yet.",
+    "add": "Add a question",
+    "question_label": "Question",
+    "answer_label": "Answer",
+    "save": "Save",
+    "saved": "Question saved",
+    "deleted": "Question deleted",
+    "delete_confirm": "Delete this question?",
+    "move_up": "Move up",
+    "move_down": "Move down"
   }
 }

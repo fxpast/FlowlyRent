@@ -21,6 +21,10 @@ export const superadminRoutes: Routes = [
       {
         path: 'notifications',
         loadComponent: () => import('./notifications/superadmin-notifications.component').then(m => m.SuperadminNotificationsComponent)
+      },
+      {
+        path: 'faq',
+        loadComponent: () => import('./faq/superadmin-faq.component').then(m => m.SuperadminFaqComponent)
       }
     ]
   }

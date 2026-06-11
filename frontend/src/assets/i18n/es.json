@@ -1018,5 +1018,19 @@
     "sync_all_launched": "Sincronización global iniciada",
     "ok_prefix": "Sincronización OK:",
     "ok_suffix": "reserva(s) importada(s)"
+  },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "Preguntas frecuentes",
+    "no_items": "Ninguna pregunta por el momento.",
+    "add": "Añadir una pregunta",
+    "question_label": "Pregunta",
+    "answer_label": "Respuesta",
+    "save": "Guardar",
+    "saved": "Pregunta guardada",
+    "deleted": "Pregunta eliminada",
+    "delete_confirm": "¿Eliminar esta pregunta?",
+    "move_up": "Subir",
+    "move_down": "Bajar"
   }
 }

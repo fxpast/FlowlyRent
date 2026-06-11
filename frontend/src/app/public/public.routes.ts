@@ -14,6 +14,10 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('./booking/booking.component').then(m => m.PublicBookingComponent)
   },
   {
+    path: 'faq',
+    loadComponent: () => import('./faq/faq.component').then(m => m.FaqComponent)
+  },
+  {
     path: '',
     redirectTo: 'home',
     pathMatch: 'full'

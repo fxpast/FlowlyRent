@@ -34,6 +34,9 @@ import { filter } from 'rxjs';
       <button mat-icon-button routerLink="/superadmin/notifications" matTooltip="Notifications utilisateurs">
         <mat-icon>campaign</mat-icon>
       </button>
+      <button mat-icon-button routerLink="/superadmin/faq" matTooltip="FAQ">
+        <mat-icon>quiz</mat-icon>
+      </button>
       <app-lang-switcher />
       <button mat-icon-button (click)="logout()" class="logout-icon-btn" [matTooltip]="'common.logout' | translate">
         <mat-icon>logout</mat-icon>

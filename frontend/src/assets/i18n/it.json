@@ -1018,5 +1018,19 @@
     "sync_all_launched": "Sincronizzazione globale avviata",
     "ok_prefix": "Sync OK:",
     "ok_suffix": "prenotazione/i importata/e"
+  },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "Domande frequenti",
+    "no_items": "Nessuna domanda per il momento.",
+    "add": "Aggiungi una domanda",
+    "question_label": "Domanda",
+    "answer_label": "Risposta",
+    "save": "Salva",
+    "saved": "Domanda salvata",
+    "deleted": "Domanda eliminata",
+    "delete_confirm": "Eliminare questa domanda?",
+    "move_up": "Sposta su",
+    "move_down": "Sposta giù"
   }
 }
