@@ -112,7 +112,9 @@
     "create_account": "Create an account",
     "create_btn": "Create my account",
     "have_account": "Already have an account?",
-    "register_error": "Error creating account"
+    "register_error": "Error creating account",
+    "error_not_owner": "This portal is for property owners only.",
+    "error_not_housekeeper": "This portal is for service providers only."
   },
   "today": {
     "departures_title": "Today's departures",

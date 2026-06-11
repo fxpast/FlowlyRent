@@ -112,7 +112,9 @@
     "create_account": "Créer un compte",
     "create_btn": "Créer mon compte",
     "have_account": "Déjà un compte ?",
-    "register_error": "Erreur lors de la création du compte"
+    "register_error": "Erreur lors de la création du compte",
+    "error_not_owner": "Ce portail est réservé aux propriétaires.",
+    "error_not_housekeeper": "Ce portail est réservé aux prestataires."
   },
   "today": {
     "departures_title": "Départs du jour",

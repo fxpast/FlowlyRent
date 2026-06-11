@@ -112,7 +112,9 @@
     "create_account": "Crea un account",
     "create_btn": "Crea il mio account",
     "have_account": "Hai già un account?",
-    "register_error": "Errore durante la creazione dell'account"
+    "register_error": "Errore durante la creazione dell'account",
+    "error_not_owner": "Questo portale è riservato ai proprietari.",
+    "error_not_housekeeper": "Questo portale è riservato ai fornitori."
   },
   "today": {
     "departures_title": "Partenze di oggi",

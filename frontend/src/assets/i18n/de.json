@@ -112,7 +112,9 @@
     "create_account": "Konto erstellen",
     "create_btn": "Mein Konto erstellen",
     "have_account": "Sie haben bereits ein Konto?",
-    "register_error": "Fehler beim Erstellen des Kontos"
+    "register_error": "Fehler beim Erstellen des Kontos",
+    "error_not_owner": "Dieses Portal ist nur für Eigentümer.",
+    "error_not_housekeeper": "Dieses Portal ist nur für Dienstleister."
   },
   "today": {
     "departures_title": "Heutige Abreisen",

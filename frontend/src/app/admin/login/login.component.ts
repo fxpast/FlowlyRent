@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -50,10 +50,12 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
             </button>
           </form>
         </mat-card-content>
-        <mat-card-footer class="footer">
-          {{ 'login.no_account' | translate }}
-          <a routerLink="/admin/register">{{ 'login.sign_up' | translate }}</a>
-        </mat-card-footer>
+        @if (loginType !== 'housekeeper') {
+          <mat-card-footer class="footer">
+            {{ 'login.no_account' | translate }}
+            <a routerLink="/admin/register">{{ 'login.sign_up' | translate }}</a>
+          </mat-card-footer>
+        }
       </mat-card>
     </div>
   `,
@@ -87,7 +89,17 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private auth: AuthService, private userService: UserService, private router: Router, private t: TranslateService) {}
+  get loginType(): string {
+    return this.route.snapshot.queryParamMap.get('type') ?? '';
+  }
+
+  constructor(
+    private auth: AuthService,
+    private userService: UserService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private t: TranslateService
+  ) {}
 
   onSubmit(): void {
     if (!this.username || !this.password) return;
@@ -99,6 +111,27 @@ export class LoginComponent {
           this.router.navigate(['/superadmin/dashboard']);
           return;
         }
+        const type = this.loginType;
+        if (type === 'housekeeper') {
+          if (!this.auth.isHousekeeper()) {
+            this.rejectLogin('login.error_not_housekeeper');
+            return;
+          }
+          this.router.navigate(['/housekeeper/tasks']);
+          return;
+        }
+        if (type === 'owner') {
+          if (this.auth.isHousekeeper()) {
+            this.rejectLogin('login.error_not_owner');
+            return;
+          }
+          this.userService.getBeds24Status().subscribe({
+            next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
+            error: () => this.router.navigate(['/admin/settings'])
+          });
+          return;
+        }
+        // Fallback sans paramètre type (accès direct à /admin/login)
         if (this.auth.isHousekeeper()) {
           this.router.navigate(['/housekeeper/tasks']);
           return;
@@ -113,5 +146,13 @@ export class LoginComponent {
         this.loading.set(false);
       }
     });
+  }
+
+  private rejectLogin(errorKey: string): void {
+    localStorage.removeItem('flr_token');
+    localStorage.removeItem('flr_user');
+    this.auth.isLoggedIn.set(false);
+    this.error.set(this.t.instant(errorKey));
+    this.loading.set(false);
   }
 }

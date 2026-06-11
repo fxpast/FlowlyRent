@@ -24,7 +24,7 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
             <mat-icon>home_work</mat-icon>
             <h2>{{ 'public.owner_title' | translate }}</h2>
             <p>{{ 'public.owner_desc' | translate }}</p>
-            <a mat-raised-button routerLink="/admin/login" class="btn-primary">
+            <a mat-raised-button [routerLink]="['/admin/login']" [queryParams]="{type: 'owner'}" class="btn-primary">
               <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
             </a>
             <a mat-button routerLink="/admin/register" class="btn-register">
@@ -37,7 +37,7 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
             <h2>{{ 'public.housekeeper_title' | translate }}</h2>
             <p>{{ 'public.housekeeper_desc' | translate }}</p>
             <p class="hint">{{ 'public.housekeeper_hint' | translate }}</p>
-            <a mat-raised-button routerLink="/admin/login" class="btn-primary">
+            <a mat-raised-button [routerLink]="['/admin/login']" [queryParams]="{type: 'housekeeper'}" class="btn-primary">
               <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
             </a>
           </div>
