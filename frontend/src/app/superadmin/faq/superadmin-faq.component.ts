@@ -28,9 +28,20 @@ import { environment } from '../../../environments/environment';
     <div class="page">
       <div class="page-header">
         <h1>{{ 'faq.title' | translate }}</h1>
-        <button mat-raised-button color="primary" (click)="startAdd()">
-          <mat-icon>add</mat-icon> {{ 'faq.add' | translate }}
-        </button>
+        <div class="header-actions">
+          <button mat-stroked-button (click)="downloadTemplate()" [matTooltip]="'faq.template_hint' | translate">
+            <mat-icon>download</mat-icon> {{ 'faq.template' | translate }}
+          </button>
+          <button mat-stroked-button (click)="fileInput.click()" [disabled]="importing()">
+            @if (importing()) { <mat-spinner diameter="18" /> }
+            @else { <mat-icon>upload_file</mat-icon> }
+            {{ 'faq.import' | translate }}
+          </button>
+          <input #fileInput type="file" accept=".csv" style="display:none" (change)="onFileSelected($event)" />
+          <button mat-raised-button color="primary" (click)="startAdd()">
+            <mat-icon>add</mat-icon> {{ 'faq.add' | translate }}
+          </button>
+        </div>
       </div>
 
       @if (loading()) {
@@ -105,6 +116,7 @@ import { environment } from '../../../environments/environment';
     .page { padding: 24px; max-width: 900px; margin: 0 auto; }
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
     .page-header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .edit-card { margin-bottom: 24px; border-left: 4px solid #0288d1; }
     .full { width: 100%; }
     .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
@@ -126,10 +138,11 @@ import { environment } from '../../../environments/environment';
   `]
 })
 export class SuperadminFaqComponent implements OnInit {
-  items  = signal<any[]>([]);
-  loading = signal(true);
-  saving  = signal(false);
-  editing = signal(false);
+  items     = signal<any[]>([]);
+  loading   = signal(true);
+  saving    = signal(false);
+  editing   = signal(false);
+  importing = signal(false);
 
   form = { question: '', answer: '' };
   private editingId: number | null = null;
@@ -187,6 +200,36 @@ export class SuperadminFaqComponent implements OnInit {
         this.load();
       }
     });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    this.importing.set(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    this.http.post<any>(`${environment.apiUrl}/superadmin/faq/import`, fd).subscribe({
+      next: res => {
+        this.importing.set(false);
+        this.snackBar.open(
+          this.t.instant('faq.imported', { count: res.imported, skipped: res.skipped }),
+          '', { duration: 3500 }
+        );
+        this.load();
+      },
+      error: () => this.importing.set(false)
+    });
+  }
+
+  downloadTemplate(): void {
+    const csv = 'question,answer\n"Comment fonctionne FlowlyRent ?","FlowlyRent est une plateforme SaaS de gestion de location saisonnière."\n"Comment connecter Beds24 ?","Rendez-vous dans Paramètres > Beds24 et collez votre token API."';
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'faq_modele.csv'; a.click();
+    URL.revokeObjectURL(url);
   }
 
   moveUp(i: number): void { this.swap(i, i - 1); }

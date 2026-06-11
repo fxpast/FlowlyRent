@@ -1032,6 +1032,10 @@
     "deleted": "Question supprimée",
     "delete_confirm": "Supprimer cette question ?",
     "move_up": "Monter",
-    "move_down": "Descendre"
+    "move_down": "Descendre",
+    "import": "Importer CSV",
+    "imported": "{{count}} question(s) importée(s), {{skipped}} ignorée(s)",
+    "template": "Modèle CSV",
+    "template_hint": "Télécharger un fichier CSV exemple (2 colonnes : question, answer)"
   }
 }

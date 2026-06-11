@@ -1032,6 +1032,10 @@
     "deleted": "Domanda eliminata",
     "delete_confirm": "Eliminare questa domanda?",
     "move_up": "Sposta su",
-    "move_down": "Sposta giù"
+    "move_down": "Sposta giù",
+    "import": "Importa CSV",
+    "imported": "{{count}} domanda/e importata/e, {{skipped}} ignorata/e",
+    "template": "Modello CSV",
+    "template_hint": "Scarica un file CSV di esempio (2 colonne: question, answer)"
   }
 }
