@@ -35,7 +35,10 @@ import { filter } from 'rxjs';
         <mat-icon>campaign</mat-icon>
       </button>
       <app-lang-switcher />
-      <button mat-stroked-button (click)="logout()" style="margin-left:16px;color:white;border-color:rgba(255,255,255,.5)">
+      <button mat-icon-button (click)="logout()" class="logout-icon-btn" [matTooltip]="'common.logout' | translate">
+        <mat-icon>logout</mat-icon>
+      </button>
+      <button mat-stroked-button (click)="logout()" class="logout-text-btn">
         <mat-icon>logout</mat-icon> {{ 'common.logout' | translate }}
       </button>
     </mat-toolbar>
@@ -44,7 +47,7 @@ import { filter } from 'rxjs';
     </main>
   `,
   styles: [`
-    .toolbar { gap: 12px; }
+    .toolbar { gap: 8px; }
     .toolbar-logo { height: 36px; width: auto; filter: brightness(0) invert(1); }
     .admin-badge {
       font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
@@ -52,7 +55,15 @@ import { filter } from 'rxjs';
       text-transform: uppercase;
     }
     .spacer { flex: 1; }
+    .logout-icon-btn { display: none; color: white; }
+    .logout-text-btn { margin-left: 8px; color: white; border-color: rgba(255,255,255,.5); }
     .content { padding: 32px; max-width: 1200px; margin: 0 auto; }
+    @media (max-width: 700px) {
+      .toolbar-logo { display: none; }
+      .admin-badge { display: none; }
+      .logout-text-btn { display: none; }
+      .logout-icon-btn { display: inline-flex; }
+    }
   `]
 })
 export class SuperadminLayoutComponent implements OnInit {
