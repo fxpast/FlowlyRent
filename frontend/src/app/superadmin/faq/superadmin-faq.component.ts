@@ -210,7 +210,7 @@ export class SuperadminFaqComponent implements OnInit {
     this.importing.set(true);
     const fd = new FormData();
     fd.append('file', file);
-    this.http.post<any>(`${environment.apiUrl}/superadmin/faq/import`, fd).subscribe({
+    this.http.post<any>(`${environment.apiUrl}/superadmin/faq-import`, fd).subscribe({
       next: res => {
         this.importing.set(false);
         this.snackBar.open(

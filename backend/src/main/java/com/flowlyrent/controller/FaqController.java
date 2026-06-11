@@ -61,7 +61,7 @@ public class FaqController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/superadmin/faq/import")
+    @PostMapping("/superadmin/faq-import")
     public ResponseEntity<Map<String, Object>> importCsv(@RequestParam("file") MultipartFile file) {
         try {
             String content = new String(file.getBytes(), StandardCharsets.UTF_8);
