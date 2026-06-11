@@ -1033,6 +1033,8 @@
     "delete_confirm": "Eliminare questa domanda?",
     "move_up": "Sposta su",
     "move_down": "Sposta giù",
+    "search": "Cerca nelle FAQ…",
+    "no_results": "Nessun risultato per questa ricerca.",
     "import": "Importa CSV",
     "imported": "{{count}} domanda/e importata/e, {{skipped}} ignorata/e",
     "template": "Modello CSV",

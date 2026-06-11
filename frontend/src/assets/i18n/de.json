@@ -1033,6 +1033,8 @@
     "delete_confirm": "Diese Frage löschen?",
     "move_up": "Nach oben",
     "move_down": "Nach unten",
+    "search": "FAQ durchsuchen…",
+    "no_results": "Keine Ergebnisse für diese Suche.",
     "import": "CSV importieren",
     "imported": "{{count}} Frage(n) importiert, {{skipped}} übersprungen",
     "template": "CSV-Vorlage",
