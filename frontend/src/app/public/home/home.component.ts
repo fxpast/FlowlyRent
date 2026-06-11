@@ -17,12 +17,30 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
       <div class="hero-content">
         <img src="assets/logo.svg" alt="FlowlyRent" class="hero-logo" />
         <h1>{{ 'public.home_title' | translate }}</h1>
-        <p>{{ 'public.home_subtitle' | translate }}</p>
-        <div class="hero-actions">
-          <a mat-raised-button routerLink="/admin/login" class="btn-login">
-            <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
-          </a>
-          <p class="login-hint">{{ 'public.login_hint' | translate }}</p>
+        <p class="hero-sub">{{ 'public.home_subtitle' | translate }}</p>
+
+        <div class="role-cards">
+          <div class="role-card">
+            <mat-icon>home_work</mat-icon>
+            <h2>{{ 'public.owner_title' | translate }}</h2>
+            <p>{{ 'public.owner_desc' | translate }}</p>
+            <a mat-raised-button routerLink="/admin/login" class="btn-primary">
+              <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
+            </a>
+            <a mat-button routerLink="/admin/register" class="btn-register">
+              {{ 'login.sign_up' | translate }}
+            </a>
+          </div>
+
+          <div class="role-card">
+            <mat-icon>cleaning_services</mat-icon>
+            <h2>{{ 'public.housekeeper_title' | translate }}</h2>
+            <p>{{ 'public.housekeeper_desc' | translate }}</p>
+            <p class="hint">{{ 'public.housekeeper_hint' | translate }}</p>
+            <a mat-raised-button routerLink="/admin/login" class="btn-primary">
+              <mat-icon>login</mat-icon> {{ 'public.login_button' | translate }}
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -50,7 +68,7 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
       position: relative;
       background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
       color: white;
-      padding: 80px 24px 100px;
+      padding: 60px 24px 80px;
       text-align: center;
     }
     .hero-lang {
@@ -58,19 +76,46 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
       top: 12px;
       right: 12px;
     }
-    .hero-logo { width: 240px; height: auto; filter: brightness(0) invert(1); margin-bottom: 24px; display: block; margin-left: auto; margin-right: auto; }
-    .hero h1 { font-size: 44px; margin: 0 0 16px; font-weight: 700; }
-    .hero p { font-size: 20px; opacity: 0.85; margin: 0 0 40px; }
-    .hero-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .login-hint { margin: 0; font-size: 13px; opacity: 0.7; letter-spacing: 0.5px; }
-    .btn-login {
-      background: white !important;
-      color: #0288d1 !important;
-      font-weight: 600;
-      font-size: 15px;
-      padding: 8px 28px;
+    .hero-logo { width: 200px; height: auto; filter: brightness(0) invert(1); margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto; }
+    .hero h1 { font-size: 38px; margin: 0 0 12px; font-weight: 700; }
+    .hero-sub { font-size: 18px; opacity: 0.85; margin: 0 0 40px; }
+
+    .role-cards {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    .btn-login mat-icon { margin-right: 6px; }
+    .role-card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+      color: #333;
+    }
+    .role-card mat-icon {
+      font-size: 44px;
+      width: 44px;
+      height: 44px;
+      color: #0288d1;
+    }
+    .role-card h2 { margin: 0; font-size: 17px; font-weight: 700; color: #111; }
+    .role-card p { margin: 0; font-size: 13px; color: #555; line-height: 1.5; }
+    .hint { font-size: 12px !important; color: #999 !important; font-style: italic; }
+    .btn-primary {
+      background: #0288d1 !important;
+      color: white !important;
+      font-weight: 600;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .btn-primary mat-icon { margin-right: 4px; font-size: 18px; height: 18px; width: 18px; vertical-align: middle; }
+    .btn-register { color: #0288d1 !important; font-size: 13px; }
 
     .features {
       display: grid;
@@ -98,8 +143,9 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
 
     @media (max-width: 700px) {
       .features { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 28px; }
-      .hero { padding: 60px 24px 80px; }
+      .hero h1 { font-size: 26px; }
+      .hero { padding: 48px 16px 60px; }
+      .role-card { width: 100%; max-width: 320px; }
     }
   `]
 })
