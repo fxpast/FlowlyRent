@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
@@ -122,7 +123,7 @@ export class RegisterComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private http: HttpClient, private auth: AuthService, private router: Router, private t: TranslateService) {}
+  constructor(private http: HttpClient, private auth: AuthService, private userService: UserService, private router: Router, private t: TranslateService) {}
 
   onSubmit(): void {
     this.loading.set(true);
@@ -138,7 +139,10 @@ export class RegisterComponent {
           plan: resp.plan, publicSiteSlug: resp.publicSiteSlug
         }));
         this.auth.isLoggedIn.set(true);
-        this.router.navigate(['/admin/dashboard']);
+        this.userService.getBeds24Status().subscribe({
+          next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
+          error: () => this.router.navigate(['/admin/settings'])
+        });
       },
       error: err => {
         this.error.set(err.error?.error ?? this.t.instant('login.register_error'));
