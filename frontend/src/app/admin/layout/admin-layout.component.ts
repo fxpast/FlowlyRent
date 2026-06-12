@@ -137,13 +137,10 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'notifications',     label: 'nav.notifications', route: 'notifications' },
     { icon: 'receipt_long',       label: 'nav.invoices',    route: 'invoices' },
     { icon: 'account_balance',   label: 'nav.expenses',    route: 'expenses' },
-    { icon: 'settings',          label: 'nav.settings',    route: 'settings' },
+    { icon: 'bar_chart',         label: 'nav.stats',       route: 'stats' },
     { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
     { icon: 'quiz',              label: 'nav.faq',         route: 'faq' },
-    { icon: 'payment',           label: 'nav.payments',    route: 'payments' },
-    { icon: 'sync',              label: 'nav.sync',        route: 'sync' },
-    { icon: 'bar_chart',         label: 'nav.stats',       route: 'stats' },
-    { icon: 'assessment',        label: 'nav.reports',     route: 'reports' }
+    { icon: 'settings',          label: 'nav.settings',    route: 'settings' }
   ];
 
   private msgInterval?: ReturnType<typeof setInterval>;
