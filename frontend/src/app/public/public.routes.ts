@@ -18,6 +18,10 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('./faq/faq.component').then(m => m.FaqComponent)
   },
   {
+    path: 'privacy',
+    loadComponent: () => import('./privacy/privacy.component').then(m => m.PrivacyComponent)
+  },
+  {
     path: '',
     redirectTo: 'home',
     pathMatch: 'full'
