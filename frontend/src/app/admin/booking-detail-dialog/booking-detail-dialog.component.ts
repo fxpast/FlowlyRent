@@ -215,6 +215,16 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                 <input matInput type="number" step="0.01" [(ngModel)]="draft['totalPrice']">
               </mat-form-field>
             </div>
+            @if (draft['totalPrice'] > 0) {
+              <div class="taxe-row">
+                <mat-icon class="taxe-icon">receipt_long</mat-icon>
+                <span class="taxe-label">{{ 'booking_dialog.taxe_sejour' | translate }}</span>
+                <span class="taxe-value">{{ taxeSejour | number:'1.2-2' }} €</span>
+                @if (cleaningFee() > 0) {
+                  <span class="taxe-hint">({{ 'booking_dialog.taxe_base' | translate : { fee: cleaningFee() } }})</span>
+                }
+              </div>
+            }
             <mat-form-field appearance="outline" class="full">
               <mat-label>{{ 'common.notes' | translate }}</mat-label>
               <textarea matInput rows="2" [(ngModel)]="draft['notes']"></textarea>
@@ -565,6 +575,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .date-part { flex: 1; }
     .time-part { width: 110px; flex-shrink: 0; }
     .full { width: 100%; }
+    .taxe-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #e3f2fd; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+    .taxe-icon { font-size: 18px; color: #1976d2; }
+    .taxe-label { font-weight: 500; color: #1565c0; }
+    .taxe-value { font-weight: 700; color: #1565c0; }
+    .taxe-hint { color: #78909c; font-size: 12px; }
     mat-divider { margin: 4px 0 12px; }
     .horaires-section { margin: 4px 0 12px; padding: 10px 12px; background: #f9f9f9; border-radius: 8px; border: 1px solid #e8e8e8; }
     .horaires-header { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
@@ -716,6 +731,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   saving         = signal(false);
   activeTab      = signal(0);
+  cleaningFee    = signal<number>(0);
   propAccessCode         = signal<string | undefined>(undefined);
   propPreviousAccessCode = signal<string | undefined>(undefined);
   regeneratingCode       = signal(false);
@@ -839,6 +855,16 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const bookingId = Number(this.data['id']);
     if (!bookingId) return;
+    // Charger le cleaningFee depuis PropertyConfig pour le calcul de la taxe de séjour
+    const propId = String(this.draft['propId'] || this.draft['propertyId'] || '');
+    if (propId) {
+      this.propConfigService.getAll().subscribe({
+        next: cfgs => {
+          const cfg = cfgs.find(c => String(c.beds24PropertyId) === propId);
+          if (cfg?.cleaningFee) this.cleaningFee.set(Number(cfg.cleaningFee));
+        }
+      });
+    }
     // Charger l'override d'horaires depuis la base locale
     this.timeOverrideService.get(String(this.data['id'])).subscribe({
       next: ov => {
@@ -865,6 +891,13 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   get beds24Id(): string | null {
     const id = String(this.data['id'] || '');
     return id && id !== '0' ? id : null;
+  }
+
+  get taxeSejour(): number {
+    const price = Number(this.draft['totalPrice'] ?? 0);
+    const fee   = this.cleaningFee();
+    const base  = Math.max(0, price - fee);
+    return Math.round(base * 0.0275 * 100) / 100;
   }
 
   generatePayLink(type: 'payment' | 'deposit'): void {

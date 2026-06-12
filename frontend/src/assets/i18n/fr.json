@@ -887,6 +887,8 @@
     "times_saved": "Horaires enregistrés",
     "times_reset": "Horaires réinitialisés",
     "amount_label": "Montant (€)",
+    "taxe_sejour": "Taxe de séjour estimée",
+    "taxe_base": "base : prix − {{fee}} € frais ménage × 2,75 %",
     "payment_request": "Demande de paiement",
     "pay_btn": "Paiement",
     "deposit_btn": "Caution",

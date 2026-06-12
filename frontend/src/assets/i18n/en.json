@@ -886,7 +886,7 @@
     "standard_times": "Standard times",
     "times_saved": "Times saved",
     "times_reset": "Times reset",
-    "amount_label": "Amount (€)",
+    "amount_label": "Amount (€)",\n    "taxe_sejour": "Estimated tourist tax",\n    "taxe_base": "base: price − {{fee}} € cleaning fee × 2.75%",
     "payment_request": "Payment request",
     "pay_btn": "Payment",
     "deposit_btn": "Deposit",
