@@ -8,10 +8,8 @@ export class PushNotificationService {
   constructor(private swPush: SwPush, private http: HttpClient) {}
 
   init(): void {
-    if (!this.swPush.isEnabled) {
-      console.warn('[Push] SwPush non activé (service worker inactif ou dev)');
-      return;
-    }
+    if (!this.swPush.isEnabled) return;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
     this.swPush.requestSubscription({ serverPublicKey: environment.vapidPublicKey })
       .then(sub => {
         const payload = sub.toJSON();

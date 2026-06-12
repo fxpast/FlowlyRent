@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '@env/environment';
 
 export interface BookingTimeOverride {
@@ -18,8 +19,10 @@ export class BookingTimeOverrideService {
 
   constructor(private http: HttpClient) {}
 
-  get(bookingId: string): Observable<BookingTimeOverride> {
-    return this.http.get<BookingTimeOverride>(`${this.base}/${bookingId}`);
+  get(bookingId: string): Observable<BookingTimeOverride | null> {
+    return this.http.get<BookingTimeOverride>(`${this.base}/${bookingId}`).pipe(
+      catchError(() => of(null))
+    );
   }
 
   upsert(bookingId: string, data: Partial<BookingTimeOverride>): Observable<BookingTimeOverride> {

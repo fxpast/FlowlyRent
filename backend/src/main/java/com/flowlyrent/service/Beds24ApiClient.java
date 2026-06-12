@@ -13,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -171,6 +172,7 @@ public class Beds24ApiClient {
                 .uri(URI.create(url))
                 .header("Accept", "application/json")
                 .header("token", token)
+                .timeout(Duration.ofSeconds(25))
                 .GET()
                 .build();
         return send(request);
@@ -182,6 +184,7 @@ public class Beds24ApiClient {
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .header("token", token)
+                .timeout(Duration.ofSeconds(25))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
         return send(request);
@@ -193,6 +196,7 @@ public class Beds24ApiClient {
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .header("token", token)
+                .timeout(Duration.ofSeconds(25))
                 .method("PATCH", HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
         return send(request);
@@ -203,6 +207,7 @@ public class Beds24ApiClient {
                 .uri(URI.create(url))
                 .header("Accept", "application/json")
                 .header("token", token)
+                .timeout(Duration.ofSeconds(25))
                 .DELETE()
                 .build();
         return send(request);
@@ -211,6 +216,7 @@ public class Beds24ApiClient {
     private String send(HttpRequest request) throws Exception {
         HttpResponse<String> response = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(10))
                 .build()
                 .send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
