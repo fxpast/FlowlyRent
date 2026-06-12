@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -283,6 +284,120 @@ public class Beds24ReportService {
                 .summary(Map.of("periodeDays", totalDays))
                 .generatedAt(LocalDateTime.now())
                 .build();
+    }
+
+    // --- CA_MENSUEL : chiffre d'affaires d'un mois avec ventilation au prorata ---
+    // Algorithme : itération jour par jour (ref. CA_mois PHP).
+    // Une réservation à cheval sur deux mois contribue price/nights par jour effectif dans le mois.
+
+    public Map<String, Object> caMonthly(Beds24Account account, int year, int month) throws Exception {
+        String token = beds24.tokenFor(account);
+
+        LocalDate firstDay = LocalDate.of(year, month, 1);
+        LocalDate lastDay  = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+
+        // Toutes les réservations qui chevauchent le mois :
+        // arrivée ≤ dernier jour du mois  ET  départ ≥ premier jour du mois
+        // On ne filtre pas status côté API (le filtre Beds24 v2 est sensible à la casse et peu fiable)
+        // → on filtre en Java : New + Confirmed (comme PHP : status IN ('New','Confirmed'))
+        Map<String, String> params = new HashMap<>();
+        params.put("arrivalTo",     lastDay.toString());
+        params.put("departureFrom", firstDay.toString());
+        List<Map<String, Object>> allBookings = beds24.getBookings(token, params);
+        log.info("[caMonthly] {}-{} : {} réservations brutes récupérées", year, month, allBookings.size());
+        if (!allBookings.isEmpty()) {
+            Map<String, Object> sample = allBookings.get(0);
+            log.info("[caMonthly] Champs disponibles : {}", sample.keySet());
+            log.info("[caMonthly] Exemple réservation : status={} arrival={} departure={} price={} totalPrice={}",
+                    sample.get("status"), sample.get("arrival"), sample.get("departure"),
+                    sample.get("price"), sample.get("totalPrice"));
+        }
+        List<Map<String, Object>> bookings = allBookings.stream()
+                .filter(b -> {
+                    String s = str(b, "status");
+                    if (s == null) return false;
+                    String sl = s.toLowerCase();
+                    return sl.equals("confirmed") || sl.equals("new");
+                })
+                .collect(Collectors.toList());
+        log.info("[caMonthly] {}-{} : {} réservations après filtre New/Confirmed", year, month, bookings.size());
+
+        // Noms des propriétés
+        List<Map<String, Object>> properties = beds24.getProperties(token, Map.of());
+        Map<String, String> propNames = new HashMap<>();
+        for (Map<String, Object> p : properties) {
+            String id   = str(p, "id");
+            String name = str(p, "name");
+            if (id != null) propNames.put(id, name != null ? name : id);
+        }
+
+        // Pré-décodage des réservations
+        record BookingData(LocalDate arrival, LocalDate departure, String propName, BigDecimal pricePerNight) {}
+        List<BookingData> decoded = new ArrayList<>();
+        for (Map<String, Object> b : bookings) {
+            String arrStr = str(b, "arrival");
+            String depStr = str(b, "departure");
+            if (arrStr == null || depStr == null || arrStr.length() < 10 || depStr.length() < 10) continue;
+            LocalDate arrival   = LocalDate.parse(arrStr.substring(0, 10));
+            LocalDate departure = LocalDate.parse(depStr.substring(0, 10));
+            long nights = ChronoUnit.DAYS.between(arrival, departure);
+            if (nights <= 0) continue;
+            BigDecimal price = decimal(b, "totalPrice");
+            if (price == null) price = decimal(b, "price");
+            if (price == null) continue;
+            String propId   = str(b, "propId");
+            String propName = propId != null ? propNames.getOrDefault(propId, propId) : "Inconnu";
+            BigDecimal ppn  = price.divide(BigDecimal.valueOf(nights), 4, RoundingMode.HALF_UP);
+            decoded.add(new BookingData(arrival, departure, propName, ppn));
+        }
+
+        // Itération jour par jour (algorithme CA_mois)
+        Map<String, BigDecimal> caByProp     = new LinkedHashMap<>();
+        Map<String, Integer>    nightsByProp = new LinkedHashMap<>();
+        BigDecimal caTotal   = BigDecimal.ZERO;
+        int        totalNights = 0;
+
+        for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
+            for (BookingData bd : decoded) {
+                // Le jour est couvert si : arrival <= day < departure
+                if (!day.isBefore(bd.arrival()) && day.isBefore(bd.departure())) {
+                    caByProp.merge(bd.propName(),    bd.pricePerNight(), BigDecimal::add);
+                    nightsByProp.merge(bd.propName(), 1,                 Integer::sum);
+                    caTotal = caTotal.add(bd.pricePerNight());
+                    totalNights++;
+                }
+            }
+        }
+
+        // Construction de la réponse
+        List<Map<String, Object>> byProperty = caByProp.entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .map(e -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("propertyName", e.getKey());
+                    row.put("ca",     e.getValue().setScale(2, RoundingMode.HALF_UP));
+                    row.put("nights", nightsByProp.getOrDefault(e.getKey(), 0));
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+        int daysInMonth = lastDay.getDayOfMonth();
+        int nbProps      = Math.max(propNames.size(), 1);
+        BigDecimal occRate = daysInMonth > 0
+                ? BigDecimal.valueOf(100.0 * totalNights / ((long) daysInMonth * nbProps))
+                      .setScale(1, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("year",         year);
+        result.put("month",        month);
+        result.put("monthLabel",   Month.of(month).getDisplayName(TextStyle.FULL, Locale.FRENCH));
+        result.put("caTotal",      caTotal.setScale(2, RoundingMode.HALF_UP));
+        result.put("nights",       totalNights);
+        result.put("daysInMonth",  daysInMonth);
+        result.put("occupancyRate", occRate);
+        result.put("byProperty",   byProperty);
+        return result;
     }
 
     // -------------------------------------------------------------------------
