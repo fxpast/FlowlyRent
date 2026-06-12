@@ -18,7 +18,7 @@ import { MatCardModule } from '@angular/material/card';
             FlowlyRent (ci-après « l'Application ») est un service de gestion de locations saisonnières
             accessible via <strong>flowlyrent.com</strong> et via son application Android.
             L'Application est éditée et exploitée par FlowlyRent, joignable à
-            <a href="mailto:contact@flowlyrent.com">contact@flowlyrent.com</a>.
+            <a href="mailto:contact@flowlyrent.com">contact&#64;flowlyrent.com</a>.
           </p>
 
           <h2>2. Données collectées</h2>
@@ -79,7 +79,7 @@ import { MatCardModule } from '@angular/material/card';
           </ul>
           <p>
             Pour exercer ces droits, contactez-nous à
-            <a href="mailto:contact@flowlyrent.com">contact@flowlyrent.com</a>.
+            <a href="mailto:contact@flowlyrent.com">contact&#64;flowlyrent.com</a>.
           </p>
 
           <h2>9. Application Android</h2>
@@ -104,7 +104,7 @@ import { MatCardModule } from '@angular/material/card';
 
           <h2>12. Contact</h2>
           <p>
-            FlowlyRent — <a href="mailto:contact@flowlyrent.com">contact@flowlyrent.com</a>
+            FlowlyRent — <a href="mailto:contact@flowlyrent.com">contact&#64;flowlyrent.com</a>
           </p>
         </mat-card-content>
       </mat-card>
