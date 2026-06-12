@@ -25,7 +25,7 @@ public class AdminBookingTimeOverrideController {
         Long userId = securityUtils.getCurrentUserId();
         return repo.findByUserIdAndBeds24BookingId(userId, beds24BookingId)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.noContent().build());
     }
 
     @PutMapping("/{beds24BookingId}")

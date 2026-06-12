@@ -347,7 +347,7 @@ public class AdminBookingController {
     }
 
     private void mapField(Map<String, Object> b, String from, String to) {
-        if (b.containsKey(from) && !b.containsKey(to)) b.put(to, b.get(from));
+        if (b.containsKey(from)) b.put(to, b.get(from));
     }
 
     private String idStr(Object v) {
