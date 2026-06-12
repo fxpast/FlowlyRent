@@ -322,14 +322,15 @@ public class Beds24ReportService {
                 .collect(Collectors.toList());
         log.info("[caMonthly] {}-{} : {} réservations après filtre New/Confirmed", year, month, bookings.size());
 
-        // Noms des propriétés
+        // Noms des propriétés — Beds24 v2 peut retourner id ou propId selon les comptes
         List<Map<String, Object>> properties = beds24.getProperties(token, Map.of());
         Map<String, String> propNames = new HashMap<>();
         for (Map<String, Object> p : properties) {
-            String id   = str(p, "id");
-            String name = str(p, "name");
+            String id   = p.get("id")     != null ? str(p, "id")     : str(p, "propId");
+            String name = p.get("name")   != null ? str(p, "name")   : str(p, "propName");
             if (id != null) propNames.put(id, name != null ? name : id);
         }
+        log.info("[caMonthly] {} propriétés chargées : {}", propNames.size(), propNames);
 
         // Pré-décodage des réservations
         record BookingData(LocalDate arrival, LocalDate departure, String propName, BigDecimal pricePerNight) {}
@@ -345,7 +346,8 @@ public class Beds24ReportService {
             BigDecimal price = decimal(b, "totalPrice");
             if (price == null) price = decimal(b, "price");
             if (price == null) continue;
-            String propId   = str(b, "propId");
+            // Beds24 v2 : propId ou propertyId selon les comptes
+            String propId   = b.get("propId") != null ? str(b, "propId") : str(b, "propertyId");
             String propName = propId != null ? propNames.getOrDefault(propId, propId) : "Inconnu";
             BigDecimal ppn  = price.divide(BigDecimal.valueOf(nights), 4, RoundingMode.HALF_UP);
             decoded.add(new BookingData(arrival, departure, propName, ppn));
