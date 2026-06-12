@@ -2,6 +2,8 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.dto.ReportResult;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.repository.PropertyConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class Beds24ReportService {
 
     private final Beds24ApiClient beds24;
+    private final PropertyConfigRepository propConfigRepo;
 
     // --- B24_CA_ANNUAL : chiffre d'affaires mensuel sur une année ---
 
@@ -326,9 +329,17 @@ public class Beds24ReportService {
         List<Map<String, Object>> properties = beds24.getProperties(token, Map.of());
         Map<String, String> propNames = new HashMap<>();
         for (Map<String, Object> p : properties) {
-            String id   = p.get("id")     != null ? str(p, "id")     : str(p, "propId");
-            String name = p.get("name")   != null ? str(p, "name")   : str(p, "propName");
+            String id   = p.get("id")   != null ? str(p, "id")   : str(p, "propId");
+            String name = p.get("name") != null ? str(p, "name") : str(p, "propName");
             if (id != null) propNames.put(id, name != null ? name : id);
+        }
+        // Superposer les noms courts configurés localement (shortName > nom Beds24)
+        Long userId = account.getAppUser().getId();
+        for (PropertyConfig cfg : propConfigRepo.findByUserId(userId)) {
+            String sn = cfg.getShortName();
+            if (sn != null && !sn.isBlank()) {
+                propNames.put(cfg.getBeds24PropertyId(), sn);
+            }
         }
         log.info("[caMonthly] {} propriétés chargées : {}", propNames.size(), propNames);
 
