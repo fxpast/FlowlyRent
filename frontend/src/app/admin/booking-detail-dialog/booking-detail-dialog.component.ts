@@ -868,12 +868,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     // Charger l'override d'horaires depuis la base locale
     this.timeOverrideService.get(String(this.data['id'])).subscribe({
       next: ov => {
+        if (!ov) return;
         if (ov.checkinTime)  this.arrivalTime   = ov.checkinTime;
         if (ov.checkoutTime) this.departureTime = ov.checkoutTime;
         if (ov.note)         this.customTimeComment = ov.note;
         this.taskTime = this.departureTime;
-      },
-      error: () => {} // 404 = pas d'override, heures par défaut
+      }
     });
     const bookingLang = (this.data['lang'] || '').toLowerCase();
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
@@ -1199,7 +1199,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
           const nextId = String(next['id'] ?? '');
           if (!nextId) { buildNotes(rawTime); return; }
           this.timeOverrideService.get(nextId).subscribe({
-            next: ov => buildNotes(ov.checkinTime || rawTime),
+            next: ov => buildNotes(ov?.checkinTime || rawTime),
             error: () => buildNotes(rawTime)
           });
         },

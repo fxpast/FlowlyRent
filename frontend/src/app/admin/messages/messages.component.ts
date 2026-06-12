@@ -768,12 +768,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
     // Charger l'override éventuel
     this.timeOverrideService.get(String(b['id'])).subscribe({
       next: ov => {
+        if (!ov) return;
         this.selectedBookingTimes.set({
           checkin:  ov.checkinTime  || defaultCheckin,
           checkout: ov.checkoutTime || defaultCheckout
         });
-      },
-      error: () => {} // 404 = pas d'override, on garde les valeurs par défaut
+      }
     });
     const id = String(b['id']);
     this.messageService.getMessages(+id).subscribe({
