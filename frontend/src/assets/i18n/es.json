@@ -550,16 +550,18 @@
     "listings_url": "URL — todos los alojamientos"
   },
   "stats": {
-    "title": "Ingresos y estadísticas",
-    "revenue_this_month": "Ingresos este mes",
-    "vs_last_month": "vs mes anterior",
-    "bookings_this_month": "Reservas este mes",
-    "properties_active": "Alojamientos activos",
-    "avg_per_booking": "Ingreso medio / reserva",
-    "revenue_6_months": "Ingresos — últimos 6 meses",
-    "by_channel_year": "Por canal ({{year}})",
-    "no_data_year": "Sin datos para este año.",
-    "bookings_abbr": "res."
+    "title": "Ingresos",
+    "ca_total": "Facturación",
+    "nights_sold": "Noches vendidas",
+    "occupancy": "Tasa de ocupación",
+    "avg_per_night": "Prom./noche",
+    "by_property": "Desglose por alojamiento",
+    "prev_month": "Mes anterior",
+    "next_month": "Mes siguiente",
+    "no_data": "Sin reservas confirmadas este mes.",
+    "days": "días",
+    "nights_unit": "noches",
+    "load_error": "No se pueden cargar los datos. Comprueba que Beds24 está conectado."
   },
   "reports": {
     "title": "Informes",
@@ -663,6 +665,8 @@
     "transactions": "Transacciones",
     "rules": "Reglas de categorización",
     "summary": "Resumen",
+    "filter_date_label": "Período",
+    "filter_this_month": "Este mes",
     "filter_all_dates": "Todo",
     "filter_period": "Período",
     "filter_from": "Desde",

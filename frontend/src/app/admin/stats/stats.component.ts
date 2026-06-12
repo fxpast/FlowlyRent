@@ -1,218 +1,242 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { environment } from '@env/environment';
+import { environment } from '../../../environments/environment';
 
-interface MonthStat { label: string; revenue: number; pct: number; key: string; }
-interface ChannelStat { channel: string; revenue: number; count: number; pct: number; }
-
-interface Stats {
-  revenueThisMonth:  number;
-  revenueLastMonth:  number;
-  bookingsThisMonth: number;
-  bookingsLastMonth: number;
-  propertiesCount:   number;
-  monthlyRevenue:    MonthStat[];
-  byChannel:         ChannelStat[];
+interface RevenueData {
+  year: number;
+  month: number;
+  monthLabel: string;
+  caTotal: number;
+  nights: number;
+  daysInMonth: number;
+  occupancyRate: number;
+  byProperty: { propertyName: string; ca: number; nights: number }[];
 }
-
-const CHANNEL_LABELS: Record<string, string> = {
-  airbnb: 'Airbnb', booking: 'Booking.com', abritel: 'Abritel',
-  direct: 'Direct', beds24: 'Beds24', '': 'Direct'
-};
-const CHANNEL_COLORS: Record<string, string> = {
-  airbnb: '#FF5A5F', booking: '#003580', abritel: '#E8572A',
-  direct: '#1976d2', beds24: '#607d8b', '': '#1976d2'
-};
 
 @Component({
   selector: 'app-stats',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
+  imports: [
+    CommonModule, FormsModule,
+    MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
+    MatProgressSpinnerModule, MatTooltipModule, MatDividerModule, TranslateModule
+  ],
   template: `
-    <h2>{{ 'stats.title' | translate }}</h2>
-
-    @if (loading()) {
-      <div class="center"><mat-spinner diameter="40"/></div>
-    } @else if (stats()) {
-
-    <div class="kpi-grid">
-      <mat-card class="kpi-card">
-        <div class="kpi-icon" style="background:#e3f2fd"><mat-icon style="color:#1976d2">euro</mat-icon></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ stats()!.revenueThisMonth | currency:'EUR':'symbol':'1.0-0':'fr' }}</div>
-          <div class="kpi-label">{{ 'stats.revenue_this_month' | translate }}</div>
-          <div class="kpi-delta" [class.up]="delta('revenue') >= 0" [class.down]="delta('revenue') < 0">
-            <mat-icon>{{ delta('revenue') >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-            {{ deltaStr('revenue') }} {{ 'stats.vs_last_month' | translate }}
-          </div>
-        </div>
-      </mat-card>
-
-      <mat-card class="kpi-card">
-        <div class="kpi-icon" style="background:#f3e5f5"><mat-icon style="color:#7b1fa2">book_online</mat-icon></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ stats()!.bookingsThisMonth }}</div>
-          <div class="kpi-label">{{ 'stats.bookings_this_month' | translate }}</div>
-          <div class="kpi-delta" [class.up]="delta('bookings') >= 0" [class.down]="delta('bookings') < 0">
-            <mat-icon>{{ delta('bookings') >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-            {{ deltaStr('bookings') }} {{ 'stats.vs_last_month' | translate }}
-          </div>
-        </div>
-      </mat-card>
-
-      <mat-card class="kpi-card">
-        <div class="kpi-icon" style="background:#e8f5e9"><mat-icon style="color:#2e7d32">home</mat-icon></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ stats()!.propertiesCount }}</div>
-          <div class="kpi-label">{{ 'stats.properties_active' | translate }}</div>
-        </div>
-      </mat-card>
-
-      <mat-card class="kpi-card">
-        <div class="kpi-icon" style="background:#fff3e0"><mat-icon style="color:#e65100">payments</mat-icon></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ avgNightly() | currency:'EUR':'symbol':'1.0-0':'fr' }}</div>
-          <div class="kpi-label">{{ 'stats.avg_per_booking' | translate }}</div>
-        </div>
-      </mat-card>
-    </div>
-
-    <div class="charts-row">
-
-      <mat-card class="chart-card">
-        <mat-card-header><mat-card-title>{{ 'stats.revenue_6_months' | translate }}</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <div class="bar-chart">
-            @for (m of stats()!.monthlyRevenue; track m.key) {
-              <div class="bar-col">
-                <div class="bar-val">{{ m.revenue > 0 ? (m.revenue | currency:'EUR':'symbol':'1.0-0':'fr') : '' }}</div>
-                <div class="bar-wrap">
-                  <div class="bar" [style.height.%]="m.pct || 2"
-                       [class.current]="isCurrentMonth(m.key)"></div>
-                </div>
-                <div class="bar-label">{{ m.label }}</div>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="chart-card">
-        <mat-card-header><mat-card-title>{{ 'stats.by_channel_year' | translate:{ year: currentYear } }}</mat-card-title></mat-card-header>
-        <mat-card-content>
-          @if (stats()!.byChannel.length === 0) {
-            <p class="empty-chart">{{ 'stats.no_data_year' | translate }}</p>
-          } @else {
-            <div class="channel-list">
-              @for (c of stats()!.byChannel; track c.channel) {
-                <div class="channel-row">
-                  <div class="channel-name">
-                    <span class="dot" [style.background]="channelColor(c.channel)"></span>
-                    {{ channelLabel(c.channel) }}
-                  </div>
-                  <div class="channel-bar-wrap">
-                    <div class="channel-bar" [style.width.%]="c.pct"
-                         [style.background]="channelColor(c.channel)"></div>
-                  </div>
-                  <div class="channel-stats">
-                    {{ c.revenue | currency:'EUR':'symbol':'1.0-0':'fr' }}
-                    <span class="channel-count">({{ c.count }} {{ 'stats.bookings_abbr' | translate }})</span>
-                  </div>
-                </div>
+    <div class="page">
+      <div class="page-header">
+        <h2>{{ 'stats.title' | translate }}</h2>
+        <div class="nav-controls">
+          <button mat-icon-button (click)="prevMonth()" [matTooltip]="'stats.prev_month' | translate">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <div class="month-selectors">
+            <mat-select [(ngModel)]="selectedMonth" (selectionChange)="load()" class="month-sel">
+              @for (m of months; track m.value) {
+                <mat-option [value]="m.value">{{ m.label }}</mat-option>
               }
-            </div>
-          }
-        </mat-card-content>
-      </mat-card>
+            </mat-select>
+            <mat-select [(ngModel)]="selectedYear" (selectionChange)="load()" class="year-sel">
+              @for (y of years; track y) {
+                <mat-option [value]="y">{{ y }}</mat-option>
+              }
+            </mat-select>
+          </div>
+          <button mat-icon-button (click)="nextMonth()" [disabled]="isCurrentMonth()"
+                  [matTooltip]="'stats.next_month' | translate">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      </div>
 
+      @if (loading()) {
+        <div class="center"><mat-spinner diameter="48" /></div>
+      } @else if (error()) {
+        <mat-card class="error-card">
+          <mat-card-content>
+            <mat-icon class="error-icon">cloud_off</mat-icon>
+            <p>{{ error() }}</p>
+          </mat-card-content>
+        </mat-card>
+      } @else if (data()) {
+        <div class="kpis">
+          <mat-card class="kpi-card primary">
+            <mat-card-content>
+              <div class="kpi-label">{{ 'stats.ca_total' | translate }}</div>
+              <div class="kpi-value">{{ data()!.caTotal | number:'1.2-2' }} €</div>
+              <div class="kpi-sub">{{ data()!.monthLabel }} {{ data()!.year }}</div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card">
+            <mat-card-content>
+              <div class="kpi-label">{{ 'stats.nights_sold' | translate }}</div>
+              <div class="kpi-value">{{ data()!.nights }}</div>
+              <div class="kpi-sub">/ {{ data()!.daysInMonth }} {{ 'stats.days' | translate }}</div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card">
+            <mat-card-content>
+              <div class="kpi-label">{{ 'stats.occupancy' | translate }}</div>
+              <div class="kpi-value">{{ data()!.occupancyRate }} %</div>
+              <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        @if (data()!.byProperty.length > 0) {
+          <mat-card class="prop-card">
+            <mat-card-header>
+              <mat-card-title>{{ 'stats.by_property' | translate }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="prop-list">
+                @for (p of data()!.byProperty; track p.propertyName) {
+                  <div class="prop-row">
+                    <div class="prop-name">{{ p.propertyName }}</div>
+                    <div class="prop-bar-wrap">
+                      <div class="prop-bar" [style.width]="barWidth(p.ca) + '%'"></div>
+                    </div>
+                    <div class="prop-nights">{{ p.nights }} {{ 'stats.nights_unit' | translate }}</div>
+                    <div class="prop-ca">{{ p.ca | number:'1.2-2' }} €</div>
+                  </div>
+                }
+              </div>
+              <mat-divider class="divider" />
+              <div class="prop-row total-row">
+                <div class="prop-name"><strong>Total</strong></div>
+                <div class="prop-bar-wrap"></div>
+                <div class="prop-nights"><strong>{{ data()!.nights }}</strong></div>
+                <div class="prop-ca"><strong>{{ data()!.caTotal | number:'1.2-2' }} €</strong></div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <div class="empty">{{ 'stats.no_data' | translate }}</div>
+        }
+      }
     </div>
-
-    } <!-- end @if stats -->
   `,
   styles: [`
-    h2 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
+    .page { padding: 24px; max-width: 900px; margin: 0 auto; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    h2 { margin: 0; font-size: 24px; font-weight: 700; }
+
+    .nav-controls { display: flex; align-items: center; gap: 4px; }
+    .month-selectors { display: flex; gap: 8px; }
+    .month-sel { width: 130px; }
+    .year-sel  { width: 90px; }
+
     .center { display: flex; justify-content: center; padding: 60px; }
 
-    /* KPI */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .kpi-card { display: flex; align-items: center; gap: 16px; padding: 20px; }
-    .kpi-icon { border-radius: 12px; padding: 12px; display: flex; }
-    .kpi-icon mat-icon { font-size: 28px; width: 28px; height: 28px; }
-    .kpi-value { font-size: 28px; font-weight: 700; line-height: 1.1; }
-    .kpi-label { font-size: 13px; color: #666; margin: 4px 0; }
-    .kpi-delta { display: flex; align-items: center; gap: 2px; font-size: 12px; }
-    .kpi-delta mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .kpi-delta.up { color: #2e7d32; }
-    .kpi-delta.down { color: #c62828; }
+    .error-card { max-width: 460px; margin-top: 24px; text-align: center; }
+    .error-icon { font-size: 40px; width: 40px; height: 40px; color: #999; margin-bottom: 8px; }
 
-    /* Charts row */
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
-    .chart-card mat-card-content { padding-top: 16px; }
+    .kpis { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .kpi-card { flex: 1; min-width: 180px; }
+    .kpi-card.primary { border-left: 4px solid #0288d1; }
+    .kpi-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; color: #111; }
+    .kpi-sub   { font-size: 13px; color: #777; }
 
-    /* Bar chart */
-    .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 0 8px; }
-    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-    .bar-val { font-size: 10px; color: #555; text-align: center; min-height: 16px; }
-    .bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; padding: 4px 4px 0; }
-    .bar { width: 100%; background: #90caf9; border-radius: 4px 4px 0 0; min-height: 3px; transition: height 0.3s; }
-    .bar.current { background: #1976d2; }
-    .bar-label { font-size: 12px; color: #666; margin-top: 4px; text-transform: capitalize; }
+    .prop-card { margin-bottom: 16px; }
+    .prop-list { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+    .prop-row { display: flex; align-items: center; gap: 12px; }
+    .prop-name { width: 160px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .prop-bar-wrap { flex: 1; background: #f0f0f0; border-radius: 4px; height: 10px; overflow: hidden; }
+    .prop-bar { height: 100%; background: #0288d1; border-radius: 4px; transition: width 0.4s ease; min-width: 4px; }
+    .prop-nights { width: 80px; text-align: right; font-size: 13px; color: #666; flex-shrink: 0; }
+    .prop-ca { width: 110px; text-align: right; font-size: 14px; font-weight: 600; color: #111; flex-shrink: 0; }
+    .divider { margin: 12px 0 8px; }
+    .total-row { margin-top: 4px; }
 
-    /* Channel bars */
-    .channel-list { display: flex; flex-direction: column; gap: 14px; }
-    .channel-row { display: grid; grid-template-columns: 120px 1fr auto; align-items: center; gap: 12px; }
-    .channel-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .channel-bar-wrap { height: 14px; background: #f5f5f5; border-radius: 7px; overflow: hidden; }
-    .channel-bar { height: 100%; border-radius: 7px; min-width: 4px; transition: width 0.4s; }
-    .channel-stats { font-size: 13px; font-weight: 500; white-space: nowrap; }
-    .channel-count { color: #888; font-weight: 400; }
-    .empty-chart { color: #888; text-align: center; padding: 32px; font-style: italic; }
+    .empty { text-align: center; color: #999; padding: 48px 0; font-size: 15px; }
+
+    @media (max-width: 600px) {
+      .page { padding: 16px; }
+      .kpis { flex-direction: column; }
+      .prop-name { width: 110px; font-size: 13px; }
+      .prop-nights { display: none; }
+      .month-sel { width: 110px; }
+    }
   `]
 })
 export class StatsComponent implements OnInit {
-  stats  = signal<Stats | null>(null);
-  loading = signal(true);
-  currentYear = new Date().getFullYear();
-  private currentMonthKey = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
-  })();
+  data    = signal<RevenueData | null>(null);
+  loading = signal(false);
+  error   = signal('');
+
+  selectedYear  = new Date().getFullYear();
+  selectedMonth = new Date().getMonth() + 1;
+
+  years  = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
+  months: { value: number; label: string }[] = [];
 
   constructor(private http: HttpClient, private t: TranslateService) {}
 
   ngOnInit(): void {
-    this.http.get<Stats>(`${environment.apiUrl}/admin/stats`).subscribe({
-      next: s => { this.stats.set(s); this.loading.set(false); },
-      error: () => this.loading.set(false)
+    this.buildMonths();
+    this.load();
+  }
+
+  private buildMonths(): void {
+    this.months = Array.from({ length: 12 }, (_, i) => ({
+      value: i + 1,
+      label: new Date(2000, i, 1).toLocaleDateString(this.t.currentLang || 'fr', { month: 'long' })
+    }));
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.data.set(null);
+    this.http.get<RevenueData>(
+      `${environment.apiUrl}/admin/stats/revenue?year=${this.selectedYear}&month=${this.selectedMonth}`
+    ).subscribe({
+      next: d  => { this.data.set(d);  this.loading.set(false); },
+      error: e => {
+        this.error.set(e?.error?.error || this.t.instant('stats.load_error'));
+        this.loading.set(false);
+      }
     });
   }
 
-  delta(type: 'revenue' | 'bookings'): number {
-    const s = this.stats()!;
-    if (type === 'revenue') return s.revenueThisMonth - s.revenueLastMonth;
-    return s.bookingsThisMonth - s.bookingsLastMonth;
+  prevMonth(): void {
+    if (this.selectedMonth === 1) { this.selectedMonth = 12; this.selectedYear--; }
+    else this.selectedMonth--;
+    this.load();
   }
 
-  deltaStr(type: 'revenue' | 'bookings'): string {
-    const d = this.delta(type);
-    if (type === 'revenue') return (d >= 0 ? '+' : '') + d.toFixed(0) + ' €';
-    return (d >= 0 ? '+' : '') + d;
+  nextMonth(): void {
+    if (this.selectedMonth === 12) { this.selectedMonth = 1; this.selectedYear++; }
+    else this.selectedMonth++;
+    this.load();
   }
 
-  avgNightly(): number {
-    const s = this.stats()!;
-    if (!s.bookingsThisMonth) return 0;
-    return s.revenueThisMonth / s.bookingsThisMonth;
+  isCurrentMonth(): boolean {
+    const now = new Date();
+    return this.selectedYear === now.getFullYear() && this.selectedMonth === (now.getMonth() + 1);
   }
 
-  isCurrentMonth(key: string): boolean { return key === this.currentMonthKey; }
-  channelLabel(ch: string): string { return CHANNEL_LABELS[ch] ?? ch; }
-  channelColor(ch: string): string { return CHANNEL_COLORS[ch] ?? '#607d8b'; }
+  avgPerNight(): number {
+    const d = this.data();
+    if (!d || d.nights === 0) return 0;
+    return d.caTotal / d.nights;
+  }
+
+  barWidth(ca: number): number {
+    const d = this.data();
+    if (!d || d.caTotal === 0) return 0;
+    return (ca / d.caTotal) * 100;
+  }
 }

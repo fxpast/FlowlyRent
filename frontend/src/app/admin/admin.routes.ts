@@ -67,8 +67,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'stats',
-        component: ComingSoonComponent,
-        data: { title: 'Revenus' }
+        loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
       },
       {
         path: 'reports',

@@ -550,16 +550,18 @@
     "listings_url": "URL — tous logements"
   },
   "stats": {
-    "title": "Revenus & statistiques",
-    "revenue_this_month": "Revenus ce mois",
-    "vs_last_month": "vs mois dernier",
-    "bookings_this_month": "Réservations ce mois",
-    "properties_active": "Logements actifs",
-    "avg_per_booking": "Revenu moyen / réservation",
-    "revenue_6_months": "Revenus des 6 derniers mois",
-    "by_channel_year": "Répartition par canal ({{year}})",
-    "no_data_year": "Aucune donnée pour cette année.",
-    "bookings_abbr": "rés."
+    "title": "Revenus",
+    "ca_total": "Chiffre d'affaires",
+    "nights_sold": "Nuits vendues",
+    "occupancy": "Taux d'occupation",
+    "avg_per_night": "Moy./nuit",
+    "by_property": "Répartition par logement",
+    "prev_month": "Mois précédent",
+    "next_month": "Mois suivant",
+    "no_data": "Aucune réservation confirmée ce mois.",
+    "days": "jours",
+    "nights_unit": "nuits",
+    "load_error": "Impossible de charger les données. Vérifiez que Beds24 est connecté."
   },
   "reports": {
     "title": "Rapports",
@@ -663,6 +665,8 @@
     "transactions": "Transactions",
     "rules": "Règles de catégorisation",
     "summary": "Résumé",
+    "filter_date_label": "Période",
+    "filter_this_month": "Ce mois",
     "filter_all_dates": "Tout",
     "filter_period": "Période",
     "filter_from": "De",

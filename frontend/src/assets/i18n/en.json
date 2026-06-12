@@ -550,16 +550,18 @@
     "listings_url": "URL — all properties"
   },
   "stats": {
-    "title": "Revenue & statistics",
-    "revenue_this_month": "Revenue this month",
-    "vs_last_month": "vs last month",
-    "bookings_this_month": "Bookings this month",
-    "properties_active": "Active properties",
-    "avg_per_booking": "Avg revenue / booking",
-    "revenue_6_months": "Revenue — last 6 months",
-    "by_channel_year": "By channel ({{year}})",
-    "no_data_year": "No data for this year.",
-    "bookings_abbr": "bkgs"
+    "title": "Revenue",
+    "ca_total": "Revenue",
+    "nights_sold": "Nights sold",
+    "occupancy": "Occupancy rate",
+    "avg_per_night": "Avg/night",
+    "by_property": "Breakdown by property",
+    "prev_month": "Previous month",
+    "next_month": "Next month",
+    "no_data": "No confirmed bookings this month.",
+    "days": "days",
+    "nights_unit": "nights",
+    "load_error": "Unable to load data. Check that Beds24 is connected."
   },
   "reports": {
     "title": "Reports",
@@ -663,6 +665,8 @@
     "transactions": "Transactions",
     "rules": "Categorization rules",
     "summary": "Summary",
+    "filter_date_label": "Period",
+    "filter_this_month": "This month",
     "filter_all_dates": "All",
     "filter_period": "Period",
     "filter_from": "From",
