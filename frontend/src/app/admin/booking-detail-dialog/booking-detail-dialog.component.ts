@@ -475,6 +475,27 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                   </mat-select>
                 </mat-form-field>
               </div>
+              @if (propAccessCode() !== undefined) {
+                <div class="code-section">
+                  <div class="code-row">
+                    <mat-icon class="code-icon">vpn_key</mat-icon>
+                    <span class="code-label">{{ 'properties.access_code' | translate }}</span>
+                    <span class="code-value">{{ propAccessCode() || '—' }}</span>
+                    <button mat-icon-button type="button" (click)="regenerateAccessCode()"
+                            [matTooltip]="'properties.regenerate_code' | translate"
+                            [disabled]="regeneratingCode()">
+                      <mat-icon>casino</mat-icon>
+                    </button>
+                  </div>
+                  @if (propPreviousAccessCode()) {
+                    <div class="code-prev">
+                      <mat-icon class="code-icon-sm">history</mat-icon>
+                      <span class="code-prev-label">{{ 'properties.prev_code' | translate }}</span>
+                      <span class="code-prev-value">{{ propPreviousAccessCode() }}</span>
+                    </div>
+                  }
+                </div>
+              }
               <mat-form-field appearance="outline" class="full">
                 <mat-label>{{ 'booking_dialog.task_provider' | translate }}</mat-label>
                 <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
@@ -516,27 +537,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                         <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateDialogLinenQty(item.linenItemId, $event)">
                         <span matTextSuffix>pcs</span>
                       </mat-form-field>
-                    </div>
-                  }
-                </div>
-              }
-              @if (propAccessCode() !== undefined) {
-                <div class="code-section">
-                  <div class="code-row">
-                    <mat-icon class="code-icon">vpn_key</mat-icon>
-                    <span class="code-label">{{ 'properties.access_code' | translate }}</span>
-                    <span class="code-value">{{ propAccessCode() || '—' }}</span>
-                    <button mat-icon-button type="button" (click)="regenerateAccessCode()"
-                            [matTooltip]="'properties.regenerate_code' | translate"
-                            [disabled]="regeneratingCode()">
-                      <mat-icon>casino</mat-icon>
-                    </button>
-                  </div>
-                  @if (propPreviousAccessCode()) {
-                    <div class="code-prev">
-                      <mat-icon class="code-icon-sm">history</mat-icon>
-                      <span class="code-prev-label">{{ 'properties.prev_code' | translate }}</span>
-                      <span class="code-prev-value">{{ propPreviousAccessCode() }}</span>
                     </div>
                   }
                 </div>
