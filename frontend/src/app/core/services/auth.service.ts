@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '@env/environment';
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 interface LoginResponse {
   token: string;
   userId: number;
@@ -61,6 +63,23 @@ export class AuthService {
 
   isHousekeeper(): boolean {
     return this.getCurrentUser()?.role === 'HOUSEKEEPER';
+  }
+
+  tryAutoRefresh(): void {
+    const token = this.getToken();
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresAt: number = payload.exp * 1000;
+      if (expiresAt - Date.now() < THIRTY_DAYS_MS) {
+        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/refresh`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).subscribe({
+          next: resp => localStorage.setItem('flr_token', resp.token),
+          error: () => {}
+        });
+      }
+    } catch {}
   }
 
   // Rétrocompatibilité : l'intercepteur appellait getCredentials()

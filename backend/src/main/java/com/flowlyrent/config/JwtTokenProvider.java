@@ -29,7 +29,7 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:604800000}") // 7 jours par défaut
+    @Value("${jwt.expiration:31536000000}") // 365 jours par défaut
     private long jwtExpiration;
 
     public String generateToken(AppUser user) {

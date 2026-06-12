@@ -9,6 +9,7 @@ import com.flowlyrent.model.enums.AnalyticsEventType;
 import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.service.AnalyticsService;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -82,6 +83,22 @@ public class AuthController {
         resp.setPublicSiteSlug(user.getPublicSiteSlug());
         resp.setRole(user.getRole());
         return resp;
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("error", "Token manquant"));
+        }
+        try {
+            Claims claims = jwtTokenProvider.validateToken(header.substring(7));
+            AppUser user = userRepository.findByEmail(claims.getSubject())
+                    .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+            return ResponseEntity.ok(Map.of("token", jwtTokenProvider.generateToken(user)));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Token invalide ou expiré"));
+        }
     }
 
     private String generateSlug(String email) {
