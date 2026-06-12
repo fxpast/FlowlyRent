@@ -22,6 +22,15 @@ public class FaqItem {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String answer;
 
+    @Column(columnDefinition = "TEXT") private String questionEn;
+    @Column(columnDefinition = "TEXT") private String answerEn;
+    @Column(columnDefinition = "TEXT") private String questionEs;
+    @Column(columnDefinition = "TEXT") private String answerEs;
+    @Column(columnDefinition = "TEXT") private String questionDe;
+    @Column(columnDefinition = "TEXT") private String answerDe;
+    @Column(columnDefinition = "TEXT") private String questionIt;
+    @Column(columnDefinition = "TEXT") private String answerIt;
+
     @Column(nullable = false)
     private int displayOrder = 0;
 

@@ -1042,6 +1042,10 @@
     "import": "Importar CSV",
     "imported": "{{count}} pregunta(s) importada(s), {{skipped}} omitida(s)",
     "template": "Plantilla CSV",
-    "template_hint": "Descargar un archivo CSV de ejemplo (2 columnas: question, answer)"
+    "template_hint": "Descargar un archivo CSV de ejemplo (2 columnas: question, answer)",
+    "retranslate": "Retraducir todo",
+    "retranslate_hint": "Relanzar traducción automática de todas las FAQ (EN/ES/DE/IT)",
+    "retranslate_confirm": "¿Relanzar la traducción automática de todas las preguntas FAQ?",
+    "retranslate_started": "Traducción iniciada para {{count}} pregunta(s) — resultado disponible en unos segundos."
   }
 }

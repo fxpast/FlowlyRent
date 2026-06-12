@@ -2,6 +2,7 @@ package com.flowlyrent.controller;
 
 import com.flowlyrent.model.FaqItem;
 import com.flowlyrent.repository.FaqRepository;
+import com.flowlyrent.service.FaqTranslationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,10 +19,14 @@ import java.util.Map;
 public class FaqController {
 
     private final FaqRepository faqRepository;
+    private final FaqTranslationService translationService;
 
     @GetMapping("/public/faq")
-    public List<FaqItem> getPublic() {
-        return faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc();
+    public List<Map<String, Object>> getPublic(@RequestParam(defaultValue = "fr") String lang) {
+        return faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc()
+                .stream()
+                .map(item -> toDto(item, lang))
+                .toList();
     }
 
     @GetMapping("/superadmin/faq")
@@ -39,18 +45,29 @@ public class FaqController {
         int maxOrder = faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc()
                 .stream().mapToInt(FaqItem::getDisplayOrder).max().orElse(-1);
         item.setDisplayOrder(maxOrder + 1);
-        return ResponseEntity.ok(faqRepository.save(item));
+        FaqItem saved = faqRepository.save(item);
+        translationService.translateAsync(saved);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/superadmin/faq/{id}")
     public ResponseEntity<FaqItem> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return faqRepository.findById(id).map(item -> {
-            if (body.containsKey("question")) item.setQuestion(body.get("question").toString().trim());
-            if (body.containsKey("answer"))   item.setAnswer(body.get("answer").toString().trim());
+            boolean contentChanged = false;
+            if (body.containsKey("question")) {
+                item.setQuestion(body.get("question").toString().trim());
+                contentChanged = true;
+            }
+            if (body.containsKey("answer")) {
+                item.setAnswer(body.get("answer").toString().trim());
+                contentChanged = true;
+            }
             if (body.containsKey("displayOrder")) {
                 item.setDisplayOrder(Integer.parseInt(body.get("displayOrder").toString()));
             }
-            return ResponseEntity.ok(faqRepository.save(item));
+            FaqItem saved = faqRepository.save(item);
+            if (contentChanged) translationService.translateAsync(saved);
+            return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -61,11 +78,18 @@ public class FaqController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/superadmin/faq/retranslate")
+    public ResponseEntity<Map<String, Object>> retranslateAll() {
+        int count = faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc().size();
+        translationService.translateAllAsync();
+        return ResponseEntity.ok(Map.of("message", "Traduction lancée en arrière-plan", "count", count));
+    }
+
     @PostMapping("/superadmin/faq-import")
     public ResponseEntity<Map<String, Object>> importCsv(@RequestParam("file") MultipartFile file) {
         try {
             String content = new String(file.getBytes(), StandardCharsets.UTF_8);
-            if (content.startsWith("﻿")) content = content.substring(1); // BOM Excel
+            if (content.startsWith("﻿")) content = content.substring(1);
 
             String[] lines = content.split("\r?\n");
             if (lines.length == 0) return ResponseEntity.badRequest().body(Map.of("error", "Fichier vide"));
@@ -77,6 +101,7 @@ public class FaqController {
                     .stream().mapToInt(FaqItem::getDisplayOrder).max().orElse(-1);
 
             int imported = 0, skipped = 0;
+            List<FaqItem> saved = new ArrayList<>();
             for (int i = startLine; i < lines.length; i++) {
                 String line = lines[i].trim();
                 if (line.isEmpty()) continue;
@@ -89,13 +114,39 @@ public class FaqController {
                 item.setQuestion(question);
                 item.setAnswer(answer);
                 item.setDisplayOrder(++maxOrder);
-                faqRepository.save(item);
+                saved.add(faqRepository.save(item));
                 imported++;
             }
+            saved.forEach(translationService::translateAsync);
             return ResponseEntity.ok(Map.of("imported", imported, "skipped", skipped));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    private Map<String, Object> toDto(FaqItem item, String lang) {
+        Map<String, Object> dto = new LinkedHashMap<>();
+        dto.put("id", item.getId());
+        dto.put("question", switch (lang) {
+            case "en" -> nvl(item.getQuestionEn(), item.getQuestion());
+            case "es" -> nvl(item.getQuestionEs(), item.getQuestion());
+            case "de" -> nvl(item.getQuestionDe(), item.getQuestion());
+            case "it" -> nvl(item.getQuestionIt(), item.getQuestion());
+            default   -> item.getQuestion();
+        });
+        dto.put("answer", switch (lang) {
+            case "en" -> nvl(item.getAnswerEn(), item.getAnswer());
+            case "es" -> nvl(item.getAnswerEs(), item.getAnswer());
+            case "de" -> nvl(item.getAnswerDe(), item.getAnswer());
+            case "it" -> nvl(item.getAnswerIt(), item.getAnswer());
+            default   -> item.getAnswer();
+        });
+        dto.put("displayOrder", item.getDisplayOrder());
+        return dto;
+    }
+
+    private String nvl(String value, String fallback) {
+        return (value != null && !value.isBlank()) ? value : fallback;
     }
 
     private List<String> parseCsvLine(String line, char sep) {

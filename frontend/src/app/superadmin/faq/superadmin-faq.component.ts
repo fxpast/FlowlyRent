@@ -38,6 +38,11 @@ import { environment } from '../../../environments/environment';
             {{ 'faq.import' | translate }}
           </button>
           <input #fileInput type="file" accept=".csv" style="display:none" (change)="onFileSelected($event)" />
+          <button mat-stroked-button (click)="retranslateAll()" [disabled]="retranslating()" [matTooltip]="'faq.retranslate_hint' | translate">
+            @if (retranslating()) { <mat-spinner diameter="18" /> }
+            @else { <mat-icon>translate</mat-icon> }
+            {{ 'faq.retranslate' | translate }}
+          </button>
           <button mat-raised-button color="primary" (click)="startAdd()">
             <mat-icon>add</mat-icon> {{ 'faq.add' | translate }}
           </button>
@@ -138,11 +143,12 @@ import { environment } from '../../../environments/environment';
   `]
 })
 export class SuperadminFaqComponent implements OnInit {
-  items     = signal<any[]>([]);
-  loading   = signal(true);
-  saving    = signal(false);
-  editing   = signal(false);
-  importing = signal(false);
+  items        = signal<any[]>([]);
+  loading      = signal(true);
+  saving       = signal(false);
+  editing      = signal(false);
+  importing    = signal(false);
+  retranslating = signal(false);
 
   form = { question: '', answer: '' };
   private editingId: number | null = null;
@@ -220,6 +226,18 @@ export class SuperadminFaqComponent implements OnInit {
         this.load();
       },
       error: () => this.importing.set(false)
+    });
+  }
+
+  retranslateAll(): void {
+    if (!confirm(this.t.instant('faq.retranslate_confirm'))) return;
+    this.retranslating.set(true);
+    this.http.post<any>(`${environment.apiUrl}/superadmin/faq/retranslate`, {}).subscribe({
+      next: res => {
+        this.retranslating.set(false);
+        this.snackBar.open(this.t.instant('faq.retranslate_started', { count: res.count }), '', { duration: 3000 });
+      },
+      error: () => this.retranslating.set(false)
     });
   }
 

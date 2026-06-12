@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
 import { environment } from '../../../environments/environment';
 
@@ -100,10 +100,16 @@ export class FaqComponent implements OnInit {
     );
   });
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private translate: TranslateService) {}
 
   ngOnInit(): void {
-    this.http.get<any[]>(`${environment.apiUrl}/public/faq`).subscribe({
+    this.load();
+    this.translate.onLangChange.subscribe(() => this.load());
+  }
+
+  private load(): void {
+    const lang = this.translate.currentLang || 'fr';
+    this.http.get<any[]>(`${environment.apiUrl}/public/faq?lang=${lang}`).subscribe({
       next: list => { this.allItems.set(list); this.loading.set(false); },
       error: () => this.loading.set(false)
     });

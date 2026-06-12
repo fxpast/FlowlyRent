@@ -1042,6 +1042,10 @@
     "import": "Importer CSV",
     "imported": "{{count}} question(s) importée(s), {{skipped}} ignorée(s)",
     "template": "Modèle CSV",
-    "template_hint": "Télécharger un fichier CSV exemple (2 colonnes : question, answer)"
+    "template_hint": "Télécharger un fichier CSV exemple (2 colonnes : question, answer)",
+    "retranslate": "Retraduire tout",
+    "retranslate_hint": "Relancer la traduction automatique de toutes les FAQ (EN/ES/DE/IT)",
+    "retranslate_confirm": "Relancer la traduction automatique de toutes les questions FAQ ?",
+    "retranslate_started": "Traduction lancée pour {{count}} question(s) — résultat disponible dans quelques secondes."
   }
 }
