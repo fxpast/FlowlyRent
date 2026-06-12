@@ -22,6 +22,10 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('./privacy/privacy.component').then(m => m.PrivacyComponent)
   },
   {
+    path: 'delete-account',
+    loadComponent: () => import('./delete-account/delete-account.component').then(m => m.DeleteAccountComponent)
+  },
+  {
     path: '',
     redirectTo: 'home',
     pathMatch: 'full'
