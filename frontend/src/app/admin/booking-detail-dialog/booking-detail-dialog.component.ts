@@ -475,27 +475,25 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                   </mat-select>
                 </mat-form-field>
               </div>
-              @if (propAccessCode() !== undefined) {
-                <div class="code-section">
-                  <div class="code-row">
-                    <mat-icon class="code-icon">vpn_key</mat-icon>
-                    <span class="code-label">{{ 'properties.access_code' | translate }}</span>
-                    <span class="code-value">{{ propAccessCode() || '—' }}</span>
-                    <button mat-icon-button type="button" (click)="regenerateAccessCode()"
-                            [matTooltip]="'properties.regenerate_code' | translate"
-                            [disabled]="regeneratingCode()">
-                      <mat-icon>casino</mat-icon>
-                    </button>
-                  </div>
-                  @if (propPreviousAccessCode()) {
-                    <div class="code-prev">
-                      <mat-icon class="code-icon-sm">history</mat-icon>
-                      <span class="code-prev-label">{{ 'properties.prev_code' | translate }}</span>
-                      <span class="code-prev-value">{{ propPreviousAccessCode() }}</span>
-                    </div>
-                  }
+              <div class="code-section">
+                <div class="code-row">
+                  <mat-icon class="code-icon">vpn_key</mat-icon>
+                  <span class="code-label">{{ 'properties.access_code' | translate }}</span>
+                  <span class="code-value">{{ propAccessCode() || '—' }}</span>
+                  <button mat-icon-button type="button" (click)="regenerateAccessCode()"
+                          [matTooltip]="'properties.regenerate_code' | translate"
+                          [disabled]="regeneratingCode()">
+                    <mat-icon>casino</mat-icon>
+                  </button>
                 </div>
-              }
+                @if (propPreviousAccessCode()) {
+                  <div class="code-prev">
+                    <mat-icon class="code-icon-sm">history</mat-icon>
+                    <span class="code-prev-label">{{ 'properties.prev_code' | translate }}</span>
+                    <span class="code-prev-value">{{ propPreviousAccessCode() }}</span>
+                  </div>
+                }
+              </div>
               <mat-form-field appearance="outline" class="full">
                 <mat-label>{{ 'booking_dialog.task_provider' | translate }}</mat-label>
                 <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
@@ -732,8 +730,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   saving         = signal(false);
   activeTab      = signal(0);
   cleaningFee    = signal<number>(0);
-  propAccessCode         = signal<string | undefined>(undefined);
-  propPreviousAccessCode = signal<string | undefined>(undefined);
+  propAccessCode         = signal('');
+  propPreviousAccessCode = signal('');
   regeneratingCode       = signal(false);
   draft: Record<string, any>;
 
@@ -862,6 +860,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         next: cfgs => {
           const cfg = cfgs.find(c => String(c.beds24PropertyId) === propId);
           if (cfg?.cleaningFee) this.cleaningFee.set(Number(cfg.cleaningFee));
+          this.propAccessCode.set(cfg?.accessCode ?? '');
+          this.propPreviousAccessCode.set(cfg?.previousAccessCode ?? '');
         }
       });
     }
@@ -950,17 +950,6 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   private loadTemplates(): void {
-    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
-    if (pid && this.propAccessCode() === undefined) {
-      this.propConfigService.getAll().subscribe({
-        next: cfgs => {
-          const cfg = cfgs.find(c => c.beds24PropertyId === pid);
-          this.propAccessCode.set(cfg?.accessCode ?? '');
-          this.propPreviousAccessCode.set(cfg?.previousAccessCode ?? '');
-        },
-        error: () => this.propAccessCode.set('')
-      });
-    }
     this.templateService.getAll().subscribe({
       next: tpls => this.allTemplates.set(tpls),
       error: () => {}
@@ -1207,23 +1196,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       });
     };
 
-    if (this.propAccessCode() !== undefined) {
-      checkNextArrival();
-    } else {
-      this.propConfigService.getAll().subscribe({
-        next: cfgs => {
-          const cfg = cfgs.find(c => c.beds24PropertyId === pid);
-          this.propAccessCode.set(cfg?.accessCode ?? '');
-          this.propPreviousAccessCode.set(cfg?.previousAccessCode ?? '');
-          checkNextArrival();
-        },
-        error: () => {
-          this.propAccessCode.set('');
-          this.propPreviousAccessCode.set('');
-          checkNextArrival();
-        }
-      });
-    }
+    checkNextArrival();
   }
 
   private toFrDate(iso: string): string {
