@@ -566,9 +566,10 @@
     "expenses": "Dépenses :",
     "no_qonto": "Qonto non connecté",
     "margin_by_property": "Marge par logement",
-    "margin_note": "* Dépenses Qonto affectées à ce logement + frais de ménage/dépannage + commission plateforme",
+    "margin_note": "* Dépenses Qonto affectées à ce logement + frais de ménage/dépannage + commission plateforme + charges manuelles",
     "hk_costs": "ménage/dépannage",
-    "commission": "commission plateforme"
+    "commission": "commission plateforme",
+    "manual_expenses": "charges manuelles"
   },
   "reports": {
     "title": "Rapports",
@@ -711,7 +712,19 @@
     "monthly_evolution": "Évolution mensuelle des dépenses",
     "edit_rule_title": "Modifier la règle",
     "rules_hint": "Les règles s'appliquent aux transactions Qonto par correspondance de mots-clés dans le libellé. La première règle qui correspond est appliquée.",
-    "transactions_unit": "transactions"
+    "transactions_unit": "transactions",
+    "manual_expenses": "Charges manuelles",
+    "manual_expenses_hint": "Saisissez ici les charges mensuelles qui ne sont pas détectables via Qonto (loyer, assurance, taxe foncière, etc.). Elles seront déduites de la marge du mois sélectionné.",
+    "new_manual_expense": "Nouvelle charge",
+    "edit_manual_expense_title": "Modifier la charge",
+    "manual_expense_label": "Libellé",
+    "manual_expense_amount": "Montant (€)",
+    "manual_expense_property_hint": "Permet d'attribuer cette charge à un logement pour le calcul de la marge par logement",
+    "no_manual_expenses": "Aucune charge manuelle pour ce mois.",
+    "manual_expense_saved": "Charge enregistrée",
+    "manual_expense_deleted": "Charge supprimée",
+    "delete_manual_expense_confirm": "Supprimer la charge",
+    "manual_expenses_total": "Total"
   },
   "housekeeper": {
     "title": "Missions",

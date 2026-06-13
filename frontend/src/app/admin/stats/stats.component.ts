@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
+import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
 
 interface RevenueData {
   year: number;
@@ -42,6 +43,7 @@ interface PropertyMargin {
   qontoExpenses: number;
   hkExpenses: number;
   commission: number;
+  manualExpenses: number;
   margin: number;
 }
 
@@ -132,6 +134,7 @@ interface HousekeepingCosts {
                   {{ 'stats.expenses' | translate }} {{ qontoData()!.totalDebits | number:'1.2-2' }} €
                   @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
                   @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
+                  @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
                   @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
                 </div>
               } @else {
@@ -195,6 +198,7 @@ interface HousekeepingCosts {
                         @if (pm.qontoExpenses > 0) { <span>Qonto {{ pm.qontoExpenses | number:'1.0-0' }} €</span> }
                         @if (pm.hkExpenses > 0) { <span>{{ 'stats.hk_costs' | translate }} {{ pm.hkExpenses | number:'1.0-0' }} €</span> }
                         @if (pm.commission > 0) { <span>{{ 'stats.commission' | translate }} {{ pm.commission | number:'1.0-0' }} €</span> }
+                        @if (pm.manualExpenses > 0) { <span>{{ 'stats.manual_expenses' | translate }} {{ pm.manualExpenses | number:'1.0-0' }} €</span> }
                       </div>
                     }
                   </div>
@@ -270,11 +274,12 @@ interface HousekeepingCosts {
   `]
 })
 export class StatsComponent implements OnInit {
-  data       = signal<RevenueData | null>(null);
-  qontoData  = signal<QontoSummary | null>(null);
-  hkCosts    = signal<HousekeepingCosts | null>(null);
-  loading    = signal(false);
-  error      = signal('');
+  data           = signal<RevenueData | null>(null);
+  qontoData      = signal<QontoSummary | null>(null);
+  hkCosts        = signal<HousekeepingCosts | null>(null);
+  manualExpenses = signal<ManualExpense[]>([]);
+  loading        = signal(false);
+  error          = signal('');
 
   selectedYear  = new Date().getFullYear();
   selectedMonth = new Date().getMonth() + 1;
@@ -282,7 +287,11 @@ export class StatsComponent implements OnInit {
   years  = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
   months: { value: number; label: string }[] = [];
 
-  constructor(private http: HttpClient, private t: TranslateService) {}
+  constructor(
+    private http: HttpClient,
+    private t: TranslateService,
+    private manualExpenseService: ManualExpenseService
+  ) {}
 
   ngOnInit(): void {
     this.buildMonths();
@@ -302,6 +311,7 @@ export class StatsComponent implements OnInit {
     this.data.set(null);
     this.qontoData.set(null);
     this.hkCosts.set(null);
+    this.manualExpenses.set([]);
 
     this.http.get<RevenueData>(
       `${environment.apiUrl}/admin/stats/revenue?year=${this.selectedYear}&month=${this.selectedMonth}`
@@ -322,6 +332,10 @@ export class StatsComponent implements OnInit {
       `${environment.apiUrl}/admin/stats/housekeeping-costs?year=${this.selectedYear}&month=${this.selectedMonth}`
     ).pipe(catchError(() => of(null)))
     .subscribe(c => this.hkCosts.set(c));
+
+    this.manualExpenseService.list(this.selectedYear, this.selectedMonth)
+      .pipe(catchError(() => of([])))
+      .subscribe(e => this.manualExpenses.set(e));
   }
 
   prevMonth(): void {
@@ -355,11 +369,15 @@ export class StatsComponent implements OnInit {
     return Number(this.data()?.commissionTotal ?? 0);
   }
 
+  get manualExpensesTotal(): number {
+    return this.manualExpenses().reduce((s, e) => s + Number(e.amount || 0), 0);
+  }
+
   get marge(): number {
     const d = this.data();
     const q = this.qontoData();
     if (!d || !q) return 0;
-    return Math.round((d.caTotal - Number(q.totalDebits) - this.hkCostsTotal - this.commissionTotal) * 100) / 100;
+    return Math.round((d.caTotal - Number(q.totalDebits) - this.hkCostsTotal - this.commissionTotal - this.manualExpensesTotal) * 100) / 100;
   }
 
   get margeRate(): number {
@@ -377,7 +395,12 @@ export class StatsComponent implements OnInit {
       const qontoExpenses = Math.round(Number(q.byProperty?.[p.propId] ?? 0) * 100) / 100;
       const hkExpenses = Math.round(Number(hk?.byProperty?.[p.propId] ?? 0) * 100) / 100;
       const commission = Math.round(Number(p.commission ?? 0) * 100) / 100;
-      const expenses = Math.round((qontoExpenses + hkExpenses + commission) * 100) / 100;
+      const manualExpenses = Math.round(
+        this.manualExpenses()
+          .filter(e => e.beds24PropertyId === p.propId)
+          .reduce((s, e) => s + Number(e.amount || 0), 0) * 100
+      ) / 100;
+      const expenses = Math.round((qontoExpenses + hkExpenses + commission + manualExpenses) * 100) / 100;
       return {
         propId:       p.propId,
         propertyName: p.propertyName,
@@ -386,6 +409,7 @@ export class StatsComponent implements OnInit {
         qontoExpenses,
         hkExpenses,
         commission,
+        manualExpenses,
         margin:       Math.round((p.ca - expenses) * 100) / 100
       };
     });

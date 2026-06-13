@@ -18,6 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 import { BookingService } from '../../core/services/booking.service';
+import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
 
 const COLOR_PALETTE = [
   '#1976d2','#388e3c','#f57c00','#7b1fa2','#c62828',
@@ -329,6 +330,107 @@ const COLOR_PALETTE = [
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'expenses.manual_expenses' | translate">
+          <div class="tab-content">
+            <p class="rules-hint">{{ 'expenses.manual_expenses_hint' | translate }}</p>
+
+            <div class="summary-filters">
+              <mat-form-field>
+                <mat-label>{{ 'expenses.summary_year' | translate }}</mat-label>
+                <mat-select [(ngModel)]="manualExpenseYear" (selectionChange)="onManualExpensePeriodChange()">
+                  @for (y of years; track y) {
+                    <mat-option [value]="y">{{ y }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>{{ 'expenses.summary_month' | translate }}</mat-label>
+                <mat-select [(ngModel)]="manualExpenseMonth" (selectionChange)="onManualExpensePeriodChange()">
+                  @for (m of months; track m) {
+                    <mat-option [value]="m">{{ getMonthName(m) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="rules-header">
+              <span></span>
+              <button mat-flat-button color="primary" (click)="openManualExpenseForm()">
+                <mat-icon>add</mat-icon> {{ 'expenses.new_manual_expense' | translate }}
+              </button>
+            </div>
+
+            @if (showManualExpenseForm()) {
+              <mat-card class="rule-form-card">
+                <mat-card-header>
+                  <mat-card-title>{{ (editingManualExpense()?.id ? 'expenses.edit_manual_expense_title' : 'expenses.new_manual_expense') | translate }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="rule-form">
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_expense_label' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="manualExpenseForm.label" />
+                    </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_expense_amount' | translate }}</mat-label>
+                      <input matInput type="number" step="0.01" [(ngModel)]="manualExpenseForm.amount" />
+                    </mat-form-field>
+                    <mat-form-field class="full-width">
+                      <mat-label>{{ 'expenses.rule_property' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="manualExpenseForm.beds24PropertyId">
+                        <mat-option value="">{{ 'expenses.rule_property_none' | translate }}</mat-option>
+                        @for (p of properties(); track p.id) {
+                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-hint>{{ 'expenses.manual_expense_property_hint' | translate }}</mat-hint>
+                    </mat-form-field>
+                  </div>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-flat-button color="primary" (click)="saveManualExpense()" [disabled]="savingManualExpense()">
+                    @if (savingManualExpense()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
+                  </button>
+                  <button mat-stroked-button (click)="cancelManualExpenseForm()" style="margin-left:8px">{{ 'common.cancel' | translate }}</button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            @if (loadingManualExpenses()) {
+              <div class="center"><mat-spinner /></div>
+            } @else if (manualExpenses().length === 0) {
+              <div class="empty">{{ 'expenses.no_manual_expenses' | translate }}</div>
+            } @else {
+              <div class="rules-list">
+                @for (expense of manualExpenses(); track expense.id) {
+                  <div class="rule-row">
+                    <div class="rule-info">
+                      <strong>{{ expense.label }}</strong>
+                      @if (expense.beds24PropertyId) {
+                        <span class="property-chip">{{ propertyName(expense.beds24PropertyId) }}</span>
+                      }
+                    </div>
+                    <div class="manual-expense-amount">{{ expense.amount | number:'1.2-2' }} €</div>
+                    <div class="rule-actions">
+                      <button mat-icon-button (click)="editManualExpense(expense)" [matTooltip]="'common.edit' | translate">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteManualExpense(expense)" [matTooltip]="'common.delete' | translate">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+                <div class="rule-row total-row">
+                  <div class="rule-info"><strong>{{ 'expenses.manual_expenses_total' | translate }}</strong></div>
+                  <div class="manual-expense-amount"><strong>{{ manualExpensesTotal() | number:'1.2-2' }} €</strong></div>
+                  <div class="rule-actions"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     }
   `,
@@ -401,6 +503,8 @@ const COLOR_PALETTE = [
     .keyword-chip.alt { background: #f3e5f5; color: #6a1b9a; }
     .property-chip { display: inline-block; margin-left: 8px; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
     .rule-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .manual-expense-amount { width: 100px; text-align: right; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .rule-row.total-row { background: #fafafa; border-style: dashed; }
 
     /* Summary */
     .summary-filters { display: flex; gap: 12px; margin-bottom: 20px; }
@@ -459,9 +563,20 @@ export class ExpensesComponent implements OnInit {
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   months = Array.from({ length: 12 }, (_, i) => i + 1);
 
+  // Manual expenses
+  manualExpenses = signal<ManualExpense[]>([]);
+  loadingManualExpenses = signal(false);
+  showManualExpenseForm = signal(false);
+  editingManualExpense = signal<ManualExpense | null>(null);
+  savingManualExpense = signal(false);
+  manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '' };
+  manualExpenseYear = new Date().getFullYear();
+  manualExpenseMonth = new Date().getMonth() + 1;
+
   constructor(
     private qontoService: QontoService,
     private bookingService: BookingService,
+    private manualExpenseService: ManualExpenseService,
     private snack: MatSnackBar,
     private t: TranslateService
   ) {}
@@ -474,6 +589,7 @@ export class ExpensesComponent implements OnInit {
         this.loadRules();
         this.loadSummary();
         this.loadProperties();
+        this.loadManualExpenses();
       }
     });
   }
@@ -661,6 +777,80 @@ export class ExpensesComponent implements OnInit {
   monthBarWidth(value: number): number {
     const max = Math.max(...this.monthlyEntries().map(e => e.value));
     return max > 0 ? (value / max) * 100 : 0;
+  }
+
+  // ─── Dépenses manuelles ────────────────────────────────────────────────
+
+  loadManualExpenses(): void {
+    this.loadingManualExpenses.set(true);
+    this.manualExpenseService.list(this.manualExpenseYear, this.manualExpenseMonth).subscribe({
+      next: e => { this.manualExpenses.set(e); this.loadingManualExpenses.set(false); },
+      error: () => this.loadingManualExpenses.set(false)
+    });
+  }
+
+  onManualExpensePeriodChange(): void {
+    this.loadManualExpenses();
+  }
+
+  openManualExpenseForm(): void {
+    this.editingManualExpense.set(null);
+    this.manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '' };
+    this.showManualExpenseForm.set(true);
+  }
+
+  editManualExpense(expense: ManualExpense): void {
+    this.editingManualExpense.set(expense);
+    this.manualExpenseForm = {
+      label: expense.label,
+      amount: expense.amount,
+      beds24PropertyId: expense.beds24PropertyId || ''
+    };
+    this.showManualExpenseForm.set(true);
+  }
+
+  cancelManualExpenseForm(): void {
+    this.showManualExpenseForm.set(false);
+    this.editingManualExpense.set(null);
+  }
+
+  saveManualExpense(): void {
+    if (!this.manualExpenseForm.label.trim() || !this.manualExpenseForm.amount) return;
+    this.savingManualExpense.set(true);
+
+    const payload = {
+      label: this.manualExpenseForm.label.trim(),
+      amount: this.manualExpenseForm.amount,
+      beds24PropertyId: this.manualExpenseForm.beds24PropertyId,
+      year: this.manualExpenseYear,
+      month: this.manualExpenseMonth
+    };
+
+    const req = this.editingManualExpense()?.id
+      ? this.manualExpenseService.update(this.editingManualExpense()!.id, payload)
+      : this.manualExpenseService.create(payload);
+
+    req.subscribe({
+      next: () => {
+        this.savingManualExpense.set(false);
+        this.showManualExpenseForm.set(false);
+        this.loadManualExpenses();
+        this.snack.open(this.t.instant('expenses.manual_expense_saved'), '', { duration: 2000 });
+      },
+      error: () => this.savingManualExpense.set(false)
+    });
+  }
+
+  deleteManualExpense(expense: ManualExpense): void {
+    if (!confirm(this.t.instant('expenses.delete_manual_expense_confirm') + ' "' + expense.label + '" ?')) return;
+    this.manualExpenseService.delete(expense.id).subscribe(() => {
+      this.loadManualExpenses();
+      this.snack.open(this.t.instant('expenses.manual_expense_deleted'), '', { duration: 2000 });
+    });
+  }
+
+  manualExpensesTotal(): number {
+    return this.manualExpenses().reduce((s, e) => s + Number(e.amount || 0), 0);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────

@@ -566,9 +566,10 @@
     "expenses": "Expenses:",
     "no_qonto": "Qonto not connected",
     "margin_by_property": "Margin by property",
-    "margin_note": "* Qonto expenses assigned to this property + cleaning/maintenance costs + platform commission",
+    "margin_note": "* Qonto expenses assigned to this property + cleaning/maintenance costs + platform commission + manual expenses",
     "hk_costs": "cleaning/maintenance",
-    "commission": "platform commission"
+    "commission": "platform commission",
+    "manual_expenses": "manual expenses"
   },
   "reports": {
     "title": "Reports",
@@ -711,7 +712,19 @@
     "monthly_evolution": "Monthly expense trend",
     "edit_rule_title": "Edit rule",
     "rules_hint": "Rules are applied to Qonto transactions by matching keywords in the description. The first matching rule is applied.",
-    "transactions_unit": "transactions"
+    "transactions_unit": "transactions",
+    "manual_expenses": "Manual expenses",
+    "manual_expenses_hint": "Enter here the monthly expenses that cannot be detected via Qonto (rent, insurance, property tax, etc.). They will be deducted from the margin of the selected month.",
+    "new_manual_expense": "New expense",
+    "edit_manual_expense_title": "Edit expense",
+    "manual_expense_label": "Label",
+    "manual_expense_amount": "Amount (€)",
+    "manual_expense_property_hint": "Assign this expense to a property for the margin-by-property calculation",
+    "no_manual_expenses": "No manual expenses for this month.",
+    "manual_expense_saved": "Expense saved",
+    "manual_expense_deleted": "Expense deleted",
+    "delete_manual_expense_confirm": "Delete expense",
+    "manual_expenses_total": "Total"
   },
   "housekeeper": {
     "title": "Tasks",

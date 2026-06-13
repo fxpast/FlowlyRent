@@ -566,9 +566,10 @@
     "expenses": "Spese:",
     "no_qonto": "Qonto non connesso",
     "margin_by_property": "Margine per alloggio",
-    "margin_note": "* Spese Qonto assegnate a questo alloggio + spese di pulizia/manutenzione + commissione piattaforma",
+    "margin_note": "* Spese Qonto assegnate a questo alloggio + spese di pulizia/manutenzione + commissione piattaforma + spese manuali",
     "hk_costs": "pulizia/manutenzione",
-    "commission": "commissione piattaforma"
+    "commission": "commissione piattaforma",
+    "manual_expenses": "spese manuali"
   },
   "reports": {
     "title": "Report",
@@ -711,7 +712,19 @@
     "monthly_evolution": "Evoluzione mensile delle spese",
     "edit_rule_title": "Modifica regola",
     "rules_hint": "Le regole vengono applicate alle transazioni Qonto per corrispondenza di parole chiave nella descrizione. Viene applicata la prima regola corrispondente.",
-    "transactions_unit": "transazioni"
+    "transactions_unit": "transazioni",
+    "manual_expenses": "Spese manuali",
+    "manual_expenses_hint": "Inserisci qui le spese mensili non rilevabili tramite Qonto (affitto, assicurazione, tasse sulla proprietà, ecc.). Verranno dedotte dal margine del mese selezionato.",
+    "new_manual_expense": "Nuova spesa",
+    "edit_manual_expense_title": "Modifica spesa",
+    "manual_expense_label": "Descrizione",
+    "manual_expense_amount": "Importo (€)",
+    "manual_expense_property_hint": "Consente di assegnare questa spesa a un alloggio per il calcolo del margine per alloggio",
+    "no_manual_expenses": "Nessuna spesa manuale per questo mese.",
+    "manual_expense_saved": "Spesa salvata",
+    "manual_expense_deleted": "Spesa eliminata",
+    "delete_manual_expense_confirm": "Eliminare la spesa",
+    "manual_expenses_total": "Totale"
   },
   "housekeeper": {
     "title": "Compiti",

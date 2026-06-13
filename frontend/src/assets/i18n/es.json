@@ -566,9 +566,10 @@
     "expenses": "Gastos:",
     "no_qonto": "Qonto no conectado",
     "margin_by_property": "Margen por alojamiento",
-    "margin_note": "* Gastos Qonto asignados a este alojamiento + gastos de limpieza/mantenimiento + comisión de la plataforma",
+    "margin_note": "* Gastos Qonto asignados a este alojamiento + gastos de limpieza/mantenimiento + comisión de la plataforma + gastos manuales",
     "hk_costs": "limpieza/mantenimiento",
-    "commission": "comisión de la plataforma"
+    "commission": "comisión de la plataforma",
+    "manual_expenses": "gastos manuales"
   },
   "reports": {
     "title": "Informes",
@@ -711,7 +712,19 @@
     "monthly_evolution": "Evolución mensual de gastos",
     "edit_rule_title": "Editar regla",
     "rules_hint": "Las reglas se aplican a las transacciones Qonto por coincidencia de palabras clave en el concepto. Se aplica la primera regla que coincida.",
-    "transactions_unit": "transacciones"
+    "transactions_unit": "transacciones",
+    "manual_expenses": "Gastos manuales",
+    "manual_expenses_hint": "Introduce aquí los gastos mensuales que no se pueden detectar mediante Qonto (alquiler, seguro, impuesto sobre la propiedad, etc.). Se deducirán del margen del mes seleccionado.",
+    "new_manual_expense": "Nuevo gasto",
+    "edit_manual_expense_title": "Editar gasto",
+    "manual_expense_label": "Concepto",
+    "manual_expense_amount": "Importe (€)",
+    "manual_expense_property_hint": "Permite asignar este gasto a un alojamiento para el cálculo del margen por alojamiento",
+    "no_manual_expenses": "Sin gastos manuales para este mes.",
+    "manual_expense_saved": "Gasto guardado",
+    "manual_expense_deleted": "Gasto eliminado",
+    "delete_manual_expense_confirm": "Eliminar el gasto",
+    "manual_expenses_total": "Total"
   },
   "housekeeper": {
     "title": "Tareas",

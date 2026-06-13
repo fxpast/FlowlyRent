@@ -566,9 +566,10 @@
     "expenses": "Ausgaben:",
     "no_qonto": "Qonto nicht verbunden",
     "margin_by_property": "Marge pro Unterkunft",
-    "margin_note": "* Qonto-Ausgaben dieser Unterkunft + Reinigungs-/Wartungskosten + Plattformgebühr",
+    "margin_note": "* Qonto-Ausgaben dieser Unterkunft + Reinigungs-/Wartungskosten + Plattformgebühr + manuelle Ausgaben",
     "hk_costs": "Reinigung/Wartung",
-    "commission": "Plattformgebühr"
+    "commission": "Plattformgebühr",
+    "manual_expenses": "manuelle Ausgaben"
   },
   "reports": {
     "title": "Berichte",
@@ -711,7 +712,19 @@
     "monthly_evolution": "Monatliche Ausgabenentwicklung",
     "edit_rule_title": "Regel bearbeiten",
     "rules_hint": "Regeln werden auf Qonto-Transaktionen durch Schlüsselwort-Abgleich im Beschreibungsfeld angewendet. Die erste passende Regel wird verwendet.",
-    "transactions_unit": "Transaktionen"
+    "transactions_unit": "Transaktionen",
+    "manual_expenses": "Manuelle Ausgaben",
+    "manual_expenses_hint": "Erfassen Sie hier monatliche Ausgaben, die nicht über Qonto erkannt werden können (Miete, Versicherung, Grundsteuer usw.). Sie werden von der Marge des ausgewählten Monats abgezogen.",
+    "new_manual_expense": "Neue Ausgabe",
+    "edit_manual_expense_title": "Ausgabe bearbeiten",
+    "manual_expense_label": "Bezeichnung",
+    "manual_expense_amount": "Betrag (€)",
+    "manual_expense_property_hint": "Ordnet diese Ausgabe einer Unterkunft für die Margenberechnung pro Unterkunft zu",
+    "no_manual_expenses": "Keine manuellen Ausgaben für diesen Monat.",
+    "manual_expense_saved": "Ausgabe gespeichert",
+    "manual_expense_deleted": "Ausgabe gelöscht",
+    "delete_manual_expense_confirm": "Ausgabe löschen",
+    "manual_expenses_total": "Gesamt"
   },
   "housekeeper": {
     "title": "Aufgaben",
