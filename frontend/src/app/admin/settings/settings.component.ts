@@ -8,8 +8,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UserService, UserProfile, Beds24Status } from '../../core/services/user.service';
 import { QontoService, QontoStatus } from '../../core/services/qonto.service';
+import { MinStayService, MinStayStrategy } from '../../core/services/min-stay.service';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -23,6 +25,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatDividerModule,
     MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule,
+    MatSlideToggleModule,
     TranslateModule
   ],
   template: `
@@ -139,6 +142,63 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         }
       </mat-card-actions>
     </mat-card>
+
+    <!-- Stratégie durée minimum de séjour -->
+    @if (beds24Status()?.connected) {
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>event_available</mat-icon>
+          <mat-card-title>{{ 'settings.min_stay_title' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'settings.min_stay_subtitle' | translate }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (minStay()) {
+            <mat-slide-toggle [(ngModel)]="minStayForm.enabled" color="primary">
+              {{ 'settings.min_stay_enable' | translate }}
+            </mat-slide-toggle>
+            <p class="sync-info">{{ 'settings.min_stay_enable_hint' | translate }}</p>
+
+            <div class="form-row" style="margin-top:16px">
+              <mat-form-field>
+                <mat-label>{{ 'settings.min_stay_near_days' | translate }}</mat-label>
+                <input matInput type="number" min="0" [(ngModel)]="minStayForm.nearDays" />
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>{{ 'settings.min_stay_near_value' | translate }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="minStayForm.nearMinStay" />
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field>
+                <mat-label>{{ 'settings.min_stay_far_value' | translate }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="minStayForm.farMinStay" />
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>{{ 'settings.min_stay_horizon' | translate }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="minStayForm.horizonDays" />
+              </mat-form-field>
+            </div>
+
+            @if (minStay()!.lastRunAt) {
+              <p class="sync-info">{{ 'settings.min_stay_last_run' | translate }} {{ minStay()!.lastRunAt | date:'dd/MM/yyyy HH:mm' }} — {{ minStay()!.lastRunStatus }}</p>
+            }
+            @if (minStayMsg()) {
+              <p class="msg" [class.error]="minStayError()">{{ minStayMsg() }}</p>
+            }
+          } @else {
+            <mat-spinner diameter="32" />
+          }
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-flat-button color="primary" (click)="saveMinStay()" [disabled]="savingMinStay()">
+            @if (savingMinStay()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
+          </button>
+          <button mat-stroked-button (click)="runMinStayNow()" [disabled]="runningMinStay()" style="margin-left:8px">
+            @if (runningMinStay()) { <mat-spinner diameter="18" /> } @else { <mat-icon>play_arrow</mat-icon> {{ 'settings.min_stay_run_now' | translate }} }
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
 
     <!-- Connexion Qonto -->
     <mat-card class="section-card">
@@ -436,6 +496,13 @@ export class SettingsComponent implements OnInit {
 
   webhookUrl = signal('');
 
+  minStay = signal<MinStayStrategy | null>(null);
+  minStayForm = { enabled: false, nearDays: 10, nearMinStay: 2, farMinStay: 3, horizonDays: 365 };
+  savingMinStay = signal(false);
+  runningMinStay = signal(false);
+  minStayMsg = signal('');
+  minStayError = signal(false);
+
   qontoStatus = signal<QontoStatus | null>(null);
   qontoLogin = '';
   qontoSecretKey = '';
@@ -452,6 +519,7 @@ export class SettingsComponent implements OnInit {
   constructor(
     private userService: UserService,
     private qontoService: QontoService,
+    private minStayService: MinStayService,
     private route: ActivatedRoute,
     private snackBar: MatSnackBar,
     private t: TranslateService
@@ -492,6 +560,7 @@ export class SettingsComponent implements OnInit {
     });
     this.loadBeds24Status();
     this.loadQontoStatus();
+    this.loadMinStay();
   }
 
   saveProfile(): void {
@@ -636,5 +705,56 @@ export class SettingsComponent implements OnInit {
 
   private loadQontoStatus(): void {
     this.qontoService.getStatus().subscribe(s => this.qontoStatus.set(s));
+  }
+
+  private loadMinStay(): void {
+    this.minStayService.get().subscribe(s => {
+      this.minStay.set(s);
+      this.minStayForm = {
+        enabled: s.enabled, nearDays: s.nearDays, nearMinStay: s.nearMinStay,
+        farMinStay: s.farMinStay, horizonDays: s.horizonDays
+      };
+    });
+  }
+
+  saveMinStay(): void {
+    this.savingMinStay.set(true);
+    this.minStayMsg.set('');
+    this.minStayService.save(this.minStayForm).subscribe({
+      next: s => {
+        this.savingMinStay.set(false);
+        this.minStay.set(s);
+        this.minStayMsg.set(this.t.instant('settings.min_stay_saved'));
+        this.minStayError.set(false);
+      },
+      error: () => {
+        this.savingMinStay.set(false);
+        this.minStayMsg.set(this.t.instant('settings.min_stay_error'));
+        this.minStayError.set(true);
+      }
+    });
+  }
+
+  runMinStayNow(): void {
+    this.runningMinStay.set(true);
+    this.minStayMsg.set('');
+    this.minStayService.runNow().subscribe({
+      next: r => {
+        this.runningMinStay.set(false);
+        if (r.success) {
+          this.minStayMsg.set(this.t.instant('settings.min_stay_run_success', { count: r.propertiesUpdated }));
+          this.minStayError.set(false);
+        } else {
+          this.minStayMsg.set(r.error ?? this.t.instant('settings.min_stay_error'));
+          this.minStayError.set(true);
+        }
+        this.loadMinStay();
+      },
+      error: err => {
+        this.runningMinStay.set(false);
+        this.minStayMsg.set(err.error?.error ?? this.t.instant('settings.min_stay_error'));
+        this.minStayError.set(true);
+      }
+    });
   }
 }
