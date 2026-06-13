@@ -164,18 +164,18 @@ public class QontoService {
                 if (propId != null && !propId.isBlank()) {
                     byProperty.merge(propId, amount, BigDecimal::add);
                 }
+
+                String cat = tx.get("category") != null ? tx.get("category").toString() : null;
+                if (cat == null) { uncategorized++; cat = "NON_CATEGORISE"; }
+                byCategory.merge(cat, amount, BigDecimal::add);
+
+                String settledAt = tx.getOrDefault("settled_at", "").toString();
+                if (settledAt.length() >= 7) {
+                    String monthKey = settledAt.substring(0, 7);
+                    byMonth.merge(monthKey, amount, BigDecimal::add);
+                }
             } else {
                 totalCredits = totalCredits.add(amount);
-            }
-
-            String cat = tx.get("category") != null ? tx.get("category").toString() : null;
-            if (cat == null) { uncategorized++; cat = "NON_CATEGORISE"; }
-            byCategory.merge(cat, amount, BigDecimal::add);
-
-            String settledAt = tx.getOrDefault("settled_at", "").toString();
-            if (settledAt.length() >= 7 && "DEBIT".equals(side)) {
-                String monthKey = settledAt.substring(0, 7);
-                byMonth.merge(monthKey, amount, BigDecimal::add);
             }
         }
 
