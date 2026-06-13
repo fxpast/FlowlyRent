@@ -561,7 +561,10 @@
     "no_data": "No confirmed bookings this month.",
     "days": "days",
     "nights_unit": "nights",
-    "load_error": "Unable to load data. Check that Beds24 is connected."
+    "load_error": "Unable to load data. Check that Beds24 is connected.",
+    "margin": "Profit margin",
+    "expenses": "Expenses:",
+    "no_qonto": "Qonto not connected"
   },
   "reports": {
     "title": "Reports",

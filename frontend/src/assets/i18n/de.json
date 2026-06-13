@@ -561,7 +561,10 @@
     "no_data": "Keine bestätigten Buchungen in diesem Monat.",
     "days": "Tage",
     "nights_unit": "Nächte",
-    "load_error": "Daten können nicht geladen werden. Überprüfen Sie die Beds24-Verbindung."
+    "load_error": "Daten können nicht geladen werden. Überprüfen Sie die Beds24-Verbindung.",
+    "margin": "Gewinnspanne",
+    "expenses": "Ausgaben:",
+    "no_qonto": "Qonto nicht verbunden"
   },
   "reports": {
     "title": "Berichte",

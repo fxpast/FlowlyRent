@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { catchError, of } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +22,14 @@ interface RevenueData {
   daysInMonth: number;
   occupancyRate: number;
   byProperty: { propertyName: string; ca: number; nights: number }[];
+}
+
+interface QontoSummary {
+  totalDebits: number;
+  totalCredits: number;
+  byCategory: Record<string, number>;
+  transactionCount: number;
+  uncategorized: number;
 }
 
 @Component({
@@ -92,6 +101,25 @@ interface RevenueData {
               <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
             </mat-card-content>
           </mat-card>
+
+          <mat-card class="kpi-card" [class.margin-positive]="qontoData() !== null && marge >= 0"
+                                     [class.margin-negative]="qontoData() !== null && marge < 0">
+            <mat-card-content>
+              <div class="kpi-label">{{ 'stats.margin' | translate }}</div>
+              @if (qontoData()) {
+                <div class="kpi-value" [class.value-positive]="marge >= 0" [class.value-negative]="marge < 0">
+                  {{ marge | number:'1.2-2' }} €
+                </div>
+                <div class="kpi-sub">
+                  {{ 'stats.expenses' | translate }} {{ qontoData()!.totalDebits | number:'1.2-2' }} €
+                  @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
+                </div>
+              } @else {
+                <div class="kpi-value kpi-na">—</div>
+                <div class="kpi-sub">{{ 'stats.no_qonto' | translate }}</div>
+              }
+            </mat-card-content>
+          </mat-card>
         </div>
 
         @if (data()!.byProperty.length > 0) {
@@ -145,6 +173,11 @@ interface RevenueData {
     .kpis { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
     .kpi-card { flex: 1; min-width: 180px; }
     .kpi-card.primary { border-left: 4px solid #0288d1; }
+    .kpi-card.margin-positive { border-left: 4px solid #4caf50; }
+    .kpi-card.margin-negative { border-left: 4px solid #f44336; }
+    .value-positive { color: #2e7d32 !important; }
+    .value-negative { color: #c62828 !important; }
+    .kpi-na { color: #bbb !important; }
     .kpi-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; color: #111; }
     .kpi-sub   { font-size: 13px; color: #777; }
@@ -172,9 +205,10 @@ interface RevenueData {
   `]
 })
 export class StatsComponent implements OnInit {
-  data    = signal<RevenueData | null>(null);
-  loading = signal(false);
-  error   = signal('');
+  data       = signal<RevenueData | null>(null);
+  qontoData  = signal<QontoSummary | null>(null);
+  loading    = signal(false);
+  error      = signal('');
 
   selectedYear  = new Date().getFullYear();
   selectedMonth = new Date().getMonth() + 1;
@@ -200,6 +234,8 @@ export class StatsComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     this.data.set(null);
+    this.qontoData.set(null);
+
     this.http.get<RevenueData>(
       `${environment.apiUrl}/admin/stats/revenue?year=${this.selectedYear}&month=${this.selectedMonth}`
     ).subscribe({
@@ -209,6 +245,11 @@ export class StatsComponent implements OnInit {
         this.loading.set(false);
       }
     });
+
+    this.http.get<QontoSummary>(
+      `${environment.apiUrl}/admin/qonto/summary?year=${this.selectedYear}&month=${this.selectedMonth}`
+    ).pipe(catchError(() => of(null)))
+    .subscribe(q => this.qontoData.set(q));
   }
 
   prevMonth(): void {
@@ -232,6 +273,19 @@ export class StatsComponent implements OnInit {
     const d = this.data();
     if (!d || d.nights === 0) return 0;
     return d.caTotal / d.nights;
+  }
+
+  get marge(): number {
+    const d = this.data();
+    const q = this.qontoData();
+    if (!d || !q) return 0;
+    return Math.round((d.caTotal - Number(q.totalDebits)) * 100) / 100;
+  }
+
+  get margeRate(): number {
+    const d = this.data();
+    if (!d || d.caTotal === 0) return 0;
+    return Math.round((this.marge / d.caTotal) * 10000) / 100;
   }
 
   barWidth(ca: number): number {

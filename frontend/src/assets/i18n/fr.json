@@ -561,7 +561,10 @@
     "no_data": "Aucune réservation confirmée ce mois.",
     "days": "jours",
     "nights_unit": "nuits",
-    "load_error": "Impossible de charger les données. Vérifiez que Beds24 est connecté."
+    "load_error": "Impossible de charger les données. Vérifiez que Beds24 est connecté.",
+    "margin": "Marge bénéficiaire",
+    "expenses": "Dépenses :",
+    "no_qonto": "Qonto non connecté"
   },
   "reports": {
     "title": "Rapports",
