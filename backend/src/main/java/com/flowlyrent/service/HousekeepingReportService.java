@@ -207,6 +207,7 @@ public class HousekeepingReportService {
         Map<String, BigDecimal> byProperty = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO;
         for (HousekeepingTask t : tasks) {
+            if (t.getStatus() == TaskStatus.SKIPPED) continue;
             BigDecimal c = cost(t);
             if (c == null) continue;
             total = total.add(c);
@@ -225,12 +226,8 @@ public class HousekeepingReportService {
     // -------------------------------------------------------------------------
 
     private BigDecimal cost(HousekeepingTask t) {
-        if (t.getHourlyRate() == null) return null;
-        BigDecimal base = t.getHourlyRate();
-        if (t.getExtraHours() != null && t.getExtraHours() > 0) {
-            base = base.add(BigDecimal.valueOf(t.getExtraHours()).multiply(t.getHourlyRate()));
-        }
-        return base.setScale(2, RoundingMode.HALF_UP);
+        if (t.getHourlyRate() == null || t.getExtraHours() == null || t.getExtraHours() <= 0) return null;
+        return BigDecimal.valueOf(t.getExtraHours()).multiply(t.getHourlyRate()).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Map<String, Object> buildSummary(List<HousekeepingTask> tasks) {
