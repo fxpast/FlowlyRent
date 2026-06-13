@@ -564,7 +564,9 @@
     "load_error": "Unable to load data. Check that Beds24 is connected.",
     "margin": "Profit margin",
     "expenses": "Expenses:",
-    "no_qonto": "Qonto not connected"
+    "no_qonto": "Qonto not connected",
+    "margin_by_property": "Margin by property",
+    "margin_note": "* Only expenses assigned to this property in Qonto"
   },
   "reports": {
     "title": "Reports",

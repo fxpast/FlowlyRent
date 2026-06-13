@@ -344,7 +344,7 @@ public class Beds24ReportService {
         log.info("[caMonthly] {} propriétés chargées : {}", propNames.size(), propNames);
 
         // Pré-décodage des réservations
-        record BookingData(LocalDate arrival, LocalDate departure, String propName, BigDecimal pricePerNight) {}
+        record BookingData(LocalDate arrival, LocalDate departure, String propId, BigDecimal pricePerNight) {}
         List<BookingData> decoded = new ArrayList<>();
         for (Map<String, Object> b : bookings) {
             String arrStr = str(b, "arrival");
@@ -357,16 +357,15 @@ public class Beds24ReportService {
             BigDecimal price = decimal(b, "totalPrice");
             if (price == null) price = decimal(b, "price");
             if (price == null) continue;
-            // Beds24 v2 : propId ou propertyId selon les comptes
-            String propId   = b.get("propId") != null ? str(b, "propId") : str(b, "propertyId");
-            String propName = propId != null ? propNames.getOrDefault(propId, propId) : "Inconnu";
-            BigDecimal ppn  = price.divide(BigDecimal.valueOf(nights), 4, RoundingMode.HALF_UP);
-            decoded.add(new BookingData(arrival, departure, propName, ppn));
+            String propId = b.get("propId") != null ? str(b, "propId") : str(b, "propertyId");
+            if (propId == null) propId = "inconnu";
+            BigDecimal ppn = price.divide(BigDecimal.valueOf(nights), 4, RoundingMode.HALF_UP);
+            decoded.add(new BookingData(arrival, departure, propId, ppn));
         }
 
         // Itération jour par jour (algorithme CA_mois)
-        Map<String, BigDecimal> caByProp     = new LinkedHashMap<>();
-        Map<String, Integer>    nightsByProp = new LinkedHashMap<>();
+        Map<String, BigDecimal> caByPropId     = new LinkedHashMap<>();
+        Map<String, Integer>    nightsByPropId = new LinkedHashMap<>();
         BigDecimal caTotal   = BigDecimal.ZERO;
         int        totalNights = 0;
 
@@ -374,8 +373,8 @@ public class Beds24ReportService {
             for (BookingData bd : decoded) {
                 // Le jour est couvert si : arrival <= day < departure
                 if (!day.isBefore(bd.arrival()) && day.isBefore(bd.departure())) {
-                    caByProp.merge(bd.propName(),    bd.pricePerNight(), BigDecimal::add);
-                    nightsByProp.merge(bd.propName(), 1,                 Integer::sum);
+                    caByPropId.merge(bd.propId(),    bd.pricePerNight(), BigDecimal::add);
+                    nightsByPropId.merge(bd.propId(), 1,                 Integer::sum);
                     caTotal = caTotal.add(bd.pricePerNight());
                     totalNights++;
                 }
@@ -383,13 +382,15 @@ public class Beds24ReportService {
         }
 
         // Construction de la réponse
-        List<Map<String, Object>> byProperty = caByProp.entrySet().stream()
+        List<Map<String, Object>> byProperty = caByPropId.entrySet().stream()
                 .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
                 .map(e -> {
+                    String pid = e.getKey();
                     Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("propertyName", e.getKey());
+                    row.put("propId",       pid);
+                    row.put("propertyName", propNames.getOrDefault(pid, pid));
                     row.put("ca",     e.getValue().setScale(2, RoundingMode.HALF_UP));
-                    row.put("nights", nightsByProp.getOrDefault(e.getKey(), 0));
+                    row.put("nights", nightsByPropId.getOrDefault(pid, 0));
                     return row;
                 })
                 .collect(Collectors.toList());

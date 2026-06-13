@@ -564,7 +564,9 @@
     "load_error": "Impossible de charger les données. Vérifiez que Beds24 est connecté.",
     "margin": "Marge bénéficiaire",
     "expenses": "Dépenses :",
-    "no_qonto": "Qonto non connecté"
+    "no_qonto": "Qonto non connecté",
+    "margin_by_property": "Marge par logement",
+    "margin_note": "* Dépenses affectées à ce logement dans Qonto uniquement"
   },
   "reports": {
     "title": "Rapports",

@@ -564,7 +564,9 @@
     "load_error": "Daten können nicht geladen werden. Überprüfen Sie die Beds24-Verbindung.",
     "margin": "Gewinnspanne",
     "expenses": "Ausgaben:",
-    "no_qonto": "Qonto nicht verbunden"
+    "no_qonto": "Qonto nicht verbunden",
+    "margin_by_property": "Marge pro Unterkunft",
+    "margin_note": "* Nur Qonto-Ausgaben, die dieser Unterkunft zugeordnet sind"
   },
   "reports": {
     "title": "Berichte",

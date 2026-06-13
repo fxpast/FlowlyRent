@@ -146,7 +146,8 @@ public class QontoService {
         List<Map<String, Object>> txs = fetchTransactions(userId, from, to);
 
         Map<String, BigDecimal> byCategory = new LinkedHashMap<>();
-        Map<String, BigDecimal> byMonth = new LinkedHashMap<>();
+        Map<String, BigDecimal> byMonth    = new LinkedHashMap<>();
+        Map<String, BigDecimal> byProperty = new LinkedHashMap<>();
         BigDecimal totalDebits = BigDecimal.ZERO;
         BigDecimal totalCredits = BigDecimal.ZERO;
         int uncategorized = 0;
@@ -159,6 +160,10 @@ public class QontoService {
 
             if ("DEBIT".equals(side)) {
                 totalDebits = totalDebits.add(amount);
+                String propId = tx.get("beds24PropertyId") != null ? tx.get("beds24PropertyId").toString() : null;
+                if (propId != null && !propId.isBlank()) {
+                    byProperty.merge(propId, amount, BigDecimal::add);
+                }
             } else {
                 totalCredits = totalCredits.add(amount);
             }
@@ -182,7 +187,8 @@ public class QontoService {
                 "transactionCount", txs.size(),
                 "uncategorized", uncategorized,
                 "byCategory", byCategory,
-                "byMonth", byMonth
+                "byMonth", byMonth,
+                "byProperty", byProperty
         );
     }
 

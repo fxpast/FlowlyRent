@@ -21,15 +21,24 @@ interface RevenueData {
   nights: number;
   daysInMonth: number;
   occupancyRate: number;
-  byProperty: { propertyName: string; ca: number; nights: number }[];
+  byProperty: { propId: string; propertyName: string; ca: number; nights: number }[];
 }
 
 interface QontoSummary {
   totalDebits: number;
   totalCredits: number;
   byCategory: Record<string, number>;
+  byProperty: Record<string, number>;
   transactionCount: number;
   uncategorized: number;
+}
+
+interface PropertyMargin {
+  propId: string;
+  propertyName: string;
+  ca: number;
+  expenses: number;
+  margin: number;
 }
 
 @Component({
@@ -152,6 +161,29 @@ interface QontoSummary {
         } @else {
           <div class="empty">{{ 'stats.no_data' | translate }}</div>
         }
+
+        @if (qontoData() && propertyMargins().length > 0) {
+          <mat-card class="prop-card">
+            <mat-card-header>
+              <mat-card-title>{{ 'stats.margin_by_property' | translate }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="margin-list">
+                @for (pm of propertyMargins(); track pm.propId) {
+                  <div class="margin-row">
+                    <div class="margin-name">{{ pm.propertyName }}</div>
+                    <div class="margin-ca">{{ pm.ca | number:'1.0-0' }} €</div>
+                    <div class="margin-exp">− {{ pm.expenses | number:'1.0-0' }} €</div>
+                    <div class="margin-val" [class.value-positive]="pm.margin >= 0" [class.value-negative]="pm.margin < 0">
+                      = {{ pm.margin | number:'1.0-0' }} € <span class="margin-pct">({{ propMarginRate(pm) }})</span>
+                    </div>
+                  </div>
+                }
+              </div>
+              <div class="margin-note">{{ 'stats.margin_note' | translate }}</div>
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </div>
   `,
@@ -194,6 +226,15 @@ interface QontoSummary {
     .total-row { margin-top: 4px; }
 
     .empty { text-align: center; color: #999; padding: 48px 0; font-size: 15px; }
+
+    .margin-list { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+    .margin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .margin-name { width: 160px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .margin-ca  { width: 90px; text-align: right; font-size: 13px; color: #555; flex-shrink: 0; }
+    .margin-exp { width: 90px; text-align: right; font-size: 13px; color: #888; flex-shrink: 0; }
+    .margin-val { flex: 1; text-align: right; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+    .margin-pct { font-size: 12px; font-weight: 400; opacity: 0.75; }
+    .margin-note { font-size: 11px; color: #aaa; margin-top: 12px; font-style: italic; }
 
     @media (max-width: 600px) {
       .page { padding: 16px; }
@@ -286,6 +327,27 @@ export class StatsComponent implements OnInit {
     const d = this.data();
     if (!d || d.caTotal === 0) return 0;
     return Math.round((this.marge / d.caTotal) * 10000) / 100;
+  }
+
+  propertyMargins(): PropertyMargin[] {
+    const d = this.data();
+    const q = this.qontoData();
+    if (!d || !q) return [];
+    return d.byProperty.map(p => {
+      const expenses = Math.round(Number(q.byProperty?.[p.propId] ?? 0) * 100) / 100;
+      return {
+        propId:       p.propId,
+        propertyName: p.propertyName,
+        ca:           p.ca,
+        expenses,
+        margin:       Math.round((p.ca - expenses) * 100) / 100
+      };
+    });
+  }
+
+  propMarginRate(pm: PropertyMargin): string {
+    if (pm.ca <= 0) return '—';
+    return Math.round(pm.margin / pm.ca * 100) + '%';
   }
 
   barWidth(ca: number): number {
