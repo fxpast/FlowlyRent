@@ -131,7 +131,7 @@ interface HousekeepingCosts {
                   {{ marge | number:'1.2-2' }} €
                 </div>
                 <div class="kpi-sub">
-                  {{ 'stats.expenses' | translate }} {{ qontoData()!.totalDebits | number:'1.2-2' }} €
+                  {{ 'stats.expenses' | translate }} {{ qontoExpensesTotal | number:'1.2-2' }} €
                   @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
                   @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
                   @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
@@ -373,11 +373,20 @@ export class StatsComponent implements OnInit {
     return this.manualExpenses().reduce((s, e) => s + Number(e.amount || 0), 0);
   }
 
+  // Dépenses Qonto catégorisées uniquement (les transactions NON_CATEGORISE
+  // ne sont pas encore validées comme charges et ne doivent pas impacter la marge)
+  get qontoExpensesTotal(): number {
+    const q = this.qontoData();
+    if (!q) return 0;
+    const nonCategorise = Number(q.byCategory?.['NON_CATEGORISE'] ?? 0);
+    return Math.round((Number(q.totalDebits) - nonCategorise) * 100) / 100;
+  }
+
   get marge(): number {
     const d = this.data();
     const q = this.qontoData();
     if (!d || !q) return 0;
-    return Math.round((d.caTotal - Number(q.totalDebits) - this.hkCostsTotal - this.commissionTotal - this.manualExpensesTotal) * 100) / 100;
+    return Math.round((d.caTotal - this.qontoExpensesTotal - this.hkCostsTotal - this.commissionTotal - this.manualExpensesTotal) * 100) / 100;
   }
 
   get margeRate(): number {
