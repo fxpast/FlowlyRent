@@ -197,6 +197,29 @@ public class HousekeepingReportService {
                 .build();
     }
 
+    // --- Coût ménage + dépannage sur une période, total + par logement (pour la marge) ---
+
+    public Map<String, Object> costSummary(Long userId, LocalDate from, LocalDate to) {
+        List<HousekeepingTask> tasks = taskRepo
+                .findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                        userId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
+
+        Map<String, BigDecimal> byProperty = new LinkedHashMap<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (HousekeepingTask t : tasks) {
+            BigDecimal c = cost(t);
+            if (c == null) continue;
+            total = total.add(c);
+            byProperty.merge(t.getBeds24PropertyId(), c, BigDecimal::add);
+        }
+        byProperty.replaceAll((k, v) -> v.setScale(2, RoundingMode.HALF_UP));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", total.setScale(2, RoundingMode.HALF_UP));
+        result.put("byProperty", byProperty);
+        return result;
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

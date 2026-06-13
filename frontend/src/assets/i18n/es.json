@@ -566,7 +566,9 @@
     "expenses": "Gastos:",
     "no_qonto": "Qonto no conectado",
     "margin_by_property": "Margen por alojamiento",
-    "margin_note": "* Solo gastos asignados a este alojamiento en Qonto"
+    "margin_note": "* Gastos Qonto asignados a este alojamiento + gastos de limpieza/mantenimiento + comisión de la plataforma",
+    "hk_costs": "limpieza/mantenimiento",
+    "commission": "comisión de la plataforma"
   },
   "reports": {
     "title": "Informes",
@@ -693,6 +695,9 @@
     "rule_name_hint": "Este nombre se convierte en la categoría de la transacción",
     "rule_keywords": "Palabras clave (separadas por coma)",
     "rule_keywords_hint": "Busca en todos los campos de la transacción",
+    "rule_property": "Propiedad asociada",
+    "rule_property_hint": "Atribuye estos gastos a una propiedad para el cálculo del margen por propiedad",
+    "rule_property_none": "Ninguna (gasto compartido)",
     "no_rules": "Sin reglas definidas.",
     "rule_saved": "Regla guardada",
     "rule_deleted": "Regla eliminada",

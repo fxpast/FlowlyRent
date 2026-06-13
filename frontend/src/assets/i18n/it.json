@@ -566,7 +566,9 @@
     "expenses": "Spese:",
     "no_qonto": "Qonto non connesso",
     "margin_by_property": "Margine per alloggio",
-    "margin_note": "* Solo le spese assegnate a questo alloggio in Qonto"
+    "margin_note": "* Spese Qonto assegnate a questo alloggio + spese di pulizia/manutenzione + commissione piattaforma",
+    "hk_costs": "pulizia/manutenzione",
+    "commission": "commissione piattaforma"
   },
   "reports": {
     "title": "Report",
@@ -693,6 +695,9 @@
     "rule_name_hint": "Questo nome diventa la categoria della transazione",
     "rule_keywords": "Parole chiave (separate da virgola)",
     "rule_keywords_hint": "Cerca in tutti i campi della transazione",
+    "rule_property": "Immobile associato",
+    "rule_property_hint": "Attribuisce queste spese a un immobile per il calcolo del margine per immobile",
+    "rule_property_none": "Nessuno (spesa generale)",
     "no_rules": "Nessuna regola definita.",
     "rule_saved": "Regola salvata",
     "rule_deleted": "Regola eliminata",

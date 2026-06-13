@@ -566,7 +566,9 @@
     "expenses": "Expenses:",
     "no_qonto": "Qonto not connected",
     "margin_by_property": "Margin by property",
-    "margin_note": "* Only expenses assigned to this property in Qonto"
+    "margin_note": "* Qonto expenses assigned to this property + cleaning/maintenance costs + platform commission",
+    "hk_costs": "cleaning/maintenance",
+    "commission": "platform commission"
   },
   "reports": {
     "title": "Reports",
@@ -693,6 +695,9 @@
     "rule_name_hint": "This name becomes the category displayed on transactions",
     "rule_keywords": "Keywords (comma-separated)",
     "rule_keywords_hint": "Searches all transaction fields",
+    "rule_property": "Associated property",
+    "rule_property_hint": "Attributes these expenses to a property for the per-property margin calculation",
+    "rule_property_none": "None (shared expense)",
     "no_rules": "No rules defined.",
     "rule_saved": "Rule saved",
     "rule_deleted": "Rule deleted",

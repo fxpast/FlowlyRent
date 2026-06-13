@@ -566,7 +566,9 @@
     "expenses": "Ausgaben:",
     "no_qonto": "Qonto nicht verbunden",
     "margin_by_property": "Marge pro Unterkunft",
-    "margin_note": "* Nur Qonto-Ausgaben, die dieser Unterkunft zugeordnet sind"
+    "margin_note": "* Qonto-Ausgaben dieser Unterkunft + Reinigungs-/Wartungskosten + Plattformgebühr",
+    "hk_costs": "Reinigung/Wartung",
+    "commission": "Plattformgebühr"
   },
   "reports": {
     "title": "Berichte",
@@ -693,6 +695,9 @@
     "rule_name_hint": "Dieser Name wird als Kategorie der Transaktionen angezeigt",
     "rule_keywords": "Schlüsselwörter (kommagetrennt)",
     "rule_keywords_hint": "Sucht in allen Transaktionsfeldern",
+    "rule_property": "Zugehörige Unterkunft",
+    "rule_property_hint": "Ordnet diese Ausgaben einer Unterkunft für die Margenberechnung pro Unterkunft zu",
+    "rule_property_none": "Keine (allgemeine Ausgabe)",
     "no_rules": "Keine Regeln definiert.",
     "rule_saved": "Regel gespeichert",
     "rule_deleted": "Regel gelöscht",

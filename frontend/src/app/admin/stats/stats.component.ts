@@ -18,10 +18,11 @@ interface RevenueData {
   month: number;
   monthLabel: string;
   caTotal: number;
+  commissionTotal: number;
   nights: number;
   daysInMonth: number;
   occupancyRate: number;
-  byProperty: { propId: string; propertyName: string; ca: number; nights: number }[];
+  byProperty: { propId: string; propertyName: string; ca: number; nights: number; commission: number }[];
 }
 
 interface QontoSummary {
@@ -38,7 +39,15 @@ interface PropertyMargin {
   propertyName: string;
   ca: number;
   expenses: number;
+  qontoExpenses: number;
+  hkExpenses: number;
+  commission: number;
   margin: number;
+}
+
+interface HousekeepingCosts {
+  total: number;
+  byProperty: Record<string, number>;
 }
 
 @Component({
@@ -121,6 +130,8 @@ interface PropertyMargin {
                 </div>
                 <div class="kpi-sub">
                   {{ 'stats.expenses' | translate }} {{ qontoData()!.totalDebits | number:'1.2-2' }} €
+                  @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
+                  @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
                   @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
                 </div>
               } @else {
@@ -170,13 +181,22 @@ interface PropertyMargin {
             <mat-card-content>
               <div class="margin-list">
                 @for (pm of propertyMargins(); track pm.propId) {
-                  <div class="margin-row">
-                    <div class="margin-name">{{ pm.propertyName }}</div>
-                    <div class="margin-ca">{{ pm.ca | number:'1.0-0' }} €</div>
-                    <div class="margin-exp">− {{ pm.expenses | number:'1.0-0' }} €</div>
-                    <div class="margin-val" [class.value-positive]="pm.margin >= 0" [class.value-negative]="pm.margin < 0">
-                      = {{ pm.margin | number:'1.0-0' }} € <span class="margin-pct">({{ propMarginRate(pm) }})</span>
+                  <div class="margin-item">
+                    <div class="margin-row">
+                      <div class="margin-name">{{ pm.propertyName }}</div>
+                      <div class="margin-ca">{{ pm.ca | number:'1.0-0' }} €</div>
+                      <div class="margin-exp">− {{ pm.expenses | number:'1.0-0' }} €</div>
+                      <div class="margin-val" [class.value-positive]="pm.margin >= 0" [class.value-negative]="pm.margin < 0">
+                        = {{ pm.margin | number:'1.0-0' }} € <span class="margin-pct">({{ propMarginRate(pm) }})</span>
+                      </div>
                     </div>
+                    @if (pm.expenses > 0) {
+                      <div class="margin-detail">
+                        @if (pm.qontoExpenses > 0) { <span>Qonto {{ pm.qontoExpenses | number:'1.0-0' }} €</span> }
+                        @if (pm.hkExpenses > 0) { <span>{{ 'stats.hk_costs' | translate }} {{ pm.hkExpenses | number:'1.0-0' }} €</span> }
+                        @if (pm.commission > 0) { <span>{{ 'stats.commission' | translate }} {{ pm.commission | number:'1.0-0' }} €</span> }
+                      </div>
+                    }
                   </div>
                 }
               </div>
@@ -228,12 +248,14 @@ interface PropertyMargin {
     .empty { text-align: center; color: #999; padding: 48px 0; font-size: 15px; }
 
     .margin-list { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+    .margin-item { display: flex; flex-direction: column; gap: 2px; }
     .margin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .margin-name { width: 160px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
     .margin-ca  { width: 90px; text-align: right; font-size: 13px; color: #555; flex-shrink: 0; }
     .margin-exp { width: 90px; text-align: right; font-size: 13px; color: #888; flex-shrink: 0; }
     .margin-val { flex: 1; text-align: right; font-size: 14px; font-weight: 600; flex-shrink: 0; }
     .margin-pct { font-size: 12px; font-weight: 400; opacity: 0.75; }
+    .margin-detail { display: flex; gap: 12px; flex-wrap: wrap; padding-left: 168px; font-size: 11px; color: #999; }
     .margin-note { font-size: 11px; color: #aaa; margin-top: 12px; font-style: italic; }
 
     @media (max-width: 600px) {
@@ -242,12 +264,15 @@ interface PropertyMargin {
       .prop-name { width: 110px; font-size: 13px; }
       .prop-nights { display: none; }
       .month-sel { width: 110px; }
+      .margin-name { width: 110px; font-size: 13px; }
+      .margin-detail { padding-left: 0; }
     }
   `]
 })
 export class StatsComponent implements OnInit {
   data       = signal<RevenueData | null>(null);
   qontoData  = signal<QontoSummary | null>(null);
+  hkCosts    = signal<HousekeepingCosts | null>(null);
   loading    = signal(false);
   error      = signal('');
 
@@ -276,6 +301,7 @@ export class StatsComponent implements OnInit {
     this.error.set('');
     this.data.set(null);
     this.qontoData.set(null);
+    this.hkCosts.set(null);
 
     this.http.get<RevenueData>(
       `${environment.apiUrl}/admin/stats/revenue?year=${this.selectedYear}&month=${this.selectedMonth}`
@@ -291,6 +317,11 @@ export class StatsComponent implements OnInit {
       `${environment.apiUrl}/admin/qonto/summary?year=${this.selectedYear}&month=${this.selectedMonth}`
     ).pipe(catchError(() => of(null)))
     .subscribe(q => this.qontoData.set(q));
+
+    this.http.get<HousekeepingCosts>(
+      `${environment.apiUrl}/admin/stats/housekeeping-costs?year=${this.selectedYear}&month=${this.selectedMonth}`
+    ).pipe(catchError(() => of(null)))
+    .subscribe(c => this.hkCosts.set(c));
   }
 
   prevMonth(): void {
@@ -316,11 +347,19 @@ export class StatsComponent implements OnInit {
     return d.caTotal / d.nights;
   }
 
+  get hkCostsTotal(): number {
+    return Number(this.hkCosts()?.total ?? 0);
+  }
+
+  get commissionTotal(): number {
+    return Number(this.data()?.commissionTotal ?? 0);
+  }
+
   get marge(): number {
     const d = this.data();
     const q = this.qontoData();
     if (!d || !q) return 0;
-    return Math.round((d.caTotal - Number(q.totalDebits)) * 100) / 100;
+    return Math.round((d.caTotal - Number(q.totalDebits) - this.hkCostsTotal - this.commissionTotal) * 100) / 100;
   }
 
   get margeRate(): number {
@@ -333,13 +372,20 @@ export class StatsComponent implements OnInit {
     const d = this.data();
     const q = this.qontoData();
     if (!d || !q) return [];
+    const hk = this.hkCosts();
     return d.byProperty.map(p => {
-      const expenses = Math.round(Number(q.byProperty?.[p.propId] ?? 0) * 100) / 100;
+      const qontoExpenses = Math.round(Number(q.byProperty?.[p.propId] ?? 0) * 100) / 100;
+      const hkExpenses = Math.round(Number(hk?.byProperty?.[p.propId] ?? 0) * 100) / 100;
+      const commission = Math.round(Number(p.commission ?? 0) * 100) / 100;
+      const expenses = Math.round((qontoExpenses + hkExpenses + commission) * 100) / 100;
       return {
         propId:       p.propId,
         propertyName: p.propertyName,
         ca:           p.ca,
         expenses,
+        qontoExpenses,
+        hkExpenses,
+        commission,
         margin:       Math.round((p.ca - expenses) * 100) / 100
       };
     });

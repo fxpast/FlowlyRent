@@ -17,6 +17,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
+import { BookingService } from '../../core/services/booking.service';
 
 const COLOR_PALETTE = [
   '#1976d2','#388e3c','#f57c00','#7b1fa2','#c62828',
@@ -184,6 +185,16 @@ const COLOR_PALETTE = [
                       <input matInput [(ngModel)]="ruleForm.keywordsRaw" />
                       <mat-hint>{{ 'expenses.rule_keywords_hint' | translate }}</mat-hint>
                     </mat-form-field>
+                    <mat-form-field class="full-width">
+                      <mat-label>{{ 'expenses.rule_property' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="ruleForm.beds24PropertyId">
+                        <mat-option value="">{{ 'expenses.rule_property_none' | translate }}</mat-option>
+                        @for (p of properties(); track p.id) {
+                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-hint>{{ 'expenses.rule_property_hint' | translate }}</mat-hint>
+                    </mat-form-field>
                   </div>
                 </mat-card-content>
                 <mat-card-actions>
@@ -206,6 +217,9 @@ const COLOR_PALETTE = [
                     <span class="cat-badge" [style.background]="catColor(rule.label)">{{ rule.label }}</span>
                     <div class="rule-info">
                       <strong>{{ rule.label }}</strong>
+                      @if (rule.beds24PropertyId) {
+                        <span class="property-chip">{{ propertyName(rule.beds24PropertyId) }}</span>
+                      }
                       <div class="rule-keywords">
                         @for (kw of rule.keywords; track kw) {
                           <span class="keyword-chip">{{ kw }}</span>
@@ -385,6 +399,7 @@ const COLOR_PALETTE = [
     .rule-keywords { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
     .keyword-chip { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     .keyword-chip.alt { background: #f3e5f5; color: #6a1b9a; }
+    .property-chip { display: inline-block; margin-left: 8px; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
     .rule-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
     /* Summary */
@@ -433,7 +448,8 @@ export class ExpensesComponent implements OnInit {
   showRuleForm = signal(false);
   editingRule = signal<ExpenseRule | null>(null);
   savingRule = signal(false);
-  ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '' };
+  ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '', beds24PropertyId: '' };
+  properties = signal<{ id: string; name: string }[]>([]);
 
   // Summary
   summary = signal<QontoSummary | null>(null);
@@ -443,7 +459,12 @@ export class ExpensesComponent implements OnInit {
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  constructor(private qontoService: QontoService, private snack: MatSnackBar, private t: TranslateService) {}
+  constructor(
+    private qontoService: QontoService,
+    private bookingService: BookingService,
+    private snack: MatSnackBar,
+    private t: TranslateService
+  ) {}
 
   ngOnInit(): void {
     this.qontoService.getStatus().subscribe(s => {
@@ -452,7 +473,17 @@ export class ExpensesComponent implements OnInit {
         this.loadTransactions();
         this.loadRules();
         this.loadSummary();
+        this.loadProperties();
       }
+    });
+  }
+
+  private loadProperties(): void {
+    this.bookingService.getPropertiesWithDisplayNames().subscribe(props => {
+      this.properties.set((props ?? []).map(p => ({
+        id: String(p['id'] ?? p['propId'] ?? ''),
+        name: p['name'] || ''
+      })).filter(p => p.id));
     });
   }
 
@@ -537,7 +568,7 @@ export class ExpensesComponent implements OnInit {
 
   openRuleForm(): void {
     this.editingRule.set(null);
-    this.ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '' };
+    this.ruleForm = { label: '', keywordsRaw: '', altKeywordsRaw: '', beds24PropertyId: '' };
     this.showRuleForm.set(true);
   }
 
@@ -546,7 +577,8 @@ export class ExpensesComponent implements OnInit {
     this.ruleForm = {
       label: rule.label,
       keywordsRaw: rule.keywords.join(', '),
-      altKeywordsRaw: rule.altKeywords.join(', ')
+      altKeywordsRaw: rule.altKeywords.join(', '),
+      beds24PropertyId: rule.beds24PropertyId || ''
     };
     this.showRuleForm.set(true);
   }
@@ -563,7 +595,8 @@ export class ExpensesComponent implements OnInit {
     const payload = {
       label: this.ruleForm.label.trim(),
       keywords: this.ruleForm.keywordsRaw.split(',').map(s => s.trim()).filter(Boolean),
-      altKeywords: this.ruleForm.altKeywordsRaw.split(',').map(s => s.trim()).filter(Boolean)
+      altKeywords: this.ruleForm.altKeywordsRaw.split(',').map(s => s.trim()).filter(Boolean),
+      beds24PropertyId: this.ruleForm.beds24PropertyId
     };
 
     const req = this.editingRule()?.id
@@ -649,6 +682,10 @@ export class ExpensesComponent implements OnInit {
 
   uniqueCategories(): string[] {
     return [...new Set(this.rules().map(r => r.label))].sort();
+  }
+
+  propertyName(id: string): string {
+    return this.properties().find(p => p.id === id)?.name || id;
   }
 
   formatMonthKey(key: string): string {

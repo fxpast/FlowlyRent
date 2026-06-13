@@ -566,7 +566,9 @@
     "expenses": "Dépenses :",
     "no_qonto": "Qonto non connecté",
     "margin_by_property": "Marge par logement",
-    "margin_note": "* Dépenses affectées à ce logement dans Qonto uniquement"
+    "margin_note": "* Dépenses Qonto affectées à ce logement + frais de ménage/dépannage + commission plateforme",
+    "hk_costs": "ménage/dépannage",
+    "commission": "commission plateforme"
   },
   "reports": {
     "title": "Rapports",
@@ -693,6 +695,9 @@
     "rule_name_hint": "Ce nom devient la catégorie affichée sur les transactions",
     "rule_keywords": "Mots-clés (séparés par virgule)",
     "rule_keywords_hint": "Recherche dans tous les champs de la transaction",
+    "rule_property": "Logement associé",
+    "rule_property_hint": "Permet d'attribuer ces dépenses à un logement pour le calcul de la marge par logement",
+    "rule_property_none": "Aucun (charge globale)",
     "no_rules": "Aucune règle définie.",
     "rule_saved": "Règle enregistrée",
     "rule_deleted": "Règle supprimée",
