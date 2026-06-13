@@ -720,6 +720,8 @@
     "manual_expense_label": "Bezeichnung",
     "manual_expense_amount": "Betrag (€)",
     "manual_expense_property_hint": "Ordnet diese Ausgabe einer Unterkunft für die Margenberechnung pro Unterkunft zu",
+    "manual_expense_recurring": "Wiederkehrend (wird ab diesem Monat jeden Monat angewendet)",
+    "recurring_badge": "Wiederkehrend",
     "no_manual_expenses": "Keine manuellen Ausgaben für diesen Monat.",
     "manual_expense_saved": "Ausgabe gespeichert",
     "manual_expense_deleted": "Ausgabe gelöscht",

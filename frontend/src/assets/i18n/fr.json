@@ -720,6 +720,8 @@
     "manual_expense_label": "Libellé",
     "manual_expense_amount": "Montant (€)",
     "manual_expense_property_hint": "Permet d'attribuer cette charge à un logement pour le calcul de la marge par logement",
+    "manual_expense_recurring": "Récurrente (appliquée chaque mois à partir de ce mois)",
+    "recurring_badge": "Récurrent",
     "no_manual_expenses": "Aucune charge manuelle pour ce mois.",
     "manual_expense_saved": "Charge enregistrée",
     "manual_expense_deleted": "Charge supprimée",

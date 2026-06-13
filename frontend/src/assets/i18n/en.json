@@ -720,6 +720,8 @@
     "manual_expense_label": "Label",
     "manual_expense_amount": "Amount (€)",
     "manual_expense_property_hint": "Assign this expense to a property for the margin-by-property calculation",
+    "manual_expense_recurring": "Recurring (applied every month from this month on)",
+    "recurring_badge": "Recurring",
     "no_manual_expenses": "No manual expenses for this month.",
     "manual_expense_saved": "Expense saved",
     "manual_expense_deleted": "Expense deleted",

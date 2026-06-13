@@ -720,6 +720,8 @@
     "manual_expense_label": "Descrizione",
     "manual_expense_amount": "Importo (€)",
     "manual_expense_property_hint": "Consente di assegnare questa spesa a un alloggio per il calcolo del margine per alloggio",
+    "manual_expense_recurring": "Ricorrente (applicata ogni mese a partire da questo mese)",
+    "recurring_badge": "Ricorrente",
     "no_manual_expenses": "Nessuna spesa manuale per questo mese.",
     "manual_expense_saved": "Spesa salvata",
     "manual_expense_deleted": "Spesa eliminata",

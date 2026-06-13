@@ -10,6 +10,7 @@ export interface ManualExpense {
   beds24PropertyId: string;
   year: number;
   month: number;
+  recurring: boolean;
   createdAt: string;
 }
 

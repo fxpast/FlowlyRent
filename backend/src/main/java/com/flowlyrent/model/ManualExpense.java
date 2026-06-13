@@ -39,6 +39,9 @@ public class ManualExpense {
     @Column(nullable = false)
     private int month;
 
+    // true = charge récurrente, appliquée chaque mois à partir de year/month
+    private boolean recurring = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

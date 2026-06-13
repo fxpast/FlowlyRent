@@ -720,6 +720,8 @@
     "manual_expense_label": "Concepto",
     "manual_expense_amount": "Importe (€)",
     "manual_expense_property_hint": "Permite asignar este gasto a un alojamiento para el cálculo del margen por alojamiento",
+    "manual_expense_recurring": "Recurrente (se aplica cada mes a partir de este mes)",
+    "recurring_badge": "Recurrente",
     "no_manual_expenses": "Sin gastos manuales para este mes.",
     "manual_expense_saved": "Gasto guardado",
     "manual_expense_deleted": "Gasto eliminado",

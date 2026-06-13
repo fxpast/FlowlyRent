@@ -15,6 +15,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 import { BookingService } from '../../core/services/booking.service';
@@ -35,7 +36,7 @@ const COLOR_PALETTE = [
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressSpinnerModule, MatChipsModule, MatTooltipModule,
     MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatDividerModule, TranslateModule
+    MatSnackBarModule, MatDividerModule, MatCheckboxModule, TranslateModule
   ],
   template: `
     <div class="page-header">
@@ -385,6 +386,9 @@ const COLOR_PALETTE = [
                       </mat-select>
                       <mat-hint>{{ 'expenses.manual_expense_property_hint' | translate }}</mat-hint>
                     </mat-form-field>
+                    <mat-checkbox [(ngModel)]="manualExpenseForm.recurring">
+                      {{ 'expenses.manual_expense_recurring' | translate }}
+                    </mat-checkbox>
                   </div>
                 </mat-card-content>
                 <mat-card-actions>
@@ -408,6 +412,9 @@ const COLOR_PALETTE = [
                       <strong>{{ expense.label }}</strong>
                       @if (expense.beds24PropertyId) {
                         <span class="property-chip">{{ propertyName(expense.beds24PropertyId) }}</span>
+                      }
+                      @if (expense.recurring) {
+                        <span class="recurring-chip">{{ 'expenses.recurring_badge' | translate }}</span>
                       }
                     </div>
                     <div class="manual-expense-amount">{{ expense.amount | number:'1.2-2' }} €</div>
@@ -502,6 +509,7 @@ const COLOR_PALETTE = [
     .keyword-chip { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     .keyword-chip.alt { background: #f3e5f5; color: #6a1b9a; }
     .property-chip { display: inline-block; margin-left: 8px; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+    .recurring-chip { display: inline-block; margin-left: 8px; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
     .rule-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .manual-expense-amount { width: 100px; text-align: right; font-size: 14px; font-weight: 500; flex-shrink: 0; }
     .rule-row.total-row { background: #fafafa; border-style: dashed; }
@@ -569,7 +577,7 @@ export class ExpensesComponent implements OnInit {
   showManualExpenseForm = signal(false);
   editingManualExpense = signal<ManualExpense | null>(null);
   savingManualExpense = signal(false);
-  manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '' };
+  manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
   manualExpenseYear = new Date().getFullYear();
   manualExpenseMonth = new Date().getMonth() + 1;
 
@@ -795,7 +803,7 @@ export class ExpensesComponent implements OnInit {
 
   openManualExpenseForm(): void {
     this.editingManualExpense.set(null);
-    this.manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '' };
+    this.manualExpenseForm = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
     this.showManualExpenseForm.set(true);
   }
 
@@ -804,7 +812,8 @@ export class ExpensesComponent implements OnInit {
     this.manualExpenseForm = {
       label: expense.label,
       amount: expense.amount,
-      beds24PropertyId: expense.beds24PropertyId || ''
+      beds24PropertyId: expense.beds24PropertyId || '',
+      recurring: expense.recurring
     };
     this.showManualExpenseForm.set(true);
   }
@@ -818,12 +827,16 @@ export class ExpensesComponent implements OnInit {
     if (!this.manualExpenseForm.label.trim() || !this.manualExpenseForm.amount) return;
     this.savingManualExpense.set(true);
 
+    const editing = this.editingManualExpense();
     const payload = {
       label: this.manualExpenseForm.label.trim(),
       amount: this.manualExpenseForm.amount,
       beds24PropertyId: this.manualExpenseForm.beds24PropertyId,
-      year: this.manualExpenseYear,
-      month: this.manualExpenseMonth
+      recurring: this.manualExpenseForm.recurring,
+      // En édition, on conserve le mois de départ d'origine (une charge récurrente
+      // peut être visible/éditée depuis un mois ultérieur sans décaler son point de départ)
+      year: editing ? editing.year : this.manualExpenseYear,
+      month: editing ? editing.month : this.manualExpenseMonth
     };
 
     const req = this.editingManualExpense()?.id

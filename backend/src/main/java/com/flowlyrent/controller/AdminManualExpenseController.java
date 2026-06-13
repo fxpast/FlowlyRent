@@ -31,7 +31,7 @@ public class AdminManualExpenseController {
         if (year  == 0) year  = LocalDate.now().getYear();
         if (month == 0) month = LocalDate.now().getMonthValue();
         Long userId = securityUtils.getCurrentUserId();
-        return expenseRepo.findByUserIdAndYearAndMonthOrderByLabelAsc(userId, year, month)
+        return expenseRepo.findForPeriod(userId, year, month)
                 .stream().map(this::toMap).collect(Collectors.toList());
     }
 
@@ -71,6 +71,7 @@ public class AdminManualExpenseController {
         }
         if (body.containsKey("year")) expense.setYear(((Number) body.get("year")).intValue());
         if (body.containsKey("month")) expense.setMonth(((Number) body.get("month")).intValue());
+        if (body.containsKey("recurring")) expense.setRecurring(Boolean.TRUE.equals(body.get("recurring")));
     }
 
     private Map<String, Object> toMap(ManualExpense e) {
@@ -81,6 +82,7 @@ public class AdminManualExpenseController {
                 "beds24PropertyId", e.getBeds24PropertyId() != null ? e.getBeds24PropertyId() : "",
                 "year", e.getYear(),
                 "month", e.getMonth(),
+                "recurring", e.isRecurring(),
                 "createdAt", e.getCreatedAt() != null ? e.getCreatedAt().toString() : ""
         );
     }
