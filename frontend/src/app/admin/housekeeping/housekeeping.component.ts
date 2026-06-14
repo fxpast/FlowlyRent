@@ -18,6 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
@@ -115,7 +116,7 @@ const STATUS_KEYS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule,
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule,
     LinenComponent, TranslateModule
   ],
   template: `
@@ -139,9 +140,14 @@ const STATUS_KEYS: Record<string, string> = {
                 }
               </mat-button-toggle>
             </mat-button-toggle-group>
-            <button mat-flat-button color="primary" (click)="openNewTaskForm()">
-              <mat-icon>add</mat-icon> {{ 'housekeeping.new_task' | translate }}
-            </button>
+            <div class="header-actions">
+              <button mat-stroked-button color="warn" (click)="openIncidentForm()">
+                <mat-icon>warning</mat-icon> {{ 'housekeeping.report_incident' | translate }}
+              </button>
+              <button mat-flat-button color="primary" (click)="openNewTaskForm()">
+                <mat-icon>add</mat-icon> {{ 'housekeeping.new_task' | translate }}
+              </button>
+            </div>
           </div>
 
           <!-- Formulaire création -->
@@ -227,6 +233,17 @@ const STATUS_KEYS: Record<string, string> = {
                   <mat-label>{{ 'common.notes' | translate }}</mat-label>
                   <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="5" [(ngModel)]="newTask.notes" [placeholder]="'housekeeping.notes_placeholder' | translate"></textarea>
                 </mat-form-field>
+                @if (newTask.type === 'MAINTENANCE') {
+                  <mat-checkbox [(ngModel)]="newTask.hasIncident" class="incident-checkbox">
+                    {{ 'housekeeping.report_incident' | translate }}
+                  </mat-checkbox>
+                  @if (newTask.hasIncident) {
+                    <mat-form-field style="width:100%">
+                      <mat-label>{{ 'housekeeping.incident_desc' | translate }}</mat-label>
+                      <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="3" [(ngModel)]="newTask.incidentDescription"></textarea>
+                    </mat-form-field>
+                  }
+                }
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" (click)="createTask()" [disabled]="!newTask.propertyId || !newTaskDate">
@@ -315,6 +332,9 @@ const STATUS_KEYS: Record<string, string> = {
                   }
                   @if (task.hasIncident) {
                     <div class="task-incident"><mat-icon>warning</mat-icon> {{ 'housekeeping.incident_reported' | translate }}</div>
+                    @if (task.incidentDescription) {
+                      <div class="task-incident-desc">{{ task.incidentDescription }}</div>
+                    }
                   }
                   @if (task.reportComment) {
                     <div class="task-report-preview">{{ task.reportComment }}</div>
@@ -712,6 +732,7 @@ const STATUS_KEYS: Record<string, string> = {
   `,
   styles: [`
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     h2 { margin: 0; font-size: 24px; font-weight: 500; }
     .create-form { margin-bottom: 24px; }
     mat-card-content { padding-top: 16px; }
@@ -777,6 +798,8 @@ const STATUS_KEYS: Record<string, string> = {
     .task-unassigned mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .task-incident { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #e65100; font-weight: 500; margin: 4px 0; }
     .task-incident mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .task-incident-desc { font-size: 12px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 4px 8px; margin: 4px 0; white-space: pre-wrap; }
+    .incident-checkbox { display: block; margin: 8px 0; }
     .task-report-preview { font-size: 12px; color: #555; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
     .intervention-form { margin-top: 12px; padding: 12px; background: #fff8f8; border-radius: 8px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; gap: 0; }
     .intervention-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #c62828; margin-bottom: 10px; }
@@ -891,7 +914,7 @@ export class HousekeepingComponent implements OnInit {
   filterToDate: Date   = new Date(Date.now() + 30 * 86400000);
   filterStatus = '';
 
-  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '', extraHours: '', hourlyRate: '' };
+  newTask = { propertyId: null as number | null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null as number | null, notes: '', extraHours: '', hourlyRate: '', hasIncident: false, incidentDescription: '' };
   newTaskDate: Date | null = null;
   newTaskTime = '09:00';
   activatingHk: number | null = null;
@@ -1029,9 +1052,16 @@ export class HousekeepingComponent implements OnInit {
     this.newTaskDate = new Date();
     this.newTaskTime = '09:00';
     const defaultType = this.taskCategory() === 'menage' ? 'CHECKOUT_CLEANING' : 'MAINTENANCE';
-    this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+    this.newTask = { propertyId: null, type: defaultType, scheduledDate: this.fromDate(new Date()), housekeeperId: null, notes: '', extraHours: '', hourlyRate: '', hasIncident: false, incidentDescription: '' };
     this.taskLinenItems.set([]);
     this.showForm = true;
+  }
+
+  openIncidentForm(): void {
+    this.taskCategory.set('depannage');
+    this.openNewTaskForm();
+    this.newTask.type = 'MAINTENANCE';
+    this.newTask.hasIncident = true;
   }
 
   openEditTaskForm(task: Task): void {
@@ -1047,7 +1077,9 @@ export class HousekeepingComponent implements OnInit {
       housekeeperId: task.housekeeper?.id ?? null,
       notes:         task.notes ?? '',
       extraHours:    task.extraHours != null ? String(task.extraHours) : '',
-      hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : ''
+      hourlyRate:    task.hourlyRate != null ? String(task.hourlyRate) : '',
+      hasIncident:   task.hasIncident ?? false,
+      incidentDescription: task.incidentDescription ?? ''
     };
     this.taskLinenItems.set([]);
     this.showForm = true;
@@ -1093,6 +1125,10 @@ export class HousekeepingComponent implements OnInit {
       hourlyRate:       this.newTask.hourlyRate || null,
       linenUsages:      this.taskLinenItems().filter(i => i.quantity > 0).map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }))
     };
+    if (this.newTask.type === 'MAINTENANCE') {
+      payload['hasIncident'] = this.newTask.hasIncident;
+      payload['incidentDescription'] = this.newTask.hasIncident ? (this.newTask.incidentDescription || null) : null;
+    }
     this.http.patch<Task>(`${this.base}/admin/housekeeping/${task.id}`, payload).subscribe({
       next: updated => {
         this.bookingService.getPropertyNames().subscribe(names => {
@@ -1137,11 +1173,15 @@ export class HousekeepingComponent implements OnInit {
     if (this.newTask.housekeeperId) payload['housekeeperId'] = this.newTask.housekeeperId;
     if (this.newTask.extraHours)   payload['extraHours']   = this.newTask.extraHours;
     if (this.newTask.hourlyRate)   payload['hourlyRate']   = this.newTask.hourlyRate;
+    if (this.newTask.type === 'MAINTENANCE' && this.newTask.hasIncident) {
+      payload['hasIncident'] = true;
+      payload['incidentDescription'] = this.newTask.incidentDescription || null;
+    }
     const usages = this.taskLinenItems().filter(i => i.quantity > 0);
     if (usages.length > 0) payload['linenUsages'] = usages.map(i => ({ linenItemId: i.linenItemId, quantity: i.quantity }));
     this.http.post<Task>(`${this.base}/admin/housekeeping`, payload).subscribe(() => {
       this.showForm = false;
-      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '' };
+      this.newTask = { propertyId: null, type: 'CHECKOUT_CLEANING', scheduledDate: '', housekeeperId: null, notes: '', extraHours: '', hourlyRate: '', hasIncident: false, incidentDescription: '' };
       this.taskLinenItems.set([]);
       this.load();
     });

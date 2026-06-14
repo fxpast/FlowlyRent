@@ -105,6 +105,13 @@ public class AdminHousekeepingController {
         if (body.containsKey("hourlyRate"))   task.setHourlyRate(new BigDecimal(body.get("hourlyRate").toString()));
         if (body.containsKey("extraHours"))   task.setExtraHours(Float.parseFloat(body.get("extraHours").toString()));
         if (body.containsKey("beds24BookingId")) task.setBeds24BookingId(body.get("beds24BookingId").toString());
+        if (body.containsKey("hasIncident")) {
+            boolean hasIncident = Boolean.parseBoolean(body.get("hasIncident").toString());
+            task.setHasIncident(hasIncident);
+            if (hasIncident) task.setReportedAt(LocalDateTime.now());
+        }
+        if (body.containsKey("incidentDescription"))
+            task.setIncidentDescription(body.get("incidentDescription") != null ? body.get("incidentDescription").toString() : null);
 
         if (body.containsKey("staffId")) {
             Long staffId = Long.parseLong(body.get("staffId").toString());
@@ -151,6 +158,14 @@ public class AdminHousekeepingController {
         if (body.containsKey("notes"))            task.setNotes(body.get("notes") != null ? body.get("notes").toString() : null);
         if (body.containsKey("extraHours"))       task.setExtraHours(body.get("extraHours") != null ? Float.parseFloat(body.get("extraHours").toString()) : null);
         if (body.containsKey("hourlyRate"))       task.setHourlyRate(body.get("hourlyRate") != null ? new BigDecimal(body.get("hourlyRate").toString()) : null);
+        if (body.containsKey("hasIncident")) {
+            boolean hasIncident = Boolean.parseBoolean(body.get("hasIncident").toString());
+            boolean wasIncident = Boolean.TRUE.equals(task.getHasIncident());
+            task.setHasIncident(hasIncident);
+            if (!wasIncident && hasIncident) task.setReportedAt(LocalDateTime.now());
+        }
+        if (body.containsKey("incidentDescription"))
+            task.setIncidentDescription(body.get("incidentDescription") != null ? body.get("incidentDescription").toString() : null);
 
         HousekeeperProfile updatedHk = null;
         if (body.containsKey("housekeeperId")) {
