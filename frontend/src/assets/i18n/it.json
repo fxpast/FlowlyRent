@@ -264,8 +264,6 @@
     "no_contact": "Nessun contatto registrato",
     "mission_email_subject": "Nuova missione — {{property}}",
     "mission_message": "Ciao {{name}},\n\nNuova missione: {{type}}\nAlloggio: {{property}}\nData: {{date}} alle {{time}}",
-    "show_more": "Mostra di più",
-    "show_less": "Mostra meno",
     "delete_confirm": "Elimina compito",
     "task_deleted": "Compito eliminato",
     "hours_unit": "h",

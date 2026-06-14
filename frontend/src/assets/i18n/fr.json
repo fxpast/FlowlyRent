@@ -264,8 +264,6 @@
     "no_contact": "Aucun moyen de contact enregistré",
     "mission_email_subject": "Nouvelle mission — {{property}}",
     "mission_message": "Bonjour {{name}},\n\nNouvelle mission : {{type}}\nLogement : {{property}}\nDate : {{date}} à {{time}}",
-    "show_more": "Voir plus",
-    "show_less": "Voir moins",
     "delete_confirm": "Supprimer la tâche",
     "task_deleted": "Tâche supprimée",
     "hours_unit": "h",

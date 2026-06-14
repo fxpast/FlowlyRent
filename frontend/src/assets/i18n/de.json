@@ -264,8 +264,6 @@
     "no_contact": "Keine Kontaktdaten hinterlegt",
     "mission_email_subject": "Neuer Auftrag — {{property}}",
     "mission_message": "Hallo {{name}},\n\nNeuer Auftrag: {{type}}\nUnterkunft: {{property}}\nDatum: {{date}} um {{time}}",
-    "show_more": "Mehr anzeigen",
-    "show_less": "Weniger anzeigen",
     "delete_confirm": "Aufgabe löschen",
     "task_deleted": "Aufgabe gelöscht",
     "hours_unit": "h",
