@@ -549,17 +549,21 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
               }
               @if (taskLinenItems.length > 0) {
                 <div class="task-linen-preset">
-                  <div class="task-linen-title">
+                  <div class="task-linen-title" [class.expanded]="linenExpanded()" (click)="linenExpanded.set(!linenExpanded())">
                     <mat-icon>local_laundry_service</mat-icon> {{ 'booking_dialog.linen_used' | translate }}
+                    <span class="task-linen-count">({{ taskLinenItems.length }})</span>
+                    <mat-icon class="task-linen-toggle">{{ linenExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
                   </div>
-                  @for (item of taskLinenItems; track item.linenItemId) {
-                    <div class="task-linen-row">
-                      <span class="task-linen-label">{{ item.label }}</span>
-                      <mat-form-field appearance="outline" class="task-linen-qty">
-                        <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateDialogLinenQty(item.linenItemId, $event)">
-                        <span matTextSuffix>pcs</span>
-                      </mat-form-field>
-                    </div>
+                  @if (linenExpanded()) {
+                    @for (item of taskLinenItems; track item.linenItemId) {
+                      <div class="task-linen-row">
+                        <span class="task-linen-label">{{ item.label }}</span>
+                        <mat-form-field appearance="outline" class="task-linen-qty">
+                          <input matInput type="number" min="0" [ngModel]="item.quantity" (ngModelChange)="updateDialogLinenQty(item.linenItemId, $event)">
+                          <span matTextSuffix>pcs</span>
+                        </mat-form-field>
+                      </div>
+                    }
                   }
                 </div>
               }
@@ -735,8 +739,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .code-prev-label { font-size: 11px; color: #999; flex-shrink: 0; }
     .code-prev-value { font-size: 12px; color: #888; text-decoration: line-through; }
     .task-linen-preset { margin: 0 0 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e0e0e0; }
-    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; margin-bottom: 8px; }
+    .task-linen-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1976d2; cursor: pointer; user-select: none; }
+    .task-linen-title.expanded { margin-bottom: 8px; }
     .task-linen-title mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .task-linen-count { color: #888; font-weight: 400; }
+    .task-linen-toggle { margin-left: auto; }
     .task-linen-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
     .task-linen-label { flex: 1; font-size: 13px; color: #333; }
     .task-linen-qty { width: 110px; flex-shrink: 0; }
@@ -810,6 +817,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     hourlyRate: ''
   };
   taskLinenItems: {linenItemId: number; label: string; category: string; quantity: number}[] = [];
+  linenExpanded = signal(false);
   taskDate: Date | null = null;
   taskTime = '09:00';
 
