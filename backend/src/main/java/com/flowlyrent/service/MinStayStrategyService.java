@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ public class MinStayStrategyService {
 
     // ─── Exécution ─────────────────────────────────────────────────────────────
 
+    @Transactional
     public Map<String, Object> runNow(Long userId) {
         MinStayStrategy strategy = getOrDefault(userId);
         Beds24Account account = accountRepo.findByAppUserId(userId)
@@ -111,17 +113,17 @@ public class MinStayStrategyService {
         }
     }
 
-    // ─── Exécution automatique hebdomadaire (lundi 3h) ─────────────────────────
+    // ─── Exécution automatique quotidienne (3h) ────────────────────────────────
 
-    @Scheduled(cron = "0 0 3 * * MON")
-    public void runWeekly() {
+    @Scheduled(cron = "0 0 3 * * *")
+    public void runDaily() {
         List<MinStayStrategy> strategies = repo.findByEnabledTrue();
-        log.info("[MinStay] Exécution hebdomadaire pour {} stratégie(s) active(s)", strategies.size());
+        log.info("[MinStay] Exécution quotidienne pour {} stratégie(s) active(s)", strategies.size());
         for (MinStayStrategy strategy : strategies) {
             try {
                 runNow(strategy.getUser().getId());
             } catch (Exception e) {
-                log.error("[MinStay] Échec exécution hebdomadaire userId={}: {}", strategy.getUser().getId(), e.getMessage());
+                log.error("[MinStay] Échec exécution quotidienne userId={}: {}", strategy.getUser().getId(), e.getMessage());
             }
         }
     }
