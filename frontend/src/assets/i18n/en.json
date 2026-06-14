@@ -383,7 +383,10 @@
     "template_error": "Error",
     "template_confirm_delete": "Delete this template?",
     "template_select_at_least_one_item": "Add at least one item",
-    "template_select_at_least_one_property": "Select at least one property"
+    "template_select_at_least_one_property": "Select at least one property",
+    "template_duplicate": "Duplicate",
+    "template_duplicated": "Template duplicated",
+    "template_copy_suffix": "(copy)"
   },
   "calendar": {
     "title": "Calendar",

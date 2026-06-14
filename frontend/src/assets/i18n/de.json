@@ -383,7 +383,10 @@
     "template_error": "Fehler",
     "template_confirm_delete": "Diese Vorlage löschen?",
     "template_select_at_least_one_item": "Fügen Sie mindestens einen Artikel hinzu",
-    "template_select_at_least_one_property": "Wählen Sie mindestens eine Unterkunft aus"
+    "template_select_at_least_one_property": "Wählen Sie mindestens eine Unterkunft aus",
+    "template_duplicate": "Duplizieren",
+    "template_duplicated": "Vorlage dupliziert",
+    "template_copy_suffix": "(Kopie)"
   },
   "calendar": {
     "title": "Kalender",

@@ -167,6 +167,9 @@ const CATEGORY_ICONS: Record<string, string> = {
                   <div class="template-count">{{ 'linen.template_items_count' | translate: { count: tpl.items.length } }}</div>
                 </div>
                 <div class="item-actions-top">
+                  <button mat-icon-button (click)="duplicateTemplate(tpl)" [matTooltip]="'linen.template_duplicate' | translate">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
                   <button mat-icon-button (click)="openTemplateForm(tpl)" [matTooltip]="'common.edit' | translate">
                     <mat-icon>edit</mat-icon>
                   </button>
@@ -788,6 +791,26 @@ export class LinenComponent implements OnInit {
       next: () => {
         this.loadTemplates();
         this.snack.open(this.t.instant('linen.template_deleted'), '', { duration: 2500 });
+      },
+      error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  duplicateTemplate(tpl: LinenTemplate): void {
+    const payload: LinenTemplate = {
+      name: `${tpl.name} ${this.t.instant('linen.template_copy_suffix')}`,
+      items: tpl.items.map(i => ({
+        label: i.label,
+        category: i.category,
+        totalQuantity: i.totalQuantity,
+        minThreshold: i.minThreshold ?? null,
+        defaultPerCleaning: i.defaultPerCleaning ?? null
+      }))
+    };
+    this.linenTemplateService.create(payload).subscribe({
+      next: () => {
+        this.loadTemplates();
+        this.snack.open(this.t.instant('linen.template_duplicated'), '', { duration: 2500 });
       },
       error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });

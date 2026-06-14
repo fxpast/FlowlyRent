@@ -383,7 +383,10 @@
     "template_error": "Error",
     "template_confirm_delete": "¿Eliminar esta plantilla?",
     "template_select_at_least_one_item": "Añada al menos un artículo",
-    "template_select_at_least_one_property": "Seleccione al menos un alojamiento"
+    "template_select_at_least_one_property": "Seleccione al menos un alojamiento",
+    "template_duplicate": "Duplicar",
+    "template_duplicated": "Plantilla duplicada",
+    "template_copy_suffix": "(copia)"
   },
   "calendar": {
     "title": "Calendario",

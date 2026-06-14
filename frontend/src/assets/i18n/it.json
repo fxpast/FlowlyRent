@@ -383,7 +383,10 @@
     "template_error": "Errore",
     "template_confirm_delete": "Eliminare questo modello?",
     "template_select_at_least_one_item": "Aggiungi almeno un articolo",
-    "template_select_at_least_one_property": "Seleziona almeno un alloggio"
+    "template_select_at_least_one_property": "Seleziona almeno un alloggio",
+    "template_duplicate": "Duplica",
+    "template_duplicated": "Modello duplicato",
+    "template_copy_suffix": "(copia)"
   },
   "calendar": {
     "title": "Calendario",
