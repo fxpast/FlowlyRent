@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -62,6 +63,7 @@ public class PropertyBundleService {
 
     // ─── Exécution ─────────────────────────────────────────────────────────────
 
+    @Transactional
     public Map<String, Object> runNow(Long userId, Long id) {
         PropertyBundle bundle = repo.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle introuvable."));
