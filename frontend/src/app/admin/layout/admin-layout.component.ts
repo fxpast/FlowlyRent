@@ -104,7 +104,7 @@ interface NavItem { icon: string; label: string; route: string; }
     }
     .nav-fab {
       position: fixed !important;
-      bottom: 24px;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
       right: 20px;
       z-index: 999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
