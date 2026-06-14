@@ -67,9 +67,10 @@ import { localDateStr } from '../../core/utils/date.utils';
             <mat-label>{{ 'bookings.source' | translate }}</mat-label>
             <mat-select [ngModel]="filterChannel()" (ngModelChange)="onChannelFilter($event)">
               <mat-option value="">{{ 'common.all' | translate }}</mat-option>
-              <mat-option value="Airbnb">Airbnb</mat-option>
-              <mat-option value="Booking.com">Booking.com</mat-option>
-              <mat-option value="Direct">{{ 'bookings.channel_direct' | translate }}</mat-option>
+              <mat-option value="airbnb">{{ 'bookings.channel_airbnb' | translate }}</mat-option>
+              <mat-option value="booking">{{ 'bookings.channel_booking' | translate }}</mat-option>
+              <mat-option value="abritel">{{ 'bookings.channel_abritel' | translate }}</mat-option>
+              <mat-option value="direct">{{ 'bookings.channel_direct' | translate }}</mat-option>
             </mat-select>
           </mat-form-field>
           <span class="total-count">{{ sortedFiltered().length }} {{ 'bookings.count' | translate }}</span>
@@ -93,7 +94,7 @@ import { localDateStr } from '../../core/utils/date.utils';
                 <span><mat-icon>login</mat-icon>{{ b['arrival'] | date:'dd/MM/yy' }}</span>
                 <span><mat-icon>logout</mat-icon>{{ b['departure'] | date:'dd/MM/yy' }}</span>
                 <span><mat-icon>nights_stay</mat-icon>{{ nights(b) }} {{ 'common.nights' | translate }}</span>
-                <span><mat-icon>sell</mat-icon>{{ b['channel'] || ('bookings.channel_direct' | translate) }}</span>
+                <span><mat-icon>sell</mat-icon>{{ channelLabel(b) }}</span>
                 @if (b['totalPrice']) {
                   <span><mat-icon>euro</mat-icon>{{ b['totalPrice'] | currency:'EUR':'symbol':'1.0-0' }}</span>
                 }
@@ -141,7 +142,7 @@ import { localDateStr } from '../../core/utils/date.utils';
             <ng-container matColumnDef="channel">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'bookings.source' | translate }}</th>
               <td mat-cell *matCellDef="let b">
-                <mat-chip class="source-chip">{{ b['channel'] || ('bookings.channel_direct' | translate) }}</mat-chip>
+                <mat-chip class="source-chip">{{ channelLabel(b) }}</mat-chip>
               </td>
             </ng-container>
             <ng-container matColumnDef="status">
@@ -306,7 +307,7 @@ export class BookingsComponent implements OnInit {
       String(b['id']).includes(q)
     );
     if (st) data = data.filter(b => (b['status'] ?? '') === st);
-    if (ch) data = data.filter(b => (b['channel'] || 'Direct') === ch);
+    if (ch) data = data.filter(b => this.channelKey(b) === ch);
     return data;
   }
 
@@ -321,7 +322,7 @@ export class BookingsComponent implements OnInit {
         case 'guest':    va = this.guestName(a);               vb = this.guestName(b); break;
         case 'property': va = this.propLabel(a);               vb = this.propLabel(b); break;
         case 'dates':    va = a['arrival'] ?? '';              vb = b['arrival'] ?? ''; break;
-        case 'channel':  va = a['channel'] ?? 'Direct';        vb = b['channel'] ?? 'Direct'; break;
+        case 'channel':  va = this.channelKey(a);              vb = this.channelKey(b); break;
         case 'status':   va = a['status'] ?? '';               vb = b['status'] ?? ''; break;
         case 'amount':   va = Number(a['totalPrice'] ?? 0);    vb = Number(b['totalPrice'] ?? 0); break;
         default: return 0;
@@ -336,6 +337,16 @@ export class BookingsComponent implements OnInit {
     const first = b['guestFirstName'] || b['firstName'] || '';
     const last  = b['guestLastName']  || b['lastName']  || '';
     return (first + ' ' + last).trim() || '—';
+  }
+
+  channelKey(b: any): string {
+    return (b['channel'] || 'direct').toString().toLowerCase();
+  }
+
+  channelLabel(b: any): string {
+    const key = this.channelKey(b);
+    const known = ['direct', 'airbnb', 'booking', 'abritel'];
+    return known.includes(key) ? this.t.instant('bookings.channel_' + key) : (b['channel'] || this.t.instant('bookings.channel_direct'));
   }
 
   propLabel(b: any): string {
