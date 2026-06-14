@@ -139,6 +139,13 @@
             <version>1.78.1</version>
         </dependency>
 
+        <!-- Firebase Cloud Messaging (notifications app mobile) -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.4.1</version>
+        </dependency>
+
         <!-- Cloudinary (stockage photos tâches ménage) -->
         <dependency>
             <groupId>com.cloudinary</groupId>

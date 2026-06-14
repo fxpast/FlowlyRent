@@ -13,6 +13,7 @@ import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.FcmPushService;
 import com.flowlyrent.service.LinenService;
 import com.flowlyrent.service.WebPushService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,6 +52,7 @@ public class HousekeeperPortalController {
     private final Beds24ApiClient beds24;
     private final Beds24AccountRepository accountRepo;
     private final WebPushService webPushService;
+    private final FcmPushService fcmPushService;
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
@@ -127,6 +129,10 @@ public class HousekeeperPortalController {
             String prop = saved.getPropertyName() != null ? saved.getPropertyName() : ("prop " + saved.getBeds24PropertyId());
             String desc = saved.getIncidentDescription();
             webPushService.sendToUser(profile.getUser().getId(),
+                "⚠️ Incident signalé — " + prop,
+                desc != null && !desc.isBlank() ? desc : "Un incident a été signalé par " + profile.getName(),
+                "/admin/housekeeping");
+            fcmPushService.sendToUser(profile.getUser().getId(),
                 "⚠️ Incident signalé — " + prop,
                 desc != null && !desc.isBlank() ? desc : "Un incident a été signalé par " + profile.getName(),
                 "/admin/housekeeping");

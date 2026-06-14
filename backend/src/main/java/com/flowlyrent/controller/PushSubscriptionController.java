@@ -2,7 +2,9 @@ package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
+import com.flowlyrent.model.FcmToken;
 import com.flowlyrent.model.PushSubscription;
+import com.flowlyrent.repository.FcmTokenRepository;
 import com.flowlyrent.repository.PushSubscriptionRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class PushSubscriptionController {
 
     private final PushSubscriptionRepository subRepo;
+    private final FcmTokenRepository fcmTokenRepo;
     private final SecurityUtils securityUtils;
 
     @Value("${vapid.public-key}")
@@ -58,5 +61,30 @@ public class PushSubscriptionController {
     @GetMapping("/vapid-public-key")
     public ResponseEntity<?> getVapidPublicKey() {
         return ResponseEntity.ok(Map.of("publicKey", vapidPublicKey));
+    }
+
+    @PostMapping("/subscribe-fcm")
+    public ResponseEntity<?> subscribeFcm(@RequestBody Map<String, String> body) {
+        AppUser user = securityUtils.getCurrentUser();
+        String token = body.get("token");
+        if (token == null || token.isBlank()) return ResponseEntity.badRequest().build();
+
+        fcmTokenRepo.findByUserIdAndToken(user.getId(), token).ifPresentOrElse(
+            existing -> {},
+            () -> {
+                FcmToken fcmToken = new FcmToken();
+                fcmToken.setUser(user);
+                fcmToken.setToken(token);
+                fcmTokenRepo.save(fcmToken);
+            }
+        );
+        return ResponseEntity.ok(Map.of("status", "subscribed"));
+    }
+
+    @DeleteMapping("/unsubscribe-fcm")
+    public ResponseEntity<?> unsubscribeFcm(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        if (token != null) fcmTokenRepo.deleteByToken(token);
+        return ResponseEntity.ok(Map.of("status", "unsubscribed"));
     }
 }

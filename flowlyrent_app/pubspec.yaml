@@ -1,0 +1,33 @@
+name: flowlyrent_app
+description: "FlowlyRent — gestion de locations saisonnières"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  webview_flutter: ^4.10.0
+  firebase_core: ^3.10.0
+  firebase_messaging: ^15.1.6
+  flutter_local_notifications: ^18.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#1976D2"
+  adaptive_icon_foreground: "assets/icon/icon_fg.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true

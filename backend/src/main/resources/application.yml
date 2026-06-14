@@ -69,6 +69,10 @@ vapid:
   private-key: ${VAPID_PRIVATE_KEY:}
   subject: ${VAPID_SUBJECT:mailto:contact@flowlyrent.com}
 
+firebase:
+  # Contenu JSON complet du compte de service Firebase Admin (Project Settings > Service accounts > Generate new private key)
+  service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
+
 admin:
   username: ${ADMIN_USERNAME:}
   password: ${ADMIN_PASSWORD:}

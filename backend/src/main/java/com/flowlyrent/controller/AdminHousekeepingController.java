@@ -16,6 +16,7 @@ import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.TaskLinenUsageRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.FcmPushService;
 import com.flowlyrent.service.LinenService;
 import com.flowlyrent.service.WebPushService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,6 +53,7 @@ public class AdminHousekeepingController {
     private final LinenService linenService;
     private final SecurityUtils securityUtils;
     private final WebPushService webPushService;
+    private final FcmPushService fcmPushService;
 
     // --- Tâches ---
 
@@ -139,6 +141,10 @@ public class AdminHousekeepingController {
                 "🧹 Nouvelle mission assignée",
                 prop + " — " + (saved.getScheduledDate() != null ? saved.getScheduledDate().toLocalDate() : ""),
                 "/tasks");
+            fcmPushService.sendToUser(assignedHk.getLinkedUser().getId(),
+                "🧹 Nouvelle mission assignée",
+                prop + " — " + (saved.getScheduledDate() != null ? saved.getScheduledDate().toLocalDate() : ""),
+                "/tasks");
         }
 
         return ResponseEntity.ok(saved);
@@ -187,6 +193,10 @@ public class AdminHousekeepingController {
         if (updatedHk != null && updatedHk.getLinkedUser() != null) {
             String prop = updated.getPropertyName() != null ? updated.getPropertyName() : ("prop " + updated.getBeds24PropertyId());
             webPushService.sendToUser(updatedHk.getLinkedUser().getId(),
+                "🧹 Nouvelle mission assignée",
+                prop + " — " + (updated.getScheduledDate() != null ? updated.getScheduledDate().toLocalDate() : ""),
+                "/tasks");
+            fcmPushService.sendToUser(updatedHk.getLinkedUser().getId(),
                 "🧹 Nouvelle mission assignée",
                 prop + " — " + (updated.getScheduledDate() != null ? updated.getScheduledDate().toLocalDate() : ""),
                 "/tasks");
