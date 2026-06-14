@@ -300,9 +300,9 @@ export class BookingsComponent implements OnInit {
     const st = this.filterStatus();
     const ch = this.filterChannel();
     if (q) data = data.filter(b =>
-      b['guestFirstName']?.toLowerCase().includes(q) ||
-      b['guestLastName']?.toLowerCase().includes(q) ||
-      b['guestEmail']?.toLowerCase().includes(q) ||
+      (b['guestFirstName'] || b['firstName'])?.toLowerCase().includes(q) ||
+      (b['guestLastName']  || b['lastName'])?.toLowerCase().includes(q) ||
+      (b['guestEmail']     || b['email'])?.toLowerCase().includes(q) ||
       String(b['id']).includes(q)
     );
     if (st) data = data.filter(b => (b['status'] ?? '') === st);
