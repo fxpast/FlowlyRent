@@ -12,6 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { forkJoin } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
@@ -19,6 +20,7 @@ import { PropertyConfigService, PropertyConfig } from '../../core/services/prope
 import { BookingService } from '../../core/services/booking.service';
 import { UserService } from '../../core/services/user.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
+import { PropertyBundleService, PropertyBundle } from '../../core/services/property-bundle.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 interface OccupancyStatus {
@@ -39,7 +41,7 @@ interface OccupancyStatus {
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule,
-    MatTooltipModule, MatSnackBarModule, MatDividerModule,
+    MatTooltipModule, MatSnackBarModule, MatDividerModule, MatSlideToggleModule,
     TranslateModule
   ],
   template: `
@@ -60,6 +62,92 @@ interface OccupancyStatus {
         }
       </mat-form-field>
     </div>
+
+    @if (!loading() && properties().length > 0) {
+      <mat-card class="bundle-card">
+        <mat-card-header>
+          <mat-card-title>{{ 'properties.bundle_title' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'properties.bundle_subtitle' | translate }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (bundles().length === 0 && !bundleFormOpen()) {
+            <p class="bundle-empty">{{ 'properties.bundle_no_bundles' | translate }}</p>
+          }
+          @for (b of bundles(); track b.id) {
+            <div class="bundle-row">
+              <div class="bundle-info">
+                <strong>{{ b.name }}</strong>
+                <span class="bundle-sub">{{ 'properties.bundle_unit' | translate }} : {{ propertyLabel(b.bundlePropertyId) }}</span>
+                <span class="bundle-sub">{{ 'properties.bundle_members' | translate }} : {{ memberLabels(b) }}</span>
+                @if (b.lastRunAt) {
+                  <span class="bundle-sub">{{ 'properties.bundle_last_run' | translate }} {{ b.lastRunAt | date:'dd/MM/yyyy HH:mm' }} — {{ b.lastRunStatus }}</span>
+                }
+              </div>
+              <div class="bundle-actions">
+                <mat-slide-toggle [checked]="b.enabled" (change)="toggleBundleEnabled(b)"
+                  [matTooltip]="'properties.bundle_enabled' | translate"></mat-slide-toggle>
+                <button mat-icon-button (click)="runBundleNow(b)" [disabled]="runningBundleId() === b.id"
+                  [matTooltip]="'properties.bundle_run_now' | translate">
+                  @if (runningBundleId() === b.id) { <mat-spinner diameter="18"></mat-spinner> } @else { <mat-icon>sync</mat-icon> }
+                </button>
+                <button mat-icon-button (click)="editBundle(b)" [matTooltip]="'common.edit' | translate">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button (click)="deleteBundle(b)" [matTooltip]="'common.delete' | translate">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+            <mat-divider></mat-divider>
+          }
+
+          @if (bundleFormOpen()) {
+            <div class="bundle-form">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'properties.bundle_name' | translate }}</mat-label>
+                <input matInput [(ngModel)]="bundleForm.name" [placeholder]="'properties.bundle_name_placeholder' | translate">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'properties.bundle_select_unit' | translate }}</mat-label>
+                <mat-select [(ngModel)]="bundleForm.bundlePropertyId">
+                  @for (p of properties(); track p['id']) {
+                    <mat-option [value]="idOf(p)">{{ displayName(p) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'properties.bundle_select_members' | translate }}</mat-label>
+                <mat-select multiple [(ngModel)]="bundleForm.memberPropertyIds">
+                  @for (p of properties(); track p['id']) {
+                    <mat-option [value]="idOf(p)">{{ displayName(p) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="bundle-horizon-field">
+                <mat-label>{{ 'properties.bundle_horizon' | translate }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="bundleForm.horizonDays">
+              </mat-form-field>
+
+              <mat-slide-toggle [(ngModel)]="bundleForm.enabled">{{ 'properties.bundle_enabled' | translate }}</mat-slide-toggle>
+
+              <div class="bundle-form-actions">
+                <button mat-flat-button color="primary" (click)="saveBundle()" [disabled]="savingBundle()">
+                  @if (savingBundle()) { <mat-spinner diameter="18"></mat-spinner> } @else { {{ 'properties.bundle_save' | translate }} }
+                </button>
+                <button mat-button (click)="cancelBundleForm()">{{ 'common.cancel' | translate }}</button>
+              </div>
+            </div>
+          } @else {
+            <button mat-stroked-button (click)="openNewBundleForm()">
+              <mat-icon>add</mat-icon> {{ 'properties.bundle_add' | translate }}
+            </button>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
 
     @if (loading()) {
       <div class="center"><mat-spinner diameter="48"></mat-spinner></div>
@@ -537,6 +625,25 @@ interface OccupancyStatus {
     }
     .inactive-banner mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
+    /* Bundles */
+    .bundle-card { margin-bottom: 20px; }
+    .bundle-empty { color: #999; font-size: 13px; margin: 4px 0 12px; }
+    .bundle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 0; flex-wrap: wrap;
+    }
+    .bundle-info { display: flex; flex-direction: column; gap: 2px; }
+    .bundle-info strong { font-size: 14px; }
+    .bundle-sub { font-size: 12px; color: #888; }
+    .bundle-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .bundle-form {
+      display: flex; flex-direction: column; gap: 4px; flex-wrap: wrap;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;
+    }
+    .bundle-form mat-form-field { width: 100%; }
+    .bundle-horizon-field { max-width: 200px; }
+    .bundle-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+
     @media (max-width: 600px) {
       .props-grid { grid-template-columns: 1fr; }
       .search-field { width: 100%; }
@@ -562,6 +669,16 @@ export class PropertiesComponent implements OnInit {
   cleaningSaved: Record<string, string> = {};
   pricingDraft: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
   pricingSaved: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
+
+  // ── Bundles de logements ────────────────────────────────────────────
+  bundles          = signal<PropertyBundle[]>([]);
+  bundleFormOpen   = signal(false);
+  savingBundle     = signal(false);
+  runningBundleId  = signal<number | null>(null);
+  editingBundleId: number | null = null;
+  bundleForm: { name: string; bundlePropertyId: string; memberPropertyIds: string[]; enabled: boolean; horizonDays: number } = {
+    name: '', bundlePropertyId: '', memberPropertyIds: [], enabled: true, horizonDays: 365
+  };
 
   filtered = computed(() => {
     const q   = this.search().toLowerCase().trim();
@@ -681,6 +798,7 @@ export class PropertiesComponent implements OnInit {
     private bookingService: BookingService,
     private inventoryService: PropertyInventoryService,
     private userService: UserService,
+    private bundleService: PropertyBundleService,
     private snackBar: MatSnackBar,
     private t: TranslateService
   ) {}
@@ -730,6 +848,7 @@ export class PropertiesComponent implements OnInit {
       },
       error: () => this.loading.set(false)
     });
+    this.loadBundles();
   }
 
   occupancyMap = computed((): Record<string, OccupancyStatus> => {
@@ -893,6 +1012,131 @@ export class PropertiesComponent implements OnInit {
   displayName(p: any): string {
     const id = String(p['id'] ?? '');
     return this.shortNameSaved[id] || p['name'] || '';
+  }
+
+  idOf(p: any): string {
+    return String(p['id'] ?? '');
+  }
+
+  // ── Bundles de logements ────────────────────────────────────────────
+
+  private loadBundles(): void {
+    this.bundleService.list().subscribe({
+      next: bundles => this.bundles.set(bundles ?? []),
+      error: () => this.bundles.set([])
+    });
+  }
+
+  propertyLabel(propId: string): string {
+    const p = this.properties().find(p => this.idOf(p) === String(propId));
+    return p ? this.displayName(p) : propId;
+  }
+
+  memberLabels(b: PropertyBundle): string {
+    return b.memberPropertyIds.map(id => this.propertyLabel(id)).join(', ');
+  }
+
+  openNewBundleForm(): void {
+    this.editingBundleId = null;
+    this.bundleForm = { name: '', bundlePropertyId: '', memberPropertyIds: [], enabled: true, horizonDays: 365 };
+    this.bundleFormOpen.set(true);
+  }
+
+  editBundle(b: PropertyBundle): void {
+    this.editingBundleId = b.id ?? null;
+    this.bundleForm = {
+      name: b.name,
+      bundlePropertyId: b.bundlePropertyId,
+      memberPropertyIds: [...b.memberPropertyIds],
+      enabled: b.enabled,
+      horizonDays: b.horizonDays
+    };
+    this.bundleFormOpen.set(true);
+  }
+
+  cancelBundleForm(): void {
+    this.bundleFormOpen.set(false);
+    this.editingBundleId = null;
+  }
+
+  saveBundle(): void {
+    if (!this.bundleForm.name.trim() || !this.bundleForm.bundlePropertyId) return;
+    if (this.bundleForm.memberPropertyIds.length === 0) {
+      this.snackBar.open(this.t.instant('properties.bundle_select_at_least_one_member'), this.t.instant('common.close'), { duration: 3000 });
+      return;
+    }
+
+    this.savingBundle.set(true);
+    const payload = {
+      name: this.bundleForm.name.trim(),
+      bundlePropertyId: this.bundleForm.bundlePropertyId,
+      memberPropertyIds: this.bundleForm.memberPropertyIds,
+      enabled: this.bundleForm.enabled,
+      horizonDays: this.bundleForm.horizonDays
+    };
+
+    const obs = this.editingBundleId
+      ? this.bundleService.update(this.editingBundleId, payload)
+      : this.bundleService.create(payload);
+
+    obs.subscribe({
+      next: () => {
+        this.savingBundle.set(false);
+        this.bundleFormOpen.set(false);
+        this.editingBundleId = null;
+        this.snackBar.open(this.t.instant('properties.bundle_saved'), this.t.instant('common.ok'), { duration: 2000 });
+        this.loadBundles();
+      },
+      error: () => {
+        this.savingBundle.set(false);
+        this.snackBar.open(this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  deleteBundle(b: PropertyBundle): void {
+    if (!b.id || !confirm(this.t.instant('properties.bundle_confirm_delete'))) return;
+    this.bundleService.delete(b.id).subscribe({
+      next: () => {
+        this.snackBar.open(this.t.instant('properties.bundle_deleted'), this.t.instant('common.ok'), { duration: 2000 });
+        this.loadBundles();
+      },
+      error: () => this.snackBar.open(this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  toggleBundleEnabled(b: PropertyBundle): void {
+    if (!b.id) return;
+    this.bundleService.update(b.id, {
+      name: b.name,
+      bundlePropertyId: b.bundlePropertyId,
+      memberPropertyIds: b.memberPropertyIds,
+      enabled: !b.enabled,
+      horizonDays: b.horizonDays
+    }).subscribe({
+      next: () => this.loadBundles(),
+      error: () => this.snackBar.open(this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  runBundleNow(b: PropertyBundle): void {
+    if (!b.id) return;
+    this.runningBundleId.set(b.id);
+    this.bundleService.runNow(b.id).subscribe({
+      next: r => {
+        this.runningBundleId.set(null);
+        if (r.success) {
+          this.snackBar.open(this.t.instant('properties.bundle_run_success', { count: r.propertiesUpdated }), this.t.instant('common.ok'), { duration: 2500 });
+        } else {
+          this.snackBar.open(r.error ?? this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 4000 });
+        }
+        this.loadBundles();
+      },
+      error: err => {
+        this.runningBundleId.set(null);
+        this.snackBar.open(err.error?.error ?? this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 4000 });
+      }
+    });
   }
 
   isShortNameDirty(propId: string): boolean {
