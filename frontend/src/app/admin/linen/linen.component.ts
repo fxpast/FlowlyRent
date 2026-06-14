@@ -18,8 +18,17 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { BookingService } from '../../core/services/booking.service';
 import { localDateStr } from '../../core/utils/date.utils';
+import { LinenTemplateService, LinenTemplate } from '../../core/services/linen-template.service';
 
 interface Property { id: number; name: string; }
+
+interface TemplateItemRow {
+  label: string;
+  category: string;
+  totalQuantity: number;
+  minThreshold: string;
+  defaultPerCleaning: string;
+}
 
 interface LinenItem {
   id: number;
@@ -77,6 +86,130 @@ const CATEGORY_ICONS: Record<string, string> = {
   ],
   template: `
     <div class="linen-root">
+
+      <!-- ── Modèles de linge ── -->
+      <div class="section-header">
+        <span class="section-title"><mat-icon>view_list</mat-icon> {{ 'linen.templates_title' | translate }}</span>
+        <button mat-flat-button color="primary" (click)="openTemplateForm()">
+          <mat-icon>add</mat-icon> {{ 'linen.templates_add' | translate }}
+        </button>
+      </div>
+      <p class="subtitle">{{ 'linen.templates_subtitle' | translate }}</p>
+
+      @if (templateForm.show) {
+        <mat-card class="form-card">
+          <mat-card-header>
+            <mat-card-title>{{ (templateForm.editingId ? 'common.edit' : 'linen.templates_add') | translate }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field style="width:100%">
+              <mat-label>{{ 'linen.template_name' | translate }} *</mat-label>
+              <input matInput [(ngModel)]="templateForm.name" [placeholder]="'linen.template_name_placeholder' | translate">
+            </mat-form-field>
+
+            @for (item of templateForm.items; track $index) {
+              <div class="form-row template-item-row">
+                <mat-form-field class="flex2">
+                  <mat-label>{{ 'linen.label_required' | translate }}</mat-label>
+                  <input matInput [(ngModel)]="item.label">
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>{{ 'linen.category' | translate }}</mat-label>
+                  <mat-select [(ngModel)]="item.category">
+                    @for (c of categories; track c.value) {
+                      <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field class="qty-field">
+                  <mat-label>{{ 'linen.qty_total' | translate }}</mat-label>
+                  <input matInput type="number" min="1" [(ngModel)]="item.totalQuantity">
+                </mat-form-field>
+                <mat-form-field class="qty-field">
+                  <mat-label>{{ 'linen.per_cleaning' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="item.defaultPerCleaning">
+                </mat-form-field>
+                <mat-form-field class="qty-field">
+                  <mat-label>{{ 'linen.low_stock_threshold' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="item.minThreshold">
+                </mat-form-field>
+                <button mat-icon-button color="warn" (click)="removeTemplateItemRow($index)" [matTooltip]="'common.delete' | translate">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+
+            <button mat-stroked-button (click)="addTemplateItemRow()" style="margin-top:8px">
+              <mat-icon>add</mat-icon> {{ 'linen.template_item_add' | translate }}
+            </button>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-flat-button color="primary" (click)="saveTemplate()"
+                    [disabled]="!templateForm.name.trim() || templateForm.saving">
+              {{ (templateForm.editingId ? 'common.edit' : 'common.create') | translate }}
+            </button>
+            <button mat-button (click)="cancelTemplateForm()">{{ 'common.cancel' | translate }}</button>
+          </mat-card-actions>
+        </mat-card>
+      }
+
+      @if (templatesLoading()) {
+        <div class="center"><mat-spinner diameter="36" /></div>
+      } @else if (templates().length === 0) {
+        <p class="empty">{{ 'linen.templates_empty' | translate }}</p>
+      } @else {
+        <div class="templates-grid">
+          @for (tpl of templates(); track tpl.id) {
+            <mat-card class="template-card">
+              <div class="template-header">
+                <div class="template-meta">
+                  <div class="template-name">{{ tpl.name }}</div>
+                  <div class="template-count">{{ 'linen.template_items_count' | translate: { count: tpl.items.length } }}</div>
+                </div>
+                <div class="item-actions-top">
+                  <button mat-icon-button (click)="openTemplateForm(tpl)" [matTooltip]="'common.edit' | translate">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="deleteTemplate(tpl)" [matTooltip]="'common.delete' | translate">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              @if (applyForm.templateId !== tpl.id) {
+                <button mat-stroked-button color="primary" (click)="openApplyForm(tpl)">
+                  <mat-icon>send</mat-icon> {{ 'linen.template_apply' | translate }}
+                </button>
+              } @else {
+                <div class="apply-form">
+                  <div class="mv-form-title">
+                    <mat-icon>send</mat-icon> {{ 'linen.template_apply_title' | translate }}
+                  </div>
+                  <mat-form-field style="width:100%">
+                    <mat-label>{{ 'linen.template_apply_select' | translate }}</mat-label>
+                    <mat-select multiple [(ngModel)]="applyForm.propertyIds">
+                      @for (p of properties(); track p.id) {
+                        <mat-option [value]="strId(p.id)">{{ p.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <div class="mv-form-actions">
+                    <button mat-flat-button color="primary" (click)="applyTemplate(tpl)"
+                            [disabled]="applyForm.propertyIds.length === 0 || applyForm.applying">
+                      @if (applyForm.applying) { <mat-spinner diameter="16" style="display:inline-block"/> }
+                      @else { <mat-icon>check</mat-icon> }
+                      {{ 'linen.template_apply_confirm' | translate }}
+                    </button>
+                    <button mat-button (click)="closeApplyForm()">{{ 'common.cancel' | translate }}</button>
+                  </div>
+                </div>
+              }
+            </mat-card>
+          }
+        </div>
+      }
+
+      <mat-divider style="margin: 28px 0 24px"></mat-divider>
 
       <!-- Sélecteur de logement -->
       <mat-form-field class="prop-select">
@@ -308,6 +441,16 @@ const CATEGORY_ICONS: Record<string, string> = {
     .section-title mat-icon { color: #1976d2; font-size: 20px; width: 20px; height: 20px; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .empty { color: #999; font-size: 14px; padding: 20px 0; }
+    .subtitle { color: #888; font-size: 13px; margin: -8px 0 16px; }
+
+    /* Modèles de linge */
+    .templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 8px; }
+    .template-card { padding: 16px; }
+    .template-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+    .template-name { font-size: 15px; font-weight: 600; color: #222; }
+    .template-count { font-size: 12px; color: #888; margin-top: 2px; }
+    .template-item-row { align-items: flex-start; }
+    .apply-form { margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; }
 
     /* Formulaire article */
     .form-card { margin-bottom: 20px; }
@@ -387,8 +530,10 @@ export class LinenComponent implements OnInit {
   properties  = signal<Property[]>([]);
   items       = signal<LinenItem[]>([]);
   movements   = signal<LinenMovement[]>([]);
+  templates   = signal<LinenTemplate[]>([]);
   itemsLoading      = signal(false);
   movementsLoading  = signal(false);
+  templatesLoading  = signal(false);
   selectedPropId    = '';
 
   get categories() {
@@ -415,15 +560,31 @@ export class LinenComponent implements OnInit {
     saving: boolean;
   } = { itemId: null, direction: 'TO_LAUNDRY', quantity: 1, date: new Date(), notes: '', saving: false };
 
+  templateForm: {
+    show: boolean;
+    editingId: number | null;
+    name: string;
+    items: TemplateItemRow[];
+    saving: boolean;
+  } = { show: false, editingId: null, name: '', items: [], saving: false };
+
+  applyForm: {
+    templateId: number | null;
+    propertyIds: string[];
+    applying: boolean;
+  } = { templateId: null, propertyIds: [], applying: false };
+
   constructor(
     private http: HttpClient,
     private bookingService: BookingService,
+    private linenTemplateService: LinenTemplateService,
     private snack: MatSnackBar,
     private t: TranslateService
   ) {}
 
   ngOnInit(): void {
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
+    this.loadTemplates();
   }
 
   strId(id: number): string { return String(id); }
@@ -546,6 +707,118 @@ export class LinenComponent implements OnInit {
     this.http.delete(`${this.base}/admin/linen/movements/${mv.id}`).subscribe({
       next: () => { this.loadItems(); this.loadMovements(); },
       error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  // ─── Modèles de linge ────────────────────────────────────────────────────
+
+  loadTemplates(): void {
+    this.templatesLoading.set(true);
+    this.linenTemplateService.list().subscribe({
+      next: tpls => { this.templates.set(tpls); this.templatesLoading.set(false); },
+      error: () => this.templatesLoading.set(false)
+    });
+  }
+
+  private emptyTemplateItemRow(): TemplateItemRow {
+    return { label: '', category: 'DRAPS', totalQuantity: 1, minThreshold: '', defaultPerCleaning: '' };
+  }
+
+  openTemplateForm(tpl?: LinenTemplate): void {
+    this.applyForm.templateId = null;
+    if (tpl) {
+      this.templateForm = {
+        show: true, editingId: tpl.id!, name: tpl.name, saving: false,
+        items: tpl.items.map(i => ({
+          label: i.label,
+          category: i.category,
+          totalQuantity: i.totalQuantity,
+          minThreshold: i.minThreshold != null ? String(i.minThreshold) : '',
+          defaultPerCleaning: i.defaultPerCleaning != null ? String(i.defaultPerCleaning) : ''
+        }))
+      };
+    } else {
+      this.templateForm = { show: true, editingId: null, name: '', saving: false, items: [this.emptyTemplateItemRow()] };
+    }
+  }
+
+  cancelTemplateForm(): void { this.templateForm.show = false; }
+
+  addTemplateItemRow(): void { this.templateForm.items.push(this.emptyTemplateItemRow()); }
+  removeTemplateItemRow(index: number): void { this.templateForm.items.splice(index, 1); }
+
+  saveTemplate(): void {
+    if (!this.templateForm.name.trim()) return;
+    const items = this.templateForm.items.filter(i => i.label.trim());
+    if (items.length === 0) {
+      this.snack.open(this.t.instant('linen.template_select_at_least_one_item'), this.t.instant('common.close'), { duration: 3000 });
+      return;
+    }
+    this.templateForm.saving = true;
+    const payload: LinenTemplate = {
+      name: this.templateForm.name.trim(),
+      items: items.map(i => ({
+        label: i.label.trim(),
+        category: i.category,
+        totalQuantity: Number(i.totalQuantity) || 0,
+        minThreshold: i.minThreshold ? Number(i.minThreshold) : null,
+        defaultPerCleaning: i.defaultPerCleaning ? Number(i.defaultPerCleaning) : null
+      }))
+    };
+    const req = this.templateForm.editingId
+      ? this.linenTemplateService.update(this.templateForm.editingId, payload)
+      : this.linenTemplateService.create(payload);
+    req.subscribe({
+      next: () => {
+        this.templateForm.show = false;
+        this.templateForm.saving = false;
+        this.loadTemplates();
+        this.snack.open(this.t.instant('linen.template_saved'), '', { duration: 2500 });
+      },
+      error: () => {
+        this.templateForm.saving = false;
+        this.snack.open(this.t.instant('linen.template_error'), this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  deleteTemplate(tpl: LinenTemplate): void {
+    if (!confirm(this.t.instant('linen.template_confirm_delete'))) return;
+    this.linenTemplateService.delete(tpl.id!).subscribe({
+      next: () => {
+        this.loadTemplates();
+        this.snack.open(this.t.instant('linen.template_deleted'), '', { duration: 2500 });
+      },
+      error: () => this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  openApplyForm(tpl: LinenTemplate): void {
+    this.templateForm.show = false;
+    this.applyForm = { templateId: tpl.id!, propertyIds: [], applying: false };
+  }
+
+  closeApplyForm(): void { this.applyForm.templateId = null; }
+
+  applyTemplate(tpl: LinenTemplate): void {
+    if (this.applyForm.propertyIds.length === 0) return;
+    this.applyForm.applying = true;
+    const propertyNames: Record<string, string> = {};
+    for (const id of this.applyForm.propertyIds) {
+      const p = this.properties().find(pr => String(pr.id) === id);
+      if (p) propertyNames[id] = p.name;
+    }
+    const propsCount = this.applyForm.propertyIds.length;
+    this.linenTemplateService.apply(tpl.id!, this.applyForm.propertyIds, propertyNames).subscribe({
+      next: res => {
+        this.applyForm = { templateId: null, propertyIds: [], applying: false };
+        this.snack.open(this.t.instant('linen.template_applied', { count: res.itemsUpdated ?? 0, props: propsCount }), '', { duration: 3000 });
+        if (this.selectedPropId) this.loadItems();
+      },
+      error: () => {
+        this.applyForm.applying = false;
+        this.snack.open(this.t.instant('linen.template_error'), this.t.instant('common.close'), { duration: 3000 });
+      }
     });
   }
 }

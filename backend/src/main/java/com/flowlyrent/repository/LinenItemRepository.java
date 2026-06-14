@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface LinenItemRepository extends JpaRepository<LinenItem, Long> {
     List<LinenItem> findByUserIdAndBeds24PropertyIdOrderBySortOrderAscLabelAsc(Long userId, String beds24PropertyId);
     Optional<LinenItem> findByIdAndUserId(Long id, Long userId);
+    Optional<LinenItem> findByUserIdAndBeds24PropertyIdAndLabel(Long userId, String beds24PropertyId, String label);
 }
