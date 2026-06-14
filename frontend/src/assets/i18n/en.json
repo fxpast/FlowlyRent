@@ -264,6 +264,8 @@
     "no_contact": "No contact info available",
     "mission_email_subject": "New mission — {{property}}",
     "mission_message": "Hello {{name}},\n\nNew mission: {{type}}\nProperty: {{property}}\nDate: {{date}} at {{time}}",
+    "show_more": "Show more",
+    "show_less": "Show less",
     "delete_confirm": "Delete task",
     "task_deleted": "Task deleted",
     "hours_unit": "h",
