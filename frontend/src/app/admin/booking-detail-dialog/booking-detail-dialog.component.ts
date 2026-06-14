@@ -17,6 +17,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { Router } from '@angular/router';
 import { BookingService } from '../../core/services/booking.service';
@@ -41,7 +42,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     CommonModule, FormsModule, MatDialogModule,
     MatButtonModule, MatIconModule, MatChipsModule, MatDividerModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule,
-    MatTabsModule, MatBadgeModule, MatProgressSpinnerModule, MatTooltipModule,
+    MatTabsModule, MatBadgeModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule,
     MatDatepickerModule, MatNativeDateModule, TextFieldModule, TranslateModule
   ],
   template: `
@@ -494,15 +495,38 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                   </div>
                 }
               </div>
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ 'booking_dialog.task_provider' | translate }}</mat-label>
-                <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
-                  <mat-option [value]="null">{{ 'booking_dialog.task_unassigned' | translate }}</mat-option>
-                  @for (h of housekeepers(); track h.id) {
-                    <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <div class="provider-row">
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>{{ 'booking_dialog.task_provider' | translate }}</mat-label>
+                  <mat-select [ngModel]="taskForm.housekeeperId" (ngModelChange)="onHousekeeperChange($event)">
+                    <mat-option [value]="null">{{ 'booking_dialog.task_unassigned' | translate }}</mat-option>
+                    @for (h of housekeepers(); track h.id) {
+                      <mat-option [value]="h.id">{{ h.name }}{{ h.phone ? ' · ' + h.phone : '' }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                @if (selectedHousekeeper()?.phone || selectedHousekeeper()?.email) {
+                  <button mat-icon-button class="hk-send" type="button" [matMenuTriggerFor]="missionMenu"
+                          [matTooltip]="'housekeeping.send_mission' | translate">
+                    <mat-icon>send</mat-icon>
+                  </button>
+                  <mat-menu #missionMenu="matMenu">
+                    @if (selectedHousekeeper()?.email) {
+                      <button mat-menu-item (click)="sendMission('email')">
+                        <mat-icon>email</mat-icon> {{ 'housekeeping.send_email' | translate }}
+                      </button>
+                    }
+                    @if (selectedHousekeeper()?.phone) {
+                      <button mat-menu-item (click)="sendMission('whatsapp')">
+                        <mat-icon>chat</mat-icon> {{ 'housekeeping.send_whatsapp' | translate }}
+                      </button>
+                      <button mat-menu-item (click)="sendMission('sms')">
+                        <mat-icon>sms</mat-icon> {{ 'housekeeping.send_sms' | translate }}
+                      </button>
+                    }
+                  </mat-menu>
+                }
+              </div>
               <div class="row-2">
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'booking_dialog.task_hours' | translate }}</mat-label>
@@ -573,6 +597,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .date-part { flex: 1; }
     .time-part { width: 110px; flex-shrink: 0; }
     .full { width: 100%; }
+    .provider-row { display: flex; align-items: center; gap: 4px; }
+    .provider-row .full { flex: 1; }
+    .hk-send { color: #6a1b9a; flex-shrink: 0; margin-top: -8px; }
     .taxe-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #e3f2fd; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
     .taxe-icon { font-size: 18px; color: #1976d2; }
     .taxe-label { font-weight: 500; color: #1565c0; }
@@ -1154,6 +1181,48 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (id && hk && this.taskForm.type === 'CHECKOUT_CLEANING') {
       this.generateCleaningNotes(hk);
     }
+  }
+
+  selectedHousekeeper(): HousekeeperProfile | undefined {
+    return this.housekeepers().find(h => h.id === this.taskForm.housekeeperId);
+  }
+
+  sendMission(channel: 'email' | 'whatsapp' | 'sms'): void {
+    const hk = this.selectedHousekeeper();
+    if (!hk) return;
+    const property = this.draft['propName'] || this.draft['propertyName'] || '';
+    const date = this.taskDate ?? new Date();
+    let text = this.t.instant('housekeeping.mission_message', {
+      name:     hk.name,
+      type:     this.taskTypeLabel(this.taskForm.type),
+      property,
+      date:     date.toLocaleDateString('fr-FR'),
+      time:     this.taskTime
+    });
+    if (this.taskForm.notes) text += `\n\n${this.taskForm.notes}`;
+
+    let url = '';
+    switch (channel) {
+      case 'email': {
+        if (!hk.email) return;
+        const subject = encodeURIComponent(this.t.instant('housekeeping.mission_email_subject', { property }));
+        url = `mailto:${hk.email}?subject=${subject}&body=${encodeURIComponent(text)}`;
+        break;
+      }
+      case 'whatsapp': {
+        if (!hk.phone) return;
+        url = `https://wa.me/${hk.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`;
+        break;
+      }
+      case 'sms': {
+        if (!hk.phone) return;
+        const phone = hk.phone.replace(/[^0-9+]/g, '');
+        url = `sms:${phone}${/iPhone|iPad|Macintosh/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(text)}`;
+        break;
+      }
+    }
+
+    if (url) window.open(url, '_blank');
   }
 
   private generateCleaningNotes(hk: HousekeeperProfile): void {

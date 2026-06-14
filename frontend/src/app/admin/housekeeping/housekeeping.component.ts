@@ -19,6 +19,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
@@ -116,7 +117,7 @@ const STATUS_KEYS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule,
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule, MatMenuModule,
     LinenComponent, TranslateModule
   ],
   template: `
@@ -324,6 +325,27 @@ const STATUS_KEYS: Record<string, string> = {
                         <a [href]="waUrl(task.housekeeper.phone)" target="_blank" class="hk-wa" [matTooltip]="'housekeeping.whatsapp_hk' | translate" (click)="$event.stopPropagation()">
                           <mat-icon>chat</mat-icon>
                         </a>
+                      }
+                      @if (task.housekeeper.phone || task.housekeeper.email) {
+                        <button mat-icon-button class="hk-send" [matMenuTriggerFor]="missionMenu"
+                                [matTooltip]="'housekeeping.send_mission' | translate" (click)="$event.stopPropagation()">
+                          <mat-icon>send</mat-icon>
+                        </button>
+                        <mat-menu #missionMenu="matMenu">
+                          @if (task.housekeeper.email) {
+                            <button mat-menu-item (click)="sendMission(task, 'email')">
+                              <mat-icon>email</mat-icon> {{ 'housekeeping.send_email' | translate }}
+                            </button>
+                          }
+                          @if (task.housekeeper.phone) {
+                            <button mat-menu-item (click)="sendMission(task, 'whatsapp')">
+                              <mat-icon>chat</mat-icon> {{ 'housekeeping.send_whatsapp' | translate }}
+                            </button>
+                            <button mat-menu-item (click)="sendMission(task, 'sms')">
+                              <mat-icon>sms</mat-icon> {{ 'housekeeping.send_sms' | translate }}
+                            </button>
+                          }
+                        </mat-menu>
                       }
                     </div>
                   }
@@ -791,6 +813,8 @@ const STATUS_KEYS: Record<string, string> = {
     .hk-phone mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .hk-wa { color: #25D366; margin-left: 4px; display: inline-flex; align-items: center; }
     .hk-wa mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hk-send { width: 28px; height: 28px; line-height: 28px; margin-left: 2px; color: #6a1b9a; }
+    .hk-send mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .wa-media-link { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; text-decoration: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; margin-top: 10px; }
     .wa-media-link mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .depannage-alert { display: inline-flex; align-items: center; justify-content: center; background: #d32f2f; color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; line-height: 1; }
@@ -1309,6 +1333,50 @@ export class HousekeepingComponent implements OnInit {
   statusLabel(s: string): string    { return STATUS_KEYS[s] ? this.t.instant(STATUS_KEYS[s]) : s; }
   statusColor(s: string): string    { return STATUS_COLORS[s] ?? '#888'; }
   waUrl(phone: string): string      { return `https://wa.me/${phone.replace(/[^0-9]/g, '')}`; }
+
+  private missionMessage(task: Task): string {
+    const date = new Date(task.scheduledDate);
+    const property = task.propertyName ?? task.property?.name ?? task.beds24PropertyId ?? '';
+    let msg = this.t.instant('housekeeping.mission_message', {
+      name:     task.housekeeper?.name ?? '',
+      type:     this.typeLabel(task.type),
+      property,
+      date:     date.toLocaleDateString('fr-FR'),
+      time:     date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    });
+    if (task.notes) msg += `\n\n${task.notes}`;
+    return msg;
+  }
+
+  sendMission(task: Task, channel: 'email' | 'whatsapp' | 'sms'): void {
+    const hk = task.housekeeper;
+    if (!hk) return;
+    const text = this.missionMessage(task);
+    const property = task.propertyName ?? task.property?.name ?? task.beds24PropertyId ?? '';
+
+    let url = '';
+    switch (channel) {
+      case 'email': {
+        if (!hk.email) return;
+        const subject = encodeURIComponent(this.t.instant('housekeeping.mission_email_subject', { property }));
+        url = `mailto:${hk.email}?subject=${subject}&body=${encodeURIComponent(text)}`;
+        break;
+      }
+      case 'whatsapp': {
+        if (!hk.phone) return;
+        url = `${this.waUrl(hk.phone)}?text=${encodeURIComponent(text)}`;
+        break;
+      }
+      case 'sms': {
+        if (!hk.phone) return;
+        const phone = hk.phone.replace(/[^0-9+]/g, '');
+        url = `sms:${phone}${/iPhone|iPad|Macintosh/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(text)}`;
+        break;
+      }
+    }
+
+    if (url) window.open(url, '_blank');
+  }
 
   photoTypeLabel(type: string): string {
     const map: Record<string, string> = {
