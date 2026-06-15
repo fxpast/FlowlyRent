@@ -76,7 +76,7 @@ firebase:
 gemini:
   # Clé API Google Gemini (https://aistudio.google.com/app/apikey) — utilisée par le chatbot FAQ
   api-key: ${GEMINI_API_KEY:}
-  model: ${GEMINI_MODEL:gemini-2.0-flash}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 admin:
   username: ${ADMIN_USERNAME:}
