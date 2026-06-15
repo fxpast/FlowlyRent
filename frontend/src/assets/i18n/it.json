@@ -1136,7 +1136,7 @@
     "retranslate_confirm": "Riavviare la traduzione automatica di tutte le domande FAQ?",
     "retranslate_started": "Traduzione avviata per {{count}} domanda/e — risultato disponibile tra qualche secondo.",
     "chat_title": "Assistente IA",
-    "chat_subtitle": "Fai la tua domanda, l'assistente risponde basandosi sulla FAQ qui sotto.",
+    "chat_subtitle": "Fai la tua domanda sull'utilizzo di FlowlyRent — l'assistente conosce tutte le funzionalità dell'app.",
     "chat_placeholder": "Scrivi la tua domanda…",
     "chat_error": "L'assistente non è momentaneamente disponibile. Riprova più tardi."
   }

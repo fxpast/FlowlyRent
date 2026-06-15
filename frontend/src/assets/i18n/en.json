@@ -1138,7 +1138,7 @@
     "retranslate_confirm": "Re-run automatic translation for all FAQ items?",
     "retranslate_started": "Translation started for {{count}} item(s) — results available in a few seconds.",
     "chat_title": "AI Assistant",
-    "chat_subtitle": "Ask your question, the assistant replies based on the FAQ below.",
+    "chat_subtitle": "Ask your question about using FlowlyRent — the assistant knows all the app's features.",
     "chat_placeholder": "Type your question…",
     "chat_error": "Sorry, the assistant is temporarily unavailable. Please try again later."
   }

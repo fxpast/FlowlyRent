@@ -4,16 +4,22 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.FaqItem;
 import com.flowlyrent.repository.FaqRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,8 +29,10 @@ import java.util.Map;
 public class GeminiChatbotService {
 
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+    private static final int MAX_TOOL_ITERATIONS = 3;
 
     private final FaqRepository faqRepository;
+    private final ChatbotToolService chatbotToolService;
     private final ObjectMapper objectMapper;
 
     @Value("${gemini.api-key:}")
@@ -32,6 +40,32 @@ public class GeminiChatbotService {
 
     @Value("${gemini.model:gemini-2.5-flash}")
     private String model;
+
+    private String knowledgeBase = "";
+    private List<Map<String, Object>> toolDeclarations = List.of();
+
+    @PostConstruct
+    public void loadKnowledgeBase() {
+        try {
+            knowledgeBase = new String(
+                    new ClassPathResource("chatbot/knowledge-base.md").getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Impossible de charger la base de connaissance FlowlyRent", e);
+        }
+    }
+
+    @PostConstruct
+    public void loadToolDeclarations() {
+        try {
+            String json = new String(
+                    new ClassPathResource("chatbot/tool-declarations.json").getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+            toolDeclarations = objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.error("Impossible de charger les déclarations d'outils du chatbot", e);
+        }
+    }
 
     public String ask(String question, String lang) {
         if (apiKey == null || apiKey.isBlank()) {
@@ -41,43 +75,83 @@ public class GeminiChatbotService {
             throw new IllegalArgumentException("Question vide");
         }
 
-        String prompt = """
+        String systemInstruction = """
                 Tu es l'assistant d'aide de FlowlyRent, une plateforme de gestion de location saisonnière pour les hôtes.
-                Réponds à la question de l'hôte en te basant UNIQUEMENT sur la FAQ ci-dessous.
-                Si la réponse ne s'y trouve pas, dis-le poliment et invite l'hôte à contacter le support.
+
+                Pour toute question sur le fonctionnement de l'application, base-toi UNIQUEMENT sur la base de
+                connaissance et la FAQ ci-dessous.
+
+                Pour toute question portant sur les données réelles de l'hôte (revenus, marge, réservations,
+                arrivées, départs, séjours en cours, dépenses, ménage, stock de linge, etc.), utilise les outils mis
+                à ta disposition plutôt que la base de connaissance. Résous les dates ou périodes relatives
+                ("aujourd'hui", "demain", "hier", "ce mois-ci", "le mois dernier") en dates absolues (AAAA-MM-JJ) ou
+                en année/mois avant d'appeler un outil, en te basant sur la date du jour ci-dessous.
+
+                Si une information ne se trouve ni dans la base de connaissance, ni dans la FAQ, ni dans les outils,
+                dis-le poliment et invite l'hôte à contacter le support.
                 Réponds dans la même langue que la question, de façon concise et claire, sans formatage markdown.
+
+                Date du jour : %s
+
+                Base de connaissance FlowlyRent :
+                %s
 
                 FAQ :
                 %s
+                """.formatted(LocalDate.now(), knowledgeBase, buildFaqContext(lang));
 
-                Question de l'hôte : %s
-                """.formatted(buildFaqContext(lang), question.trim());
+        List<Map<String, Object>> contents = new ArrayList<>();
+        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", question.trim()))));
 
         try {
-            Map<String, Object> body = Map.of(
-                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
-            );
-            String json = objectMapper.writeValueAsString(body);
+            for (int iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemInstruction))));
+                body.put("contents", contents);
+                body.put("tools", List.of(Map.of("functionDeclarations", toolDeclarations)));
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL.formatted(model, apiKey)))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(25))
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
+                Map<String, Object> content = extractContent(callGemini(body));
 
-            HttpResponse<String> response = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build()
-                    .send(request, HttpResponse.BodyHandlers.ofString());
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.error("Gemini HTTP {} : {}", response.statusCode(), response.body());
-                throw new IllegalStateException("Erreur de l'assistant IA");
+                List<Map<String, Object>> functionCalls = new ArrayList<>();
+                StringBuilder textBuilder = new StringBuilder();
+                for (Map<String, Object> part : parts) {
+                    if (part.get("functionCall") != null) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> functionCall = (Map<String, Object>) part.get("functionCall");
+                        functionCalls.add(functionCall);
+                    } else if (part.get("text") != null) {
+                        textBuilder.append(part.get("text"));
+                    }
+                }
+
+                if (functionCalls.isEmpty()) {
+                    if (textBuilder.length() == 0) {
+                        throw new IllegalStateException("Réponse vide de l'assistant IA");
+                    }
+                    return textBuilder.toString().trim();
+                }
+
+                List<Map<String, Object>> modelParts = new ArrayList<>();
+                for (Map<String, Object> functionCall : functionCalls) {
+                    modelParts.add(Map.of("functionCall", functionCall));
+                }
+                contents.add(Map.of("role", "model", "parts", modelParts));
+
+                List<Map<String, Object>> responseParts = new ArrayList<>();
+                for (Map<String, Object> functionCall : functionCalls) {
+                    String toolName = (String) functionCall.get("name");
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> args = (Map<String, Object>) functionCall.get("args");
+                    Map<String, Object> toolResult = chatbotToolService.execute(toolName, args);
+                    responseParts.add(Map.of("functionResponse", Map.of("name", toolName, "response", toolResult)));
+                }
+                contents.add(Map.of("role", "user", "parts", responseParts));
             }
 
-            Map<String, Object> result = objectMapper.readValue(response.body(), new TypeReference<>() {});
-            return extractText(result);
+            throw new IllegalStateException("L'assistant IA n'a pas pu répondre");
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -86,15 +160,36 @@ public class GeminiChatbotService {
         }
     }
 
+    private Map<String, Object> callGemini(Map<String, Object> body) throws Exception {
+        String json = objectMapper.writeValueAsString(body);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL.formatted(model, apiKey)))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(25))
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            log.error("Gemini HTTP {} : {}", response.statusCode(), response.body());
+            throw new IllegalStateException("Erreur de l'assistant IA");
+        }
+
+        return objectMapper.readValue(response.body(), new TypeReference<>() {});
+    }
+
     @SuppressWarnings("unchecked")
-    private String extractText(Map<String, Object> result) {
+    private Map<String, Object> extractContent(Map<String, Object> result) {
         List<Map<String, Object>> candidates = (List<Map<String, Object>>) result.get("candidates");
         if (candidates == null || candidates.isEmpty()) {
             throw new IllegalStateException("Réponse vide de l'assistant IA");
         }
-        Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-        return parts.get(0).get("text").toString().trim();
+        return (Map<String, Object>) candidates.get(0).get("content");
     }
 
     private String buildFaqContext(String lang) {

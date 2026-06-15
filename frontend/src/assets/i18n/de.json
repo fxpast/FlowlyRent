@@ -1136,7 +1136,7 @@
     "retranslate_confirm": "Automatische Übersetzung aller FAQ-Fragen neu starten?",
     "retranslate_started": "Übersetzung für {{count}} Frage(n) gestartet — Ergebnis in wenigen Sekunden verfügbar.",
     "chat_title": "KI-Assistent",
-    "chat_subtitle": "Stelle deine Frage — der Assistent antwortet anhand der untenstehenden FAQ.",
+    "chat_subtitle": "Stelle deine Frage zur Nutzung von FlowlyRent — der Assistent kennt alle Funktionen der App.",
     "chat_placeholder": "Frage eingeben…",
     "chat_error": "Der Assistent ist momentan nicht verfügbar. Bitte später erneut versuchen."
   }

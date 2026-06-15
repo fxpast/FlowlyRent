@@ -1,0 +1,193 @@
+[
+  {
+    "name": "get_properties",
+    "description": "Liste les logements (propriétés) de l'hôte, avec leur nom configuré (shortName) sur FlowlyRent.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_revenue",
+    "description": "Donne le chiffre d'affaires (CA), le taux d'occupation, les nuits réservées pour un mois donné, ainsi que la marge bénéficiaire (CA moins dépenses Qonto) si le compte Qonto est connecté. Utiliser pour répondre à des questions du type 'combien j'ai gagné le mois dernier', 'quel est mon CA ce mois-ci', 'quelle est ma marge'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "year": {
+          "type": "INTEGER",
+          "description": "Année (AAAA). Si absent, utilise l'année en cours."
+        },
+        "month": {
+          "type": "INTEGER",
+          "description": "Mois (1-12). Si absent, utilise le mois en cours."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_arrivals",
+    "description": "Liste les voyageurs qui arrivent (check-in) à une date donnée. Utiliser pour 'qui arrive aujourd'hui/demain/le [date]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "date": {
+          "type": "STRING",
+          "description": "Date au format AAAA-MM-JJ. Si absent, utilise la date du jour."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_departures",
+    "description": "Liste les voyageurs qui partent (check-out) à une date donnée. Utiliser pour 'qui part aujourd'hui/demain/le [date]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "date": {
+          "type": "STRING",
+          "description": "Date au format AAAA-MM-JJ. Si absent, utilise la date du jour."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_ongoing_stays",
+    "description": "Liste les séjours en cours (voyageurs déjà arrivés et pas encore partis) à une date donnée. Utiliser pour 'qui est dans mes logements actuellement', 'qui séjourne aujourd'hui'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "date": {
+          "type": "STRING",
+          "description": "Date au format AAAA-MM-JJ. Si absent, utilise la date du jour."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_reservations",
+    "description": "Liste les réservations (arrivées) sur une période, avec filtres optionnels par logement, statut ou plateforme. Utiliser pour 'mes réservations de [mois]', 'mes réservations Airbnb', 'mes réservations pour [logement]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début (AAAA-MM-JJ). Si absent, début du mois en cours."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin (AAAA-MM-JJ). Si absent, fin du mois en cours."
+        },
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e'). Optionnel."
+        },
+        "status": {
+          "type": "STRING",
+          "description": "Statut de la réservation (ex: 'new', 'confirmed', 'cancelled'). Optionnel."
+        },
+        "platform": {
+          "type": "STRING",
+          "description": "Plateforme/canal de réservation (ex: 'Airbnb', 'Booking.com', 'Direct'). Optionnel."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_expenses_summary",
+    "description": "Donne le résumé des dépenses et recettes Qonto pour un mois donné : total débits, total crédits, répartition par catégorie et par logement. Utiliser pour 'mes dépenses ce mois-ci', 'combien j'ai dépensé en [catégorie]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "year": {
+          "type": "INTEGER",
+          "description": "Année (AAAA). Si absent, utilise l'année en cours."
+        },
+        "month": {
+          "type": "INTEGER",
+          "description": "Mois (1-12). Si absent, utilise le mois en cours."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_transactions",
+    "description": "Liste les transactions bancaires Qonto sur une période, avec filtres optionnels par catégorie ou par sens (DEBIT/CREDIT). Utiliser pour 'mes dernières transactions', 'mes dépenses en [catégorie] depuis [date]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début (AAAA-MM-JJ). Si absent, début du mois en cours."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin (AAAA-MM-JJ). Si absent, date du jour."
+        },
+        "category": {
+          "type": "STRING",
+          "description": "Catégorie de dépense (ex: 'Ménage', 'Linge', 'Charges'). Optionnel."
+        },
+        "side": {
+          "type": "STRING",
+          "description": "Sens de la transaction : 'DEBIT' (dépense) ou 'CREDIT' (recette). Optionnel."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_housekeeping_tasks",
+    "description": "Liste les tâches de ménage/entretien planifiées sur une période, avec filtres optionnels par logement ou statut. Utiliser pour 'mes ménages de la semaine', 'le ménage de [logement] est-il fait'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début (AAAA-MM-JJ). Si absent, date du jour."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin (AAAA-MM-JJ). Si absent, 30 jours après 'from'."
+        },
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e'). Optionnel."
+        },
+        "status": {
+          "type": "STRING",
+          "description": "Statut de la tâche (ex: 'PENDING', 'DONE'). Optionnel."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_housekeeping_costs",
+    "description": "Donne le coût total du ménage/entretien pour un mois donné, avec répartition par logement. Utiliser pour 'combien j'ai dépensé en ménage ce mois-ci'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "year": {
+          "type": "INTEGER",
+          "description": "Année (AAAA). Si absent, utilise l'année en cours."
+        },
+        "month": {
+          "type": "INTEGER",
+          "description": "Mois (1-12). Si absent, utilise le mois en cours."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_linen_stock",
+    "description": "Donne le stock de linge (draps, serviettes, etc.) d'un logement : quantité sur place, quantité au pressing/blanchisserie, seuil minimum, et alerte si stock bas. Utiliser pour 'quel est mon stock de linge pour [logement]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e')."
+        }
+      },
+      "required": ["propertyName"]
+    }
+  }
+]
