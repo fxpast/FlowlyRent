@@ -30,6 +30,7 @@ public class GeminiChatbotService {
 
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
     private static final int MAX_TOOL_ITERATIONS = 3;
+    private static final int MAX_HISTORY_MESSAGES = 20;
 
     private final FaqRepository faqRepository;
     private final ChatbotToolService chatbotToolService;
@@ -67,7 +68,7 @@ public class GeminiChatbotService {
         }
     }
 
-    public String ask(String question, String lang) {
+    public String ask(String question, String lang, List<Map<String, String>> history) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("L'assistant IA n'est pas configuré");
         }
@@ -87,6 +88,16 @@ public class GeminiChatbotService {
                 ("aujourd'hui", "demain", "hier", "ce mois-ci", "le mois dernier") en dates absolues (AAAA-MM-JJ) ou
                 en année/mois avant d'appeler un outil, en te basant sur la date du jour ci-dessous.
 
+                Certains outils effectuent une ACTION D'ÉCRITURE qui modifie le calendrier du logement sur Beds24 et
+                sur toutes les plateformes connectées (Airbnb, Booking.com, etc.) : block_dates (bloquer des dates)
+                et unblock_dates (débloquer des dates). Pour ces outils, tu dois OBLIGATOIREMENT :
+                1. D'abord répondre par un texte qui récapitule clairement l'action envisagée (logement concerné et
+                   dates précises au format AAAA-MM-JJ) et demander explicitement à l'hôte de confirmer, SANS
+                   appeler l'outil.
+                2. N'appeler block_dates ou unblock_dates que si le dernier message de l'hôte confirme explicitement
+                   l'action proposée (ex: "oui", "confirme", "vas-y", "d'accord").
+                3. Si l'hôte refuse ou ne confirme pas clairement, ne pas appeler l'outil et rester en attente.
+
                 Si une information ne se trouve ni dans la base de connaissance, ni dans la FAQ, ni dans les outils,
                 dis-le poliment et invite l'hôte à contacter le support.
                 Réponds dans la même langue que la question, de façon concise et claire, sans formatage markdown.
@@ -101,6 +112,15 @@ public class GeminiChatbotService {
                 """.formatted(LocalDate.now(), knowledgeBase, buildFaqContext(lang));
 
         List<Map<String, Object>> contents = new ArrayList<>();
+        if (history != null) {
+            int start = Math.max(0, history.size() - MAX_HISTORY_MESSAGES);
+            for (Map<String, String> msg : history.subList(start, history.size())) {
+                String text = msg.get("text");
+                if (text == null || text.isBlank()) continue;
+                String role = "assistant".equals(msg.get("role")) ? "model" : "user";
+                contents.add(Map.of("role", role, "parts", List.of(Map.of("text", text))));
+            }
+        }
         contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", question.trim()))));
 
         try {

@@ -64,6 +64,8 @@ public class ChatbotToolService {
                         strArg(args, "propertyName"), strArg(args, "status"));
                 case "get_housekeeping_costs" -> getHousekeepingCosts(userId, intArg(args, "year"), intArg(args, "month"));
                 case "get_linen_stock" -> getLinenStock(userId, strArg(args, "propertyName"));
+                case "block_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "blackout");
+                case "unblock_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "none");
                 default -> Map.of("error", "Outil inconnu : " + toolName);
             };
         } catch (IllegalStateException e) {
@@ -344,6 +346,54 @@ public class ChatbotToolService {
             return m;
         }).collect(Collectors.toList());
         return Map.of("propertyName", propertyName, "items", result);
+    }
+
+    // ─── Calendrier (action d'écriture) ────────────────────────────────────
+
+    /**
+     * Bloque ("blackout") ou débloque ("none") une plage de dates pour un logement.
+     * Reproduit la logique de AdminAvailabilityController.setBlackout.
+     */
+    private Map<String, Object> setBlackout(Long userId, String propertyName, LocalDate from, LocalDate to, String override) throws Exception {
+        if (from == null || to == null) {
+            return Map.of("error", "Dates de début et de fin requises (AAAA-MM-JJ).");
+        }
+        if (to.isBefore(from)) {
+            return Map.of("error", "La date de fin doit être postérieure ou égale à la date de début.");
+        }
+        String propId = resolvePropertyId(userId, propertyName);
+        if (propId == null) {
+            return Map.of("error", "Logement introuvable : " + propertyName);
+        }
+
+        Beds24Account account = requireBeds24Account(userId);
+        String token = beds24.tokenFor(account);
+
+        Map<String, String> calParams = new HashMap<>();
+        calParams.put("startDate", from.toString());
+        calParams.put("endDate", to.toString());
+        List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+        String roomId = rooms.stream()
+                .filter(r -> propId.equals(idStr(r.get("propertyId"))))
+                .map(r -> idStr(r.get("roomId")))
+                .findFirst()
+                .orElse(null);
+        if (roomId == null) {
+            return Map.of("error", "Chambre introuvable pour ce logement.");
+        }
+
+        beds24.updateCalendar(token, List.of(Map.of(
+                "roomId", Long.parseLong(roomId),
+                "calendar", List.of(Map.of("from", from.toString(), "to", to.toString(), "override", override))
+        )));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("propertyName", propertyName);
+        result.put("from", from.toString());
+        result.put("to", to.toString());
+        result.put("action", "blackout".equals(override) ? "blocked" : "unblocked");
+        return result;
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────

@@ -189,5 +189,53 @@
       },
       "required": ["propertyName"]
     }
+  },
+  {
+    "name": "block_dates",
+    "description": "ACTION D'ÉCRITURE — bloque (rend indisponible à la réservation) une ou plusieurs dates pour un logement, sur Beds24 et toutes les plateformes connectées (Airbnb, Booking.com, etc.). N'appelle cet outil QUE SI l'hôte a explicitement confirmé l'action après que tu lui as présenté un récapitulatif (logement et dates) dans ta réponse précédente.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e')."
+        },
+        "from": {
+          "type": "STRING",
+          "description": "Date de début du blocage, incluse (AAAA-MM-JJ)."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin du blocage, incluse (AAAA-MM-JJ). Identique à 'from' pour bloquer un seul jour."
+        },
+        "reason": {
+          "type": "STRING",
+          "description": "Raison du blocage (optionnel, informatif uniquement, non transmis à Beds24)."
+        }
+      },
+      "required": ["propertyName", "from", "to"]
+    }
+  },
+  {
+    "name": "unblock_dates",
+    "description": "ACTION D'ÉCRITURE — débloque (rend à nouveau disponible à la réservation) une ou plusieurs dates précédemment bloquées pour un logement, sur Beds24 et toutes les plateformes connectées. N'appelle cet outil QUE SI l'hôte a explicitement confirmé l'action après que tu lui as présenté un récapitulatif (logement et dates) dans ta réponse précédente.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e')."
+        },
+        "from": {
+          "type": "STRING",
+          "description": "Date de début à débloquer, incluse (AAAA-MM-JJ)."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin à débloquer, incluse (AAAA-MM-JJ). Identique à 'from' pour débloquer un seul jour."
+        }
+      },
+      "required": ["propertyName", "from", "to"]
+    }
   }
 ]

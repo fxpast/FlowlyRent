@@ -158,10 +158,11 @@ export class AdminFaqComponent implements OnInit {
   sendChatMessage(): void {
     const question = this.chatInput.trim();
     if (!question || this.chatLoading()) return;
+    const history = this.chatMessages();
     this.chatMessages.update(msgs => [...msgs, { role: 'user', text: question }]);
     this.chatInput = '';
     this.chatLoading.set(true);
-    this.chatbotService.ask(question, this.lang.current()).subscribe({
+    this.chatbotService.ask(question, this.lang.current(), history).subscribe({
       next: res => {
         this.chatMessages.update(msgs => [...msgs, { role: 'assistant', text: res.answer }]);
         this.chatLoading.set(false);

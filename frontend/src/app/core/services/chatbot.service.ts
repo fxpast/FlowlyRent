@@ -9,7 +9,7 @@ export class ChatbotService {
 
   constructor(private http: HttpClient) {}
 
-  ask(question: string, lang: string): Observable<{ answer: string }> {
-    return this.http.post<{ answer: string }>(`${this.base}/admin/chatbot/ask`, { question, lang });
+  ask(question: string, lang: string, history: { role: string; text: string }[]): Observable<{ answer: string }> {
+    return this.http.post<{ answer: string }>(`${this.base}/admin/chatbot/ask`, { question, lang, history });
   }
 }
