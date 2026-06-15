@@ -1136,6 +1136,10 @@
     "retranslate": "Retraduire tout",
     "retranslate_hint": "Relancer la traduction automatique de toutes les FAQ (EN/ES/DE/IT)",
     "retranslate_confirm": "Relancer la traduction automatique de toutes les questions FAQ ?",
-    "retranslate_started": "Traduction lancée pour {{count}} question(s) — résultat disponible dans quelques secondes."
+    "retranslate_started": "Traduction lancée pour {{count}} question(s) — résultat disponible dans quelques secondes.",
+    "chat_title": "Assistant IA",
+    "chat_subtitle": "Posez votre question, l'assistant répond à partir de la FAQ ci-dessous.",
+    "chat_placeholder": "Tapez votre question…",
+    "chat_error": "Désolé, l'assistant est momentanément indisponible. Réessayez plus tard."
   }
 }
