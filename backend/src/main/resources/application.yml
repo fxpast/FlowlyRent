@@ -78,6 +78,12 @@ gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash}
 
+groq:
+  # Clé API Groq (https://console.groq.com/keys) — utilisée comme repli (fallback) du chatbot FAQ
+  # si Gemini est indisponible (ex. quota dépassé)
+  api-key: ${GROQ_API_KEY:}
+  model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+
 admin:
   username: ${ADMIN_USERNAME:}
   password: ${ADMIN_PASSWORD:}
