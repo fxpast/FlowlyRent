@@ -897,6 +897,13 @@
     "top_pages_title": "Most visited pages",
     "user_growth_title": "New users",
     "logins_chart_title": "Logins (30d)",
+    "faq_suggestions_kpi": "FAQ suggestions",
+    "pending_label": "pending",
+    "module_adoption_title": "Module adoption",
+    "plan_breakdown_title": "Plan breakdown",
+    "qonto_label": "Qonto connected",
+    "housekeeping_label": "Housekeeping active",
+    "linen_label": "Linen stock configured",
     "no_data": "No data collected yet.",
     "page_header": "Page",
     "views_header": "Views",
@@ -1140,6 +1147,15 @@
     "chat_title": "AI Assistant",
     "chat_subtitle": "Ask your question about using FlowlyRent — the assistant knows all the app's features.",
     "chat_placeholder": "Type your question…",
-    "chat_error": "Sorry, the assistant is temporarily unavailable. Please try again later."
+    "chat_error": "Sorry, the assistant is temporarily unavailable. Please try again later.",
+    "suggestions_title": "AI assistant suggestions",
+    "suggestions_hint": "Questions asked by hosts that the assistant couldn't answer with the current FAQ. Review and approve to add them to the FAQ.",
+    "suggestions_empty": "No pending suggestions.",
+    "suggestion_no_answer": "(The assistant didn't propose an answer)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "reject_confirm": "Reject this suggestion?",
+    "approved": "Question added to the FAQ",
+    "rejected": "Suggestion rejected"
   }
 }

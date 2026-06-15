@@ -27,4 +27,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     @Query(value = "SELECT DATE(created_at) as day, COUNT(*) as cnt FROM users WHERE created_at > :after AND id NOT IN :excludeIds GROUP BY DATE(created_at) ORDER BY day", nativeQuery = true)
     List<Object[]> findDailyNewUsersExcluding(@Param("after") LocalDateTime after, @Param("excludeIds") List<Long> excludeIds);
+
+    @Query("SELECT u.plan, COUNT(u) FROM AppUser u WHERE u.id NOT IN :excludeIds GROUP BY u.plan")
+    List<Object[]> countByPlanExcluding(@Param("excludeIds") List<Long> excludeIds);
 }

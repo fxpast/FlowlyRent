@@ -22,6 +22,11 @@ interface Stats {
   topPages: { page: string; count: number }[];
   userGrowthLast30Days: { date: string; count: number }[];
   loginsChartLast30Days: { date: string; count: number }[];
+  planBreakdown: { plan: string; count: number }[];
+  qontoConnectedUsers: number;
+  housekeepingActiveUsers: number;
+  linenActiveUsers: number;
+  pendingFaqSuggestions: number;
 }
 
 @Component({
@@ -91,6 +96,77 @@ interface Stats {
             <div class="kpi-label">{{ 'superadmin.top_page_kpi' | translate }}</div>
             <div class="kpi-sub">{{ stats()!.topPages[0].count || 0 }} {{ 'superadmin.views' | translate }}</div>
           </div>
+        </mat-card>
+
+        <mat-card class="kpi-card">
+          <div class="kpi-icon amber"><mat-icon>auto_awesome</mat-icon></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ stats()!.pendingFaqSuggestions }}</div>
+            <div class="kpi-label">{{ 'superadmin.faq_suggestions_kpi' | translate }}</div>
+            <div class="kpi-sub">{{ 'superadmin.pending_label' | translate }}</div>
+          </div>
+        </mat-card>
+      </div>
+
+      <!-- Adoption des modules & répartition par plan -->
+      <div class="section-row">
+        <mat-card class="table-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>extension</mat-icon>
+            <mat-card-title>{{ 'superadmin.module_adoption_title' | translate }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="adoption-list">
+              <div class="adoption-item">
+                <div class="adoption-label">
+                  <mat-icon>account_balance</mat-icon>
+                  <span>{{ 'superadmin.qonto_label' | translate }}</span>
+                </div>
+                <div class="adoption-bar"><div class="adoption-fill" [style.width.%]="modulePercent(stats()!.qontoConnectedUsers)"></div></div>
+                <div class="adoption-count">{{ stats()!.qontoConnectedUsers }} / {{ stats()!.totalUsers }}</div>
+              </div>
+              <div class="adoption-item">
+                <div class="adoption-label">
+                  <mat-icon>home_repair_service</mat-icon>
+                  <span>{{ 'superadmin.housekeeping_label' | translate }}</span>
+                </div>
+                <div class="adoption-bar"><div class="adoption-fill" [style.width.%]="modulePercent(stats()!.housekeepingActiveUsers)"></div></div>
+                <div class="adoption-count">{{ stats()!.housekeepingActiveUsers }} / {{ stats()!.totalUsers }}</div>
+              </div>
+              <div class="adoption-item">
+                <div class="adoption-label">
+                  <mat-icon>checkroom</mat-icon>
+                  <span>{{ 'superadmin.linen_label' | translate }}</span>
+                </div>
+                <div class="adoption-bar"><div class="adoption-fill" [style.width.%]="modulePercent(stats()!.linenActiveUsers)"></div></div>
+                <div class="adoption-count">{{ stats()!.linenActiveUsers }} / {{ stats()!.totalUsers }}</div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="table-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>pie_chart</mat-icon>
+            <mat-card-title>{{ 'superadmin.plan_breakdown_title' | translate }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (stats()!.planBreakdown.length === 0) {
+              <p class="empty">{{ 'superadmin.no_data' | translate }}</p>
+            } @else {
+              <div class="adoption-list">
+                @for (p of stats()!.planBreakdown; track p.plan) {
+                  <div class="adoption-item">
+                    <div class="adoption-label">
+                      <span class="plan-badge" [class]="'plan-' + p.plan.toLowerCase()">{{ p.plan }}</span>
+                    </div>
+                    <div class="adoption-bar"><div class="adoption-fill" [style.width.%]="modulePercent(p.count)"></div></div>
+                    <div class="adoption-count">{{ p.count }} / {{ stats()!.totalUsers }}</div>
+                  </div>
+                }
+              </div>
+            }
+          </mat-card-content>
         </mat-card>
       </div>
 
@@ -165,6 +241,7 @@ interface Stats {
     .kpi-icon.orange { background: #f57c00; }
     .kpi-icon.purple { background: #7b1fa2; }
     .kpi-icon.teal   { background: #00695c; }
+    .kpi-icon.amber  { background: #ffa000; }
     .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: #1a1a1a; }
     .kpi-label { font-size: 13px; color: #555; margin-top: 4px; font-weight: 500; }
     .kpi-sub { font-size: 12px; color: #999; margin-top: 2px; }
@@ -179,7 +256,19 @@ interface Stats {
     .bar-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
     .bar { width: 100%; background: #1976d2; border-radius: 3px 3px 0 0; min-height: 2px; }
     .bar-label { font-size: 10px; color: #666; margin-top: 2px; }
-    @media (max-width: 768px) { .section-row { grid-template-columns: 1fr; } }
+    .adoption-list { display: flex; flex-direction: column; gap: 16px; }
+    .adoption-item { display: grid; grid-template-columns: 160px 1fr 70px; align-items: center; gap: 12px; }
+    .adoption-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #444; font-weight: 500; }
+    .adoption-label mat-icon { font-size: 18px; width: 18px; height: 18px; color: #777; }
+    .adoption-bar { height: 8px; border-radius: 4px; background: #eee; overflow: hidden; }
+    .adoption-fill { height: 100%; background: #1976d2; border-radius: 4px; }
+    .adoption-count { font-size: 12px; color: #888; text-align: right; white-space: nowrap; }
+    .plan-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px; }
+    .plan-free    { background: #eceff1; color: #455a64; }
+    .plan-starter { background: #e3f2fd; color: #1565c0; }
+    .plan-pro     { background: #ede7f6; color: #5e35b1; }
+    .plan-agence  { background: #fff3e0; color: #ef6c00; }
+    @media (max-width: 768px) { .section-row { grid-template-columns: 1fr; } .adoption-item { grid-template-columns: 120px 1fr 60px; } }
   `]
 })
 export class SuperadminDashboardComponent implements OnInit {
@@ -208,5 +297,11 @@ export class SuperadminDashboardComponent implements OnInit {
   barHeight(value: number, data: { count: number }[]): number {
     const max = Math.max(...data.map(d => d.count), 1);
     return Math.round((value / max) * 60) + 4;
+  }
+
+  modulePercent(count: number): number {
+    const total = this.stats()?.totalUsers || 0;
+    if (total === 0) return 0;
+    return Math.round((count / total) * 100);
   }
 }

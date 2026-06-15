@@ -100,7 +100,7 @@ public class GeminiChatbotService {
                     String toolName = (String) functionCall.get("name");
                     @SuppressWarnings("unchecked")
                     Map<String, Object> args = (Map<String, Object>) functionCall.get("args");
-                    Map<String, Object> toolResult = chatbotToolService.execute(toolName, args);
+                    Map<String, Object> toolResult = chatbotToolService.execute(toolName, args, lang);
                     responseParts.add(Map.of("functionResponse", Map.of("name", toolName, "response", toolResult)));
                 }
                 contents.add(Map.of("role", "user", "parts", responseParts));

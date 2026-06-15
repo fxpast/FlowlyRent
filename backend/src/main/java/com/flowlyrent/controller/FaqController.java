@@ -1,7 +1,9 @@
 package com.flowlyrent.controller;
 
 import com.flowlyrent.model.FaqItem;
+import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.repository.FaqRepository;
+import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.service.FaqTranslationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class FaqController {
 
     private final FaqRepository faqRepository;
+    private final FaqSuggestionRepository faqSuggestionRepository;
     private final FaqTranslationService translationService;
 
     @GetMapping("/public/faq")
@@ -83,6 +86,42 @@ public class FaqController {
         int count = faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc().size();
         translationService.translateAllAsync();
         return ResponseEntity.ok(Map.of("message", "Traduction lancée en arrière-plan", "count", count));
+    }
+
+    @GetMapping("/superadmin/faq-suggestions")
+    public List<FaqSuggestion> getSuggestions() {
+        return faqSuggestionRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @PostMapping("/superadmin/faq-suggestions/{id}/approve")
+    public ResponseEntity<FaqItem> approveSuggestion(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        FaqSuggestion suggestion = faqSuggestionRepository.findById(id).orElse(null);
+        if (suggestion == null) return ResponseEntity.notFound().build();
+
+        String question = body.getOrDefault("question", suggestion.getQuestion()).toString().trim();
+        String answer = body.getOrDefault("answer", suggestion.getAnswer()).toString().trim();
+        if (question.isBlank() || answer.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        FaqItem item = new FaqItem();
+        item.setQuestion(question);
+        item.setAnswer(answer);
+        int maxOrder = faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc()
+                .stream().mapToInt(FaqItem::getDisplayOrder).max().orElse(-1);
+        item.setDisplayOrder(maxOrder + 1);
+        FaqItem saved = faqRepository.save(item);
+        translationService.translateAsync(saved);
+
+        faqSuggestionRepository.delete(suggestion);
+        return ResponseEntity.ok(saved);
+    }
+
+    @DeleteMapping("/superadmin/faq-suggestions/{id}")
+    public ResponseEntity<Void> rejectSuggestion(@PathVariable Long id) {
+        if (!faqSuggestionRepository.existsById(id)) return ResponseEntity.notFound().build();
+        faqSuggestionRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/superadmin/faq-import")

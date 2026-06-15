@@ -897,6 +897,13 @@
     "top_pages_title": "Pagine più visitate",
     "user_growth_title": "Nuovi utenti",
     "logins_chart_title": "Accessi (30g)",
+    "faq_suggestions_kpi": "Suggerimenti FAQ",
+    "pending_label": "in attesa",
+    "module_adoption_title": "Adozione dei moduli",
+    "plan_breakdown_title": "Distribuzione per piano",
+    "qonto_label": "Qonto collegato",
+    "housekeeping_label": "Pulizie attive",
+    "linen_label": "Scorte di biancheria configurate",
     "no_data": "Nessun dato ancora raccolto.",
     "page_header": "Pagina",
     "views_header": "Visualizzazioni",
@@ -1138,6 +1145,15 @@
     "chat_title": "Assistente IA",
     "chat_subtitle": "Fai la tua domanda sull'utilizzo di FlowlyRent — l'assistente conosce tutte le funzionalità dell'app.",
     "chat_placeholder": "Scrivi la tua domanda…",
-    "chat_error": "L'assistente non è momentaneamente disponibile. Riprova più tardi."
+    "chat_error": "L'assistente non è momentaneamente disponibile. Riprova più tardi.",
+    "suggestions_title": "Suggerimenti dell'assistente IA",
+    "suggestions_hint": "Domande poste dagli host a cui l'assistente non ha potuto rispondere con la FAQ attuale. Rivedi e approva per aggiungerle alla FAQ.",
+    "suggestions_empty": "Nessun suggerimento in attesa.",
+    "suggestion_no_answer": "(L'assistente non ha proposto una risposta)",
+    "approve": "Approva",
+    "reject": "Rifiuta",
+    "reject_confirm": "Rifiutare questo suggerimento?",
+    "approved": "Domanda aggiunta alla FAQ",
+    "rejected": "Suggerimento rifiutato"
   }
 }

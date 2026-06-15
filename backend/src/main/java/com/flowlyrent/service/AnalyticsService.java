@@ -3,8 +3,13 @@ package com.flowlyrent.service;
 import com.flowlyrent.dto.SuperAdminStatsDTO;
 import com.flowlyrent.model.AnalyticsEvent;
 import com.flowlyrent.model.enums.AnalyticsEventType;
+import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.repository.AnalyticsEventRepository;
 import com.flowlyrent.repository.AppUserRepository;
+import com.flowlyrent.repository.FaqSuggestionRepository;
+import com.flowlyrent.repository.HousekeepingTaskRepository;
+import com.flowlyrent.repository.LinenItemRepository;
+import com.flowlyrent.repository.QontoAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +29,10 @@ public class AnalyticsService {
 
     private final AnalyticsEventRepository analyticsRepo;
     private final AppUserRepository userRepo;
+    private final QontoAccountRepository qontoAccountRepo;
+    private final HousekeepingTaskRepository housekeepingTaskRepo;
+    private final LinenItemRepository linenItemRepo;
+    private final FaqSuggestionRepository faqSuggestionRepo;
 
     private List<String> getInternalEmails() {
         if (internalEmailsConfig == null || internalEmailsConfig.isBlank()) return List.of();
@@ -75,6 +84,15 @@ public class AnalyticsService {
                 .build())
             .toList();
 
+        List<SuperAdminStatsDTO.PlanStatDTO> planBreakdown = userRepo
+            .countByPlanExcluding(excludeIds)
+            .stream()
+            .map(row -> SuperAdminStatsDTO.PlanStatDTO.builder()
+                .plan(((SubscriptionPlan) row[0]).name())
+                .count(((Number) row[1]).longValue())
+                .build())
+            .toList();
+
         return SuperAdminStatsDTO.builder()
             .totalUsers(userRepo.countExcluding(excludeIds))
             .newUsersLast7Days(userRepo.countByCreatedAtAfterExcluding(minus7, excludeIds))
@@ -88,6 +106,11 @@ public class AnalyticsService {
             .topPages(topPages)
             .userGrowthLast30Days(userGrowth)
             .loginsChartLast30Days(loginsChart)
+            .planBreakdown(planBreakdown)
+            .qontoConnectedUsers(qontoAccountRepo.countByConnectedTrue())
+            .housekeepingActiveUsers(housekeepingTaskRepo.countDistinctUsers())
+            .linenActiveUsers(linenItemRepo.countDistinctUsers())
+            .pendingFaqSuggestions(faqSuggestionRepo.count())
             .build();
     }
 }

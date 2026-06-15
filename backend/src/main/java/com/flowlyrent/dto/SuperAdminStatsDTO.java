@@ -26,6 +26,13 @@ public class SuperAdminStatsDTO {
     private List<DailyStatDTO> userGrowthLast30Days;
     private List<DailyStatDTO> loginsChartLast30Days;
 
+    private List<PlanStatDTO> planBreakdown;
+
+    private long qontoConnectedUsers;
+    private long housekeepingActiveUsers;
+    private long linenActiveUsers;
+    private long pendingFaqSuggestions;
+
     @Data
     @Builder
     public static class PageStatDTO {
@@ -37,6 +44,13 @@ public class SuperAdminStatsDTO {
     @Builder
     public static class DailyStatDTO {
         private String date;
+        private long count;
+    }
+
+    @Data
+    @Builder
+    public static class PlanStatDTO {
+        private String plan;
         private long count;
     }
 }

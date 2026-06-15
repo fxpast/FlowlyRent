@@ -2,6 +2,7 @@ package com.flowlyrent.repository;
 
 import com.flowlyrent.model.HousekeepingTask;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,4 +26,7 @@ public interface HousekeepingTaskRepository extends JpaRepository<HousekeepingTa
     boolean existsByBeds24BookingId(String beds24BookingId);
 
     List<HousekeepingTask> findByUserIdOrderByScheduledDateAsc(Long userId);
+
+    @Query("SELECT COUNT(DISTINCT t.user.id) FROM HousekeepingTask t")
+    long countDistinctUsers();
 }

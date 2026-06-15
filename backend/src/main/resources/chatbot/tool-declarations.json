@@ -217,6 +217,24 @@
     }
   },
   {
+    "name": "suggest_faq",
+    "description": "À appeler UNIQUEMENT si la question de l'hôte porte sur le fonctionnement de FlowlyRent et que tu ne trouves la réponse ni dans la base de connaissance, ni dans la FAQ. Enregistre la question pour qu'elle soit ajoutée à la FAQ après relecture par l'équipe FlowlyRent.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "question": {
+          "type": "STRING",
+          "description": "La question de l'hôte, reformulée clairement si besoin, dans la langue de la conversation."
+        },
+        "answer": {
+          "type": "STRING",
+          "description": "Si tu connais une réponse probable basée sur tes connaissances générales sur FlowlyRent, propose-la ici (elle sera relue avant publication). Laisse vide si tu n'as aucune idée de la réponse."
+        }
+      },
+      "required": ["question"]
+    }
+  },
+  {
     "name": "unblock_dates",
     "description": "ACTION D'ÉCRITURE — débloque (rend à nouveau disponible à la réservation) une ou plusieurs dates précédemment bloquées pour un logement, sur Beds24 et toutes les plateformes connectées. N'appelle cet outil QUE SI l'hôte a explicitement confirmé l'action après que tu lui as présenté un récapitulatif (logement et dates) dans ta réponse précédente.",
     "parameters": {

@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface QontoAccountRepository extends JpaRepository<QontoAccount, Long> {
     Optional<QontoAccount> findByAppUserId(Long userId);
+    long countByConnectedTrue();
 }

@@ -897,6 +897,13 @@
     "top_pages_title": "Pages les plus consultées",
     "user_growth_title": "Nouveaux utilisateurs",
     "logins_chart_title": "Connexions (30j)",
+    "faq_suggestions_kpi": "Suggestions FAQ",
+    "pending_label": "en attente",
+    "module_adoption_title": "Adoption des modules",
+    "plan_breakdown_title": "Répartition par plan",
+    "qonto_label": "Qonto connecté",
+    "housekeeping_label": "Entretien actif",
+    "linen_label": "Stock de linge configuré",
     "no_data": "Aucune donnée encore collectée.",
     "page_header": "Page",
     "views_header": "Vues",
@@ -1140,6 +1147,15 @@
     "chat_title": "Assistant IA",
     "chat_subtitle": "Posez votre question sur l'utilisation de FlowlyRent — l'assistant connaît toutes les fonctionnalités de l'application.",
     "chat_placeholder": "Tapez votre question…",
-    "chat_error": "Désolé, l'assistant est momentanément indisponible. Réessayez plus tard."
+    "chat_error": "Désolé, l'assistant est momentanément indisponible. Réessayez plus tard.",
+    "suggestions_title": "Suggestions de l'assistant IA",
+    "suggestions_hint": "Questions posées par les hôtes auxquelles l'assistant n'a pas pu répondre avec la FAQ actuelle. Relisez et approuvez pour les ajouter à la FAQ.",
+    "suggestions_empty": "Aucune suggestion en attente.",
+    "suggestion_no_answer": "(L'assistant n'a proposé aucune réponse)",
+    "approve": "Approuver",
+    "reject": "Rejeter",
+    "reject_confirm": "Rejeter cette suggestion ?",
+    "approved": "Question ajoutée à la FAQ",
+    "rejected": "Suggestion rejetée"
   }
 }

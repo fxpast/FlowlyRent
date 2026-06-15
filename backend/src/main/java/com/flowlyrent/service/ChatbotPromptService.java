@@ -91,8 +91,15 @@ public class ChatbotPromptService {
                    l'action proposée (ex: "oui", "confirme", "vas-y", "d'accord").
                 3. Si l'hôte refuse ou ne confirme pas clairement, ne pas appeler l'outil et rester en attente.
 
-                Si une information ne se trouve ni dans la base de connaissance, ni dans la FAQ, ni dans les outils,
-                dis-le poliment et invite l'hôte à contacter le support.
+                Si une question porte sur le fonctionnement de FlowlyRent et que la réponse ne se trouve ni dans la
+                base de connaissance, ni dans la FAQ, tu DOIS appeler l'outil suggest_faq (avec la question de
+                l'hôte, et une proposition de réponse si tu en as une fiable, sinon laisse "answer" vide) AVANT de
+                répondre à l'hôte — c'est une étape obligatoire, pas une simple description. Ce n'est qu'une fois
+                cet outil exécuté que tu informes poliment l'hôte que sa question a été transmise à l'équipe
+                FlowlyRent pour être ajoutée à la FAQ. Ne dis JAMAIS à l'hôte que sa question sera transmise si tu
+                n'as pas réellement appelé suggest_faq dans ce même échange.
+                Si une question porte sur les données de l'hôte mais qu'aucun outil ne permet d'y répondre, dis-le
+                poliment et invite l'hôte à contacter le support, sans appeler suggest_faq.
                 Réponds dans la même langue que la question, de façon concise et claire, sans formatage markdown.
 
                 Date du jour : %s

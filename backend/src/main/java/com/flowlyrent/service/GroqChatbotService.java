@@ -94,7 +94,7 @@ public class GroqChatbotService {
                     Map<String, Object> args = (argumentsJson == null || argumentsJson.isBlank())
                             ? Map.of()
                             : objectMapper.readValue(argumentsJson, new TypeReference<>() {});
-                    Map<String, Object> toolResult = chatbotToolService.execute(toolName, args);
+                    Map<String, Object> toolResult = chatbotToolService.execute(toolName, args, lang);
                     messages.add(Map.of(
                             "role", "tool",
                             "tool_call_id", toolCallId,

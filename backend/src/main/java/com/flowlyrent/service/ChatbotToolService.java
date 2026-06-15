@@ -2,12 +2,14 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.LinenItem;
 import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.MovementDirection;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.LinenMovementRepository;
@@ -43,9 +45,10 @@ public class ChatbotToolService {
     private final PropertyConfigRepository propConfigRepo;
     private final LinenItemRepository linenItemRepo;
     private final LinenMovementRepository linenMovementRepo;
+    private final FaqSuggestionRepository faqSuggestionRepo;
     private final SecurityUtils securityUtils;
 
-    public Map<String, Object> execute(String toolName, Map<String, Object> args) {
+    public Map<String, Object> execute(String toolName, Map<String, Object> args, String lang) {
         if (args == null) args = Map.of();
         Long userId = securityUtils.getCurrentUserId();
         try {
@@ -66,6 +69,7 @@ public class ChatbotToolService {
                 case "get_linen_stock" -> getLinenStock(userId, strArg(args, "propertyName"));
                 case "block_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "blackout");
                 case "unblock_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "none");
+                case "suggest_faq" -> suggestFaq(userId, lang, strArg(args, "question"), strArg(args, "answer"));
                 default -> Map.of("error", "Outil inconnu : " + toolName);
             };
         } catch (IllegalStateException e) {
@@ -394,6 +398,21 @@ public class ChatbotToolService {
         result.put("to", to.toString());
         result.put("action", "blackout".equals(override) ? "blocked" : "unblocked");
         return result;
+    }
+
+    // ─── Suggestions FAQ ────────────────────────────────────────────────────
+
+    private Map<String, Object> suggestFaq(Long userId, String lang, String question, String answer) {
+        if (question == null || question.isBlank()) {
+            return Map.of("error", "Question vide.");
+        }
+        FaqSuggestion suggestion = new FaqSuggestion();
+        suggestion.setQuestion(question.trim());
+        suggestion.setAnswer(answer != null && !answer.isBlank() ? answer.trim() : null);
+        suggestion.setLang(lang != null && !lang.isBlank() ? lang : "fr");
+        suggestion.setUserId(userId);
+        faqSuggestionRepo.save(suggestion);
+        return Map.of("success", true);
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────

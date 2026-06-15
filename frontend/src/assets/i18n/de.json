@@ -897,6 +897,13 @@
     "top_pages_title": "Meistbesuchte Seiten",
     "user_growth_title": "Neue Nutzer",
     "logins_chart_title": "Anmeldungen (30T)",
+    "faq_suggestions_kpi": "FAQ-Vorschläge",
+    "pending_label": "ausstehend",
+    "module_adoption_title": "Modulnutzung",
+    "plan_breakdown_title": "Verteilung nach Tarif",
+    "qonto_label": "Qonto verbunden",
+    "housekeeping_label": "Reinigung aktiv",
+    "linen_label": "Wäschebestand konfiguriert",
     "no_data": "Noch keine Daten gesammelt.",
     "page_header": "Seite",
     "views_header": "Aufrufe",
@@ -1138,6 +1145,15 @@
     "chat_title": "KI-Assistent",
     "chat_subtitle": "Stelle deine Frage zur Nutzung von FlowlyRent — der Assistent kennt alle Funktionen der App.",
     "chat_placeholder": "Frage eingeben…",
-    "chat_error": "Der Assistent ist momentan nicht verfügbar. Bitte später erneut versuchen."
+    "chat_error": "Der Assistent ist momentan nicht verfügbar. Bitte später erneut versuchen.",
+    "suggestions_title": "Vorschläge des KI-Assistenten",
+    "suggestions_hint": "Fragen von Gastgebern, die der Assistent mit der aktuellen FAQ nicht beantworten konnte. Prüfen und freigeben, um sie zur FAQ hinzuzufügen.",
+    "suggestions_empty": "Keine ausstehenden Vorschläge.",
+    "suggestion_no_answer": "(Der Assistent hat keine Antwort vorgeschlagen)",
+    "approve": "Freigeben",
+    "reject": "Ablehnen",
+    "reject_confirm": "Diesen Vorschlag ablehnen?",
+    "approved": "Frage zur FAQ hinzugefügt",
+    "rejected": "Vorschlag abgelehnt"
   }
 }

@@ -53,6 +53,43 @@ import { environment } from '../../../environments/environment';
         <div class="center-spin"><mat-spinner diameter="40" /></div>
       } @else {
 
+        <!-- Suggestions de l'assistant IA -->
+        @if (suggestions().length > 0) {
+          <mat-card class="suggestions-card">
+            <mat-card-content>
+              <h2 class="suggestions-title">
+                <mat-icon>auto_awesome</mat-icon>
+                {{ 'faq.suggestions_title' | translate }} ({{ suggestions().length }})
+              </h2>
+              <p class="suggestions-hint">{{ 'faq.suggestions_hint' | translate }}</p>
+              @for (s of suggestions(); track s.id) {
+                <div class="suggestion-item">
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>{{ 'faq.question_label' | translate }}</mat-label>
+                    <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="1"
+                              [(ngModel)]="s.question"></textarea>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>{{ 'faq.answer_label' | translate }}</mat-label>
+                    <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="3"
+                              [placeholder]="'faq.suggestion_no_answer' | translate"
+                              [(ngModel)]="s.answer"></textarea>
+                  </mat-form-field>
+                  <div class="suggestion-actions">
+                    <button mat-button color="warn" (click)="rejectSuggestion(s.id)">
+                      <mat-icon>close</mat-icon> {{ 'faq.reject' | translate }}
+                    </button>
+                    <button mat-raised-button color="primary" (click)="approveSuggestion(s)"
+                            [disabled]="!s.question?.trim() || !s.answer?.trim()">
+                      <mat-icon>check</mat-icon> {{ 'faq.approve' | translate }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
         <!-- Formulaire ajout / édition -->
         @if (editing()) {
           <mat-card class="edit-card">
@@ -123,6 +160,12 @@ import { environment } from '../../../environments/environment';
     .page-header h1 { margin: 0; font-size: 24px; font-weight: 700; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .edit-card { margin-bottom: 24px; border-left: 4px solid #0288d1; }
+    .suggestions-card { margin-bottom: 24px; border-left: 4px solid #f9a825; }
+    .suggestions-title { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+    .suggestions-hint { margin: 0 0 16px; font-size: 13px; color: #777; }
+    .suggestion-item { padding: 12px 0; border-top: 1px solid #eee; }
+    .suggestion-item:first-of-type { border-top: none; padding-top: 0; }
+    .suggestion-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
     .full { width: 100%; }
     .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
     .faq-list { display: flex; flex-direction: column; gap: 12px; }
@@ -144,6 +187,7 @@ import { environment } from '../../../environments/environment';
 })
 export class SuperadminFaqComponent implements OnInit {
   items        = signal<any[]>([]);
+  suggestions  = signal<any[]>([]);
   loading      = signal(true);
   saving       = signal(false);
   editing      = signal(false);
@@ -155,13 +199,40 @@ export class SuperadminFaqComponent implements OnInit {
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar, private t: TranslateService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { this.load(); this.loadSuggestions(); }
 
   private load(): void {
     this.loading.set(true);
     this.http.get<any[]>(`${environment.apiUrl}/superadmin/faq`).subscribe({
       next: list => { this.items.set(list); this.loading.set(false); },
       error: () => this.loading.set(false)
+    });
+  }
+
+  private loadSuggestions(): void {
+    this.http.get<any[]>(`${environment.apiUrl}/superadmin/faq-suggestions`).subscribe({
+      next: list => this.suggestions.set(list)
+    });
+  }
+
+  approveSuggestion(s: any): void {
+    const payload = { question: s.question, answer: s.answer };
+    this.http.post<any>(`${environment.apiUrl}/superadmin/faq-suggestions/${s.id}/approve`, payload).subscribe({
+      next: () => {
+        this.snackBar.open(this.t.instant('faq.approved'), '', { duration: 2000 });
+        this.suggestions.set(this.suggestions().filter(x => x.id !== s.id));
+        this.load();
+      }
+    });
+  }
+
+  rejectSuggestion(id: number): void {
+    if (!confirm(this.t.instant('faq.reject_confirm'))) return;
+    this.http.delete(`${environment.apiUrl}/superadmin/faq-suggestions/${id}`).subscribe({
+      next: () => {
+        this.snackBar.open(this.t.instant('faq.rejected'), '', { duration: 2000 });
+        this.suggestions.set(this.suggestions().filter(x => x.id !== id));
+      }
     });
   }
 
