@@ -528,7 +528,16 @@
     "bundle_run_success": "{{count}} logement(s) synchronisé(s)",
     "bundle_error": "Erreur de synchronisation",
     "bundle_confirm_delete": "Supprimer ce bundle ?",
-    "bundle_select_at_least_one_member": "Sélectionnez au moins un logement membre"
+    "bundle_select_at_least_one_member": "Sélectionnez au moins un logement membre",
+    "add_local_prop": "Ajouter un logement",
+    "local_prop_name": "Nom du logement",
+    "local_prop_ical_url": "Lien iCal",
+    "local_prop_sync": "Synchroniser",
+    "local_prop_synced": "Synchronisation terminée",
+    "local_prop_added": "Logement ajouté",
+    "local_prop_saved": "Logement mis à jour",
+    "local_prop_delete_confirm": "Supprimer ce logement et toutes ses réservations importées ?",
+    "local_prop_deleted": "Logement supprimé"
   },
   "payments": {
     "title": "Paiements",
@@ -1172,6 +1181,15 @@
     "reject_confirm": "Rejeter cette suggestion ?",
     "approved": "Question ajoutée à la FAQ",
     "rejected": "Suggestion rejetée"
+  },
+  "onboarding": {
+    "title": "Comment gérez-vous vos logements ?",
+    "subtitle": "Choisissez votre source de réservations. Vous pourrez changer ce paramètre dans les Paramètres.",
+    "beds24_title": "Channel manager Beds24",
+    "beds24_desc": "Synchronisez automatiquement vos logements et réservations depuis Airbnb, Booking.com, Abritel et autres plateformes.",
+    "ical_title": "Calendrier iCal",
+    "ical_desc": "Importez vos dates de réservation via un lien iCal (Airbnb, Booking, Leboncoin…). Sans données voyageur ni messagerie.",
+    "confirm": "Continuer"
   },
   "chat_widget": {
     "title": "Assistant IA",

@@ -1,5 +1,6 @@
 package com.flowlyrent.dto;
 
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.model.enums.UserRole;
 import lombok.Data;
@@ -22,4 +23,5 @@ public class LoginResponse {
     private String companyAddress;
     private String companyLogoUrl;
     private String invoiceFooter;
+    private ChannelType channelType;
 }

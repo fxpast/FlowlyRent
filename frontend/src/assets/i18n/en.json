@@ -528,7 +528,16 @@
     "bundle_run_success": "{{count}} propert(y/ies) synced",
     "bundle_error": "Sync error",
     "bundle_confirm_delete": "Delete this bundle?",
-    "bundle_select_at_least_one_member": "Select at least one member property"
+    "bundle_select_at_least_one_member": "Select at least one member property",
+    "add_local_prop": "Add property",
+    "local_prop_name": "Property name",
+    "local_prop_ical_url": "iCal link",
+    "local_prop_sync": "Sync now",
+    "local_prop_synced": "Sync complete",
+    "local_prop_added": "Property added",
+    "local_prop_saved": "Property updated",
+    "local_prop_delete_confirm": "Delete this property and all its imported bookings?",
+    "local_prop_deleted": "Property deleted"
   },
   "payments": {
     "title": "Payments",
@@ -1172,6 +1181,15 @@
     "reject_confirm": "Reject this suggestion?",
     "approved": "Question added to the FAQ",
     "rejected": "Suggestion rejected"
+  },
+  "onboarding": {
+    "title": "How do you manage your properties?",
+    "subtitle": "Choose your booking source. You can change this setting later in Settings.",
+    "beds24_title": "Beds24 Channel Manager",
+    "beds24_desc": "Automatically sync your properties and bookings from Airbnb, Booking.com, Vrbo and other platforms.",
+    "ical_title": "iCal Calendar",
+    "ical_desc": "Import your booking dates via an iCal link (Airbnb, Booking, etc.). No guest data or messaging.",
+    "confirm": "Continue"
   },
   "chat_widget": {
     "title": "AI Assistant",

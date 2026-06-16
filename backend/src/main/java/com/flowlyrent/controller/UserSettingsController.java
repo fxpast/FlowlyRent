@@ -4,6 +4,7 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.dto.LoginResponse;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.QontoAccountRepository;
@@ -74,6 +75,20 @@ public class UserSettingsController {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("status", "Mot de passe mis à jour"));
+    }
+
+    @PostMapping("/channel")
+    public ResponseEntity<?> setChannel(@RequestBody Map<String, String> body) {
+        String type = body.get("channelType");
+        if (type == null) return ResponseEntity.badRequest().body(Map.of("error", "channelType requis"));
+        try {
+            ChannelType ct = ChannelType.valueOf(type.toUpperCase());
+            AppUser user = securityUtils.getCurrentUser();
+            user.setChannelType(ct);
+            return ResponseEntity.ok(toProfileResponse(userRepository.save(user)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "channelType invalide"));
+        }
     }
 
     // --- Beds24 ---
@@ -186,6 +201,7 @@ public class UserSettingsController {
         r.setCompanyAddress(user.getCompanyAddress());
         r.setCompanyLogoUrl(user.getCompanyLogoUrl());
         r.setInvoiceFooter(user.getInvoiceFooter());
+        r.setChannelType(user.getChannelType());
         return r;
     }
 }

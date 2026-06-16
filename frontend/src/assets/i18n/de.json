@@ -528,7 +528,16 @@
     "bundle_run_success": "{{count}} Unterkunft(en) synchronisiert",
     "bundle_error": "Synchronisierungsfehler",
     "bundle_confirm_delete": "Dieses Bundle löschen?",
-    "bundle_select_at_least_one_member": "Wählen Sie mindestens eine Mitglieds-Unterkunft aus"
+    "bundle_select_at_least_one_member": "Wählen Sie mindestens eine Mitglieds-Unterkunft aus",
+    "add_local_prop": "Unterkunft hinzufügen",
+    "local_prop_name": "Unterkunftsname",
+    "local_prop_ical_url": "iCal-Link",
+    "local_prop_sync": "Jetzt synchronisieren",
+    "local_prop_synced": "Synchronisierung abgeschlossen",
+    "local_prop_added": "Unterkunft hinzugefügt",
+    "local_prop_saved": "Unterkunft aktualisiert",
+    "local_prop_delete_confirm": "Diese Unterkunft und alle importierten Buchungen löschen?",
+    "local_prop_deleted": "Unterkunft gelöscht"
   },
   "payments": {
     "title": "Zahlungen",
@@ -1170,6 +1179,15 @@
     "reject_confirm": "Diesen Vorschlag ablehnen?",
     "approved": "Frage zur FAQ hinzugefügt",
     "rejected": "Vorschlag abgelehnt"
+  },
+  "onboarding": {
+    "title": "Wie verwalten Sie Ihre Unterkünfte?",
+    "subtitle": "Wählen Sie Ihre Buchungsquelle. Sie können dies später in den Einstellungen ändern.",
+    "beds24_title": "Beds24 Channel Manager",
+    "beds24_desc": "Synchronisieren Sie automatisch Ihre Unterkünfte und Buchungen von Airbnb, Booking.com, Vrbo und anderen Plattformen.",
+    "ical_title": "iCal-Kalender",
+    "ical_desc": "Importieren Sie Ihre Buchungsdaten über einen iCal-Link. Ohne Gastdaten oder Nachrichtenfunktion.",
+    "confirm": "Weiter"
   },
   "chat_widget": {
     "title": "KI-Assistent",

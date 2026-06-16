@@ -19,6 +19,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { PropertyConfigService, PropertyConfig, KeyBox } from '../../core/services/property-config.service';
 import { BookingService } from '../../core/services/booking.service';
+import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
 import { PropertyBundleService, PropertyBundle } from '../../core/services/property-bundle.service';
@@ -46,6 +47,42 @@ interface OccupancyStatus {
     TranslateModule
   ],
   template: `
+    <!-- Formulaire ajout logement (mode iCal) -->
+    @if (isIcalMode()) {
+      <div class="ical-add-section">
+        @if (addPropOpen()) {
+          <mat-card class="add-prop-card">
+            <mat-card-content>
+              <div class="add-prop-form">
+                <mat-form-field appearance="outline" class="add-field-name">
+                  <mat-label>{{ 'properties.local_prop_name' | translate }}</mat-label>
+                  <input matInput [(ngModel)]="addPropForm.name" autocomplete="off">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="add-field-short">
+                  <mat-label>{{ 'properties.short_name' | translate }}</mat-label>
+                  <input matInput [(ngModel)]="addPropForm.shortName" autocomplete="off">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="add-field-url">
+                  <mat-label>{{ 'properties.local_prop_ical_url' | translate }}</mat-label>
+                  <input matInput [(ngModel)]="addPropForm.icalUrl" autocomplete="off" placeholder="https://…">
+                </mat-form-field>
+                <div class="add-prop-actions">
+                  <button mat-flat-button color="primary" (click)="addLocalProp()" [disabled]="addPropSaving() || !addPropForm.name.trim()">
+                    @if (addPropSaving()) { <mat-spinner diameter="18"></mat-spinner> } @else { {{ 'common.save' | translate }} }
+                  </button>
+                  <button mat-button (click)="addPropOpen.set(false)">{{ 'common.cancel' | translate }}</button>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <button mat-flat-button color="primary" (click)="openAddProp()">
+            <mat-icon>add</mat-icon> {{ 'properties.add_local_prop' | translate }}
+          </button>
+        }
+      </div>
+    }
+
     <div class="page-header">
       <h1>{{ 'properties.title' | translate }}</h1>
       <mat-form-field appearance="outline" class="search-field">
@@ -64,7 +101,7 @@ interface OccupancyStatus {
       </mat-form-field>
     </div>
 
-    @if (!loading() && properties().length > 0) {
+    @if (!loading() && properties().length > 0 && !isIcalMode()) {
       <mat-card class="bundle-card">
         <mat-card-header>
           <mat-card-title>{{ 'properties.bundle_title' | translate }}</mat-card-title>
@@ -201,51 +238,88 @@ interface OccupancyStatus {
             }
 
             <mat-card-content>
-              <div class="info-rows">
-                @if (p['address']) {
+              @if (!isIcalMode()) {
+                <div class="info-rows">
+                  @if (p['address']) {
+                    <div class="info-row">
+                      <mat-icon>place</mat-icon>
+                      <span>{{ p['address'] }}</span>
+                    </div>
+                  }
+                  @if (roomCount(p)) {
+                    <div class="info-row">
+                      <mat-icon>bed</mat-icon>
+                      <span>{{ roomCount(p) }} {{ 'properties.beds' | translate }}</span>
+                    </div>
+                  }
+                  @if (p['maxGuests'] || p['maxPeople']) {
+                    <div class="info-row">
+                      <mat-icon>group</mat-icon>
+                      <span>{{ p['maxGuests'] || p['maxPeople'] }} {{ 'public.max_guests' | translate }}</span>
+                    </div>
+                  }
                   <div class="info-row">
-                    <mat-icon>place</mat-icon>
-                    <span>{{ p['address'] }}</span>
+                    <mat-icon>tag</mat-icon>
+                    <span class="prop-id">ID Beds24 : {{ p['id'] }}</span>
                   </div>
-                }
-                @if (roomCount(p)) {
-                  <div class="info-row">
-                    <mat-icon>bed</mat-icon>
-                    <span>{{ roomCount(p) }} {{ 'properties.beds' | translate }}</span>
-                  </div>
-                }
-                @if (p['maxGuests'] || p['maxPeople']) {
-                  <div class="info-row">
-                    <mat-icon>group</mat-icon>
-                    <span>{{ p['maxGuests'] || p['maxPeople'] }} {{ 'public.max_guests' | translate }}</span>
-                  </div>
-                }
-                <div class="info-row">
-                  <mat-icon>tag</mat-icon>
-                  <span class="prop-id">ID Beds24 : {{ p['id'] }}</span>
                 </div>
-              </div>
+              }
+              @if (isIcalMode() && icalEditDraft[p['id']]; as draft) {
+                <div class="ical-edit-section">
+                  <div class="ical-fields-row">
+                    <mat-form-field appearance="outline" class="ical-name-field">
+                      <mat-label>{{ 'properties.local_prop_name' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="draft.name" autocomplete="off">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="ical-short-field">
+                      <mat-label>{{ 'properties.short_name' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="draft.shortName" autocomplete="off">
+                    </mat-form-field>
+                  </div>
+                  <mat-form-field appearance="outline" class="ical-url-field">
+                    <mat-label>{{ 'properties.local_prop_ical_url' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="draft.icalUrl" autocomplete="off" placeholder="https://…">
+                  </mat-form-field>
+                  <div class="ical-prop-actions">
+                    <button mat-flat-button color="primary" (click)="saveLocalProp(p['id'])"
+                            [disabled]="!isLocalPropDirty(p['id'])">
+                      <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+                    </button>
+                    <button mat-stroked-button (click)="syncLocalProp(p['id'])" [disabled]="icalSyncing[p['id']]">
+                      @if (icalSyncing[p['id']]) { <mat-spinner diameter="16"></mat-spinner> }
+                      @else { <mat-icon>sync</mat-icon> }
+                      {{ 'properties.local_prop_sync' | translate }}
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteLocalProp(p['id'])"
+                            [matTooltip]="'common.delete' | translate">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
 
               <mat-divider class="divider"></mat-divider>
 
-              <!-- Nom court -->
-              <div class="code-section">
-                <div class="code-label">
-                  <mat-icon [matTooltip]="'properties.short_name_hint' | translate">label</mat-icon>
-                  <strong>{{ 'properties.short_name' | translate }}</strong>
-                  @if (isShortNameDirty(p['id'])) {
-                    <button mat-flat-button color="primary" class="save-btn"
-                            (click)="saveShortName(p['id'])">
-                      <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
-                    </button>
-                  }
+              <!-- Nom court (Beds24 uniquement — pour iCal le shortName est dans le formulaire d'édition) -->
+              @if (!isIcalMode()) {
+                <div class="code-section">
+                  <div class="code-label">
+                    <mat-icon [matTooltip]="'properties.short_name_hint' | translate">label</mat-icon>
+                    <strong>{{ 'properties.short_name' | translate }}</strong>
+                    @if (isShortNameDirty(p['id'])) {
+                      <button mat-flat-button color="primary" class="save-btn"
+                              (click)="saveShortName(p['id'])">
+                        <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+                      </button>
+                    }
+                  </div>
+                  <mat-form-field appearance="outline" class="code-field">
+                    <input matInput [(ngModel)]="shortNameDraft[p['id']]"
+                           placeholder="Ex : Appt Centre-Ville, Studio Mer…"
+                           (ngModelChange)="shortNameDraft[p['id']] = $event">
+                  </mat-form-field>
                 </div>
-                <mat-form-field appearance="outline" class="code-field">
-                  <input matInput [(ngModel)]="shortNameDraft[p['id']]"
-                         placeholder="Ex : Appt Centre-Ville, Studio Mer…"
-                         (ngModelChange)="shortNameDraft[p['id']] = $event">
-                </mat-form-field>
-              </div>
+              }
 
               <mat-divider class="divider"></mat-divider>
 
@@ -432,8 +506,8 @@ interface OccupancyStatus {
               </div>
               <mat-divider class="divider"></mat-divider>
 
-              <!-- Lien réservation Beds24 -->
-              @if (shortNameSaved[p['id']]) {
+              <!-- Lien réservation Beds24 (masqué en mode iCal) -->
+              @if (!isIcalMode() && shortNameSaved[p['id']]) {
                 <div class="code-section">
                   <div class="code-label">
                     <mat-icon>link</mat-icon>
@@ -450,7 +524,8 @@ interface OccupancyStatus {
                 <mat-divider class="divider"></mat-divider>
               }
 
-              <!-- Inventaire & Équipements -->
+              <!-- Inventaire & Équipements (masqué en mode iCal) -->
+              @if (!isIcalMode()) {
               <div class="inventory-section">
                 <div class="inventory-header" (click)="toggleInventory(p['id'])">
                   <mat-icon class="inv-icon">inventory_2</mat-icon>
@@ -531,9 +606,10 @@ interface OccupancyStatus {
                   }
                 }
               </div>
+              } <!-- fin @if (!isIcalMode()) inventaire -->
             </mat-card-content>
 
-            @if (p['active'] === false) {
+            @if (!isIcalMode() && p['active'] === false) {
               <div class="inactive-banner">
                 <mat-icon>pause_circle</mat-icon> {{ 'properties.inactive' | translate }}
               </div>
@@ -719,6 +795,20 @@ interface OccupancyStatus {
     .bundle-horizon-field { max-width: 200px; }
     .bundle-form-actions { display: flex; gap: 8px; margin-top: 4px; }
 
+    /* iCal mode */
+    .ical-add-section { margin-bottom: 20px; }
+    .add-prop-card { margin-bottom: 20px; }
+    .add-prop-form { display: flex; flex-direction: column; gap: 8px; }
+    .add-field-name, .add-field-short { flex: 1; }
+    .add-field-url { width: 100%; }
+    .add-prop-actions { display: flex; gap: 8px; align-items: center; }
+    .ical-edit-section { margin: 8px 0; }
+    .ical-fields-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ical-name-field { flex: 2; min-width: 140px; }
+    .ical-short-field { flex: 1; min-width: 100px; }
+    .ical-url-field { width: 100%; }
+    .ical-prop-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+
     @media (max-width: 600px) {
       .props-grid { grid-template-columns: 1fr; }
       .search-field { width: 100%; }
@@ -726,10 +816,18 @@ interface OccupancyStatus {
   `]
 })
 export class PropertiesComponent implements OnInit {
-  properties = signal<any[]>([]);
-  loading    = signal(false);
-  search     = signal('');
+  properties     = signal<any[]>([]);
+  loading        = signal(false);
+  search         = signal('');
   publicSiteSlug = signal('');
+
+  // iCal mode
+  isIcalMode    = signal(false);
+  icalEditDraft: Record<string, { name: string; shortName: string; icalUrl: string; origName: string; origShortName: string; origIcalUrl: string }> = {};
+  icalSyncing:  Record<string, boolean> = {};
+  addPropForm   = { name: '', shortName: '', icalUrl: '' };
+  addPropOpen   = signal(false);
+  addPropSaving = signal(false);
 
   searchDraft = '';
   tipsOpen:   Record<string, boolean> = {};
@@ -876,6 +974,7 @@ export class PropertiesComponent implements OnInit {
     private http: HttpClient,
     private propConfigService: PropertyConfigService,
     private bookingService: BookingService,
+    private auth: AuthService,
     private inventoryService: PropertyInventoryService,
     private userService: UserService,
     private bundleService: PropertyBundleService,
@@ -884,8 +983,11 @@ export class PropertiesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.isIcalMode.set(this.auth.isIcal());
     this.userService.getProfile().subscribe({ next: p => this.publicSiteSlug.set(p.publicSiteSlug ?? ''), error: () => {} });
-    this.propConfigService.getKeyBoxes().subscribe({ next: kbs => this.keyBoxes.set(kbs), error: () => {} });
+    if (!this.isIcalMode()) {
+      this.propConfigService.getKeyBoxes().subscribe({ next: kbs => this.keyBoxes.set(kbs), error: () => {} });
+    }
     this.loading.set(true);
     const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     forkJoin([
@@ -926,12 +1028,22 @@ export class PropertiesComponent implements OnInit {
             this.pricingDraft[id] = { ...empty };
             this.pricingSaved[id] = { ...empty };
           }
+          if (this.isIcalMode()) {
+            this.icalEditDraft[id] = {
+              name: p['name'] ?? '',
+              shortName: p['shortName'] ?? '',
+              icalUrl: p['icalUrl'] ?? '',
+              origName: p['name'] ?? '',
+              origShortName: p['shortName'] ?? '',
+              origIcalUrl: p['icalUrl'] ?? ''
+            };
+          }
         }
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
-    this.loadBundles();
+    if (!this.isIcalMode()) this.loadBundles();
   }
 
   occupancyMap = computed((): Record<string, OccupancyStatus> => {
@@ -1219,6 +1331,104 @@ export class PropertiesComponent implements OnInit {
         this.runningBundleId.set(null);
         this.snackBar.open(err.error?.error ?? this.t.instant('properties.bundle_error'), this.t.instant('common.close'), { duration: 4000 });
       }
+    });
+  }
+
+  // ── Logements locaux (mode iCal) ────────────────────────────────────
+
+  openAddProp(): void {
+    this.addPropForm = { name: '', shortName: '', icalUrl: '' };
+    this.addPropOpen.set(true);
+  }
+
+  addLocalProp(): void {
+    if (!this.addPropForm.name.trim()) return;
+    this.addPropSaving.set(true);
+    this.http.post<any>(`${environment.apiUrl}/admin/local-properties`, {
+      name: this.addPropForm.name.trim(),
+      shortName: this.addPropForm.shortName.trim(),
+      icalUrl: this.addPropForm.icalUrl.trim()
+    }).subscribe({
+      next: p => {
+        const id = String(p['id']);
+        this.properties.update(list => [...list, p]);
+        this.icalEditDraft[id] = {
+          name: p['name'] ?? '',
+          shortName: p['shortName'] ?? '',
+          icalUrl: p['icalUrl'] ?? '',
+          origName: p['name'] ?? '',
+          origShortName: p['shortName'] ?? '',
+          origIcalUrl: p['icalUrl'] ?? ''
+        };
+        const empty = { cleaningFee: '', extraPersonThreshold: '', extraPersonFee: '', discount7Nights: '', discount28Nights: '' };
+        this.pricingDraft[id] = { ...empty };
+        this.pricingSaved[id] = { ...empty };
+        this.addPropSaving.set(false);
+        this.addPropOpen.set(false);
+        this.snackBar.open(this.t.instant('properties.local_prop_added'), '', { duration: 2000 });
+      },
+      error: () => {
+        this.addPropSaving.set(false);
+        this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  isLocalPropDirty(propId: string): boolean {
+    const d = this.icalEditDraft[propId];
+    if (!d) return false;
+    return d.name !== d.origName || d.shortName !== d.origShortName || d.icalUrl !== d.origIcalUrl;
+  }
+
+  saveLocalProp(propId: string): void {
+    const d = this.icalEditDraft[propId];
+    if (!d) return;
+    this.http.put<any>(`${environment.apiUrl}/admin/local-properties/${propId}`, {
+      name: d.name.trim(),
+      shortName: d.shortName.trim(),
+      icalUrl: d.icalUrl.trim()
+    }).subscribe({
+      next: p => {
+        d.origName = p['name'] ?? '';
+        d.origShortName = p['shortName'] ?? '';
+        d.origIcalUrl = p['icalUrl'] ?? '';
+        d.name = d.origName;
+        d.shortName = d.origShortName;
+        d.icalUrl = d.origIcalUrl;
+        this.properties.update(list => list.map(pr => String(pr['id']) === propId ? p : pr));
+        // Sync shortNameSaved pour que bookingService utilise le bon nom
+        this.shortNameSaved[propId] = p['shortName'] ?? '';
+        this.shortNameDraft[propId] = p['shortName'] ?? '';
+        this.bookingService.clearPropsCache();
+        this.snackBar.open(this.t.instant('properties.local_prop_saved'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  syncLocalProp(propId: string): void {
+    this.icalSyncing[propId] = true;
+    this.http.post<any>(`${environment.apiUrl}/admin/local-properties/${propId}/sync`, {}).subscribe({
+      next: () => {
+        this.icalSyncing[propId] = false;
+        this.snackBar.open(this.t.instant('properties.local_prop_synced'), '', { duration: 2000 });
+      },
+      error: err => {
+        this.icalSyncing[propId] = false;
+        this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 });
+      }
+    });
+  }
+
+  deleteLocalProp(propId: string): void {
+    if (!confirm(this.t.instant('properties.local_prop_delete_confirm'))) return;
+    this.http.delete<any>(`${environment.apiUrl}/admin/local-properties/${propId}`).subscribe({
+      next: () => {
+        this.properties.update(list => list.filter(p => String(p['id']) !== propId));
+        delete this.icalEditDraft[propId];
+        this.snackBar.open(this.t.instant('properties.local_prop_deleted'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
   }
 

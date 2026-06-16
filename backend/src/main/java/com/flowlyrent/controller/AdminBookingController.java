@@ -1,9 +1,13 @@
 package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
+import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.IcalBooking;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.IcalBookingRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +34,7 @@ public class AdminBookingController {
     private final Beds24ApiClient beds24;
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
+    private final IcalBookingRepository icalBookingRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/estimate")
@@ -189,6 +194,22 @@ public class AdminBookingController {
     @GetMapping
     public ResponseEntity<?> getBookings(@RequestParam Map<String, String> params) {
         try {
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() == ChannelType.ICAL) {
+                List<IcalBooking> bookings;
+                if (params.containsKey("arrivalFrom")) {
+                    LocalDate from = LocalDate.parse(params.get("arrivalFrom"));
+                    LocalDate to = params.containsKey("arrivalTo") ? LocalDate.parse(params.get("arrivalTo")) : from.plusDays(365);
+                    bookings = icalBookingRepo.findByUserIdAndArrivalBetween(user.getId(), from, to);
+                } else if (params.containsKey("departureFrom")) {
+                    LocalDate from = LocalDate.parse(params.get("departureFrom"));
+                    LocalDate to = params.containsKey("departureTo") ? LocalDate.parse(params.get("departureTo")) : from.plusDays(365);
+                    bookings = icalBookingRepo.findByUserIdAndDepartureBetween(user.getId(), from, to);
+                } else {
+                    bookings = icalBookingRepo.findByUserId(user.getId());
+                }
+                return ResponseEntity.ok(bookings.stream().map(this::icalToMap).toList());
+            }
             Beds24Account account = requireAccount();
             return ResponseEntity.ok(beds24.getBookingsAllStatuses(beds24.tokenFor(account), params));
         } catch (Exception e) {
@@ -199,6 +220,13 @@ public class AdminBookingController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getBooking(@PathVariable Long id) {
         try {
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() == ChannelType.ICAL) {
+                return icalBookingRepo.findById(id)
+                        .filter(b -> b.getUser().getId().equals(user.getId()))
+                        .map(b -> ResponseEntity.ok(icalToMap(b)))
+                        .orElse(ResponseEntity.notFound().build());
+            }
             Beds24Account account = requireAccount();
             List<Map<String, Object>> list = beds24.getBookings(beds24.tokenFor(account), Map.of("id", id.toString()));
             return list.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(list.get(0));
@@ -210,22 +238,32 @@ public class AdminBookingController {
     @GetMapping("/today")
     public ResponseEntity<?> getToday(@RequestParam(required = false) String date) {
         try {
+            LocalDate localToday = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
+            AppUser user = securityUtils.getCurrentUser();
+
+            if (user.getChannelType() == ChannelType.ICAL) {
+                List<Map<String, Object>> departures = icalBookingRepo
+                        .findByUserIdAndDepartureBetween(user.getId(), localToday, localToday)
+                        .stream().map(this::icalToMap).toList();
+                List<Map<String, Object>> arrivals = icalBookingRepo
+                        .findByUserIdAndArrivalBetween(user.getId(), localToday, localToday)
+                        .stream().map(this::icalToMap).toList();
+                List<Map<String, Object>> ongoing = icalBookingRepo
+                        .findByUserIdAndArrivalLessThanAndDepartureGreaterThan(user.getId(), localToday, localToday)
+                        .stream().map(this::icalToMap).toList();
+                return ResponseEntity.ok(Map.of("departures", departures, "arrivals", arrivals, "ongoing", ongoing));
+            }
+
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            LocalDate localToday = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
             String today     = localToday.toString();
             String yesterday = localToday.minusDays(1).toString();
             String pastLimit = localToday.minusDays(90).toString();
 
-            // Départs du jour
             List<Map<String, Object>> departures = beds24.getBookings(token,
                     Map.of("departureFrom", today, "departureTo", today));
-
-            // Arrivées du jour
             List<Map<String, Object>> arrivals = beds24.getBookings(token,
                     Map.of("arrivalFrom", today, "arrivalTo", today));
-
-            // En cours : arrivés avant aujourd'hui, pas encore repartis
             List<Map<String, Object>> recentPast = beds24.getBookings(token,
                     Map.of("arrivalFrom", pastLimit, "arrivalTo", yesterday));
             List<Map<String, Object>> ongoing = recentPast.stream()
@@ -237,11 +275,7 @@ public class AdminBookingController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(Map.of(
-                    "departures", departures,
-                    "arrivals",   arrivals,
-                    "ongoing",    ongoing
-            ));
+            return ResponseEntity.ok(Map.of("departures", departures, "arrivals", arrivals, "ongoing", ongoing));
         } catch (Exception e) { return error(e); }
     }
 
@@ -249,10 +283,13 @@ public class AdminBookingController {
     public ResponseEntity<?> getArrivals(@RequestParam(defaultValue = "") String weekStart) {
         try {
             LocalDate start = weekStart.isBlank() ? LocalDate.now() : LocalDate.parse(weekStart);
-            Map<String, String> params = Map.of(
-                    "arrivalFrom", start.toString(),
-                    "arrivalTo", start.plusDays(6).toString()
-            );
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() == ChannelType.ICAL) {
+                return ResponseEntity.ok(icalBookingRepo
+                        .findByUserIdAndArrivalBetween(user.getId(), start, start.plusDays(6))
+                        .stream().map(this::icalToMap).toList());
+            }
+            Map<String, String> params = Map.of("arrivalFrom", start.toString(), "arrivalTo", start.plusDays(6).toString());
             Beds24Account account = requireAccount();
             List<Map<String, Object>> bookings = beds24.getBookings(beds24.tokenFor(account), params);
             if (!bookings.isEmpty()) {
@@ -269,10 +306,13 @@ public class AdminBookingController {
     public ResponseEntity<?> getDepartures(@RequestParam(defaultValue = "") String weekStart) {
         try {
             LocalDate start = weekStart.isBlank() ? LocalDate.now() : LocalDate.parse(weekStart);
-            Map<String, String> params = Map.of(
-                    "departureFrom", start.toString(),
-                    "departureTo", start.plusDays(6).toString()
-            );
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() == ChannelType.ICAL) {
+                return ResponseEntity.ok(icalBookingRepo
+                        .findByUserIdAndDepartureBetween(user.getId(), start, start.plusDays(6))
+                        .stream().map(this::icalToMap).toList());
+            }
+            Map<String, String> params = Map.of("departureFrom", start.toString(), "departureTo", start.plusDays(6).toString());
             Beds24Account account = requireAccount();
             return ResponseEntity.ok(beds24.getBookings(beds24.tokenFor(account), params));
         } catch (Exception e) {
@@ -365,6 +405,31 @@ public class AdminBookingController {
         } catch (Exception e) {
             return error(e);
         }
+    }
+
+    private Map<String, Object> icalToMap(IcalBooking b) {
+        String summary = b.getSummary() != null ? b.getSummary().trim() : "";
+        String[] parts = summary.split("\\s+", 2);
+        String firstName = parts.length > 0 ? parts[0] : "";
+        String lastName  = parts.length > 1 ? parts[1] : "";
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", b.getId().toString());
+        m.put("propId", b.getLocalProperty().getId().toString());
+        m.put("firstName", firstName);
+        m.put("lastName", lastName);
+        m.put("guestFirstName", firstName);
+        m.put("guestLastName", lastName);
+        m.put("arrival",   b.getArrival() != null   ? b.getArrival().toString()   : "");
+        m.put("departure", b.getDeparture() != null ? b.getDeparture().toString() : "");
+        m.put("firstNight", b.getArrival() != null  ? b.getArrival().toString()   : "");
+        m.put("lastNight",  b.getDeparture() != null ? b.getDeparture().minusDays(1).toString() : "");
+        m.put("numAdult", 1);
+        m.put("totalPrice", 0);
+        m.put("price", 0);
+        m.put("status", b.getStatus() != null ? b.getStatus() : "confirmed");
+        m.put("channel", "iCal");
+        m.put("source", "ical");
+        return m;
     }
 
     private Beds24Account requireAccount() {

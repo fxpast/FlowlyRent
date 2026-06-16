@@ -1,6 +1,7 @@
 package com.flowlyrent.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.model.enums.UserRole;
 import jakarta.persistence.*;
@@ -65,6 +66,9 @@ public class AppUser implements UserDetails {
 
     @Column(columnDefinition = "TEXT")
     private String invoiceFooter;
+
+    @Enumerated(EnumType.STRING)
+    private ChannelType channelType;
 
     private boolean active = true;
 

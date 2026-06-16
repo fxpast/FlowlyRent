@@ -101,6 +101,10 @@ export const adminRoutes: Routes = [
       {
         path: 'faq',
         loadComponent: () => import('./faq/faq.component').then(m => m.AdminFaqComponent)
+      },
+      {
+        path: 'onboarding',
+        loadComponent: () => import('./onboarding/onboarding.component').then(m => m.OnboardingComponent)
       }
     ]
   }

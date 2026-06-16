@@ -125,10 +125,7 @@ export class LoginComponent {
             this.rejectLogin('login.error_not_owner');
             return;
           }
-          this.userService.getBeds24Status().subscribe({
-            next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
-            error: () => this.router.navigate(['/admin/settings'])
-          });
+          this.redirectOwner();
           return;
         }
         // Fallback sans paramètre type (accès direct à /admin/login)
@@ -136,15 +133,27 @@ export class LoginComponent {
           this.router.navigate(['/housekeeper/tasks']);
           return;
         }
-        this.userService.getBeds24Status().subscribe({
-          next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
-          error: () => this.router.navigate(['/admin/dashboard'])
-        });
+        this.redirectOwner();
       },
       error: () => {
         this.error.set(this.t.instant('login.error'));
         this.loading.set(false);
       }
+    });
+  }
+
+  private redirectOwner(): void {
+    if (!this.auth.getChannelType()) {
+      this.router.navigate(['/admin/onboarding']);
+      return;
+    }
+    if (this.auth.isIcal()) {
+      this.router.navigate(['/admin/dashboard']);
+      return;
+    }
+    this.userService.getBeds24Status().subscribe({
+      next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
+      error: () => this.router.navigate(['/admin/settings'])
     });
   }
 

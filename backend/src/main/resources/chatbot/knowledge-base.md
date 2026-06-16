@@ -1,9 +1,16 @@
 # Base de connaissance FlowlyRent
 
-FlowlyRent est une plateforme SaaS de gestion de location saisonnière. Chaque hôte connecte
-son compte Beds24 (channel manager) pour centraliser ses logements et réservations
-(Airbnb, Booking.com, Abritel...), gérer des réservations directes, et proposer un site
-de réservation public personnalisé.
+FlowlyRent est une plateforme SaaS de gestion de location saisonnière. Deux modes d'utilisation :
+
+- **Mode Beds24** : l'hôte connecte son compte Beds24 (channel manager) pour centraliser ses
+  logements et réservations (Airbnb, Booking.com, Abritel...), gérer des réservations directes,
+  et proposer un site de réservation public personnalisé.
+- **Mode iCal** : l'hôte sans channel manager crée ses logements manuellement et importe ses
+  dates de réservation via un lien iCal (fourni par Airbnb, Booking, etc.). Dans ce mode, les
+  réservations directes et la messagerie voyageur ne sont pas disponibles, mais toutes les
+  autres fonctionnalités (entretien, tableau de bord, Qonto, calendrier, etc.) sont accessibles.
+
+Lors de la première connexion, l'hôte choisit son mode via l'écran d'onboarding.
 
 ## Plans tarifaires
 
@@ -21,6 +28,16 @@ Dans **Paramètres**, l'hôte renseigne son code d'invitation Beds24 pour synchr
 automatiquement ses logements et réservations. Un bouton permet de relancer une
 synchronisation manuelle. Sans connexion Beds24, l'app reste utilisable en mode
 réservations directes uniquement (plan FREE limité à 1 logement).
+
+## Mode iCal (sans channel manager)
+
+Pour les hôtes qui n'utilisent pas Beds24, FlowlyRent propose un mode iCal :
+- L'hôte crée ses logements manuellement dans la page **Logements**.
+- Pour chaque logement, il renseigne un lien iCal (ex. depuis Airbnb : Calendrier → Exporter).
+- FlowlyRent synchronise automatiquement les réservations depuis ce lien iCal toutes les 2 heures.
+- L'hôte peut aussi déclencher une synchronisation manuelle depuis la page Logements.
+- Dans ce mode : pas de réservations directes, pas de messagerie voyageur, pas de site public.
+- Toutes les autres fonctionnalités restent disponibles : entretien, Qonto, tableau de bord, calendrier.
 
 ## Tableau de bord (Dashboard)
 

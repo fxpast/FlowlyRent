@@ -82,6 +82,7 @@ public class AuthController {
         resp.setPlan(user.getPlan());
         resp.setPublicSiteSlug(user.getPublicSiteSlug());
         resp.setRole(user.getRole());
+        resp.setChannelType(user.getChannelType());
         return resp;
     }
 

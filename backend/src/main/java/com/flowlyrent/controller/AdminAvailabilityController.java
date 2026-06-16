@@ -1,8 +1,14 @@
 package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
+import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.IcalBooking;
+import com.flowlyrent.model.LocalProperty;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.IcalBookingRepository;
+import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +29,17 @@ public class AdminAvailabilityController {
 
     private final Beds24ApiClient beds24;
     private final Beds24AccountRepository accountRepo;
+    private final LocalPropertyRepository localPropertyRepo;
+    private final IcalBookingRepository icalBookingRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/calendar")
     public ResponseEntity<?> getCalendar(@RequestParam String from, @RequestParam String to) {
         try {
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() == ChannelType.ICAL) {
+                return getCalendarIcal(user.getId(), from, to);
+            }
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
 
@@ -349,6 +361,53 @@ public class AdminAvailabilityController {
         } catch (Exception e) {
             return error(e);
         }
+    }
+
+    private ResponseEntity<?> getCalendarIcal(Long userId, String from, String to) {
+        List<LocalProperty> props = localPropertyRepo.findByUserIdOrderByCreatedAtAsc(userId);
+
+        List<Map<String, Object>> properties = props.stream().map(p -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id",   p.getId().toString());
+            m.put("name", p.getShortName() != null && !p.getShortName().isBlank() ? p.getShortName() : p.getName());
+            m.put("city", "");
+            return m;
+        }).toList();
+
+        LocalDate fromDate = LocalDate.parse(from).minusDays(60);
+        List<IcalBooking> rawBookings = icalBookingRepo.findByUserIdAndArrivalBetween(userId, fromDate, LocalDate.parse(to).plusDays(1));
+
+        List<Map<String, Object>> bookings = rawBookings.stream().map(b -> {
+            String guest = b.getSummary() != null ? b.getSummary() : "Voyageur";
+            Map<String, Object> m = new HashMap<>();
+            m.put("id",            String.valueOf(b.getId()));
+            m.put("propertyId",    b.getLocalProperty().getId().toString());
+            m.put("propId",        b.getLocalProperty().getId().toString());
+            m.put("propName",      b.getLocalProperty().getShortName() != null && !b.getLocalProperty().getShortName().isBlank()
+                                     ? b.getLocalProperty().getShortName() : b.getLocalProperty().getName());
+            m.put("arrival",       b.getArrival().toString());
+            m.put("departure",     b.getDeparture().toString());
+            m.put("guestName",     guest);
+            m.put("guestFirstName", guest);
+            m.put("guestLastName",  "");
+            m.put("guestEmail",    "");
+            m.put("guestPhone",    "");
+            m.put("guestCountry",  "");
+            m.put("status",        b.getStatus());
+            m.put("channel",       "iCal");
+            m.put("numAdult",      null);
+            m.put("numChild",      null);
+            m.put("totalPrice",    null);
+            m.put("notes",         "");
+            return m;
+        }).toList();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("properties",   properties);
+        result.put("bookings",     bookings);
+        result.put("blocks",       List.of());
+        result.put("calendarData", Map.of());
+        return ResponseEntity.ok(result);
     }
 
     private Beds24Account requireAccount() {

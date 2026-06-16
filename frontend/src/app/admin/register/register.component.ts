@@ -128,21 +128,11 @@ export class RegisterComponent {
   onSubmit(): void {
     this.loading.set(true);
     this.error.set('');
-    this.http.post<{ token: string; userId: number; email: string; firstName: string; lastName: string; plan: any; publicSiteSlug: string }>(
-      `${environment.apiUrl}/auth/register`, this.form
-    ).subscribe({
+    this.http.post<any>(`${environment.apiUrl}/auth/register`, this.form).subscribe({
       next: resp => {
-        localStorage.setItem('flr_token', resp.token);
-        localStorage.setItem('flr_user', JSON.stringify({
-          userId: resp.userId, email: resp.email,
-          firstName: resp.firstName, lastName: resp.lastName,
-          plan: resp.plan, publicSiteSlug: resp.publicSiteSlug
-        }));
-        this.auth.isLoggedIn.set(true);
-        this.userService.getBeds24Status().subscribe({
-          next: status => this.router.navigate([status.connected ? '/admin/dashboard' : '/admin/settings']),
-          error: () => this.router.navigate(['/admin/settings'])
-        });
+        this.auth.storeSession(resp);
+        // Nouvel utilisateur → toujours vers l'onboarding (channelType null)
+        this.router.navigate(['/admin/onboarding']);
       },
       error: err => {
         this.error.set(err.error?.error ?? this.t.instant('login.register_error'));

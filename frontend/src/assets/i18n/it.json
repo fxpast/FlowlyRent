@@ -528,7 +528,16 @@
     "bundle_run_success": "{{count}} alloggio/i sincronizzato/i",
     "bundle_error": "Errore di sincronizzazione",
     "bundle_confirm_delete": "Eliminare questo bundle?",
-    "bundle_select_at_least_one_member": "Seleziona almeno un alloggio membro"
+    "bundle_select_at_least_one_member": "Seleziona almeno un alloggio membro",
+    "add_local_prop": "Aggiungi alloggio",
+    "local_prop_name": "Nome dell'alloggio",
+    "local_prop_ical_url": "Link iCal",
+    "local_prop_sync": "Sincronizza ora",
+    "local_prop_synced": "Sincronizzazione completata",
+    "local_prop_added": "Alloggio aggiunto",
+    "local_prop_saved": "Alloggio aggiornato",
+    "local_prop_delete_confirm": "Eliminare questo alloggio e tutte le prenotazioni importate?",
+    "local_prop_deleted": "Alloggio eliminato"
   },
   "payments": {
     "title": "Pagamenti",
@@ -1170,6 +1179,15 @@
     "reject_confirm": "Rifiutare questo suggerimento?",
     "approved": "Domanda aggiunta alla FAQ",
     "rejected": "Suggerimento rifiutato"
+  },
+  "onboarding": {
+    "title": "Come gestisci le tue proprietà?",
+    "subtitle": "Scegli la tua fonte di prenotazioni. Puoi modificare questa impostazione nelle Impostazioni.",
+    "beds24_title": "Channel manager Beds24",
+    "beds24_desc": "Sincronizza automaticamente le tue proprietà e prenotazioni da Airbnb, Booking.com, Vrbo e altre piattaforme.",
+    "ical_title": "Calendario iCal",
+    "ical_desc": "Importa le tue date di prenotazione tramite un link iCal. Senza dati degli ospiti né messaggistica.",
+    "confirm": "Continua"
   },
   "chat_widget": {
     "title": "Assistente IA",
