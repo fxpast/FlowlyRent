@@ -128,8 +128,10 @@ public class ChatbotToolService {
         try {
             Map<String, Object> summary = qontoService.fetchSummary(userId, year, month);
             BigDecimal totalDebits = (BigDecimal) summary.get("totalDebits");
-            result.put("totalExpenses", totalDebits);
-            result.put("profitMargin", caTotal.subtract(totalDebits));
+            BigDecimal margin = caTotal.subtract(totalDebits);
+            result.put("qonto_depenses_totales", totalDebits);
+            result.put("marge_beneficiaire_nette", margin);
+            result.put("calcul_marge", "caTotal (" + caTotal + ") - depenses_qonto (" + totalDebits + ") = " + margin);
 
             @SuppressWarnings("unchecked")
             Map<String, BigDecimal> debitsByProp = (Map<String, BigDecimal>) summary.get("byProperty");
@@ -138,15 +140,15 @@ public class ChatbotToolService {
             for (Map<String, Object> row : caByProperty) {
                 String propId = Objects.toString(row.get("propId"), null);
                 BigDecimal caProp = (BigDecimal) row.get("ca");
-                BigDecimal expenses = debitsByProp.getOrDefault(propId, BigDecimal.ZERO);
+                BigDecimal dep = debitsByProp.getOrDefault(propId, BigDecimal.ZERO);
                 marginByProperty.add(Map.of(
                         "propertyName", row.get("propertyName"),
-                        "ca", caProp,
-                        "expenses", expenses,
-                        "margin", caProp.subtract(expenses)
+                        "ca_logement", caProp,
+                        "depenses_logement", dep,
+                        "marge_logement", caProp.subtract(dep)
                 ));
             }
-            result.put("marginByProperty", marginByProperty);
+            result.put("marge_par_logement", marginByProperty);
         } catch (IllegalStateException ignored) {
             // Qonto non connecté : pas de marge, on renvoie uniquement le CA
         }
