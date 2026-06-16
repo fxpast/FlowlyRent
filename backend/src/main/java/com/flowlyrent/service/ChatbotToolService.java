@@ -13,6 +13,7 @@ import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.LinenMovementRepository;
+import com.flowlyrent.repository.ManualExpenseRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class ChatbotToolService {
     private final LinenItemRepository linenItemRepo;
     private final LinenMovementRepository linenMovementRepo;
     private final FaqSuggestionRepository faqSuggestionRepo;
+    private final ManualExpenseRepository manualExpenseRepo;
     private final SecurityUtils securityUtils;
 
     public Map<String, Object> execute(String toolName, Map<String, Object> args, String lang) {
@@ -124,33 +126,73 @@ public class ChatbotToolService {
         }
         result.put("byProperty", byProperty);
 
-        // Marge bénéficiaire (si Qonto connecté)
+        // Commission plateforme (Beds24)
+        BigDecimal commissionTotal = ca.get("commissionTotal") instanceof BigDecimal bd
+                ? bd : BigDecimal.ZERO;
+
+        // Charges manuelles du mois
+        BigDecimal manualTotal = manualExpenseRepo.findForPeriod(userId, year, month).stream()
+                .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Coûts ménage/dépannage du mois
+        LocalDate from = LocalDate.of(year, month, 1);
+        LocalDate to   = from.withDayOfMonth(from.lengthOfMonth());
+        Map<String, Object> hkSummary = hkReportService.costSummary(userId, from, to);
+        BigDecimal hkTotal = hkSummary.get("total") instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+
+        // Marge bénéficiaire (si Qonto connecté — même logique que le menu Revenus)
         try {
             Map<String, Object> summary = qontoService.fetchSummary(userId, year, month);
             BigDecimal totalDebits = (BigDecimal) summary.get("totalDebits");
-            BigDecimal margin = caTotal.subtract(totalDebits);
-            result.put("qonto_depenses_totales", totalDebits);
+
+            // Exclure NON_CATEGORISE (transactions non encore validées comme charges)
+            @SuppressWarnings("unchecked")
+            Map<String, BigDecimal> byCategory = (Map<String, BigDecimal>) summary.get("byCategory");
+            BigDecimal nonCat = byCategory != null ? byCategory.getOrDefault("NON_CATEGORISE", BigDecimal.ZERO) : BigDecimal.ZERO;
+            BigDecimal qontoExpenses = totalDebits.subtract(nonCat);
+
+            BigDecimal totalDeductions = qontoExpenses.add(commissionTotal).add(hkTotal).add(manualTotal);
+            BigDecimal margin = caTotal.subtract(totalDeductions);
+
+            result.put("qonto_depenses_categoriees", qontoExpenses);
+            result.put("qonto_non_categorise_exclu", nonCat);
+            result.put("commission_plateforme", commissionTotal);
+            result.put("couts_menage_depannage", hkTotal);
+            result.put("charges_manuelles", manualTotal);
+            result.put("total_deductions", totalDeductions);
             result.put("marge_beneficiaire_nette", margin);
-            result.put("calcul_marge", "caTotal (" + caTotal + ") - depenses_qonto (" + totalDebits + ") = " + margin);
 
             @SuppressWarnings("unchecked")
             Map<String, BigDecimal> debitsByProp = (Map<String, BigDecimal>) summary.get("byProperty");
+            @SuppressWarnings("unchecked")
+            Map<String, BigDecimal> hkByProp = (Map<String, BigDecimal>) hkSummary.get("byProperty");
 
             List<Map<String, Object>> marginByProperty = new ArrayList<>();
             for (Map<String, Object> row : caByProperty) {
                 String propId = Objects.toString(row.get("propId"), null);
                 BigDecimal caProp = (BigDecimal) row.get("ca");
-                BigDecimal dep = debitsByProp.getOrDefault(propId, BigDecimal.ZERO);
+                BigDecimal qontoProp = debitsByProp != null ? debitsByProp.getOrDefault(propId, BigDecimal.ZERO) : BigDecimal.ZERO;
+                BigDecimal hkProp    = hkByProp    != null ? hkByProp.getOrDefault(propId, BigDecimal.ZERO)    : BigDecimal.ZERO;
+                BigDecimal commProp  = row.get("commission") instanceof BigDecimal bc ? bc : BigDecimal.ZERO;
+                BigDecimal manualProp = manualExpenseRepo.findForPeriod(userId, year, month).stream()
+                        .filter(e -> propId != null && propId.equals(e.getBeds24PropertyId()))
+                        .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal depProp = qontoProp.add(hkProp).add(commProp).add(manualProp);
                 marginByProperty.add(Map.of(
                         "propertyName", row.get("propertyName"),
                         "ca_logement", caProp,
-                        "depenses_logement", dep,
-                        "marge_logement", caProp.subtract(dep)
+                        "depenses_logement", depProp,
+                        "marge_logement", caProp.subtract(depProp)
                 ));
             }
             result.put("marge_par_logement", marginByProperty);
         } catch (IllegalStateException ignored) {
-            // Qonto non connecté : pas de marge, on renvoie uniquement le CA
+            // Qonto non connecté : on expose quand même commission et HK
+            result.put("commission_plateforme", commissionTotal);
+            result.put("couts_menage_depannage", hkTotal);
+            result.put("charges_manuelles", manualTotal);
         }
 
         return result;
