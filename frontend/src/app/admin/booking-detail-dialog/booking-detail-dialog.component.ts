@@ -1199,15 +1199,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const hk = this.selectedHousekeeper();
     if (!hk) return;
     const property = this.draft['propName'] || this.draft['propertyName'] || '';
-    const date = this.taskDate ?? new Date();
-    let text = this.t.instant('housekeeping.mission_message', {
-      name:     hk.name,
-      type:     this.taskTypeLabel(this.taskForm.type),
-      property,
-      date:     date.toLocaleDateString('fr-FR'),
-      time:     this.taskTime
-    });
-    if (this.taskForm.notes) text += `\n\n${this.taskForm.notes}`;
+    const text = this.taskForm.notes ?? '';
 
     let url = '';
     switch (channel) {
