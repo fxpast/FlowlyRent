@@ -16,7 +16,7 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 - Toutes les valeurs sensibles passent **uniquement par des variables d'environnement**
 - Dans `application.yml` : syntaxe `${MA_VAR}` sans défaut obligatoire pour les secrets
 - Secrets qui **ne doivent jamais apparaître** dans le code :
-  `CLOUDINARY_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `DB_PASSWORD`
+  `CLOUDINARY_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `DB_PASSWORD`, `GROQ_API_KEY`, `GEMINI_API_KEY`
 
 ---
 
@@ -50,6 +50,7 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 | App mobile | Flutter WebView (`flowlyrent_app/`) → `flowlyrent.com` — package `com.flowlyrent.flowlyrent_app` |
 | Infrastructure dev | Docker Compose / XAMPP local |
 | Infrastructure prod | Netlify (frontend) + Railway (backend + MySQL) |
+| Chatbot IA | Gemini 2.5 Flash (principal) + Groq `llama-3.3-70b-versatile` (fallback) — function calling |
 
 ---
 
@@ -156,6 +157,25 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Code d'accès** : toujours visible (pas de condition `@if undefined`) — chargé dans `ngOnInit()` avec le `cleaningFee`
 - **Taxe de séjour** : `(totalPrice - cleaningFee) × 2.75%` — affichée en badge bleu sous le prix total
 - **Nom/prénom** : `mapField()` écrase toujours le champ destination (fix : suppression de `!b.containsKey(to)`)
+
+### Factures — Bas de page global
+- `AppUser.invoiceFooter` (TEXT) : texte libre affiché en pied de toutes les factures PDF
+- Saisi dans **Paramètres → Informations de facturation** (même carte que `companyName`/`siret`/`companyAddress`)
+- `PUT /user/profile` avec clé `invoiceFooter` → `invoice-pdf.ts` : `footer` callback pdfmake + marge bas 80 px si renseigné
+
+### Entretien — Envoi mission (WhatsApp / SMS / Email)
+- Boutons dans la carte de chaque tâche (`sendMission(task, channel)`)
+- Le contenu envoyé est **uniquement `task.notes`** — aucun en-tête généré automatiquement
+
+### Chatbot — Function calling (Gemini + Groq)
+- **`ChatbotPromptService`** : construit le `systemInstruction` partagé (base de connaissance + FAQ + date du jour) et charge `chatbot/tool-declarations.json` au démarrage (`@PostConstruct`) — fournit les déclarations Gemini ET OpenAI
+- **`GeminiChatbotService`** : fournisseur principal, boucle de function calling max 3 itérations
+- **`GroqChatbotService`** : fallback si Gemini indisponible (quota), format OpenAI-compatible
+- **`ChatbotToolService.execute(toolName, args, lang)`** : toujours scopé sur `securityUtils.getCurrentUserId()` — jamais de userId dans les args Gemini
+- **Outils lecture seule** : `get_properties`, `get_revenue` (CA + marge Qonto), `get_arrivals`, `get_departures`, `get_ongoing_stays`, `get_reservations`, `get_expenses_summary`, `get_transactions`, `get_housekeeping_tasks`, `get_housekeeping_costs`, `get_linen_stock`
+- **Outils écriture** : `block_dates` / `unblock_dates` (via `Beds24ApiClient.updateCalendar()`) — la description du tool impose une confirmation explicite de l'hôte avant appel
+- **`suggest_faq`** : enregistre dans `FaqSuggestion` les questions sans réponse dans la base de connaissance — visibles par le superadmin pour enrichir la FAQ
+- Variables d'env : `GEMINI_API_KEY`, `GEMINI_MODEL` (défaut `gemini-2.5-flash`), `GROQ_API_KEY`, `GROQ_MODEL` (défaut `llama-3.3-70b-versatile`)
 
 ### Revenus — KPIs Qonto
 - La page Revenus (`/admin/stats`) charge en parallèle le CA Beds24 ET le summary Qonto du même mois
