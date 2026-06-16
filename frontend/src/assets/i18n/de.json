@@ -1170,5 +1170,11 @@
     "reject_confirm": "Diesen Vorschlag ablehnen?",
     "approved": "Frage zur FAQ hinzugefügt",
     "rejected": "Vorschlag abgelehnt"
+  },
+  "chat_widget": {
+    "title": "KI-Assistent",
+    "hint": "Stellen Sie eine Frage zu Ihren Buchungen, Einnahmen, Reinigung, Wäschebestand…",
+    "placeholder": "Ihre Frage…",
+    "error": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
   }
 }

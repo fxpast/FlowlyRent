@@ -10,6 +10,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { HttpClient } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
 import { LangSwitcherComponent } from '../../core/components/lang-switcher.component';
+import { ChatWidgetComponent } from '../../core/components/chat-widget.component';
 import { AuthService } from '../../core/services/auth.service';
 import { MessageService } from '../../core/services/message.service';
 import { PushNotificationService } from '../../core/services/push-notification.service';
@@ -24,7 +25,7 @@ interface NavItem { icon: string; label: string; route: string; }
     RouterOutlet, RouterLink, RouterLinkActive, CommonModule,
     MatSidenavModule, MatToolbarModule, MatIconModule,
     MatButtonModule, MatListModule, MatBadgeModule,
-    TranslateModule, LangSwitcherComponent
+    TranslateModule, LangSwitcherComponent, ChatWidgetComponent
   ],
   template: `
     <mat-sidenav-container class="sidenav-container">
@@ -82,6 +83,7 @@ interface NavItem { icon: string; label: string; route: string; }
         }
       </mat-sidenav-content>
     </mat-sidenav-container>
+    <app-chat-widget />
   `,
   styles: [`
     .sidenav-container { height: 100vh; }

@@ -1172,5 +1172,11 @@
     "reject_confirm": "Reject this suggestion?",
     "approved": "Question added to the FAQ",
     "rejected": "Suggestion rejected"
+  },
+  "chat_widget": {
+    "title": "AI Assistant",
+    "hint": "Ask a question about your bookings, revenue, housekeeping, linen stock…",
+    "placeholder": "Your question…",
+    "error": "An error occurred. Please try again."
   }
 }

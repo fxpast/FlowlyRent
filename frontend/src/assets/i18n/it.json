@@ -1170,5 +1170,11 @@
     "reject_confirm": "Rifiutare questo suggerimento?",
     "approved": "Domanda aggiunta alla FAQ",
     "rejected": "Suggerimento rifiutato"
+  },
+  "chat_widget": {
+    "title": "Assistente IA",
+    "hint": "Fai una domanda sulle tue prenotazioni, entrate, pulizie, scorte biancheria…",
+    "placeholder": "La tua domanda…",
+    "error": "Si è verificato un errore. Riprova."
   }
 }

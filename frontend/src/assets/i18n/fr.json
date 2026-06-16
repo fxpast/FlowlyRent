@@ -1172,5 +1172,11 @@
     "reject_confirm": "Rejeter cette suggestion ?",
     "approved": "Question ajoutée à la FAQ",
     "rejected": "Suggestion rejetée"
+  },
+  "chat_widget": {
+    "title": "Assistant IA",
+    "hint": "Posez une question sur vos réservations, revenus, entretien, stock de linge…",
+    "placeholder": "Votre question…",
+    "error": "Une erreur est survenue. Veuillez réessayer."
   }
 }
