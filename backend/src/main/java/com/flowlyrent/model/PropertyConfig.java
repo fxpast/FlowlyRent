@@ -1,5 +1,6 @@
 package com.flowlyrent.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -28,6 +29,11 @@ public class PropertyConfig {
     private String accessCode;
 
     private String previousAccessCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "key_box_id")
+    @JsonIgnore
+    private KeyBox keyBox;
 
     private Float cleaningHours;
 

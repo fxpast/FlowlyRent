@@ -9,6 +9,8 @@ export interface PropertyConfig {
   shortName?: string | null;
   accessCode?: string;
   previousAccessCode?: string;
+  keyBoxId?: number | null;
+  keyBoxName?: string | null;
   cleaningHours?: number | null;
   cleaningFee?: number | null;
   extraPersonThreshold?: number | null;
@@ -16,6 +18,13 @@ export interface PropertyConfig {
   discount7Nights?: number | null;
   discount28Nights?: number | null;
   updatedAt?: string;
+}
+
+export interface KeyBox {
+  id: number;
+  name: string;
+  accessCode?: string;
+  previousAccessCode?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,5 +61,25 @@ export class PropertyConfigService {
 
   regenerate(propId: string): Observable<PropertyConfig> {
     return this.http.post<PropertyConfig>(`${this.base}/${propId}/regenerate`, {});
+  }
+
+  linkKeyBox(propId: string, keyBoxId: number): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { keyBoxId: String(keyBoxId) });
+  }
+
+  unlinkKeyBox(propId: string): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { keyBoxId: '' });
+  }
+
+  getKeyBoxes(): Observable<KeyBox[]> {
+    return this.http.get<KeyBox[]>(`${environment.apiUrl}/admin/key-boxes`);
+  }
+
+  createKeyBox(name: string, accessCode?: string): Observable<KeyBox> {
+    return this.http.post<KeyBox>(`${environment.apiUrl}/admin/key-boxes`, { name, accessCode: accessCode ?? '' });
+  }
+
+  deleteKeyBox(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/admin/key-boxes/${id}`);
   }
 }

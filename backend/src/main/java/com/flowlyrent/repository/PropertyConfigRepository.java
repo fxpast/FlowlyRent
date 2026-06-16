@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface PropertyConfigRepository extends JpaRepository<PropertyConfig, Long> {
     List<PropertyConfig> findByUserId(Long userId);
     Optional<PropertyConfig> findByUserIdAndBeds24PropertyId(Long userId, String beds24PropertyId);
+    List<PropertyConfig> findByKeyBoxId(Long keyBoxId);
 }

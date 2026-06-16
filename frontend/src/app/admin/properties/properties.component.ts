@@ -17,7 +17,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { forkJoin } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
-import { PropertyConfigService, PropertyConfig } from '../../core/services/property-config.service';
+import { PropertyConfigService, PropertyConfig, KeyBox } from '../../core/services/property-config.service';
 import { BookingService } from '../../core/services/booking.service';
 import { UserService } from '../../core/services/user.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
@@ -258,34 +258,92 @@ interface OccupancyStatus {
                     <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
                   }
                 </div>
-                <div class="code-row">
-                  <mat-form-field appearance="outline" class="code-input">
-                    <input matInput
-                           type="text"
-                           [class.code-masked]="!codeVisible[p['id']]"
-                           [(ngModel)]="codeDraft[p['id']]"
-                           autocomplete="off"
-                           [placeholder]="'common.none' | translate"
-                           maxlength="20"
-                           (keydown.enter)="$event.preventDefault()">
-                    <button type="button" mat-icon-button matSuffix (click)="toggleVisible(p['id'])"
-                            [matTooltip]="(codeVisible[p['id']] ? 'common.hide' : 'common.show') | translate">
-                      <mat-icon>{{ codeVisible[p['id']] ? 'visibility_off' : 'visibility' }}</mat-icon>
+
+                <!-- Badge boîte à clef active -->
+                @if (propKeyBoxId[p['id']]) {
+                  <div class="keybox-badge">
+                    <mat-icon>lock</mat-icon>
+                    <span class="keybox-badge-name">{{ propKeyBoxName[p['id']] }}</span>
+                    @if (keyBoxSharedCount(p['id']) > 1) {
+                      <span class="keybox-shared">· {{ 'properties.key_box_shared' | translate:{count: keyBoxSharedCount(p['id'])} }}</span>
+                    }
+                    <button type="button" mat-icon-button color="warn" (click)="unlinkKeyBox(p['id'])"
+                            [matTooltip]="'properties.unlink_key_box' | translate" style="margin-left:auto">
+                      <mat-icon>link_off</mat-icon>
                     </button>
-                  </mat-form-field>
-                  <button type="button" mat-icon-button color="primary" (click)="saveCode(p['id'])"
-                          [matTooltip]="'properties.save_config' | translate"
-                          [disabled]="!isDirty(p['id'])">
-                    <mat-icon>save</mat-icon>
-                  </button>
-                  <button type="button" mat-icon-button (click)="regenerateCode(p['id'])"
-                          [matTooltip]="'properties.regenerate_code' | translate">
-                    <mat-icon>casino</mat-icon>
-                  </button>
-                </div>
-                @if (prevCodes[p['id']]) {
-                  <div class="prev-code">
-                    <mat-icon>history</mat-icon> {{ 'properties.prev_code' | translate }} : {{ prevCodes[p['id']] }}
+                  </div>
+                }
+
+                <!-- Input code (local ou boîte — backend gère de façon transparente) -->
+                @if (!showKeyBoxCreate[p['id']]) {
+                  <div class="code-row">
+                    <mat-form-field appearance="outline" class="code-input">
+                      <input matInput
+                             type="text"
+                             [class.code-masked]="!codeVisible[p['id']]"
+                             [(ngModel)]="codeDraft[p['id']]"
+                             autocomplete="off"
+                             [placeholder]="'common.none' | translate"
+                             maxlength="20"
+                             (keydown.enter)="$event.preventDefault()">
+                      <button type="button" mat-icon-button matSuffix (click)="toggleVisible(p['id'])"
+                              [matTooltip]="(codeVisible[p['id']] ? 'common.hide' : 'common.show') | translate">
+                        <mat-icon>{{ codeVisible[p['id']] ? 'visibility_off' : 'visibility' }}</mat-icon>
+                      </button>
+                    </mat-form-field>
+                    <button type="button" mat-icon-button color="primary" (click)="saveCode(p['id'])"
+                            [matTooltip]="'properties.save_config' | translate"
+                            [disabled]="!isDirty(p['id'])">
+                      <mat-icon>save</mat-icon>
+                    </button>
+                    <button type="button" mat-icon-button (click)="regenerateCode(p['id'])"
+                            [matTooltip]="'properties.regenerate_code' | translate">
+                      <mat-icon>casino</mat-icon>
+                    </button>
+                  </div>
+                  @if (prevCodes[p['id']]) {
+                    <div class="prev-code">
+                      <mat-icon>history</mat-icon> {{ 'properties.prev_code' | translate }} : {{ prevCodes[p['id']] }}
+                    </div>
+                  }
+                }
+
+                <!-- Lier à une boîte existante / créer (si pas déjà liée) -->
+                @if (!propKeyBoxId[p['id']]) {
+                  <div class="keybox-link-row">
+                    @if (keyBoxes().length) {
+                      <mat-form-field appearance="outline" class="keybox-select">
+                        <mat-label>{{ 'properties.link_key_box' | translate }}</mat-label>
+                        <mat-select (selectionChange)="linkKeyBox(p['id'], $event.value)">
+                          @for (kb of keyBoxes(); track kb.id) {
+                            <mat-option [value]="kb.id">{{ kb.name }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    }
+                    <button type="button" mat-stroked-button (click)="openCreateKeyBox(p['id'])">
+                      <mat-icon>add</mat-icon> {{ 'properties.create_key_box' | translate }}
+                    </button>
+                  </div>
+                }
+
+                <!-- Formulaire création boîte -->
+                @if (showKeyBoxCreate[p['id']]) {
+                  <div class="keybox-create-form">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>{{ 'properties.key_box_name' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="newKeyBoxNameDraft[p['id']]" autocomplete="off">
+                    </mat-form-field>
+                    <div class="keybox-create-actions">
+                      <button type="button" mat-flat-button color="primary"
+                              (click)="createAndLinkKeyBox(p['id'])"
+                              [disabled]="!newKeyBoxNameDraft[p['id']]?.trim()">
+                        {{ 'common.create' | translate }}
+                      </button>
+                      <button type="button" mat-button (click)="showKeyBoxCreate[p['id']] = false">
+                        {{ 'common.cancel' | translate }}
+                      </button>
+                    </div>
                   </div>
                 }
               </div>
@@ -546,6 +604,16 @@ interface OccupancyStatus {
     }
     .prev-code mat-icon { font-size: 13px; width: 13px; height: 13px; }
 
+    .keybox-badge { display: flex; align-items: center; gap: 6px; background: #e3f2fd; border-radius: 6px; padding: 5px 10px; font-size: 12px; margin-bottom: 6px; }
+    .keybox-badge mat-icon { font-size: 15px; width: 15px; height: 15px; color: #1976d2; }
+    .keybox-badge-name { font-weight: 600; color: #1976d2; }
+    .keybox-shared { color: #888; font-size: 11px; }
+    .keybox-link-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+    .keybox-select { flex: 1; min-width: 150px; max-width: 220px; }
+    .keybox-create-form { margin-top: 6px; padding: 10px; background: #f9f9f9; border-radius: 6px; border: 1px solid #e0e0e0; }
+    .keybox-create-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .full-width { width: 100%; }
+
     .cleaning-section { margin-top: 12px; }
     .cleaning-label {
       display: flex; align-items: center; gap: 6px;
@@ -672,6 +740,11 @@ export class PropertiesComponent implements OnInit {
   codeDraft:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
   codeVisible: Record<string, boolean> = {};
+  keyBoxes = signal<KeyBox[]>([]);
+  propKeyBoxId:   Record<string, number | null> = {};
+  propKeyBoxName: Record<string, string | null> = {};
+  showKeyBoxCreate: Record<string, boolean> = {};
+  newKeyBoxNameDraft: Record<string, string> = {};
   cleaningDraft: Record<string, string> = {};
   cleaningSaved: Record<string, string> = {};
   pricingDraft: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
@@ -812,6 +885,7 @@ export class PropertiesComponent implements OnInit {
 
   ngOnInit(): void {
     this.userService.getProfile().subscribe({ next: p => this.publicSiteSlug.set(p.publicSiteSlug ?? ''), error: () => {} });
+    this.propConfigService.getKeyBoxes().subscribe({ next: kbs => this.keyBoxes.set(kbs), error: () => {} });
     this.loading.set(true);
     const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     forkJoin([
@@ -830,6 +904,8 @@ export class PropertiesComponent implements OnInit {
           this.codeSaved[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.codeDraft[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.prevCodes[c.beds24PropertyId]     = c.previousAccessCode ?? '';
+          this.propKeyBoxId[c.beds24PropertyId]   = c.keyBoxId   ?? null;
+          this.propKeyBoxName[c.beds24PropertyId] = c.keyBoxName ?? null;
           const ch = c.cleaningHours != null ? String(c.cleaningHours) : '';
           this.cleaningSaved[c.beds24PropertyId] = ch;
           this.cleaningDraft[c.beds24PropertyId] = ch;
@@ -1169,9 +1245,8 @@ export class PropertiesComponent implements OnInit {
   saveCode(propId: string): void {
     this.propConfigService.updateAccessCode(String(propId), this.codeDraft[propId] ?? '').subscribe({
       next: cfg => {
-        this.codeSaved[propId] = cfg.accessCode         ?? '';
-        this.codeDraft[propId] = cfg.accessCode         ?? '';
-        this.prevCodes[propId] = cfg.previousAccessCode ?? '';
+        this.updateCodeState(propId, cfg);
+        if (cfg.keyBoxId) this.keyBoxes.update(kbs => kbs.map(kb => kb.id === cfg.keyBoxId ? { ...kb, accessCode: cfg.accessCode, previousAccessCode: cfg.previousAccessCode } : kb));
         this.snackBar.open(this.t.instant('properties.code_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
@@ -1251,12 +1326,81 @@ export class PropertiesComponent implements OnInit {
   regenerateCode(propId: string): void {
     this.propConfigService.regenerate(String(propId)).subscribe({
       next: cfg => {
-        this.codeSaved[propId] = cfg.accessCode         ?? '';
-        this.codeDraft[propId] = cfg.accessCode         ?? '';
-        this.prevCodes[propId] = cfg.previousAccessCode ?? '';
+        this.updateCodeState(propId, cfg);
         this.snackBar.open(`${this.t.instant('properties.new_code')} : ${cfg.accessCode}`, this.t.instant('common.ok'), { duration: 3000 });
+        if (cfg.keyBoxId) this.keyBoxes.update(kbs => kbs.map(kb => kb.id === cfg.keyBoxId ? { ...kb, accessCode: cfg.accessCode, previousAccessCode: cfg.previousAccessCode } : kb));
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
+  }
+
+  private updateCodeState(propId: string, cfg: PropertyConfig): void {
+    this.codeSaved[propId]     = cfg.accessCode         ?? '';
+    this.codeDraft[propId]     = cfg.accessCode         ?? '';
+    this.prevCodes[propId]     = cfg.previousAccessCode ?? '';
+    this.propKeyBoxId[propId]   = cfg.keyBoxId   ?? null;
+    this.propKeyBoxName[propId] = cfg.keyBoxName ?? null;
+  }
+
+  linkKeyBox(propId: string, keyBoxId: number): void {
+    this.propConfigService.linkKeyBox(propId, keyBoxId).subscribe({
+      next: cfg => {
+        this.updateCodeState(propId, cfg);
+        this.showKeyBoxCreate[propId] = false;
+        this.snackBar.open(this.t.instant('properties.key_box_linked'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  unlinkKeyBox(propId: string): void {
+    this.propConfigService.unlinkKeyBox(propId).subscribe({
+      next: cfg => {
+        this.updateCodeState(propId, cfg);
+        this.snackBar.open(this.t.instant('properties.key_box_unlinked'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  createAndLinkKeyBox(propId: string): void {
+    const name = (this.newKeyBoxNameDraft[propId] ?? '').trim();
+    if (!name) return;
+    this.propConfigService.createKeyBox(name).subscribe({
+      next: kb => {
+        this.keyBoxes.update(kbs => [...kbs, kb]);
+        this.newKeyBoxNameDraft[propId] = '';
+        this.showKeyBoxCreate[propId] = false;
+        this.linkKeyBox(propId, kb.id);
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  deleteKeyBox(keyBoxId: number): void {
+    this.propConfigService.deleteKeyBox(keyBoxId).subscribe({
+      next: () => {
+        this.keyBoxes.update(kbs => kbs.filter(kb => kb.id !== keyBoxId));
+        Object.keys(this.propKeyBoxId).forEach(pid => {
+          if (this.propKeyBoxId[pid] === keyBoxId) {
+            this.propKeyBoxId[pid] = null;
+            this.propKeyBoxName[pid] = null;
+          }
+        });
+        this.snackBar.open(this.t.instant('properties.key_box_deleted'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  keyBoxSharedCount(propId: string): number {
+    const kbId = this.propKeyBoxId[propId];
+    if (!kbId) return 0;
+    return Object.values(this.propKeyBoxId).filter(id => id === kbId).length;
+  }
+
+  openCreateKeyBox(propId: string): void {
+    this.newKeyBoxNameDraft[propId] = '';
+    this.showKeyBoxCreate[propId] = true;
   }
 }
