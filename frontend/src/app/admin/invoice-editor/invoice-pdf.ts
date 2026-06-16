@@ -32,7 +32,7 @@ function vatBreakdown(inv: Invoice): { rate: number; base: number; amount: numbe
 
 function fmt(n: number): string { return n.toFixed(2) + ' €'; }
 
-export async function generateInvoicePdf(inv: Invoice, profile: any): Promise<void> {
+export async function generateInvoicePdf(inv: Invoice, profile: any, invoiceFooter?: string | null): Promise<void> {
   const pdfMakeModule  = await import('pdfmake/build/pdfmake');
   const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
   const pdfMake = pdfMakeModule.default;
@@ -52,7 +52,14 @@ export async function generateInvoicePdf(inv: Invoice, profile: any): Promise<vo
   };
 
   const docDef: any = {
-    pageMargins: [40, 40, 40, 60],
+    pageMargins: [40, 40, 40, invoiceFooter ? 80 : 40],
+    footer: invoiceFooter ? (_: number, __: number) => ({
+      text: invoiceFooter,
+      alignment: 'center',
+      fontSize: 8,
+      color: '#888',
+      margin: [40, 12, 40, 0]
+    }) : undefined,
     defaultStyle: { font: 'Roboto', fontSize: 10 },
     content: [
       // En-tête

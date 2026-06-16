@@ -34,6 +34,8 @@ public class Invoice {
 
     private String beds24BookingId;
 
+    private String beds24PropertyId;
+
     private String guestName;
     private String guestEmail;
 

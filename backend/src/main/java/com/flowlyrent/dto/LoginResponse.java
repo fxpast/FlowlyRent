@@ -21,4 +21,5 @@ public class LoginResponse {
     private String companyName;
     private String companyAddress;
     private String companyLogoUrl;
+    private String invoiceFooter;
 }

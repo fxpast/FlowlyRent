@@ -97,6 +97,7 @@ public class AdminInvoiceController {
         invoice.setIssueDate(issueDate);
         invoice.setDueDate(req.dueDate != null && !req.dueDate.isBlank() ? LocalDate.parse(req.dueDate) : null);
         invoice.setBeds24BookingId(req.beds24BookingId);
+        invoice.setBeds24PropertyId(req.beds24PropertyId);
         invoice.setGuestName(req.guestName);
         invoice.setGuestEmail(req.guestEmail);
         invoice.setGuestAddress(req.guestAddress);
@@ -121,6 +122,7 @@ public class AdminInvoiceController {
     @Data
     public static class InvoiceRequest {
         String beds24BookingId;
+        String beds24PropertyId;
         String guestName;
         String guestEmail;
         String guestAddress;

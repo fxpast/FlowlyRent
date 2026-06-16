@@ -47,6 +47,7 @@ public class UserSettingsController {
         if (body.containsKey("companyName"))  user.setCompanyName(body.get("companyName"));
         if (body.containsKey("companyAddress")) user.setCompanyAddress(body.get("companyAddress"));
         if (body.containsKey("companyLogoUrl")) user.setCompanyLogoUrl(body.get("companyLogoUrl"));
+        if (body.containsKey("invoiceFooter")) user.setInvoiceFooter(body.get("invoiceFooter"));
         if (body.containsKey("listingsSlug"))  user.setListingsSlug(body.get("listingsSlug"));
         if (body.containsKey("beds24OwnerId")) user.setBeds24OwnerId(body.get("beds24OwnerId"));
         if (body.containsKey("publicSiteSlug")) {
@@ -184,6 +185,7 @@ public class UserSettingsController {
         r.setCompanyName(user.getCompanyName());
         r.setCompanyAddress(user.getCompanyAddress());
         r.setCompanyLogoUrl(user.getCompanyLogoUrl());
+        r.setInvoiceFooter(user.getInvoiceFooter());
         return r;
     }
 }

@@ -63,6 +63,9 @@ public class AppUser implements UserDetails {
     @Column(length = 500)
     private String companyLogoUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String invoiceFooter;
+
     private boolean active = true;
 
     @CreationTimestamp

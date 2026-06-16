@@ -421,6 +421,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <textarea matInput rows="3" [(ngModel)]="profileEdit.companyAddress"
                       placeholder="Ex : 12 rue de la Paix&#10;75001 Paris"></textarea>
           </mat-form-field>
+          <mat-form-field class="full-width">
+            <mat-label>{{ 'properties.invoice_footer_label' | translate }}</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="profileEdit.invoiceFooter"
+                      [placeholder]="'properties.invoice_footer_placeholder' | translate"></textarea>
+            <mat-hint>{{ 'properties.invoice_footer_hint' | translate }}</mat-hint>
+          </mat-form-field>
           @if (billingMsg()) {
             <p class="msg" [class.error]="billingError()">{{ billingMsg() }}</p>
           }
@@ -479,7 +485,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 })
 export class SettingsComponent implements OnInit {
   profile = signal<UserProfile | null>(null);
-  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', phone: '', listingsSlug: '', beds24OwnerId: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '' };
+  profileEdit = { firstName: '', lastName: '', publicSiteSlug: '', phone: '', listingsSlug: '', beds24OwnerId: '', siret: '', companyName: '', companyAddress: '', companyLogoUrl: '', invoiceFooter: '' };
   savingProfile = signal(false);
   profileMsg = signal('');
   profileError = signal(false);
@@ -554,7 +560,8 @@ export class SettingsComponent implements OnInit {
         publicSiteSlug: p.publicSiteSlug ?? '', phone: p.phone ?? '',
         listingsSlug: p.listingsSlug ?? '', beds24OwnerId: p.beds24OwnerId ?? '',
         siret: p.siret ?? '', companyName: p.companyName ?? '',
-        companyAddress: p.companyAddress ?? '', companyLogoUrl: p.companyLogoUrl ?? ''
+        companyAddress: p.companyAddress ?? '', companyLogoUrl: p.companyLogoUrl ?? '',
+        invoiceFooter: p.invoiceFooter ?? ''
       };
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
     });
@@ -594,7 +601,8 @@ export class SettingsComponent implements OnInit {
     this.userService.updateProfile({
       siret: this.profileEdit.siret,
       companyName: this.profileEdit.companyName,
-      companyAddress: this.profileEdit.companyAddress
+      companyAddress: this.profileEdit.companyAddress,
+      invoiceFooter: this.profileEdit.invoiceFooter
     }).subscribe({
       next: p => {
         this.profile.set(p);

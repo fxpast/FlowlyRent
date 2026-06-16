@@ -30,6 +30,7 @@ export interface UserProfile {
   companyName?: string;
   companyAddress?: string;
   companyLogoUrl?: string;
+  invoiceFooter?: string;
 }
 
 export interface SubscriptionInfo {
@@ -49,7 +50,7 @@ export class UserService {
     return this.http.get<UserProfile>(`${this.base}/user/profile`);
   }
 
-  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'listingsSlug' | 'beds24OwnerId' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl'>>): Observable<UserProfile> {
+  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'listingsSlug' | 'beds24OwnerId' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl' | 'invoiceFooter'>>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.base}/user/profile`, data);
   }
 

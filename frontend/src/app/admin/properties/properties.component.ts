@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { forkJoin } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
@@ -38,7 +39,7 @@ interface OccupancyStatus {
   selector: 'app-properties',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, TextFieldModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule,
     MatTooltipModule, MatSnackBarModule, MatDividerModule, MatSlideToggleModule,
@@ -613,6 +614,12 @@ interface OccupancyStatus {
     .inv-label-field { flex: 2; min-width: 100px; }
     .inv-detail-field { flex: 1; min-width: 80px; }
     .inv-qty-field { width: 60px; flex-shrink: 0; }
+
+    .full-textarea { width: 100%; margin-bottom: 8px; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; vertical-align: middle; margin-right: 6px; color: #546e7a; }
+    .footer-actions { display: flex; align-items: center; gap: 12px; }
+    .footer-saved-hint { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #2e7d32; }
+    .footer-saved-hint mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     .booking-url-row { display: flex; align-items: center; gap: 6px; }
     .booking-url-code { font-size: 11px; background: #f5f5f5; border: 1px solid #e0e0e0;

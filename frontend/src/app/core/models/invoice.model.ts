@@ -17,6 +17,7 @@ export interface Invoice {
   invoiceYear?: number;
   invoiceSeq?: number;
   beds24BookingId?: string;
+  beds24PropertyId?: string;
   guestName?: string;
   guestEmail?: string;
   guestAddress?: string;

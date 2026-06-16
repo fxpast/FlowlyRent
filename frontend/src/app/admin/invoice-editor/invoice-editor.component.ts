@@ -17,6 +17,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InvoiceService } from '../../core/services/invoice.service';
 import { UserService } from '../../core/services/user.service';
+import { BookingService } from '../../core/services/booking.service';
 import { Invoice, InvoiceLine, InvoiceLineType, InvoiceStatus } from '../../core/models/invoice.model';
 import { generateInvoicePdf, totalHT, totalTTC } from './invoice-pdf';
 
@@ -126,6 +127,19 @@ interface LineForm {
               <mat-icon>link</mat-icon> {{ 'invoices.booking_ref' | translate:{ id: form.beds24BookingId } }}
             </div>
           }
+
+          <div class="section-title" style="margin-top:16px">
+            <mat-icon>home</mat-icon> {{ 'invoices.section_property' | translate }}
+          </div>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>{{ 'invoices.property_label' | translate }}</mat-label>
+            <mat-select [(ngModel)]="form.beds24PropertyId">
+              <mat-option value="">{{ 'invoices.no_property' | translate }}</mat-option>
+              @for (p of properties(); track p['id']) {
+                <mat-option [value]="'' + p['id']">{{ p['name'] || p['id'] }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
         </div>
 
@@ -290,13 +304,15 @@ interface LineForm {
   `]
 })
 export class InvoiceEditorComponent implements OnInit {
-  invoice    = signal<Invoice | null>(null);
-  loading    = signal(false);
-  saving     = signal(false);
+  invoice     = signal<Invoice | null>(null);
+  loading     = signal(false);
+  saving      = signal(false);
   userProfile = signal<any>(null);
+  properties  = signal<any[]>([]);
 
   form = {
     beds24BookingId: '',
+    beds24PropertyId: '',
     guestName: '', guestEmail: '', guestAddress: '',
     notes: ''
   };
@@ -330,6 +346,7 @@ export class InvoiceEditorComponent implements OnInit {
   constructor(
     private invoiceService: InvoiceService,
     private userService: UserService,
+    private bookingService: BookingService,
     private route: ActivatedRoute,
     private router: Router,
     private snackBar: MatSnackBar,
@@ -338,6 +355,7 @@ export class InvoiceEditorComponent implements OnInit {
 
   ngOnInit(): void {
     this.userService.getProfile().subscribe(p => this.userProfile.set(p));
+    this.bookingService.getPropertiesWithDisplayNames().subscribe(props => this.properties.set(props ?? []));
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
@@ -356,8 +374,9 @@ export class InvoiceEditorComponent implements OnInit {
 
   private loadInvoice(inv: Invoice): void {
     this.invoice.set(inv);
-    this.form.beds24BookingId = inv.beds24BookingId ?? '';
-    this.form.guestName       = inv.guestName       ?? '';
+    this.form.beds24BookingId    = inv.beds24BookingId    ?? '';
+    this.form.beds24PropertyId   = inv.beds24PropertyId   ?? '';
+    this.form.guestName          = inv.guestName          ?? '';
     this.form.guestEmail      = inv.guestEmail      ?? '';
     this.form.guestAddress    = inv.guestAddress    ?? '';
     this.form.notes           = inv.notes           ?? '';
@@ -423,7 +442,8 @@ export class InvoiceEditorComponent implements OnInit {
     if (this.saving()) return;
     this.saving.set(true);
     const payload: Partial<Invoice> = {
-      beds24BookingId: this.form.beds24BookingId || undefined,
+      beds24BookingId:  this.form.beds24BookingId  || undefined,
+      beds24PropertyId: this.form.beds24PropertyId || undefined,
       guestName:    this.form.guestName,
       guestEmail:   this.form.guestEmail,
       guestAddress: this.form.guestAddress,
@@ -469,15 +489,23 @@ export class InvoiceEditorComponent implements OnInit {
     if (!inv) return;
     const current: Invoice = {
       ...inv,
-      guestName:    this.form.guestName,
-      guestEmail:   this.form.guestEmail,
-      guestAddress: this.form.guestAddress,
-      issueDate:    this.toIso(this.issueDateObj),
-      dueDate:      this.dueDateObj ? this.toIso(this.dueDateObj) : undefined,
-      notes:        this.form.notes,
-      lines:        this._lines().map((l, i) => ({ ...l, sortOrder: i })) as InvoiceLine[]
+      guestName:       this.form.guestName,
+      guestEmail:      this.form.guestEmail,
+      guestAddress:    this.form.guestAddress,
+      beds24PropertyId: this.form.beds24PropertyId || undefined,
+      issueDate:       this.toIso(this.issueDateObj),
+      dueDate:         this.dueDateObj ? this.toIso(this.dueDateObj) : undefined,
+      notes:           this.form.notes,
+      lines:           this._lines().map((l, i) => ({ ...l, sortOrder: i })) as InvoiceLine[]
     };
-    generateInvoicePdf(current, this.userProfile());
+    generateInvoicePdf(current, this.userProfile(), this.userProfile()?.invoiceFooter);
+  }
+
+  selectedPropertyName(): string {
+    const id = this.form.beds24PropertyId;
+    if (!id) return '';
+    const p = this.properties().find(p => String(p['id']) === id);
+    return p ? (p['name'] ?? '') : '';
   }
 
   statusLabel(s: InvoiceStatus): string {
