@@ -167,6 +167,10 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - Boutons dans la carte de chaque tâche (`sendMission(task, channel)`)
 - Le contenu envoyé est **uniquement `task.notes`** — aucun en-tête généré automatiquement
 
+### Chatbot — Base de connaissance
+
+> **⚠️ RÈGLE : mettre à jour `backend/src/main/resources/chatbot/knowledge-base.md` à chaque fois qu'une nouvelle fonctionnalité est implémentée ou qu'une fonctionnalité existante change de comportement.** Le chatbot répond en se basant sur ce fichier — une base obsolète produit de mauvaises réponses. La mise à jour doit être incluse dans le même commit que la fonctionnalité.
+
 ### Chatbot — Function calling (Gemini + Groq)
 - **`ChatbotPromptService`** : construit le `systemInstruction` partagé (base de connaissance + FAQ + date du jour) et charge `chatbot/tool-declarations.json` au démarrage (`@PostConstruct`) — fournit les déclarations Gemini ET OpenAI
 - **`GeminiChatbotService`** : fournisseur principal, boucle de function calling max 3 itérations

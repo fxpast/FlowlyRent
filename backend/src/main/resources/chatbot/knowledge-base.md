@@ -45,7 +45,17 @@ message de rappel).
 
 Page de gestion de chaque logement :
 - **Nom court** (shortName) utilisé dans les URLs du site public et dans toute l'app.
-- **Code d'accès** : affichage, masquage et régénération.
+- **Code d'accès** : chaque logement peut avoir son propre code d'accès, ou partager une
+  **boîte à clef** commune avec d'autres logements. Quand une boîte à clef est liée, son
+  code s'applique automatiquement à tous les logements associés — modifier le code de la
+  boîte met à jour tous ces logements en même temps.
+- **Boîtes à clef (Key boxes)** : un hôte peut créer plusieurs boîtes à clef (ex. "Boîte
+  entrée immeuble", "Boîte garage") et y associer un ou plusieurs logements. C'est la
+  solution recommandée quand plusieurs logements partagent physiquement le même accès.
+  La création, la liaison et la suppression se font depuis l'onglet **Code d'accès** de
+  chaque logement. Un code peut être régénéré automatiquement (4 chiffres) ou saisi
+  manuellement. L'ancien code reste mémorisé (previousAccessCode) pour faciliter la
+  transition.
 - **Durée de ménage standard** (en heures), utilisée pour planifier les missions d'entretien.
 - **Tarification directe** : frais de ménage, tarif personne supplémentaire, remises
   longue durée (7 nuits, 28 nuits).
