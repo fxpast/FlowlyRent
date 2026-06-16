@@ -135,7 +135,7 @@ interface ChatMessage { role: 'user' | 'assistant'; text: string; }
 
     @media (max-width: 768px) {
       .widget-host {
-        bottom: 90px;
+        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
         right: 20px;
       }
       .chat-panel {
