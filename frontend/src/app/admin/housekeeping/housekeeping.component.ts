@@ -1343,17 +1343,7 @@ export class HousekeepingComponent implements OnInit {
   waUrl(phone: string): string      { return `https://wa.me/${phone.replace(/[^0-9]/g, '')}`; }
 
   private missionMessage(task: Task): string {
-    const date = new Date(task.scheduledDate);
-    const property = task.propertyName ?? task.property?.name ?? task.beds24PropertyId ?? '';
-    let msg = this.t.instant('housekeeping.mission_message', {
-      name:     task.housekeeper?.name ?? '',
-      type:     this.typeLabel(task.type),
-      property,
-      date:     date.toLocaleDateString('fr-FR'),
-      time:     date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    });
-    if (task.notes) msg += `\n\n${task.notes}`;
-    return msg;
+    return task.notes ?? '';
   }
 
   sendMission(task: Task, channel: 'email' | 'whatsapp' | 'sms'): void {
