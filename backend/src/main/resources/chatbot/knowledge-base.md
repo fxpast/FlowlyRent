@@ -33,10 +33,12 @@ réservations directes uniquement (plan FREE limité à 1 logement).
 
 Pour les hôtes qui n'utilisent pas Beds24, FlowlyRent propose un mode iCal :
 - L'hôte crée ses logements manuellement dans la page **Logements**.
-- Pour chaque logement, il renseigne un lien iCal (ex. depuis Airbnb : Calendrier → Exporter).
+- Pour chaque logement, il renseigne un **lien iCal import** (ex. depuis Airbnb : Calendrier → Exporter).
 - FlowlyRent synchronise automatiquement les réservations depuis ce lien iCal toutes les 2 heures.
 - L'hôte peut aussi déclencher une synchronisation manuelle depuis la page Logements.
-- Dans ce mode : pas de réservations directes, pas de messagerie voyageur, pas de site public.
+- L'hôte peut créer des **réservations directes** depuis la page Réservations. Ces réservations sont stockées dans FlowlyRent.
+- Chaque logement dispose d'un **lien iCal export** (affiché dans la page Logements) : l'hôte le colle dans Airbnb/Booking comme "calendrier externe" pour bloquer automatiquement les dates sur les plateformes.
+- Dans ce mode : pas de messagerie voyageur, pas de site public de réservation (en cours de développement).
 - Toutes les autres fonctionnalités restent disponibles : entretien, Qonto, tableau de bord, calendrier.
 
 ## Tableau de bord (Dashboard)

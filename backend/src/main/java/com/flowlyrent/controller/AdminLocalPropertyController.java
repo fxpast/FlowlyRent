@@ -9,6 +9,7 @@ import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.service.IcalSyncService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,16 @@ public class AdminLocalPropertyController {
     private final PropertyConfigRepository propertyConfigRepo;
     private final IcalSyncService icalSyncService;
     private final SecurityUtils securityUtils;
+
+    @PostConstruct
+    public void fillMissingFeedTokens() {
+        localPropertyRepo.findAll().stream()
+            .filter(p -> p.getIcalFeedToken() == null)
+            .forEach(p -> {
+                p.setIcalFeedToken(java.util.UUID.randomUUID().toString());
+                localPropertyRepo.save(p);
+            });
+    }
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list() {
@@ -110,12 +121,23 @@ public class AdminLocalPropertyController {
         }
     }
 
+    @PostMapping("/{id}/regenerate-token")
+    public ResponseEntity<?> regenerateToken(@PathVariable Long id) {
+        Long userId = securityUtils.getCurrentUserId();
+        LocalProperty prop = localPropertyRepo.findByIdAndUserId(id, userId).orElse(null);
+        if (prop == null) return ResponseEntity.notFound().build();
+        prop.setIcalFeedToken(java.util.UUID.randomUUID().toString());
+        localPropertyRepo.save(prop);
+        return ResponseEntity.ok(toMap(prop));
+    }
+
     private Map<String, Object> toMap(LocalProperty p) {
-        return Map.of(
-            "id", p.getId().toString(),
-            "name", p.getName(),
-            "shortName", p.getShortName() != null ? p.getShortName() : "",
-            "icalUrl", p.getIcalUrl() != null ? p.getIcalUrl() : ""
-        );
+        java.util.Map<String, Object> m = new java.util.HashMap<>();
+        m.put("id", p.getId().toString());
+        m.put("name", p.getName());
+        m.put("shortName", p.getShortName() != null ? p.getShortName() : "");
+        m.put("icalUrl", p.getIcalUrl() != null ? p.getIcalUrl() : "");
+        m.put("icalFeedToken", p.getIcalFeedToken() != null ? p.getIcalFeedToken() : "");
+        return m;
     }
 }

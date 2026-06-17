@@ -280,6 +280,19 @@ interface OccupancyStatus {
                     <mat-label>{{ 'properties.local_prop_ical_url' | translate }}</mat-label>
                     <input matInput [(ngModel)]="draft.icalUrl" autocomplete="off" placeholder="https://…">
                   </mat-form-field>
+                  @if (p['icalFeedToken']) {
+                    <div class="ical-export-row">
+                      <mat-icon class="ical-export-icon">rss_feed</mat-icon>
+                      <div class="ical-export-info">
+                        <span class="ical-export-label">{{ 'properties.ical_export_label' | translate }}</span>
+                        <code class="ical-export-url">{{ icalExportUrl(p['icalFeedToken']) }}</code>
+                      </div>
+                      <button mat-icon-button (click)="copyIcalFeedUrl(p['icalFeedToken'])"
+                              [matTooltip]="'common.copy' | translate">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+                  }
                   <div class="ical-prop-actions">
                     <button mat-flat-button color="primary" (click)="saveLocalProp(p['id'])"
                             [disabled]="!isLocalPropDirty(p['id'])">
@@ -808,6 +821,11 @@ interface OccupancyStatus {
     .ical-short-field { flex: 1; min-width: 100px; }
     .ical-url-field { width: 100%; }
     .ical-prop-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+    .ical-export-row { display: flex; align-items: flex-start; gap: 8px; background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+    .ical-export-icon { font-size: 18px; width: 18px; height: 18px; color: #558b2f; flex-shrink: 0; margin-top: 2px; }
+    .ical-export-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .ical-export-label { font-size: 11px; font-weight: 600; color: #558b2f; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ical-export-url { font-size: 11px; color: #33691e; word-break: break-all; background: none; border: none; padding: 0; }
 
     @media (max-width: 600px) {
       .props-grid { grid-template-columns: 1fr; }
@@ -1607,6 +1625,17 @@ export class PropertiesComponent implements OnInit {
     const kbId = this.propKeyBoxId[propId];
     if (!kbId) return 0;
     return Object.values(this.propKeyBoxId).filter(id => id === kbId).length;
+  }
+
+  icalExportUrl(token: string): string {
+    return `${environment.apiUrl}/public/ical/${token}.ics`;
+  }
+
+  copyIcalFeedUrl(token: string): void {
+    const url = this.icalExportUrl(token);
+    navigator.clipboard.writeText(url).then(() =>
+      this.snackBar.open(this.t.instant('properties.ical_export_copied'), '', { duration: 2000 })
+    );
   }
 
   openCreateKeyBox(propId: string): void {

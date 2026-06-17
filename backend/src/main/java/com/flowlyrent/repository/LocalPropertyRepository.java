@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface LocalPropertyRepository extends JpaRepository<LocalProperty, Long> {
     List<LocalProperty> findByUserIdOrderByCreatedAtAsc(Long userId);
     Optional<LocalProperty> findByIdAndUserId(Long id, Long userId);
+    Optional<LocalProperty> findByIcalFeedToken(String token);
 }

@@ -4,10 +4,12 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.IcalBooking;
+import com.flowlyrent.model.LocalProperty;
 import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.IcalBookingRepository;
+import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +37,7 @@ public class AdminBookingController {
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
     private final IcalBookingRepository icalBookingRepo;
+    private final LocalPropertyRepository localPropertyRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/estimate")
@@ -407,6 +410,59 @@ public class AdminBookingController {
         }
     }
 
+    @PostMapping("/direct")
+    public ResponseEntity<?> createDirectBooking(@RequestBody Map<String, String> body) {
+        try {
+            AppUser user = securityUtils.getCurrentUser();
+            if (user.getChannelType() != ChannelType.ICAL) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Disponible uniquement en mode iCal"));
+            }
+            String propIdStr = body.get("propId");
+            String arrival   = body.get("arrival");
+            String departure = body.get("departure");
+            if (propIdStr == null || arrival == null || departure == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "propId, arrival et departure sont requis"));
+            }
+            Long propId = Long.parseLong(propIdStr);
+            LocalProperty prop = localPropertyRepo.findByIdAndUserId(propId, user.getId())
+                    .orElseThrow(() -> new IllegalStateException("Logement introuvable"));
+
+            String firstName = body.getOrDefault("firstName", "").trim();
+            String lastName  = body.getOrDefault("lastName", "").trim();
+            String summary   = (firstName + " " + lastName).trim();
+            if (summary.isEmpty()) summary = "Réservation directe";
+
+            IcalBooking booking = new IcalBooking();
+            booking.setUser(user);
+            booking.setLocalProperty(prop);
+            booking.setIcalUid("direct-" + java.util.UUID.randomUUID());
+            booking.setArrival(LocalDate.parse(arrival.substring(0, 10)));
+            booking.setDeparture(LocalDate.parse(departure.substring(0, 10)));
+            booking.setSummary(summary);
+            booking.setStatus("direct");
+            icalBookingRepo.save(booking);
+
+            return ResponseEntity.ok(icalToMap(booking));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    @DeleteMapping("/direct/{id}")
+    public ResponseEntity<?> deleteDirectBooking(@PathVariable Long id) {
+        try {
+            AppUser user = securityUtils.getCurrentUser();
+            IcalBooking booking = icalBookingRepo.findById(id)
+                    .filter(b -> b.getUser().getId().equals(user.getId()))
+                    .filter(b -> b.getIcalUid() != null && b.getIcalUid().startsWith("direct-"))
+                    .orElseThrow(() -> new IllegalStateException("Réservation introuvable ou non supprimable"));
+            icalBookingRepo.delete(booking);
+            return ResponseEntity.ok(Map.of("status", "supprimé"));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
     private Map<String, Object> icalToMap(IcalBooking b) {
         String summary = b.getSummary() != null ? b.getSummary().trim() : "";
         String[] parts = summary.split("\\s+", 2);
@@ -426,9 +482,10 @@ public class AdminBookingController {
         m.put("numAdult", 1);
         m.put("totalPrice", 0);
         m.put("price", 0);
-        m.put("status", b.getStatus() != null ? b.getStatus() : "confirmed");
-        m.put("channel", "iCal");
-        m.put("source", "ical");
+        boolean isDirect = b.getIcalUid() != null && b.getIcalUid().startsWith("direct-");
+        m.put("status",  isDirect ? "direct" : (b.getStatus() != null ? b.getStatus() : "confirmed"));
+        m.put("channel", isDirect ? "direct" : "iCal");
+        m.put("source",  isDirect ? "direct" : "ical");
         return m;
     }
 

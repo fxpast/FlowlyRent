@@ -161,7 +161,16 @@
     "channel_airbnb": "Airbnb",
     "channel_booking": "Booking.com",
     "channel_abritel": "Abritel",
-    "source": "Fonte"
+    "source": "Fonte",
+    "property": "Alloggio",
+    "guest_first_name": "Nome",
+    "guest_last_name": "Cognome",
+    "arrival": "Arrivo",
+    "departure": "Partenza",
+    "direct_new": "Nuova prenotazione diretta",
+    "direct_created": "Prenotazione diretta creata",
+    "direct_deleted": "Prenotazione eliminata",
+    "direct_delete_confirm": "Eliminare questa prenotazione diretta?"
   },
   "arrivals": {
     "title": "Arrivi",
@@ -537,7 +546,9 @@
     "local_prop_added": "Alloggio aggiunto",
     "local_prop_saved": "Alloggio aggiornato",
     "local_prop_delete_confirm": "Eliminare questo alloggio e tutte le prenotazioni importate?",
-    "local_prop_deleted": "Alloggio eliminato"
+    "local_prop_deleted": "Alloggio eliminato",
+    "ical_export_label": "Link iCal export (incollare in Airbnb/Booking)",
+    "ical_export_copied": "Link iCal copiato"
   },
   "payments": {
     "title": "Pagamenti",
