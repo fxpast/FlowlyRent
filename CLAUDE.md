@@ -181,6 +181,17 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **`suggest_faq`** : enregistre dans `FaqSuggestion` les questions sans réponse dans la base de connaissance — visibles par le superadmin pour enrichir la FAQ
 - Variables d'env : `GEMINI_API_KEY`, `GEMINI_MODEL` (défaut `gemini-2.5-flash`), `GROQ_API_KEY`, `GROQ_MODEL` (défaut `llama-3.3-70b-versatile`)
 
+### Mode iCal — Export feed + réservations directes
+- **`LocalProperty.icalFeedToken`** : UUID opaque auto-généré (`@PrePersist`) — migration `@PostConstruct` dans `AdminLocalPropertyController` pour les lignes avec token null ou vide
+- **`GET /public/ical/{token}.ics`** (`PublicIcalController`) : flux iCal public sans auth — l'hôte le colle dans Airbnb/Booking comme "calendrier externe" pour bloquer automatiquement les dates
+- **`POST /admin/bookings/direct`** : crée une `IcalBooking` avec `icalUid = "direct-{uuid}"` et `status = "direct"` — exportée dans le flux iCal
+- **`DELETE /admin/bookings/direct/{id}`** : supprime uniquement si `icalUid.startsWith("direct-")`
+- **`GET /admin/bookings/overlap`** : branche iCal via `IcalBookingRepository` (pas Beds24)
+- **`GET /admin/properties`** : inclut `icalFeedToken` dans la réponse pour le mode iCal
+- **URL export dans le frontend** : `icalExportUrl(token)` construit une URL absolue — si `environment.apiUrl` est relatif (dev), préfixe `window.location.origin` ; en prod utilise l'URL Railway directement
+- **Page Logements** : affiche l'URL export par logement (icône `rss_feed`) + bouton copier
+- **Page Réservations** : formulaire de réservation directe + bouton supprimer pour les réservations `direct-*`
+
 ### Revenus — KPIs Qonto
 - La page Revenus (`/admin/stats`) charge en parallèle le CA Beds24 ET le summary Qonto du même mois
 - **Marge bénéficiaire** (KPI) : `caTotal - totalDebits Qonto` — vert/rouge selon signe
