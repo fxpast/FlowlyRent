@@ -32,7 +32,7 @@ public class AdminLocalPropertyController {
     @PostConstruct
     public void fillMissingFeedTokens() {
         localPropertyRepo.findAll().stream()
-            .filter(p -> p.getIcalFeedToken() == null)
+            .filter(p -> p.getIcalFeedToken() == null || p.getIcalFeedToken().isEmpty())
             .forEach(p -> {
                 p.setIcalFeedToken(java.util.UUID.randomUUID().toString());
                 localPropertyRepo.save(p);

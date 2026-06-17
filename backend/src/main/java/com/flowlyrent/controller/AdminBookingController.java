@@ -146,12 +146,35 @@ public class AdminBookingController {
             @RequestParam String departure,
             @RequestParam(defaultValue = "") String excludeId) {
         try {
-            Beds24Account account = requireAccount();
-            String token = beds24.tokenFor(account);
-
-            LocalDate arrDate = LocalDate.parse(arrival.substring(0, 10));
+            AppUser user = securityUtils.getCurrentUser();
             String arr = arrival.substring(0, 10);
             String dep = departure.substring(0, 10);
+
+            if (user.getChannelType() == ChannelType.ICAL) {
+                LocalDate arrDate = LocalDate.parse(arr);
+                LocalDate depDate = LocalDate.parse(dep);
+                Long localPropId = Long.parseLong(propId);
+                List<Map<String, Object>> conflicts = icalBookingRepo
+                    .findByUserIdAndArrivalLessThanAndDepartureGreaterThan(user.getId(), depDate, arrDate)
+                    .stream()
+                    .filter(b -> b.getLocalProperty().getId().equals(localPropId))
+                    .filter(b -> excludeId.isEmpty() || !excludeId.equals(b.getId().toString()))
+                    .map(b -> {
+                        String summary = b.getSummary() != null ? b.getSummary().trim() : "Voyageur";
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id",        b.getId().toString());
+                        m.put("guestName", summary);
+                        m.put("arrival",   b.getArrival() != null ? b.getArrival().toString() : "");
+                        m.put("departure", b.getDeparture() != null ? b.getDeparture().toString() : "");
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+                return ResponseEntity.ok(conflicts);
+            }
+
+            Beds24Account account = requireAccount();
+            String token = beds24.tokenFor(account);
+            LocalDate arrDate = LocalDate.parse(arr);
 
             Map<String, String> params = new HashMap<>();
             params.put("arrivalFrom", arrDate.minusDays(60).toString());
