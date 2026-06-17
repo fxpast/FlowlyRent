@@ -1628,7 +1628,10 @@ export class PropertiesComponent implements OnInit {
   }
 
   icalExportUrl(token: string): string {
-    return `${environment.apiUrl}/public/ical/${token}.ics`;
+    const base = environment.apiUrl.startsWith('http')
+      ? environment.apiUrl
+      : `${window.location.origin}${environment.apiUrl}`;
+    return `${base}/public/ical/${token}.ics`;
   }
 
   copyIcalFeedUrl(token: string): void {
