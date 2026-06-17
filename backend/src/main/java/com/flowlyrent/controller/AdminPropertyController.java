@@ -40,6 +40,7 @@ public class AdminPropertyController {
                             m.put("name", p.getName());
                             m.put("shortName", p.getShortName() != null ? p.getShortName() : "");
                             m.put("icalUrl", p.getIcalUrl() != null ? p.getIcalUrl() : "");
+                            m.put("icalFeedToken", p.getIcalFeedToken() != null ? p.getIcalFeedToken() : "");
                             return m;
                         })
                         .toList();
