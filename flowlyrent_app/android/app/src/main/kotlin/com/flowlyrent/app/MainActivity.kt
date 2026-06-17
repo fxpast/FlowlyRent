@@ -1,4 +1,4 @@
-package com.flowlyrent.flowlyrent_app
+package com.flowlyrent.app
 
 import io.flutter.embedding.android.FlutterActivity
 

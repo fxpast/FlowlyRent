@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1081180494312:android:d1ffd90fb9ff5496276c5d",
+        "mobilesdk_app_id": "1:1081180494312:android:f58490ec2ab9d16b276c5d",
         "android_client_info": {
-          "package_name": "com.flowlyrent.flowlyrent_app"
+          "package_name": "com.flowlyrent.app"
         }
       },
       "oauth_client": [],
