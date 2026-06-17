@@ -493,7 +493,7 @@ interface OccupancyStatus {
                     <input matInput type="number" min="0" step="1"
                            [value]="pricingDraft[p['id']]?.extraPersonFee || ''"
                            (input)="setPricingField(p['id'], 'extraPersonFee', $any($event.target).value)">
-                    <span matTextSuffix>€/pers/nuit</span>
+                    <span matTextSuffix>€/nuit</span>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cleaning-input">
                     <mat-label>{{ 'properties.discount_7' | translate }}</mat-label>
@@ -710,7 +710,7 @@ interface OccupancyStatus {
     }
     .cleaning-label mat-icon { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
     .cleaning-row { display: flex; align-items: center; gap: 6px; }
-    .cleaning-input { width: 120px; }
+    .cleaning-input { width: 130px; }
     .pricing-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
     .occ-banner {
