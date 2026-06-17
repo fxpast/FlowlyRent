@@ -266,6 +266,12 @@ const STATUS_KEYS: Record<string, string> = {
         <mat-button-toggle value="all">{{ 'expenses.filter_all_dates' | translate }}</mat-button-toggle>
         <mat-button-toggle value="range">{{ 'expenses.filter_period' | translate }}</mat-button-toggle>
       </mat-button-toggle-group>
+      <div class="quick-periods">
+        <button mat-stroked-button (click)="setQuickPeriod('this_month')">{{ 'housekeeping.this_month' | translate }}</button>
+        <button mat-stroked-button (click)="setQuickPeriod('last_month')">{{ 'housekeeping.last_month' | translate }}</button>
+        <button mat-stroked-button (click)="setQuickPeriod('this_year')">{{ 'housekeeping.this_year' | translate }}</button>
+        <button mat-stroked-button (click)="setQuickPeriod('last_year')">{{ 'housekeeping.last_year' | translate }}</button>
+      </div>
 
       @if (houseDateMode === 'range') {
         <mat-form-field>
@@ -788,6 +794,7 @@ const STATUS_KEYS: Record<string, string> = {
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { text-align: center; color: #888; padding: 40px; }
     .tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .quick-periods { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .task-card { padding: 16px; }
     .task-card.done { opacity: 0.65; }
     .task-card.in-progress { border-left: 4px solid #1976d2; }
@@ -1084,19 +1091,53 @@ export class HousekeepingComponent implements OnInit {
     this.load();
   }
 
+  setQuickPeriod(period: 'this_month' | 'last_month' | 'this_year' | 'last_year'): void {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    let from: Date, to: Date;
+    if (period === 'this_month') {
+      from = new Date(y, m, 1);
+      to   = new Date(y, m + 1, 0);
+    } else if (period === 'last_month') {
+      from = new Date(y, m - 1, 1);
+      to   = new Date(y, m, 0);
+    } else if (period === 'this_year') {
+      from = new Date(y, 0, 1);
+      to   = new Date(y, 11, 31);
+    } else {
+      from = new Date(y - 1, 0, 1);
+      to   = new Date(y - 1, 11, 31);
+    }
+    this.houseDateMode  = 'range';
+    this.filterFrom     = localDateStr(from);
+    this.filterTo       = localDateStr(to);
+    this.filterFromDate = from;
+    this.filterToDate   = to;
+    this.load();
+  }
+
   load(): void {
     this.loading.set(true);
     this.http.get<Task[]>(`${this.base}/admin/housekeeping`, {
       params: { from: this.filterFrom, to: this.filterTo }
     }).subscribe({
       next: t => {
-        this.bookingService.getPropertyNames().subscribe(names => {
-          this.tasks.set(t.map(task => {
-            const pid = task.beds24PropertyId ?? '';
-            return pid && names[pid] ? { ...task, propertyName: names[pid] } : task;
-          }));
-          this.applyFilter();
-          this.loading.set(false);
+        this.bookingService.getPropertyNames().subscribe({
+          next: names => {
+            this.tasks.set(t.map(task => {
+              const pid = task.beds24PropertyId ?? '';
+              return pid && names[pid] ? { ...task, propertyName: names[pid] } : task;
+            }));
+            this.applyFilter();
+            this.loading.set(false);
+          },
+          error: () => {
+            this.tasks.set(t);
+            this.applyFilter();
+            this.loading.set(false);
+          }
         });
       },
       error: () => this.loading.set(false)
