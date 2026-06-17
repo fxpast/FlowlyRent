@@ -20,6 +20,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
@@ -117,7 +118,7 @@ const STATUS_KEYS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule, MatMenuModule,
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule, MatMenuModule, MatPaginatorModule,
     LinenComponent, TranslateModule
   ],
   template: `
@@ -298,8 +299,16 @@ const STATUS_KEYS: Record<string, string> = {
           } @else if (displayedTasks().length === 0) {
             <p class="empty">{{ 'housekeeping.no_tasks' | translate }}</p>
           } @else {
+            <mat-paginator
+              [length]="displayedTasks().length"
+              [pageSize]="taskPageSize()"
+              [pageIndex]="taskPageIndex()"
+              [pageSizeOptions]="[10, 20, 50, 100]"
+              (page)="onTaskPage($event)"
+              showFirstLastButtons>
+            </mat-paginator>
             <div class="tasks-grid">
-              @for (task of displayedTasks(); track task.id) {
+              @for (task of paginatedTasks(); track task.id) {
                 <mat-card class="task-card" [class.done]="task.status === 'DONE'" [class.in-progress]="task.status === 'IN_PROGRESS'">
                   <div class="task-header">
                     <div class="task-date">{{ task.scheduledDate | date:'EEE dd/MM · HH:mm' : '' : 'fr-FR' }}</div>
@@ -966,6 +975,20 @@ export class HousekeepingComponent implements OnInit {
     );
   });
 
+  taskPageIndex = signal(0);
+  taskPageSize  = signal(20);
+
+  paginatedTasks = computed(() => {
+    const all = this.displayedTasks();
+    const start = this.taskPageIndex() * this.taskPageSize();
+    return all.slice(start, start + this.taskPageSize());
+  });
+
+  onTaskPage(e: PageEvent): void {
+    this.taskPageIndex.set(e.pageIndex);
+    this.taskPageSize.set(e.pageSize);
+  }
+
   filteredTaskTypes = computed(() =>
     this.taskTypes.filter(t =>
       this.taskCategory() === 'menage' ? this.MENAGE_TYPES.has(t.value) : !this.MENAGE_TYPES.has(t.value)
@@ -981,6 +1004,7 @@ export class HousekeepingComponent implements OnInit {
 
   setTaskCategory(cat: 'menage' | 'depannage'): void {
     this.taskCategory.set(cat);
+    this.taskPageIndex.set(0);
   }
 
   constructor(
@@ -1175,6 +1199,7 @@ export class HousekeepingComponent implements OnInit {
   }
 
   applyFilter(): void {
+    this.taskPageIndex.set(0);
     const all = this.tasks();
     const filtered = this.filterStatus ? all.filter(t => t.status === this.filterStatus) : all;
     const done = new Set(['DONE', 'SKIPPED']);
