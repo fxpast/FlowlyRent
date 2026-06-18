@@ -20,6 +20,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 import { BookingService } from '../../core/services/booking.service';
 import { MessageService } from '../../core/services/message.service';
 import { MessageTemplateService, MessageTemplate } from '../../core/services/message-template.service';
@@ -50,24 +51,26 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
       <div class="guest-name">{{ guestName() }}</div>
       <span class="booking-id">#{{ draft['id'] }}</span>
       <div class="header-actions">
-        @if (activeTab() === 0 && draft['status'] !== 'cancelled') {
+        @if (!isIcalMode() && activeTab() === 0 && draft['status'] !== 'cancelled') {
           <button mat-icon-button color="warn" (click)="cancelBooking()" [disabled]="saving()" [matTooltip]="'booking_dialog.cancel_booking_tooltip' | translate">
             <mat-icon>cancel</mat-icon>
           </button>
         }
-        @if (activeTab() === 0) {
+        @if (!isIcalMode() && activeTab() === 0) {
           <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
             <mat-icon>save</mat-icon> {{ saving() ? '…' : ('common.save' | translate) }}
           </button>
         }
-        @if (activeTab() === 2 && !loadingTask()) {
+        @if (isHousekeepingTab() && !loadingTask()) {
           <button mat-flat-button color="primary" (click)="createTask()" [disabled]="savingTask()">
             <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : ('common.create' | translate) }}
           </button>
         }
-        <button mat-icon-button (click)="goCreateInvoice()" [matTooltip]="'booking_dialog.create_invoice' | translate">
-          <mat-icon>receipt_long</mat-icon>
-        </button>
+        @if (!isIcalMode()) {
+          <button mat-icon-button (click)="goCreateInvoice()" [matTooltip]="'booking_dialog.create_invoice' | translate">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+        }
         <button mat-icon-button mat-dialog-close [disabled]="saving()" [matTooltip]="'booking_dialog.close_tooltip' | translate">
           <mat-icon>close</mat-icon>
         </button>
@@ -77,6 +80,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     <mat-tab-group animationDuration="150ms" (selectedIndexChange)="onTabChange($event)">
 
       <!-- ── Onglet Détails ───────────────────────────────────────── -->
+      @if (!isIcalMode()) {
       <mat-tab [label]="'booking_dialog.tab_details' | translate">
         <mat-dialog-content>
           <div class="edit-grid">
@@ -272,8 +276,10 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         </mat-dialog-content>
 
       </mat-tab>
+      } <!-- end @if !isIcalMode détails -->
 
       <!-- ── Onglet Messages ─────────────────────────────────────── -->
+      @if (!isIcalMode()) {
       <mat-tab>
         <ng-template mat-tab-label>
           {{ 'nav.messages' | translate }}
@@ -375,6 +381,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         </div>
 
       </mat-tab>
+      } <!-- end @if !isIcalMode messages -->
 
       <!-- ── Onglet Entretien ────────────────────────────────────── -->
       <mat-tab [label]="'booking_dialog.tab_housekeeping' | translate">
@@ -835,6 +842,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: any,
     private dialogRef: MatDialogRef<BookingDetailDialogComponent>,
+    private auth: AuthService,
     private bookingService: BookingService,
     private messageService: MessageService,
     private templateService: MessageTemplateService,
@@ -885,6 +893,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     this.taskTime = this.departureTime;
   }
 
+  isIcalMode(): boolean { return this.auth.isIcal(); }
+
+  isHousekeepingTab(): boolean {
+    return this.isIcalMode() ? this.activeTab() === 0 : this.activeTab() === 2;
+  }
+
   ngOnInit(): void {
     const bookingId = Number(this.data['id']);
     if (!bookingId) return;
@@ -910,6 +924,12 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.taskTime = this.departureTime;
       }
     });
+    if (this.isIcalMode()) {
+      this.loadHousekeepingTask();
+      this.loadHousekeepers();
+      this.loadPropertyCleaningHours();
+      if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
+    }
     const bookingLang = (this.data['lang'] || '').toLowerCase();
     this.wsSub = this.messageService.watchMessages(bookingId).subscribe(msg => {
       this.messages.update(list => [...list, msg]);
@@ -957,15 +977,17 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.activeTab.set(index);
-    if (index === 1) {
-      if (this.messages().length === 0) this.loadMessages();
-      if (this.allTemplates().length === 0) this.loadTemplates();
-    }
-    if (index === 2) {
-      this.loadHousekeepingTask();
-      if (this.housekeepers().length === 0) this.loadHousekeepers();
-      this.loadPropertyCleaningHours();
-      if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
+    if (!this.isIcalMode()) {
+      if (index === 1) {
+        if (this.messages().length === 0) this.loadMessages();
+        if (this.allTemplates().length === 0) this.loadTemplates();
+      }
+      if (index === 2) {
+        this.loadHousekeepingTask();
+        if (this.housekeepers().length === 0) this.loadHousekeepers();
+        this.loadPropertyCleaningHours();
+        if (this.taskLinenItems.length === 0) this.loadTaskLinenDefaults();
+      }
     }
   }
 
