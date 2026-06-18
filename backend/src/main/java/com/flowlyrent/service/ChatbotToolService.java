@@ -513,7 +513,14 @@ public class ChatbotToolService {
         // Grouper par prestataire (nom complet ou "Sans prestataire")
         Map<String, List<HousekeepingTask>> byStaff = new LinkedHashMap<>();
         for (HousekeepingTask t : tasks) {
-            String name = t.getStaff() != null ? t.getStaff().getFullName() : "Sans prestataire";
+            String name;
+            if (t.getStaff() != null) {
+                name = t.getStaff().getFullName();
+            } else if (t.getHousekeeper() != null) {
+                name = t.getHousekeeper().getName();
+            } else {
+                name = "Sans prestataire";
+            }
             if (needle != null && !name.toLowerCase().contains(needle)) continue;
             byStaff.computeIfAbsent(name, k -> new ArrayList<>()).add(t);
         }
