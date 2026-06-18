@@ -79,6 +79,9 @@ public class SuperAdminController {
             jdbcTemplate.update("DELETE FROM expense_rules WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM faq_suggestions WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM fcm_tokens WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM feedbacks WHERE user_id = ?", id);
+            // Nullifier housekeeper_id dans les tâches avant de supprimer les profils liés
+            jdbcTemplate.update("UPDATE housekeeping_tasks SET housekeeper_id = NULL WHERE housekeeper_id IN (SELECT id FROM housekeeper_profiles WHERE linked_user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM housekeeper_profiles WHERE user_id = ? OR linked_user_id = ?", id, id);
             jdbcTemplate.update("DELETE FROM housekeeping_staff WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM ical_bookings WHERE user_id = ?", id);
