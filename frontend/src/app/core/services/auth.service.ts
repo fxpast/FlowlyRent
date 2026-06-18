@@ -87,18 +87,13 @@ export class AuthService {
   tryAutoRefresh(): void {
     const token = this.getToken();
     if (!token) return;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expiresAt: number = payload.exp * 1000;
-      if (expiresAt - Date.now() < THIRTY_DAYS_MS) {
-        this.http.post<LoginResponse>(`${environment.apiUrl}/auth/refresh`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).subscribe({
-          next: resp => this.storeSession(resp),
-          error: () => {}
-        });
-      }
-    } catch {}
+    // Toujours rafraîchir au démarrage pour synchroniser channelType, plan, etc. depuis le serveur
+    this.http.post<LoginResponse>(`${environment.apiUrl}/auth/refresh`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).subscribe({
+      next: resp => this.storeSession(resp),
+      error: () => {}
+    });
   }
 
   // Rétrocompatibilité : l'intercepteur appellait getCredentials()
