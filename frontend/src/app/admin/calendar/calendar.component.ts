@@ -8,11 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatCardModule } from '@angular/material/card';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
+import { catchError, of } from 'rxjs';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { BookingService } from '../../core/services/booking.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -67,6 +71,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   imports: [
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatButtonModule, MatIconModule, MatSelectModule, MatFormFieldModule,
+    MatInputModule, MatCardModule, MatSnackBarModule,
     MatTooltipModule, MatProgressSpinnerModule, TranslateModule
   ],
   template: `
@@ -76,8 +81,56 @@ const CHANNEL_COLORS: Record<string, string> = {
         <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
           <mat-icon>add</mat-icon> {{ 'calendar.new_booking' | translate }}
         </a>
+      } @else {
+        <button mat-raised-button color="primary" (click)="openDirectForm()">
+          <mat-icon>add</mat-icon> {{ 'bookings.direct_new' | translate }}
+        </button>
       }
     </div>
+
+    <!-- Formulaire réservation directe (mode iCal) -->
+    @if (isIcalMode() && directFormOpen()) {
+      <mat-card class="direct-form-card">
+        <mat-card-header>
+          <mat-card-title>{{ 'bookings.direct_new' | translate }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="direct-form">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'bookings.property' | translate }}</mat-label>
+              <mat-select [(ngModel)]="directForm.propId">
+                @for (p of icalProperties(); track p.id) {
+                  <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'bookings.guest_first_name' | translate }}</mat-label>
+              <input matInput [(ngModel)]="directForm.firstName" autocomplete="off">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'bookings.guest_last_name' | translate }}</mat-label>
+              <input matInput [(ngModel)]="directForm.lastName" autocomplete="off">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'bookings.arrival' | translate }}</mat-label>
+              <input matInput type="date" [(ngModel)]="directForm.arrival">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'bookings.departure' | translate }}</mat-label>
+              <input matInput type="date" [(ngModel)]="directForm.departure">
+            </mat-form-field>
+          </div>
+          <div class="direct-form-actions">
+            <button mat-flat-button color="primary" (click)="saveDirectBooking()"
+                    [disabled]="directSaving() || !directForm.propId || !directForm.arrival || !directForm.departure">
+              {{ 'common.save' | translate }}
+            </button>
+            <button mat-button (click)="closeDirectForm()">{{ 'common.cancel' | translate }}</button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
 
     <!-- Navigation mois -->
     <div class="nav-bar">
@@ -381,6 +434,11 @@ const CHANNEL_COLORS: Record<string, string> = {
     .clickable:hover { filter: brightness(0.9); }
 
     .empty-row { text-align: center; padding: 40px; color: #888; font-style: italic; }
+
+    .direct-form-card { margin-bottom: 16px; }
+    .direct-form { display: flex; flex-wrap: wrap; gap: 8px; }
+    .direct-form mat-form-field { flex: 1; min-width: 160px; }
+    .direct-form-actions { display: flex; gap: 8px; margin-top: 4px; }
   `]
 })
 export class CalendarComponent implements OnInit {
@@ -399,7 +457,11 @@ export class CalendarComponent implements OnInit {
   days = computed(() => this.buildDays(this.year(), this.month()));
   grid = signal<{ property: CalProperty; cells: DayCell[] }[]>([]);
 
-  sidebarCollapsed = signal(false);
+  sidebarCollapsed   = signal(false);
+  icalProperties     = signal<{id: string, name: string}[]>([]);
+  directFormOpen     = signal(false);
+  directSaving       = signal(false);
+  directForm = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
 
   private dragging = false;
   private dragPropId = signal<string | null>(null);
@@ -420,11 +482,50 @@ export class CalendarComponent implements OnInit {
 
   isIcalMode(): boolean { return this.auth.isIcal(); }
 
-  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService, private auth: AuthService) {
+  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService, private auth: AuthService, private snackBar: MatSnackBar) {
     this.t.get('calendar.drag_to_block').subscribe(v => this.dragToBlockLabel = v);
   }
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.load();
+    if (this.isIcalMode()) {
+      this.http.get<any[]>(`${this.base}/admin/properties`).pipe(catchError(() => of([]))).subscribe(props => {
+        this.icalProperties.set((props ?? []).map(p => ({ id: String(p['id']), name: p['shortName'] || p['name'] })));
+      });
+    }
+  }
+
+  openDirectForm(): void {
+    this.directForm = { propId: this.icalProperties()[0]?.id ?? '', firstName: '', lastName: '', arrival: '', departure: '' };
+    this.directFormOpen.set(true);
+  }
+
+  closeDirectForm(): void {
+    this.directFormOpen.set(false);
+  }
+
+  saveDirectBooking(): void {
+    if (!this.directForm.propId || !this.directForm.arrival || !this.directForm.departure) return;
+    this.directSaving.set(true);
+    this.http.post<any>(`${this.base}/admin/bookings/direct`, {
+      propId:    this.directForm.propId,
+      firstName: this.directForm.firstName.trim(),
+      lastName:  this.directForm.lastName.trim(),
+      arrival:   this.directForm.arrival,
+      departure: this.directForm.departure
+    }).subscribe({
+      next: () => {
+        this.directSaving.set(false);
+        this.closeDirectForm();
+        this.snackBar.open(this.t.instant('bookings.direct_created'), '', { duration: 2500 });
+        this.load();
+      },
+      error: err => {
+        this.directSaving.set(false);
+        this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 });
+      }
+    });
+  }
 
   prevMonth(): void {
     if (this.month() === 1) { this.year.update(y => y - 1); this.month.set(12); }
