@@ -225,11 +225,11 @@ public class AdminBookingController {
                 List<IcalBooking> bookings;
                 if (params.containsKey("arrivalFrom")) {
                     LocalDate from = LocalDate.parse(params.get("arrivalFrom"));
-                    LocalDate to = params.containsKey("arrivalTo") ? LocalDate.parse(params.get("arrivalTo")) : from.plusDays(365);
+                    LocalDate to = params.containsKey("arrivalTo") ? LocalDate.parse(params.get("arrivalTo")) : LocalDate.now().plusYears(1);
                     bookings = icalBookingRepo.findByUserIdAndArrivalBetween(user.getId(), from, to);
                 } else if (params.containsKey("departureFrom")) {
                     LocalDate from = LocalDate.parse(params.get("departureFrom"));
-                    LocalDate to = params.containsKey("departureTo") ? LocalDate.parse(params.get("departureTo")) : from.plusDays(365);
+                    LocalDate to = params.containsKey("departureTo") ? LocalDate.parse(params.get("departureTo")) : LocalDate.now().plusYears(1);
                     bookings = icalBookingRepo.findByUserIdAndDepartureBetween(user.getId(), from, to);
                 } else {
                     bookings = icalBookingRepo.findByUserId(user.getId());
