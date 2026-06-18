@@ -45,6 +45,7 @@ interface PropertyMargin {
   commission: number;
   manualExpenses: number;
   margin: number;
+  marginRate: number;
 }
 
 interface HousekeepingCosts {
@@ -410,6 +411,8 @@ export class StatsComponent implements OnInit {
           .reduce((s, e) => s + Number(e.amount || 0), 0) * 100
       ) / 100;
       const expenses = Math.round((qontoExpenses + hkExpenses + commission + manualExpenses) * 100) / 100;
+      const margin = Math.round((p.ca - expenses) * 100) / 100;
+      const marginRate = p.ca > 0 ? margin / p.ca : -Infinity;
       return {
         propId:       p.propId,
         propertyName: p.propertyName,
@@ -419,9 +422,10 @@ export class StatsComponent implements OnInit {
         hkExpenses,
         commission,
         manualExpenses,
-        margin:       Math.round((p.ca - expenses) * 100) / 100
+        margin,
+        marginRate
       };
-    });
+    }).sort((a, b) => b.marginRate - a.marginRate);
   }
 
   propMarginRate(pm: PropertyMargin): string {
