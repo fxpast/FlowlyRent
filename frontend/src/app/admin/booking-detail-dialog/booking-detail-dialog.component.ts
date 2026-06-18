@@ -61,6 +61,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <mat-icon>save</mat-icon> {{ saving() ? '…' : ('common.save' | translate) }}
           </button>
         }
+        @if (isDirectIcalBooking()) {
+          <button mat-icon-button (click)="requestEdit()" [matTooltip]="'common.edit' | translate">
+            <mat-icon>edit</mat-icon>
+          </button>
+        }
         @if (isHousekeepingTab() && !loadingTask()) {
           <button mat-flat-button color="primary" (click)="createTask()" [disabled]="savingTask()">
             <mat-icon>add_task</mat-icon> {{ savingTask() ? '…' : ('common.create' | translate) }}
@@ -894,6 +899,14 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   }
 
   isIcalMode(): boolean { return this.auth.isIcal(); }
+
+  isDirectIcalBooking(): boolean {
+    return this.isIcalMode() && String(this.data['status'] ?? '') === 'direct';
+  }
+
+  requestEdit(): void {
+    this.dialogRef.close({ editDirect: true });
+  }
 
   isHousekeepingTab(): boolean {
     return this.isIcalMode() ? this.activeTab() === 0 : this.activeTab() === 2;

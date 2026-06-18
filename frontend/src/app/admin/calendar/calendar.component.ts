@@ -92,7 +92,7 @@ const CHANNEL_COLORS: Record<string, string> = {
     @if (isIcalMode() && directFormOpen()) {
       <mat-card class="direct-form-card">
         <mat-card-header>
-          <mat-card-title>{{ 'bookings.direct_new' | translate }}</mat-card-title>
+          <mat-card-title>{{ (directEditId() ? 'bookings.direct_edit' : 'bookings.direct_new') | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="direct-form">
@@ -461,6 +461,7 @@ export class CalendarComponent implements OnInit {
   icalProperties     = signal<{id: string, name: string}[]>([]);
   directFormOpen     = signal(false);
   directSaving       = signal(false);
+  directEditId       = signal<string | null>(null);
   directForm = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
 
   private dragging = false;
@@ -496,28 +497,47 @@ export class CalendarComponent implements OnInit {
   }
 
   openDirectForm(): void {
+    this.directEditId.set(null);
     this.directForm = { propId: this.icalProperties()[0]?.id ?? '', firstName: '', lastName: '', arrival: '', departure: '' };
     this.directFormOpen.set(true);
   }
 
+  openEditDirectForm(b: any): void {
+    this.directEditId.set(String(b['id']));
+    const firstName = b['firstName'] || b['guestFirstName'] || '';
+    const lastName  = b['lastName']  || b['guestLastName']  || '';
+    const propId    = String(b['propId'] ?? b['propertyId'] ?? this.icalProperties()[0]?.id ?? '');
+    const arrival   = (b['arrival']   ?? '').substring(0, 10);
+    const departure = (b['departure'] ?? '').substring(0, 10);
+    this.directForm = { propId, firstName, lastName, arrival, departure };
+    this.directFormOpen.set(true);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+  }
+
   closeDirectForm(): void {
     this.directFormOpen.set(false);
+    this.directEditId.set(null);
   }
 
   saveDirectBooking(): void {
     if (!this.directForm.propId || !this.directForm.arrival || !this.directForm.departure) return;
     this.directSaving.set(true);
-    this.http.post<any>(`${this.base}/admin/bookings/direct`, {
+    const body = {
       propId:    this.directForm.propId,
       firstName: this.directForm.firstName.trim(),
       lastName:  this.directForm.lastName.trim(),
       arrival:   this.directForm.arrival,
       departure: this.directForm.departure
-    }).subscribe({
+    };
+    const editId = this.directEditId();
+    const req$ = editId
+      ? this.http.put<any>(`${this.base}/admin/bookings/direct/${editId}`, body)
+      : this.http.post<any>(`${this.base}/admin/bookings/direct`, body);
+    req$.subscribe({
       next: () => {
         this.directSaving.set(false);
         this.closeDirectForm();
-        this.snackBar.open(this.t.instant('bookings.direct_created'), '', { duration: 2500 });
+        this.snackBar.open(this.t.instant(editId ? 'bookings.direct_updated' : 'bookings.direct_created'), '', { duration: 2500 });
         this.load();
       },
       error: err => {
@@ -582,7 +602,10 @@ export class CalendarComponent implements OnInit {
       if (booking) {
         const data = { ...booking, propName: property.name, propCity: property.city };
         const ref = this.dialog.open(BookingDetailDialogComponent, { data, width: '600px' });
-        ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
+        ref.afterClosed().subscribe(result => {
+          if (result?.editDirect) { this.openEditDirectForm({ ...booking, propId: booking.propertyId }); return; }
+          if (result?.cancelled || result?.updated) this.load();
+        });
       } else {
         this.router.navigate(['/admin/bookings', cell.bookingId, 'edit']);
       }
