@@ -1205,7 +1205,10 @@
     "reject": "Rejeter",
     "reject_confirm": "Rejeter cette suggestion ?",
     "approved": "Question ajoutée à la FAQ",
-    "rejected": "Suggestion rejetée"
+    "rejected": "Suggestion rejetée",
+    "chatbot_actions_title": "Actions non gérées par le chatbot",
+    "chatbot_actions_hint": "Actions que les hôtes ont demandé au chatbot de réaliser, mais que celui-ci n'est pas encore capable d'effectuer. Ces remontées permettent de prioriser les nouvelles fonctionnalités.",
+    "chatbot_action_label": "Action demandée"
   },
   "onboarding": {
     "title": "Comment gérez-vous vos logements ?",

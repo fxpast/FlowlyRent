@@ -1205,7 +1205,10 @@
     "reject": "Reject",
     "reject_confirm": "Reject this suggestion?",
     "approved": "Question added to the FAQ",
-    "rejected": "Suggestion rejected"
+    "rejected": "Suggestion rejected",
+    "chatbot_actions_title": "Unhandled chatbot actions",
+    "chatbot_actions_hint": "Actions that hosts asked the chatbot to perform but it is not yet able to handle. These reports help prioritize new features.",
+    "chatbot_action_label": "Requested action"
   },
   "onboarding": {
     "title": "How do you manage your properties?",

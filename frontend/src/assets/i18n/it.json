@@ -1203,7 +1203,10 @@
     "reject": "Rifiuta",
     "reject_confirm": "Rifiutare questo suggerimento?",
     "approved": "Domanda aggiunta alla FAQ",
-    "rejected": "Suggerimento rifiutato"
+    "rejected": "Suggerimento rifiutato",
+    "chatbot_actions_title": "Azioni non gestite dal chatbot",
+    "chatbot_actions_hint": "Azioni che gli host hanno chiesto al chatbot di eseguire ma che non è ancora in grado di gestire. Questi feedback aiutano a stabilire le priorità delle nuove funzionalità.",
+    "chatbot_action_label": "Azione richiesta"
   },
   "onboarding": {
     "title": "Come gestisci le tue proprietà?",

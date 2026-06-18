@@ -2,6 +2,7 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.ChatbotActionFeedback;
 import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.LinenItem;
@@ -9,6 +10,7 @@ import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.MovementDirection;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.ChatbotActionFeedbackRepository;
 import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.LinenItemRepository;
@@ -46,6 +48,7 @@ public class ChatbotToolService {
     private final PropertyConfigRepository propConfigRepo;
     private final LinenItemRepository linenItemRepo;
     private final LinenMovementRepository linenMovementRepo;
+    private final ChatbotActionFeedbackRepository actionFeedbackRepo;
     private final FaqSuggestionRepository faqSuggestionRepo;
     private final ManualExpenseRepository manualExpenseRepo;
     private final SecurityUtils securityUtils;
@@ -76,6 +79,8 @@ public class ChatbotToolService {
                 case "block_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "blackout");
                 case "unblock_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "none");
                 case "suggest_faq" -> suggestFaq(userId, lang, strArg(args, "question"), strArg(args, "answer"));
+                case "report_unhandled_action" -> reportUnhandledAction(userId, lang,
+                        strArg(args, "action"), strArg(args, "userMessage"));
                 default -> Map.of("error", "Outil inconnu : " + toolName);
             };
         } catch (IllegalStateException e) {
@@ -567,7 +572,20 @@ public class ChatbotToolService {
         return result;
     }
 
-    // ─── Suggestions FAQ ────────────────────────────────────────────────────
+    // ─── Suggestions FAQ & feedbacks actions ────────────────────────────────
+
+    private Map<String, Object> reportUnhandledAction(Long userId, String lang, String action, String userMessage) {
+        if (action == null || action.isBlank()) {
+            return Map.of("error", "Description de l'action manquante.");
+        }
+        ChatbotActionFeedback fb = new ChatbotActionFeedback();
+        fb.setUserId(userId);
+        fb.setAction(action.trim());
+        fb.setUserMessage(userMessage != null && !userMessage.isBlank() ? userMessage.trim() : null);
+        fb.setLang(lang != null && !lang.isBlank() ? lang : "fr");
+        actionFeedbackRepo.save(fb);
+        return Map.of("success", true);
+    }
 
     private Map<String, Object> suggestFaq(Long userId, String lang, String question, String answer) {
         if (question == null || question.isBlank()) {

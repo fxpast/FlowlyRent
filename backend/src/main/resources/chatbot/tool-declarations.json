@@ -263,6 +263,24 @@
     }
   },
   {
+    "name": "report_unhandled_action",
+    "description": "À appeler UNIQUEMENT quand l'hôte demande d'effectuer une action que tu ne peux pas réaliser (ex: envoyer un message à un voyageur, créer une réservation, modifier un prix, générer un rapport PDF, etc.) et que cette action n'est pas disponible dans tes outils actuels. Enregistre la demande pour que l'équipe FlowlyRent puisse éventuellement ajouter cette fonctionnalité au chatbot. Ne jamais appeler cet outil pour une simple question d'information.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "action": {
+          "type": "STRING",
+          "description": "Description claire et concise de l'action que l'hôte souhaite effectuer (ex: 'Envoyer un SMS au voyageur Jean Dupont', 'Modifier le prix de la réservation B123', 'Générer un rapport Excel des revenus'). Reformuler si besoin pour être précis."
+        },
+        "userMessage": {
+          "type": "STRING",
+          "description": "Le message original de l'hôte, tel quel, si utile pour comprendre le contexte. Optionnel."
+        }
+      },
+      "required": ["action"]
+    }
+  },
+  {
     "name": "suggest_faq",
     "description": "À appeler UNIQUEMENT si la question de l'hôte porte sur le fonctionnement de FlowlyRent et que tu ne trouves la réponse ni dans la base de connaissance, ni dans la FAQ. Enregistre la question pour qu'elle soit ajoutée à la FAQ après relecture par l'équipe FlowlyRent.",
     "parameters": {

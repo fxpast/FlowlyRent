@@ -1203,7 +1203,10 @@
     "reject": "Rechazar",
     "reject_confirm": "¿Rechazar esta sugerencia?",
     "approved": "Pregunta añadida a la FAQ",
-    "rejected": "Sugerencia rechazada"
+    "rejected": "Sugerencia rechazada",
+    "chatbot_actions_title": "Acciones no gestionadas por el chatbot",
+    "chatbot_actions_hint": "Acciones que los hosts pidieron al chatbot realizar pero que aún no es capaz de ejecutar. Estos informes ayudan a priorizar nuevas funciones.",
+    "chatbot_action_label": "Acción solicitada"
   },
   "onboarding": {
     "title": "¿Cómo gestionas tus alojamientos?",

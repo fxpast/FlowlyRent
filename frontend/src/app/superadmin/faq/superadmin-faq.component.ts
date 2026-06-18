@@ -90,6 +90,37 @@ import { environment } from '../../../environments/environment';
           </mat-card>
         }
 
+        <!-- Feedbacks actions non gérées par le chatbot -->
+        @if (actionFeedbacks().length > 0) {
+          <mat-card class="actions-card">
+            <mat-card-content>
+              <h2 class="suggestions-title">
+                <mat-icon>smart_toy</mat-icon>
+                {{ 'faq.chatbot_actions_title' | translate }} ({{ actionFeedbacks().length }})
+              </h2>
+              <p class="suggestions-hint">{{ 'faq.chatbot_actions_hint' | translate }}</p>
+              @for (fb of actionFeedbacks(); track fb.id) {
+                <div class="suggestion-item">
+                  <div class="action-row">
+                    <div class="action-info">
+                      <span class="action-lang mat-caption">{{ fb.lang?.toUpperCase() }}</span>
+                      <span class="action-date mat-caption">{{ fb.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <button mat-icon-button color="warn" (click)="deleteActionFeedback(fb.id)"
+                            [matTooltip]="'common.delete' | translate">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                  <p class="action-text"><strong>{{ 'faq.chatbot_action_label' | translate }} :</strong> {{ fb.action }}</p>
+                  @if (fb.userMessage) {
+                    <p class="action-msg">{{ fb.userMessage }}</p>
+                  }
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
         <!-- Formulaire ajout / édition -->
         @if (editing()) {
           <mat-card class="edit-card">
@@ -161,6 +192,13 @@ import { environment } from '../../../environments/environment';
     .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .edit-card { margin-bottom: 24px; border-left: 4px solid #0288d1; }
     .suggestions-card { margin-bottom: 24px; border-left: 4px solid #f9a825; }
+    .actions-card { margin-bottom: 24px; border-left: 4px solid #7b1fa2; }
+    .action-row { display: flex; align-items: center; justify-content: space-between; }
+    .action-info { display: flex; align-items: center; gap: 10px; }
+    .action-lang { background: #ede7f6; color: #7b1fa2; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .action-date { font-size: 12px; color: #aaa; }
+    .action-text { margin: 4px 0 2px; font-size: 14px; color: #333; }
+    .action-msg { margin: 0; font-size: 13px; color: #777; font-style: italic; white-space: pre-wrap; }
     .suggestions-title { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 17px; font-weight: 700; }
     .suggestions-hint { margin: 0 0 16px; font-size: 13px; color: #777; }
     .suggestion-item { padding: 12px 0; border-top: 1px solid #eee; }
@@ -186,9 +224,10 @@ import { environment } from '../../../environments/environment';
   `]
 })
 export class SuperadminFaqComponent implements OnInit {
-  items        = signal<any[]>([]);
-  suggestions  = signal<any[]>([]);
-  loading      = signal(true);
+  items           = signal<any[]>([]);
+  suggestions     = signal<any[]>([]);
+  actionFeedbacks = signal<any[]>([]);
+  loading         = signal(true);
   saving       = signal(false);
   editing      = signal(false);
   importing    = signal(false);
@@ -199,7 +238,7 @@ export class SuperadminFaqComponent implements OnInit {
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar, private t: TranslateService) {}
 
-  ngOnInit(): void { this.load(); this.loadSuggestions(); }
+  ngOnInit(): void { this.load(); this.loadSuggestions(); this.loadActionFeedbacks(); }
 
   private load(): void {
     this.loading.set(true);
@@ -212,6 +251,18 @@ export class SuperadminFaqComponent implements OnInit {
   private loadSuggestions(): void {
     this.http.get<any[]>(`${environment.apiUrl}/superadmin/faq-suggestions`).subscribe({
       next: list => this.suggestions.set(list)
+    });
+  }
+
+  private loadActionFeedbacks(): void {
+    this.http.get<any[]>(`${environment.apiUrl}/superadmin/chatbot-action-feedbacks`).subscribe({
+      next: list => this.actionFeedbacks.set(list)
+    });
+  }
+
+  deleteActionFeedback(id: number): void {
+    this.http.delete(`${environment.apiUrl}/superadmin/chatbot-action-feedbacks/${id}`).subscribe({
+      next: () => this.actionFeedbacks.update(list => list.filter(x => x.id !== id))
     });
   }
 
