@@ -91,10 +91,10 @@ export class AuthService {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expiresAt: number = payload.exp * 1000;
       if (expiresAt - Date.now() < THIRTY_DAYS_MS) {
-        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/refresh`, {}, {
+        this.http.post<LoginResponse>(`${environment.apiUrl}/auth/refresh`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         }).subscribe({
-          next: resp => localStorage.setItem('flr_token', resp.token),
+          next: resp => this.storeSession(resp),
           error: () => {}
         });
       }

@@ -96,7 +96,7 @@ public class AuthController {
             Claims claims = jwtTokenProvider.validateToken(header.substring(7));
             AppUser user = userRepository.findByEmail(claims.getSubject())
                     .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
-            return ResponseEntity.ok(Map.of("token", jwtTokenProvider.generateToken(user)));
+            return ResponseEntity.ok(buildLoginResponse(user));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("error", "Token invalide ou expiré"));
         }
