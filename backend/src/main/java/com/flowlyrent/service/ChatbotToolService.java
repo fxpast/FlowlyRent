@@ -62,6 +62,9 @@ public class ChatbotToolService {
                 case "get_ongoing_stays" -> getOngoingStays(userId, dateArg(args, "date"));
                 case "get_reservations" -> getReservations(userId, dateArg(args, "from"), dateArg(args, "to"),
                         strArg(args, "propertyName"), strArg(args, "status"), strArg(args, "platform"));
+                case "search_booking" -> searchBooking(userId, strArg(args, "guestName"),
+                        strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"),
+                        strArg(args, "bookingId"));
                 case "get_expenses_summary" -> getExpensesSummary(userId, intArg(args, "year"), intArg(args, "month"));
                 case "get_transactions" -> getTransactions(userId, dateArg(args, "from"), dateArg(args, "to"),
                         strArg(args, "category"), strArg(args, "side"));
@@ -270,6 +273,70 @@ public class ChatbotToolService {
                 .map(b -> simplifyBooking(b, propNames))
                 .collect(Collectors.toList());
         return Map.of("from", from.toString(), "to", to.toString(), "reservations", result);
+    }
+
+    private Map<String, Object> searchBooking(Long userId, String guestName, String propertyName,
+                                               LocalDate from, LocalDate to, String bookingId) throws Exception {
+        if (from == null) from = LocalDate.now().minusMonths(6);
+        if (to   == null) to   = LocalDate.now().plusMonths(6);
+
+        Beds24Account account = requireBeds24Account(userId);
+        String token = beds24.tokenFor(account);
+        Map<String, String> propNames = propertyNames(userId, token);
+        String propId = resolvePropertyId(userId, propertyName);
+
+        String needle = guestName != null ? guestName.toLowerCase().trim() : null;
+
+        List<Map<String, Object>> bookings = beds24.getBookings(token,
+                Map.of("arrivalFrom", from.toString(), "arrivalTo", to.toString()));
+
+        List<Map<String, Object>> result = bookings.stream()
+                .filter(b -> {
+                    if (bookingId != null && !bookingId.isBlank()) {
+                        String id = idStr(b.get("id") != null ? b.get("id") : b.get("bookingId"));
+                        return bookingId.equals(id);
+                    }
+                    return true;
+                })
+                .filter(b -> propId == null || propId.equals(idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"))))
+                .filter(b -> {
+                    if (needle == null) return true;
+                    String first = Objects.toString(b.get("guestFirstName") != null ? b.get("guestFirstName") : b.get("firstName"), "").toLowerCase();
+                    String last  = Objects.toString(b.get("guestLastName")  != null ? b.get("guestLastName")  : b.get("lastName"), "").toLowerCase();
+                    return (first + " " + last).contains(needle) || first.contains(needle) || last.contains(needle);
+                })
+                .limit(20)
+                .map(b -> detailedBooking(b, propNames))
+                .collect(Collectors.toList());
+
+        return Map.of("from", from.toString(), "to", to.toString(), "bookings", result, "count", result.size());
+    }
+
+    private Map<String, Object> detailedBooking(Map<String, Object> b, Map<String, String> propNames) {
+        String propId = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
+        String first  = Objects.toString(b.get("guestFirstName") != null ? b.get("guestFirstName") : b.get("firstName"), "").trim();
+        String last   = Objects.toString(b.get("guestLastName")  != null ? b.get("guestLastName")  : b.get("lastName"),  "").trim();
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("bookingId",     idStr(b.get("id") != null ? b.get("id") : b.get("bookingId")));
+        m.put("guestName",     (first + " " + last).trim());
+        m.put("email",         nonNull(b, "guestEmail", "email"));
+        m.put("phone",         nonNull(b, "guestPhone", "phone"));
+        m.put("propertyName",  propNames.getOrDefault(propId, propId));
+        m.put("arrival",       truncateDate(b.get("arrival")));
+        m.put("departure",     truncateDate(b.get("departure")));
+        m.put("nights",        nightsBetween(b));
+        m.put("numAdult",      b.get("numAdult"));
+        m.put("numChild",      nonNull(b, "numChild", "numChildren"));
+        m.put("totalPrice",    nonNull(b, "totalPrice", "price"));
+        m.put("cleaningFee",   b.get("cleaningFee"));
+        m.put("channel",       Objects.toString(b.get("channel"), "Direct"));
+        m.put("status",        b.get("status"));
+        m.put("notes",         nonNull(b, "guestNote", "internalNote", "message", "notes"));
+        m.put("guestAddress",  nonNull(b, "guestAddress", "address"));
+        m.put("guestCountry",  nonNull(b, "guestCountry", "country"));
+        m.put("guestCity",     nonNull(b, "guestCity", "city"));
+        return m;
     }
 
     // ─── Qonto ──────────────────────────────────────────────────────────────
@@ -550,6 +617,14 @@ public class ChatbotToolService {
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    private Object nonNull(Map<String, Object> b, String... keys) {
+        for (String k : keys) {
+            Object v = b.get(k);
+            if (v != null && !v.toString().isBlank()) return v;
+        }
+        return null;
     }
 
     private String truncateDate(Object v) {

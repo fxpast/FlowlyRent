@@ -93,6 +93,35 @@
     }
   },
   {
+    "name": "search_booking",
+    "description": "Recherche une ou plusieurs réservations avec des détails complets : email, téléphone, nombre de voyageurs (adultes + enfants), notes, ID Beds24, frais de ménage, adresse du voyageur, etc. Utiliser quand l'hôte demande les coordonnées d'un voyageur ('email de [nom]', 'téléphone de [nom]'), des infos précises sur une réservation spécifique, ou quand get_reservations ne donne pas assez de détails.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "guestName": {
+          "type": "STRING",
+          "description": "Nom ou prénom du voyageur (recherche partielle). Optionnel."
+        },
+        "propertyName": {
+          "type": "STRING",
+          "description": "Nom du logement (ex: 'Lorraine 2e'). Optionnel."
+        },
+        "from": {
+          "type": "STRING",
+          "description": "Date d'arrivée minimale (AAAA-MM-JJ). Si absent, 6 mois en arrière."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date d'arrivée maximale (AAAA-MM-JJ). Si absent, 6 mois en avant."
+        },
+        "bookingId": {
+          "type": "STRING",
+          "description": "ID exact de la réservation Beds24. Optionnel."
+        }
+      }
+    }
+  },
+  {
     "name": "get_expenses_summary",
     "description": "Donne le résumé des dépenses et recettes Qonto pour un mois donné : total débits, total crédits, répartition par catégorie et par logement. Utiliser pour 'mes dépenses ce mois-ci', 'combien j'ai dépensé en [catégorie]'.",
     "parameters": {

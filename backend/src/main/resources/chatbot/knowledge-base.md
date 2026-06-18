@@ -163,6 +163,12 @@ Page de FAQ avec recherche, et un **assistant IA** (propulsé par Gemini) qui r�
 questions des hôtes sur l'utilisation de FlowlyRent en s'appuyant sur cette base de
 connaissance et sur les questions/réponses de la FAQ.
 
+L'assistant dispose d'outils pour consulter les données réelles de l'hôte en temps réel :
+revenus, réservations, arrivées/départs, séjours en cours, dépenses Qonto, tâches de
+ménage, stock de linge. L'outil **`search_booking`** permet de rechercher des informations
+détaillées sur une réservation spécifique : email, téléphone, nombre d'adultes/enfants,
+notes, frais de ménage, ID Beds24, adresse du voyageur.
+
 ## Paramètres (Settings)
 
 - **Beds24** : code d'invitation, configuration du webhook, synchronisation manuelle.
