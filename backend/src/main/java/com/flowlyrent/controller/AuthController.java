@@ -6,9 +6,11 @@ import com.flowlyrent.dto.LoginResponse;
 import com.flowlyrent.dto.RegisterRequest;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.enums.AnalyticsEventType;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.service.AnalyticsService;
+import com.flowlyrent.service.IcalSyncService;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/auth")
@@ -35,6 +38,7 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final AnalyticsService analyticsService;
+    private final IcalSyncService icalSyncService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -69,6 +73,10 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
 
         analyticsService.record(AnalyticsEventType.LOGIN, user.getId(), null, httpRequest.getRemoteAddr());
+        if (user.getChannelType() == ChannelType.ICAL) {
+            final Long userId = user.getId();
+            CompletableFuture.runAsync(() -> icalSyncService.syncUser(userId));
+        }
         return ResponseEntity.ok(buildLoginResponse(user));
     }
 

@@ -35,6 +35,17 @@ public class IcalSyncService {
     private final PropertyConfigRepository propertyConfigRepo;
     private final PropertyIcalSourceRepository icalSourceRepo;
 
+    public void syncUser(Long userId) {
+        List<LocalProperty> props = localPropertyRepo.findByUserIdOrderByCreatedAtAsc(userId);
+        for (LocalProperty prop : props) {
+            try {
+                syncProperty(prop);
+            } catch (Exception e) {
+                log.warn("[iCal] Erreur sync logement {} : {}", prop.getId(), e.getMessage());
+            }
+        }
+    }
+
     public void syncAllUsers() {
         List<LocalProperty> all = localPropertyRepo.findAll();
         for (LocalProperty prop : all) {
