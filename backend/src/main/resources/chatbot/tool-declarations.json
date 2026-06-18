@@ -264,7 +264,7 @@
   },
   {
     "name": "report_unhandled_action",
-    "description": "À appeler UNIQUEMENT quand l'hôte demande d'effectuer une action que tu ne peux pas réaliser (ex: envoyer un message à un voyageur, créer une réservation, modifier un prix, générer un rapport PDF, etc.) et que cette action n'est pas disponible dans tes outils actuels. Enregistre la demande pour que l'équipe FlowlyRent puisse éventuellement ajouter cette fonctionnalité au chatbot. Ne jamais appeler cet outil pour une simple question d'information.",
+    "description": "À appeler quand l'hôte pose une question sur ses données ou demande une action que tes outils actuels ne permettent pas de traiter (ex: chiffre d'affaires par prestataire, analyse sur plusieurs années, envoi de message à un voyageur, modification d'un prix, génération d'un rapport, etc.). Enregistre la demande pour que l'équipe FlowlyRent puisse prioriser les améliorations du chatbot.",
     "parameters": {
       "type": "OBJECT",
       "properties": {

@@ -98,8 +98,12 @@ public class ChatbotPromptService {
                 cet outil exécuté que tu informes poliment l'hôte que sa question a été transmise à l'équipe
                 FlowlyRent pour être ajoutée à la FAQ. Ne dis JAMAIS à l'hôte que sa question sera transmise si tu
                 n'as pas réellement appelé suggest_faq dans ce même échange.
-                Si une question porte sur les données de l'hôte mais qu'aucun outil ne permet d'y répondre, dis-le
-                poliment et invite l'hôte à contacter le support, sans appeler suggest_faq.
+                Si une question ou une demande porte sur les données de l'hôte (revenus par prestataire, analyse
+                sur plusieurs années, modification d'une réservation, envoi de message, etc.) mais qu'aucun outil
+                ne permet d'y répondre, tu DOIS appeler report_unhandled_action (paramètre "action" = description
+                claire de ce que l'hôte voulait savoir ou faire, "userMessage" = message original de l'hôte)
+                AVANT de répondre poliment. Ne jamais mentionner que la demande a été enregistrée si tu n'as pas
+                réellement appelé report_unhandled_action dans ce même échange.
                 Réponds dans la même langue que la question, de façon concise et claire, sans formatage markdown.
 
                 Date du jour : %s
