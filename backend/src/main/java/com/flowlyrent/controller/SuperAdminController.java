@@ -55,14 +55,20 @@ public class SuperAdminController {
     @Transactional
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         return userRepository.findById(id).map(user -> {
-            // Enfants indirects (via tables intermédiaires)
+            // Enfants des tâches ménage (avant housekeeping_tasks)
             jdbcTemplate.update("DELETE FROM task_photos WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM task_linen_usages WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
+            // Tâches ménage avant housekeeper_profiles (housekeeping_tasks.housekeeper_id → housekeeper_profiles)
+            jdbcTemplate.update("DELETE FROM housekeeping_tasks WHERE user_id = ?", id);
+            // Enfants linge (avant linen_items et linen_templates)
             jdbcTemplate.update("DELETE FROM linen_movements WHERE linen_item_id IN (SELECT id FROM linen_items WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM linen_movements WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM linen_template_items WHERE template_id IN (SELECT id FROM linen_templates WHERE user_id = ?)", id);
+            // Enfants factures et règles (avant invoices et expense_rules)
             jdbcTemplate.update("DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM expense_rule_keywords WHERE rule_id IN (SELECT id FROM expense_rules WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM expense_rule_alt_keywords WHERE rule_id IN (SELECT id FROM expense_rules WHERE user_id = ?)", id);
+            // Enfants bundles (avant property_bundles)
             jdbcTemplate.update("DELETE FROM property_bundle_members WHERE bundle_id IN (SELECT id FROM property_bundles WHERE user_id = ?)", id);
             // Références directes à users
             jdbcTemplate.update("DELETE FROM admin_notification_reads WHERE user_id = ?", id);
@@ -75,12 +81,10 @@ public class SuperAdminController {
             jdbcTemplate.update("DELETE FROM fcm_tokens WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM housekeeper_profiles WHERE user_id = ? OR linked_user_id = ?", id, id);
             jdbcTemplate.update("DELETE FROM housekeeping_staff WHERE user_id = ?", id);
-            jdbcTemplate.update("DELETE FROM housekeeping_tasks WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM ical_bookings WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM invoices WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM key_boxes WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM linen_items WHERE user_id = ?", id);
-            jdbcTemplate.update("DELETE FROM linen_movements WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM linen_templates WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM local_properties WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM manual_expenses WHERE user_id = ?", id);
