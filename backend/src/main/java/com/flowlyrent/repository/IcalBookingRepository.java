@@ -16,5 +16,7 @@ public interface IcalBookingRepository extends JpaRepository<IcalBooking, Long> 
     List<IcalBooking> findByUserIdAndDepartureBetween(Long userId, LocalDate from, LocalDate to);
     List<IcalBooking> findByUserIdAndArrivalLessThanAndDepartureGreaterThan(Long userId, LocalDate before, LocalDate after);
     void deleteByLocalPropertyIdAndIcalUidNotIn(Long propertyId, Set<String> uids);
+    void deleteBySourceIdAndIcalUidNotIn(Long sourceId, Set<String> uids);
+    void deleteBySourceId(Long sourceId);
     void deleteByLocalPropertyId(Long propertyId);
 }

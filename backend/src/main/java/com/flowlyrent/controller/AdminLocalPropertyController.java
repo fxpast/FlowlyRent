@@ -4,9 +4,11 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.LocalProperty;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.PropertyIcalSource;
 import com.flowlyrent.repository.IcalBookingRepository;
 import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
+import com.flowlyrent.repository.PropertyIcalSourceRepository;
 import com.flowlyrent.service.IcalSyncService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
@@ -26,17 +28,26 @@ public class AdminLocalPropertyController {
     private final LocalPropertyRepository localPropertyRepo;
     private final IcalBookingRepository icalBookingRepo;
     private final PropertyConfigRepository propertyConfigRepo;
+    private final PropertyIcalSourceRepository icalSourceRepo;
     private final IcalSyncService icalSyncService;
     private final SecurityUtils securityUtils;
 
     @PostConstruct
-    public void fillMissingFeedTokens() {
-        localPropertyRepo.findAll().stream()
-            .filter(p -> p.getIcalFeedToken() == null || p.getIcalFeedToken().isEmpty())
-            .forEach(p -> {
+    public void migrate() {
+        localPropertyRepo.findAll().forEach(p -> {
+            if (p.getIcalFeedToken() == null || p.getIcalFeedToken().isEmpty()) {
                 p.setIcalFeedToken(java.util.UUID.randomUUID().toString());
                 localPropertyRepo.save(p);
-            });
+            }
+            if (p.getIcalUrl() != null && !p.getIcalUrl().isBlank()
+                    && !icalSourceRepo.existsByLocalPropertyId(p.getId())) {
+                PropertyIcalSource src = new PropertyIcalSource();
+                src.setLocalProperty(p);
+                src.setName("Principal");
+                src.setUrl(p.getIcalUrl());
+                icalSourceRepo.save(src);
+            }
+        });
     }
 
     @GetMapping
@@ -100,6 +111,7 @@ public class AdminLocalPropertyController {
         if (prop == null) return ResponseEntity.notFound().build();
 
         icalBookingRepo.deleteByLocalPropertyId(id);
+        icalSourceRepo.deleteByLocalPropertyId(id);
         localPropertyRepo.delete(prop);
         return ResponseEntity.ok(Map.of("status", "supprimé"));
     }
@@ -110,8 +122,8 @@ public class AdminLocalPropertyController {
         LocalProperty prop = localPropertyRepo.findByIdAndUserId(id, userId)
                 .orElse(null);
         if (prop == null) return ResponseEntity.notFound().build();
-        if (prop.getIcalUrl() == null || prop.getIcalUrl().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Aucune URL iCal configurée"));
+        if (!icalSourceRepo.existsByLocalPropertyId(id)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Aucune source iCal configurée"));
         }
         try {
             icalSyncService.syncProperty(prop);

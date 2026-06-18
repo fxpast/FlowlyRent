@@ -62,10 +62,6 @@ interface OccupancyStatus {
                   <mat-label>{{ 'properties.short_name' | translate }}</mat-label>
                   <input matInput [(ngModel)]="addPropForm.shortName" autocomplete="off">
                 </mat-form-field>
-                <mat-form-field appearance="outline" class="add-field-url">
-                  <mat-label>{{ 'properties.local_prop_ical_url' | translate }}</mat-label>
-                  <input matInput [(ngModel)]="addPropForm.icalUrl" autocomplete="off" placeholder="https://…">
-                </mat-form-field>
                 <div class="add-prop-actions">
                   <button mat-flat-button color="primary" (click)="addLocalProp()" [disabled]="addPropSaving() || !addPropForm.name.trim()">
                     @if (addPropSaving()) { <mat-spinner diameter="18"></mat-spinner> } @else { {{ 'common.save' | translate }} }
@@ -276,10 +272,103 @@ interface OccupancyStatus {
                       <input matInput [(ngModel)]="draft.shortName" autocomplete="off">
                     </mat-form-field>
                   </div>
-                  <mat-form-field appearance="outline" class="ical-url-field">
-                    <mat-label>{{ 'properties.local_prop_ical_url' | translate }}</mat-label>
-                    <input matInput [(ngModel)]="draft.icalUrl" autocomplete="off" placeholder="https://…">
-                  </mat-form-field>
+                  <div class="ical-prop-actions">
+                    <button mat-flat-button color="primary" (click)="saveLocalProp(p['id'])"
+                            [disabled]="!isLocalPropDirty(p['id'])">
+                      <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteLocalProp(p['id'])"
+                            [matTooltip]="'common.delete' | translate">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+
+                  <!-- Sources iCal (plateformes importées) -->
+                  <div class="ical-sources-section">
+                    <div class="ical-sources-header">
+                      <mat-icon class="src-icon">link</mat-icon>
+                      <strong>{{ 'properties.ical_sources_title' | translate }}</strong>
+                    </div>
+                    @for (src of icalSources[p['id']] ?? []; track src.id) {
+                      @if (icalSourceEditId[p['id']] === src.id && icalSourceEditDraft[p['id']]?.[src.id]; as editDraft) {
+                        <div class="source-edit-row">
+                          <mat-form-field appearance="outline" class="src-name-field">
+                            <mat-label>{{ 'properties.ical_source_name' | translate }}</mat-label>
+                            <input matInput [(ngModel)]="editDraft.name" autocomplete="off">
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" class="src-url-field">
+                            <mat-label>URL</mat-label>
+                            <input matInput [(ngModel)]="editDraft.url" autocomplete="off">
+                          </mat-form-field>
+                          <button mat-icon-button color="primary" (click)="updateSource(p['id'], src.id)"
+                                  [matTooltip]="'common.save' | translate">
+                            <mat-icon>check</mat-icon>
+                          </button>
+                          <button mat-icon-button (click)="cancelEditSource(p['id'])"
+                                  [matTooltip]="'common.cancel' | translate">
+                            <mat-icon>close</mat-icon>
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="source-row">
+                          <div class="source-info">
+                            <span class="source-name">{{ src.name }}</span>
+                            <span class="source-meta">
+                              @if (src.lastSync) { {{ 'properties.ical_source_last_sync' | translate }} {{ src.lastSync | date:'dd/MM HH:mm' }}
+                                @if (src.lastSyncCount != null) { · {{ src.lastSyncCount }} évén. }
+                              }
+                            </span>
+                          </div>
+                          <div class="source-actions">
+                            <button mat-icon-button (click)="syncSource(p['id'], src.id)"
+                                    [disabled]="isSourceSyncing(p['id'], src.id)"
+                                    [matTooltip]="'properties.local_prop_sync' | translate">
+                              @if (isSourceSyncing(p['id'], src.id)) { <mat-spinner diameter="16"></mat-spinner> }
+                              @else { <mat-icon>sync</mat-icon> }
+                            </button>
+                            <button mat-icon-button (click)="startEditSource(p['id'], src)"
+                                    [matTooltip]="'common.edit' | translate">
+                              <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button color="warn" (click)="deleteSource(p['id'], src.id)"
+                                    [matTooltip]="'common.delete' | translate">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    }
+                    @if (icalSourceFormOpen[p['id']]) {
+                      <div class="source-add-row">
+                        <mat-form-field appearance="outline" class="src-name-field">
+                          <mat-label>{{ 'properties.ical_source_name' | translate }}</mat-label>
+                          <input matInput [(ngModel)]="icalSourceForm[p['id']].name" autocomplete="off"
+                                 placeholder="Airbnb, Booking…">
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" class="src-url-field">
+                          <mat-label>URL iCal</mat-label>
+                          <input matInput [(ngModel)]="icalSourceForm[p['id']].url" autocomplete="off"
+                                 placeholder="https://…">
+                        </mat-form-field>
+                        <button mat-icon-button color="primary"
+                                (click)="addSource(p['id'])"
+                                [disabled]="icalSourceSaving[p['id']] || !icalSourceForm[p['id']]?.name?.trim() || !icalSourceForm[p['id']]?.url?.trim()"
+                                [matTooltip]="'common.save' | translate">
+                          @if (icalSourceSaving[p['id']]) { <mat-spinner diameter="16"></mat-spinner> }
+                          @else { <mat-icon>check</mat-icon> }
+                        </button>
+                        <button mat-icon-button (click)="icalSourceFormOpen[p['id']] = false"
+                                [matTooltip]="'common.cancel' | translate">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                    } @else {
+                      <button mat-stroked-button class="add-source-btn" (click)="openSourceForm(p['id'])">
+                        <mat-icon>add</mat-icon> {{ 'properties.ical_source_add' | translate }}
+                      </button>
+                    }
+                  </div>
+
                   @if (p['icalFeedToken']) {
                     <div class="ical-export-row">
                       <mat-icon class="ical-export-icon">rss_feed</mat-icon>
@@ -293,21 +382,6 @@ interface OccupancyStatus {
                       </button>
                     </div>
                   }
-                  <div class="ical-prop-actions">
-                    <button mat-flat-button color="primary" (click)="saveLocalProp(p['id'])"
-                            [disabled]="!isLocalPropDirty(p['id'])">
-                      <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
-                    </button>
-                    <button mat-stroked-button (click)="syncLocalProp(p['id'])" [disabled]="icalSyncing[p['id']]">
-                      @if (icalSyncing[p['id']]) { <mat-spinner diameter="16"></mat-spinner> }
-                      @else { <mat-icon>sync</mat-icon> }
-                      {{ 'properties.local_prop_sync' | translate }}
-                    </button>
-                    <button mat-icon-button color="warn" (click)="deleteLocalProp(p['id'])"
-                            [matTooltip]="'common.delete' | translate">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
                 </div>
               }
 
@@ -819,13 +893,27 @@ interface OccupancyStatus {
     .ical-fields-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .ical-name-field { flex: 2; min-width: 140px; }
     .ical-short-field { flex: 1; min-width: 100px; }
-    .ical-url-field { width: 100%; }
     .ical-prop-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
-    .ical-export-row { display: flex; align-items: flex-start; gap: 8px; background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+    .ical-export-row { display: flex; align-items: flex-start; gap: 8px; background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; margin-top: 8px; }
     .ical-export-icon { font-size: 18px; width: 18px; height: 18px; color: #558b2f; flex-shrink: 0; margin-top: 2px; }
     .ical-export-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .ical-export-label { font-size: 11px; font-weight: 600; color: #558b2f; text-transform: uppercase; letter-spacing: 0.5px; }
     .ical-export-url { font-size: 11px; color: #33691e; word-break: break-all; background: none; border: none; padding: 0; }
+
+    /* Sources iCal */
+    .ical-sources-section { margin-top: 12px; border: 1px solid #e8eaf6; border-radius: 6px; padding: 10px 12px; background: #f9f9fd; }
+    .ical-sources-header { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 10px; }
+    .src-icon { font-size: 16px; width: 16px; height: 16px; color: #3949ab; }
+    .source-row { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid #e8eaf6; }
+    .source-row:last-child { border-bottom: none; }
+    .source-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .source-name { font-size: 13px; font-weight: 600; color: #1a237e; }
+    .source-meta { font-size: 11px; color: #9e9e9e; }
+    .source-actions { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+    .source-add-row, .source-edit-row { display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; padding: 6px 0 2px; }
+    .src-name-field { width: 130px; flex-shrink: 0; }
+    .src-url-field { flex: 1; min-width: 150px; }
+    .add-source-btn { margin-top: 6px; font-size: 12px !important; height: 32px !important; color: #3949ab !important; border-color: #9fa8da !important; }
 
     @media (max-width: 600px) {
       .props-grid { grid-template-columns: 1fr; }
@@ -841,11 +929,20 @@ export class PropertiesComponent implements OnInit {
 
   // iCal mode
   isIcalMode    = signal(false);
-  icalEditDraft: Record<string, { name: string; shortName: string; icalUrl: string; origName: string; origShortName: string; origIcalUrl: string }> = {};
+  icalEditDraft: Record<string, { name: string; shortName: string; origName: string; origShortName: string }> = {};
   icalSyncing:  Record<string, boolean> = {};
-  addPropForm   = { name: '', shortName: '', icalUrl: '' };
+  addPropForm   = { name: '', shortName: '' };
   addPropOpen   = signal(false);
   addPropSaving = signal(false);
+
+  // iCal sources
+  icalSources:         Record<string, any[]>    = {};
+  icalSourceFormOpen:  Record<string, boolean>  = {};
+  icalSourceForm:      Record<string, { name: string; url: string }> = {};
+  icalSourceSaving:    Record<string, boolean>  = {};
+  icalSourceSyncing:   Record<string, boolean>  = {};
+  icalSourceEditId:    Record<string, number | null> = {};
+  icalSourceEditDraft: Record<string, Record<number, { name: string; url: string }>> = {};
 
   searchDraft = '';
   tipsOpen:   Record<string, boolean> = {};
@@ -1050,11 +1147,10 @@ export class PropertiesComponent implements OnInit {
             this.icalEditDraft[id] = {
               name: p['name'] ?? '',
               shortName: p['shortName'] ?? '',
-              icalUrl: p['icalUrl'] ?? '',
               origName: p['name'] ?? '',
-              origShortName: p['shortName'] ?? '',
-              origIcalUrl: p['icalUrl'] ?? ''
+              origShortName: p['shortName'] ?? ''
             };
+            this.loadSources(id);
           }
         }
         this.loading.set(false);
@@ -1355,7 +1451,7 @@ export class PropertiesComponent implements OnInit {
   // ── Logements locaux (mode iCal) ────────────────────────────────────
 
   openAddProp(): void {
-    this.addPropForm = { name: '', shortName: '', icalUrl: '' };
+    this.addPropForm = { name: '', shortName: '' };
     this.addPropOpen.set(true);
   }
 
@@ -1364,8 +1460,7 @@ export class PropertiesComponent implements OnInit {
     this.addPropSaving.set(true);
     this.http.post<any>(`${environment.apiUrl}/admin/local-properties`, {
       name: this.addPropForm.name.trim(),
-      shortName: this.addPropForm.shortName.trim(),
-      icalUrl: this.addPropForm.icalUrl.trim()
+      shortName: this.addPropForm.shortName.trim()
     }).subscribe({
       next: p => {
         const id = String(p['id']);
@@ -1373,11 +1468,10 @@ export class PropertiesComponent implements OnInit {
         this.icalEditDraft[id] = {
           name: p['name'] ?? '',
           shortName: p['shortName'] ?? '',
-          icalUrl: p['icalUrl'] ?? '',
           origName: p['name'] ?? '',
-          origShortName: p['shortName'] ?? '',
-          origIcalUrl: p['icalUrl'] ?? ''
+          origShortName: p['shortName'] ?? ''
         };
+        this.icalSources[id] = [];
         const empty = { cleaningFee: '', extraPersonThreshold: '', extraPersonFee: '', discount7Nights: '', discount28Nights: '' };
         this.pricingDraft[id] = { ...empty };
         this.pricingSaved[id] = { ...empty };
@@ -1395,7 +1489,7 @@ export class PropertiesComponent implements OnInit {
   isLocalPropDirty(propId: string): boolean {
     const d = this.icalEditDraft[propId];
     if (!d) return false;
-    return d.name !== d.origName || d.shortName !== d.origShortName || d.icalUrl !== d.origIcalUrl;
+    return d.name !== d.origName || d.shortName !== d.origShortName;
   }
 
   saveLocalProp(propId: string): void {
@@ -1403,18 +1497,14 @@ export class PropertiesComponent implements OnInit {
     if (!d) return;
     this.http.put<any>(`${environment.apiUrl}/admin/local-properties/${propId}`, {
       name: d.name.trim(),
-      shortName: d.shortName.trim(),
-      icalUrl: d.icalUrl.trim()
+      shortName: d.shortName.trim()
     }).subscribe({
       next: p => {
         d.origName = p['name'] ?? '';
         d.origShortName = p['shortName'] ?? '';
-        d.origIcalUrl = p['icalUrl'] ?? '';
         d.name = d.origName;
         d.shortName = d.origShortName;
-        d.icalUrl = d.origIcalUrl;
         this.properties.update(list => list.map(pr => String(pr['id']) === propId ? p : pr));
-        // Sync shortNameSaved pour que bookingService utilise le bon nom
         this.shortNameSaved[propId] = p['shortName'] ?? '';
         this.shortNameDraft[propId] = p['shortName'] ?? '';
         this.bookingService.clearPropsCache();
@@ -1422,6 +1512,97 @@ export class PropertiesComponent implements OnInit {
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
+  }
+
+  // ── Sources iCal ──────────────────────────────────────────────────────
+
+  loadSources(propId: string): void {
+    this.http.get<any[]>(`${environment.apiUrl}/admin/local-properties/${propId}/ical-sources`).subscribe({
+      next: sources => { this.icalSources[propId] = sources ?? []; },
+      error: () => { this.icalSources[propId] = []; }
+    });
+  }
+
+  openSourceForm(propId: string): void {
+    this.icalSourceForm[propId] = { name: '', url: '' };
+    this.icalSourceFormOpen[propId] = true;
+  }
+
+  addSource(propId: string): void {
+    const form = this.icalSourceForm[propId];
+    if (!form?.name?.trim() || !form?.url?.trim()) return;
+    this.icalSourceSaving[propId] = true;
+    this.http.post<any>(`${environment.apiUrl}/admin/local-properties/${propId}/ical-sources`, {
+      name: form.name.trim(), url: form.url.trim()
+    }).subscribe({
+      next: src => {
+        this.icalSources[propId] = [...(this.icalSources[propId] ?? []), src];
+        this.icalSourceFormOpen[propId] = false;
+        this.icalSourceSaving[propId] = false;
+        this.snackBar.open(this.t.instant('properties.ical_source_added'), '', { duration: 2000 });
+      },
+      error: err => {
+        this.icalSourceSaving[propId] = false;
+        this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  startEditSource(propId: string, src: any): void {
+    if (!this.icalSourceEditDraft[propId]) this.icalSourceEditDraft[propId] = {};
+    this.icalSourceEditDraft[propId][src.id] = { name: src.name, url: src.url };
+    this.icalSourceEditId[propId] = src.id;
+  }
+
+  cancelEditSource(propId: string): void {
+    this.icalSourceEditId[propId] = null;
+  }
+
+  updateSource(propId: string, srcId: number): void {
+    const draft = this.icalSourceEditDraft[propId]?.[srcId];
+    if (!draft?.name?.trim() || !draft?.url?.trim()) return;
+    this.http.put<any>(`${environment.apiUrl}/admin/local-properties/${propId}/ical-sources/${srcId}`, {
+      name: draft.name.trim(), url: draft.url.trim()
+    }).subscribe({
+      next: updated => {
+        this.icalSources[propId] = (this.icalSources[propId] ?? []).map(s => s.id === srcId ? updated : s);
+        this.icalSourceEditId[propId] = null;
+        this.snackBar.open(this.t.instant('properties.ical_source_saved'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  deleteSource(propId: string, srcId: number): void {
+    if (!confirm(this.t.instant('properties.ical_source_delete_confirm'))) return;
+    this.http.delete<any>(`${environment.apiUrl}/admin/local-properties/${propId}/ical-sources/${srcId}`).subscribe({
+      next: () => {
+        this.icalSources[propId] = (this.icalSources[propId] ?? []).filter(s => s.id !== srcId);
+        this.snackBar.open(this.t.instant('properties.ical_source_deleted'), '', { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  syncSource(propId: string, srcId: number): void {
+    if (!this.icalSourceSyncing[propId]) this.icalSourceSyncing[propId] = false;
+    const key = `${propId}_${srcId}`;
+    (this.icalSourceSyncing as any)[key] = true;
+    this.http.post<any>(`${environment.apiUrl}/admin/local-properties/${propId}/ical-sources/${srcId}/sync`, {}).subscribe({
+      next: r => {
+        (this.icalSourceSyncing as any)[key] = false;
+        this.loadSources(propId);
+        this.snackBar.open(this.t.instant('properties.local_prop_synced') + (r.count != null ? ` (${r.count})` : ''), '', { duration: 2000 });
+      },
+      error: err => {
+        (this.icalSourceSyncing as any)[key] = false;
+        this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 });
+      }
+    });
+  }
+
+  isSourceSyncing(propId: string, srcId: number): boolean {
+    return !!(this.icalSourceSyncing as any)[`${propId}_${srcId}`];
   }
 
   syncLocalProp(propId: string): void {

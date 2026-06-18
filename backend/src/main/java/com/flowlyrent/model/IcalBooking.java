@@ -39,6 +39,9 @@ public class IcalBooking {
 
     private String status = "confirmed";
 
+    @Column(name = "source_id")
+    private Long sourceId;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

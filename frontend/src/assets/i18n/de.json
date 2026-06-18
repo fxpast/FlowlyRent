@@ -554,7 +554,15 @@
     "local_prop_delete_confirm": "Diese Unterkunft und alle importierten Buchungen löschen?",
     "local_prop_deleted": "Unterkunft gelöscht",
     "ical_export_label": "iCal-Exportlink (in Airbnb/Booking einfügen)",
-    "ical_export_copied": "iCal-Link kopiert"
+    "ical_export_copied": "iCal-Link kopiert",
+    "ical_sources_title": "iCal-Quellen (Plattformen)",
+    "ical_source_name": "Plattformname",
+    "ical_source_add": "Quelle hinzufügen",
+    "ical_source_added": "Quelle hinzugefügt",
+    "ical_source_saved": "Quelle aktualisiert",
+    "ical_source_deleted": "Quelle gelöscht",
+    "ical_source_delete_confirm": "Diese Quelle und alle importierten Buchungen löschen?",
+    "ical_source_last_sync": "Sync:"
   },
   "payments": {
     "title": "Zahlungen",
