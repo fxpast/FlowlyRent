@@ -11,6 +11,7 @@ import com.flowlyrent.model.enums.SubscriptionPlan;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.service.AnalyticsService;
 import com.flowlyrent.service.IcalSyncService;
+import com.flowlyrent.service.PropertyBundleService;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +40,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AnalyticsService analyticsService;
     private final IcalSyncService icalSyncService;
+    private final PropertyBundleService propertyBundleService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -73,9 +75,11 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
 
         analyticsService.record(AnalyticsEventType.LOGIN, user.getId(), null, httpRequest.getRemoteAddr());
+        final Long userId = user.getId();
         if (user.getChannelType() == ChannelType.ICAL) {
-            final Long userId = user.getId();
             CompletableFuture.runAsync(() -> icalSyncService.syncUser(userId));
+        } else {
+            CompletableFuture.runAsync(() -> propertyBundleService.syncAllBundlesForUser(userId));
         }
         return ResponseEntity.ok(buildLoginResponse(user));
     }

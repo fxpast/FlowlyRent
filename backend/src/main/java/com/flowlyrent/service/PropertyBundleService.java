@@ -214,6 +214,23 @@ public class PropertyBundleService {
         return s.isBlank() ? null : s;
     }
 
+    // ─── Sync au login ────────────────────────────────────────────────────────
+
+    public void syncAllBundlesForUser(Long userId) {
+        List<PropertyBundle> bundles = repo.findByUserId(userId).stream()
+                .filter(PropertyBundle::isEnabled)
+                .toList();
+        if (bundles.isEmpty()) return;
+        log.info("[Bundle] Sync login pour {} bundle(s) userId={}", bundles.size(), userId);
+        for (PropertyBundle bundle : bundles) {
+            try {
+                runNow(userId, bundle.getId());
+            } catch (Exception e) {
+                log.warn("[Bundle] Échec sync login bundleId={}: {}", bundle.getId(), e.getMessage());
+            }
+        }
+    }
+
     // ─── Exécution automatique (toutes les 3 heures) ───────────────────────────
 
     @Scheduled(cron = "0 0 */3 * * *")
