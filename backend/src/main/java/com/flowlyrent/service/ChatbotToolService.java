@@ -65,6 +65,7 @@ public class ChatbotToolService {
                 case "search_booking" -> searchBooking(userId, strArg(args, "guestName"),
                         strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"),
                         strArg(args, "bookingId"));
+                case "get_free_properties" -> getFreeProperties(userId, dateArg(args, "from"), dateArg(args, "to"));
                 case "get_expenses_summary" -> getExpensesSummary(userId, intArg(args, "year"), intArg(args, "month"));
                 case "get_transactions" -> getTransactions(userId, dateArg(args, "from"), dateArg(args, "to"),
                         strArg(args, "category"), strArg(args, "side"));
@@ -273,6 +274,61 @@ public class ChatbotToolService {
                 .map(b -> simplifyBooking(b, propNames))
                 .collect(Collectors.toList());
         return Map.of("from", from.toString(), "to", to.toString(), "reservations", result);
+    }
+
+    private Map<String, Object> getFreeProperties(Long userId, LocalDate from, LocalDate to) throws Exception {
+        if (from == null) from = LocalDate.now();
+        if (to == null) to = from.plusDays(14);
+
+        Beds24Account account = requireBeds24Account(userId);
+        String token = beds24.tokenFor(account);
+        Map<String, String> propNames = propertyNames(userId, token);
+
+        List<String> allPropIds = new ArrayList<>();
+        for (Map<String, Object> p : beds24.getProperties(token, Map.of())) {
+            String id = idStr(p.get("id") != null ? p.get("id") : p.get("propId"));
+            if (id != null) allPropIds.add(id);
+        }
+
+        // Requête large en arrière pour capturer les séjours déjà en cours
+        final LocalDate finalFrom = from;
+        final LocalDate finalTo = to;
+        List<Map<String, Object>> bookings = beds24.getBookings(token,
+                Map.of("arrivalFrom", from.minusDays(180).toString(), "arrivalTo", to.toString()));
+
+        Set<String> occupiedIds = bookings.stream()
+                .filter(this::isActiveStatus)
+                .filter(b -> {
+                    try {
+                        LocalDate arrival   = LocalDate.parse(truncateDate(b.get("arrival")));
+                        LocalDate departure = LocalDate.parse(truncateDate(b.get("departure")));
+                        return arrival.isBefore(finalTo) && departure.isAfter(finalFrom);
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .map(b -> idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId")))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Map<String, Object>> free = allPropIds.stream()
+                .filter(id -> !occupiedIds.contains(id))
+                .map(id -> Map.<String, Object>of("id", id, "name", propNames.getOrDefault(id, id)))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> occupied = allPropIds.stream()
+                .filter(occupiedIds::contains)
+                .map(id -> Map.<String, Object>of("id", id, "name", propNames.getOrDefault(id, id)))
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "from", from.toString(),
+                "to", to.toString(),
+                "freeCount", free.size(),
+                "occupiedCount", occupied.size(),
+                "freeProperties", free,
+                "occupiedProperties", occupied
+        );
     }
 
     private Map<String, Object> searchBooking(Long userId, String guestName, String propertyName,

@@ -167,7 +167,10 @@ L'assistant dispose d'outils pour consulter les données réelles de l'hôte en 
 revenus, réservations, arrivées/départs, séjours en cours, dépenses Qonto, tâches de
 ménage, stock de linge. L'outil **`search_booking`** permet de rechercher des informations
 détaillées sur une réservation spécifique : email, téléphone, nombre d'adultes/enfants,
-notes, frais de ménage, ID Beds24, adresse du voyageur.
+notes, frais de ménage, ID Beds24, adresse du voyageur. L'outil **`get_free_properties`**
+identifie quels logements sont libres (non occupés) et lesquels sont occupés sur une
+période donnée, en tenant compte des séjours déjà en cours au moment du début de la
+période.
 
 ## Paramètres (Settings)
 

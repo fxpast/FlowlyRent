@@ -122,6 +122,23 @@
     }
   },
   {
+    "name": "get_free_properties",
+    "description": "Identifie quels logements sont libres (non occupés) et quels logements sont occupés sur une période donnée. Utiliser pour répondre à 'quels logements ne sont pas loués la semaine prochaine', 'quelles propriétés sont disponibles du [date] au [date]', 'quels appartements sont vides ce week-end'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début de la période (AAAA-MM-JJ). Si absent, utilise la date du jour."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin de la période (AAAA-MM-JJ). Si absent, 14 jours après 'from'."
+        }
+      }
+    }
+  },
+  {
     "name": "get_expenses_summary",
     "description": "Donne le résumé des dépenses et recettes Qonto pour un mois donné : total débits, total crédits, répartition par catégorie et par logement. Utiliser pour 'mes dépenses ce mois-ci', 'combien j'ai dépensé en [catégorie]'.",
     "parameters": {
