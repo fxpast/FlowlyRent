@@ -54,7 +54,12 @@ public class AdminPropertyConfigController {
         if (body.containsKey("keyBoxId")) {
             String kbIdStr = body.get("keyBoxId");
             if (kbIdStr == null || kbIdStr.isBlank()) {
+                KeyBox previous = cfg.getKeyBox();
                 cfg.setKeyBox(null);
+                repo.save(cfg);
+                if (previous != null && repo.findByKeyBoxId(previous.getId()).isEmpty()) {
+                    keyBoxRepo.delete(previous);
+                }
             } else {
                 Long kbId = Long.parseLong(kbIdStr);
                 KeyBox kb = keyBoxRepo.findByIdAndUserId(kbId, user.getId())
