@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -137,7 +137,7 @@ export class DashboardComponent implements OnInit {
   departuresToday = signal<any[]>([]);
   unreadMessages = signal(0);
 
-  constructor(private bookingService: BookingService, private messageService: MessageService, private dialog: MatDialog) {}
+  constructor(private bookingService: BookingService, private messageService: MessageService, private dialog: MatDialog, private router: Router) {}
 
   guestName(b: any): string {
     const first = b['guestFirstName'] || b['firstName'] || '';
@@ -150,7 +150,10 @@ export class DashboardComponent implements OnInit {
   }
 
   openDetail(b: any): void {
-    this.dialog.open(BookingDetailDialogComponent, { data: b, width: '600px' });
+    const ref = this.dialog.open(BookingDetailDialogComponent, { data: b, width: '600px' });
+    ref.afterClosed().subscribe(result => {
+      if (result?.editDirect) this.router.navigate(['/admin/bookings'], { state: { editDirectBooking: b } });
+    });
   }
 
   ngOnInit(): void {

@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -197,7 +198,7 @@ export class TodayComponent implements OnInit {
 
   private propNames: Record<string, string> = {};
 
-  constructor(private bookingService: BookingService, private dialog: MatDialog, readonly reminder: MessageReminderService, private t: TranslateService) {}
+  constructor(private bookingService: BookingService, private dialog: MatDialog, readonly reminder: MessageReminderService, private t: TranslateService, private router: Router) {}
 
   todayLabel(): string {
     return new Date().toLocaleDateString(this.t.currentLang || 'fr', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -233,7 +234,10 @@ export class TodayComponent implements OnInit {
       data: { ...b, propName: this.propName(b) },
       width: '600px'
     });
-    ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
+    ref.afterClosed().subscribe(result => {
+      if (result?.cancelled || result?.updated) this.load();
+      if (result?.editDirect) this.router.navigate(['/admin/bookings'], { state: { editDirectBooking: b } });
+    });
   }
 
   guestName(b: any): string {

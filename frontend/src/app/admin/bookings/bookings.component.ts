@@ -323,6 +323,8 @@ export class BookingsComponent implements OnInit {
   sortDir = signal<'asc' | 'desc'>('asc');
   columns = ['id', 'guest', 'property', 'dates', 'channel', 'status', 'amount', 'actions'];
 
+  private pendingEditDirect: any = null;
+
   sortedFiltered = computed(() => this.sortData(this.applyFilters(this.bookings())));
   paged = computed(() => {
     const start = this.pageIndex() * this.pageSize();
@@ -341,6 +343,8 @@ export class BookingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.isIcalMode.set(this.auth.isIcal());
+    const navState = history.state;
+    if (navState?.editDirectBooking) this.pendingEditDirect = navState.editDirectBooking;
     this.load();
     if (this.isIcalMode()) {
       this.http.get<any[]>(`${environment.apiUrl}/admin/properties`).pipe(catchError(() => of([]))).subscribe(props => {
@@ -360,6 +364,11 @@ export class BookingsComponent implements OnInit {
           if (pid && names[pid]) return { ...b, propName: names[pid] };
           return b;
         }));
+        if (this.pendingEditDirect) {
+          const toEdit = this.pendingEditDirect;
+          this.pendingEditDirect = null;
+          setTimeout(() => this.openEditDirectForm(toEdit), 0);
+        }
       },
       error: err => this.snackBar.open(err.error?.error ?? this.t.instant('common.error'), this.t.instant('common.close'), { duration: 4000 })
     });
@@ -545,7 +554,10 @@ export class BookingsComponent implements OnInit {
 
   openDetail(b: any): void {
     const ref = this.dialog.open(BookingDetailDialogComponent, { data: b, width: '600px' });
-    ref.afterClosed().subscribe(result => { if (result?.cancelled || result?.updated) this.load(); });
+    ref.afterClosed().subscribe(result => {
+      if (result?.cancelled || result?.updated) this.load();
+      if (result?.editDirect) this.openEditDirectForm(b);
+    });
   }
 
   editBooking(b: any): void {
