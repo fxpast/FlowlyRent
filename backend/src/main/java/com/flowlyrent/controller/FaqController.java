@@ -1,9 +1,7 @@
 package com.flowlyrent.controller;
 
-import com.flowlyrent.model.ChatbotActionFeedback;
 import com.flowlyrent.model.FaqItem;
 import com.flowlyrent.model.FaqSuggestion;
-import com.flowlyrent.repository.ChatbotActionFeedbackRepository;
 import com.flowlyrent.repository.FaqRepository;
 import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.service.FaqTranslationService;
@@ -24,7 +22,6 @@ public class FaqController {
 
     private final FaqRepository faqRepository;
     private final FaqSuggestionRepository faqSuggestionRepository;
-    private final ChatbotActionFeedbackRepository actionFeedbackRepository;
     private final FaqTranslationService translationService;
 
     @GetMapping("/public/faq")
@@ -124,18 +121,6 @@ public class FaqController {
     public ResponseEntity<Void> rejectSuggestion(@PathVariable Long id) {
         if (!faqSuggestionRepository.existsById(id)) return ResponseEntity.notFound().build();
         faqSuggestionRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/superadmin/chatbot-action-feedbacks")
-    public List<ChatbotActionFeedback> getActionFeedbacks() {
-        return actionFeedbackRepository.findAllByOrderByCreatedAtDesc();
-    }
-
-    @DeleteMapping("/superadmin/chatbot-action-feedbacks/{id}")
-    public ResponseEntity<Void> deleteActionFeedback(@PathVariable Long id) {
-        if (!actionFeedbackRepository.existsById(id)) return ResponseEntity.notFound().build();
-        actionFeedbackRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 

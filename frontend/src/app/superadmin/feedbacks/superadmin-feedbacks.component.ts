@@ -32,6 +32,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   bug: 'bug_report',
   amélioration: 'trending_up',
   suggestion: 'lightbulb',
+  chatbot: 'smart_toy',
   autre: 'help_outline',
 };
 
@@ -60,8 +61,8 @@ const CATEGORY_ICONS: Record<string, string> = {
           <mat-card class="fb-card">
             <div class="fb-header">
               <div class="fb-meta">
-                <mat-icon class="cat-icon">{{ categoryIcon(fb.category) }}</mat-icon>
-                <span class="category">{{ fb.category }}</span>
+                <mat-icon class="cat-icon" [class.chatbot-icon]="fb.category === 'chatbot'">{{ categoryIcon(fb.category) }}</mat-icon>
+                <span class="category" [class.chatbot-badge]="fb.category === 'chatbot'">{{ fb.category }}</span>
                 <span class="email">{{ fb.userEmail }}</span>
                 <span class="date">{{ fb.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
@@ -94,6 +95,8 @@ const CATEGORY_ICONS: Record<string, string> = {
     .email { font-size: 12px; color: #888; background: #f5f5f5; padding: 2px 8px; border-radius: 10px; }
     .date { font-size: 12px; color: #aaa; }
     .message { margin: 0; font-size: 14px; color: #333; line-height: 1.6; white-space: pre-wrap; }
+    .chatbot-icon { color: #7b1fa2; }
+    .chatbot-badge { color: #7b1fa2; background: #ede7f6; padding: 2px 8px; border-radius: 10px; }
     .status-select { font-size: 13px; font-weight: 600; }
     .empty-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px; color: #aaa; }
     .empty-card mat-icon { font-size: 48px; width: 48px; height: 48px; }

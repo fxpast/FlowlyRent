@@ -2,7 +2,7 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.Beds24Account;
-import com.flowlyrent.model.ChatbotActionFeedback;
+import com.flowlyrent.model.Feedback;
 import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.LinenItem;
@@ -10,7 +10,7 @@ import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.MovementDirection;
 import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.repository.Beds24AccountRepository;
-import com.flowlyrent.repository.ChatbotActionFeedbackRepository;
+import com.flowlyrent.repository.FeedbackRepository;
 import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.LinenItemRepository;
@@ -48,7 +48,7 @@ public class ChatbotToolService {
     private final PropertyConfigRepository propConfigRepo;
     private final LinenItemRepository linenItemRepo;
     private final LinenMovementRepository linenMovementRepo;
-    private final ChatbotActionFeedbackRepository actionFeedbackRepo;
+    private final FeedbackRepository feedbackRepo;
     private final FaqSuggestionRepository faqSuggestionRepo;
     private final ManualExpenseRepository manualExpenseRepo;
     private final SecurityUtils securityUtils;
@@ -578,12 +578,17 @@ public class ChatbotToolService {
         if (action == null || action.isBlank()) {
             return Map.of("error", "Description de l'action manquante.");
         }
-        ChatbotActionFeedback fb = new ChatbotActionFeedback();
+        com.flowlyrent.model.AppUser user = securityUtils.getCurrentUser();
+        StringBuilder msg = new StringBuilder(action.trim());
+        if (userMessage != null && !userMessage.isBlank()) {
+            msg.append("\n\n").append(userMessage.trim());
+        }
+        Feedback fb = new Feedback();
         fb.setUserId(userId);
-        fb.setAction(action.trim());
-        fb.setUserMessage(userMessage != null && !userMessage.isBlank() ? userMessage.trim() : null);
-        fb.setLang(lang != null && !lang.isBlank() ? lang : "fr");
-        actionFeedbackRepo.save(fb);
+        fb.setUserEmail(user.getEmail());
+        fb.setCategory("chatbot");
+        fb.setMessage(msg.toString());
+        feedbackRepo.save(fb);
         return Map.of("success", true);
     }
 

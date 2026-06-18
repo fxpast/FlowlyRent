@@ -1203,10 +1203,7 @@
     "reject": "Ablehnen",
     "reject_confirm": "Diesen Vorschlag ablehnen?",
     "approved": "Frage zur FAQ hinzugefügt",
-    "rejected": "Vorschlag abgelehnt",
-    "chatbot_actions_title": "Nicht unterstützte Chatbot-Aktionen",
-    "chatbot_actions_hint": "Aktionen, die Gastgeber vom Chatbot angefordert haben, die dieser noch nicht ausführen kann. Diese Rückmeldungen helfen dabei, neue Funktionen zu priorisieren.",
-    "chatbot_action_label": "Angeforderte Aktion"
+    "rejected": "Vorschlag abgelehnt"
   },
   "onboarding": {
     "title": "Wie verwalten Sie Ihre Unterkünfte?",
