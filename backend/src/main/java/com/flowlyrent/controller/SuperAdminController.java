@@ -58,7 +58,7 @@ public class SuperAdminController {
             // Enfants indirects (via tables intermédiaires)
             jdbcTemplate.update("DELETE FROM task_photos WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM task_linen_usages WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
-            jdbcTemplate.update("DELETE FROM linen_movements WHERE item_id IN (SELECT id FROM linen_items WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM linen_movements WHERE linen_item_id IN (SELECT id FROM linen_items WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM linen_template_items WHERE template_id IN (SELECT id FROM linen_templates WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM expense_rule_keywords WHERE rule_id IN (SELECT id FROM expense_rules WHERE user_id = ?)", id);
