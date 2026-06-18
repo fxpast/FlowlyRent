@@ -176,12 +176,13 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **`GeminiChatbotService`** : fournisseur principal, boucle de function calling max 3 itérations
 - **`GroqChatbotService`** : fallback si Gemini indisponible (quota), format OpenAI-compatible
 - **`ChatbotToolService.execute(toolName, args, lang)`** : toujours scopé sur `securityUtils.getCurrentUserId()` — jamais de userId dans les args Gemini
-- **Outils lecture seule** : `get_properties`, `get_revenue` (CA + marge Qonto), `get_arrivals`, `get_departures`, `get_ongoing_stays`, `get_reservations`, `get_expenses_summary`, `get_transactions`, `get_housekeeping_tasks`, `get_housekeeping_costs`, `get_linen_stock`
+- **Outils lecture seule** : `get_properties`, `get_revenue` (CA + marge Qonto), `get_arrivals`, `get_departures`, `get_ongoing_stays`, `get_reservations` (liste résumée), `search_booking` (détails complets : email, téléphone, enfants, notes…), `get_free_properties` (logements libres/occupés sur une période), `get_expenses_summary`, `get_transactions`, `get_housekeeping_tasks`, `get_housekeeping_costs`, `get_linen_stock`
 - **Outils écriture** : `block_dates` / `unblock_dates` (via `Beds24ApiClient.updateCalendar()`) — la description du tool impose une confirmation explicite de l'hôte avant appel
 - **`suggest_faq`** : enregistre dans `FaqSuggestion` les questions sans réponse dans la base de connaissance — visibles par le superadmin pour enrichir la FAQ
+- **`report_unhandled_action`** : quand le chatbot ne peut pas exécuter une action demandée (ex: envoyer un SMS, modifier un prix), enregistre un `Feedback` avec `category = "chatbot"` — visible dans la page Feedbacks superadmin avec un badge violet / icône `smart_toy`
 - Variables d'env : `GEMINI_API_KEY`, `GEMINI_MODEL` (défaut `gemini-2.5-flash`), `GROQ_API_KEY`, `GROQ_MODEL` (défaut `llama-3.3-70b-versatile`)
 
-### Mode iCal — Export feed + réservations directes
+### Mode iCal — Export feed + réservations directes + sources multiples
 - **`LocalProperty.icalFeedToken`** : UUID opaque auto-généré (`@PrePersist`) — migration `@PostConstruct` dans `AdminLocalPropertyController` pour les lignes avec token null ou vide
 - **`GET /public/ical/{token}.ics`** (`PublicIcalController`) : flux iCal public sans auth — l'hôte le colle dans Airbnb/Booking comme "calendrier externe" pour bloquer automatiquement les dates
 - **`POST /admin/bookings/direct`** : crée une `IcalBooking` avec `icalUid = "direct-{uuid}"` et `status = "direct"` — exportée dans le flux iCal
@@ -191,13 +192,24 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **URL export dans le frontend** : `icalExportUrl(token)` construit une URL absolue — si `environment.apiUrl` est relatif (dev), préfixe `window.location.origin` ; en prod utilise l'URL Railway directement
 - **Page Logements** : affiche l'URL export par logement (icône `rss_feed`) + bouton copier
 - **Page Réservations** : formulaire de réservation directe + bouton supprimer pour les réservations `direct-*`
+- **Sources iCal multiples** : entité `PropertyIcalSource` (`property_ical_sources`) — chaque logement peut avoir N sources (nom + URL + lastSync). CRUD via `AdminIcalSourceController` (`/admin/local-properties/{propId}/ical-sources`). `IcalBooking.sourceId` trace la source d'origine. Migration `@PostConstruct` : l'ancien champ `icalUrl` est converti automatiquement en source nommée "Principal". Suppression d'une source supprime ses `IcalBooking` associées.
+- **Sync iCal au login** : `AuthController` déclenche `IcalSyncService.syncUser(userId)` en arrière-plan (`CompletableFuture.runAsync`) à chaque connexion en mode iCal
+- **Sync bundles au login** : `PropertyBundleService.syncAllBundlesForUser(userId)` déclenché de même à chaque connexion en mode Beds24 si des bundles actifs existent
 
 ### Revenus — KPIs Qonto
 - La page Revenus (`/admin/stats`) charge en parallèle le CA Beds24 ET le summary Qonto du même mois
 - **Marge bénéficiaire** (KPI) : `caTotal - totalDebits Qonto` — vert/rouge selon signe
-- **Marge par logement** : section affichée si Qonto connecté — dépenses liées à chaque `beds24PropertyId` via les règles de catégorisation
+- **Marge par logement** : triée par taux de marge décroissant (% = marge / CA), pas par montant absolu
 - `caMonthly()` retourne maintenant `propId` dans chaque entrée `byProperty`
 - `fetchSummary()` retourne `byProperty` : map `beds24PropertyId → total débits`
+
+### Boîtes à clé — Suppression automatique des orphelines
+- Quand un logement est dissocié de sa boîte à clé (`keyBoxId` vide dans `PUT /admin/property-configs/{id}`), si la boîte n'est plus associée à aucun autre logement (`repo.findByKeyBoxId().isEmpty()`), elle est supprimée automatiquement de la base
+
+### Navigation — Modifier réservation directe depuis dashboard/today/arrivées/départs
+- Le dialog `BookingDetailDialogComponent` retourne `{ editDirect: true }` via `afterClosed()`
+- Les composants `dashboard`, `today`, `arrivals`, `departures` redirigent vers `/admin/bookings` avec `history.state = { editDirectBooking: booking }`
+- `BookingsComponent` lit `history.state` dans `ngOnInit()` et ouvre le formulaire d'édition après chargement de la liste
 
 ---
 
