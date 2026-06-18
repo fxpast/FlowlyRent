@@ -28,6 +28,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Outils en lecture seule exposés au chatbot Gemini (function calling).
@@ -75,6 +76,8 @@ public class ChatbotToolService {
                 case "get_housekeeping_tasks" -> getHousekeepingTasks(userId, dateArg(args, "from"), dateArg(args, "to"),
                         strArg(args, "propertyName"), strArg(args, "status"));
                 case "get_housekeeping_costs" -> getHousekeepingCosts(userId, intArg(args, "year"), intArg(args, "month"));
+                case "get_housekeeper_performance" -> getHousekeeperPerformance(userId,
+                        dateArg(args, "from"), dateArg(args, "to"), strArg(args, "staffName"));
                 case "get_linen_stock" -> getLinenStock(userId, strArg(args, "propertyName"));
                 case "block_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "blackout");
                 case "unblock_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "none");
@@ -496,6 +499,69 @@ public class ChatbotToolService {
             result.put("byProperty", named);
         }
         return result;
+    }
+
+    private Map<String, Object> getHousekeeperPerformance(Long userId, LocalDate from, LocalDate to, String staffName) {
+        if (from == null) from = LocalDate.now().minusYears(5);
+        if (to   == null) to   = LocalDate.now();
+
+        List<HousekeepingTask> tasks = taskRepo.findByUserIdAndScheduledDateBetweenOrderByScheduledDateAsc(
+                userId, from.atStartOfDay(), to.atTime(LocalTime.MAX));
+
+        String needle = staffName != null ? staffName.toLowerCase().trim() : null;
+
+        // Grouper par prestataire (nom complet ou "Sans prestataire")
+        Map<String, List<HousekeepingTask>> byStaff = new LinkedHashMap<>();
+        for (HousekeepingTask t : tasks) {
+            String name = t.getStaff() != null ? t.getStaff().getFullName() : "Sans prestataire";
+            if (needle != null && !name.toLowerCase().contains(needle)) continue;
+            byStaff.computeIfAbsent(name, k -> new ArrayList<>()).add(t);
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<HousekeepingTask>> entry : byStaff.entrySet()) {
+            List<HousekeepingTask> staffTasks = entry.getValue();
+            long total     = staffTasks.size();
+            long done      = staffTasks.stream().filter(t -> t.getStatus() == com.flowlyrent.model.enums.TaskStatus.DONE).count();
+            long skipped   = staffTasks.stream().filter(t -> t.getStatus() == com.flowlyrent.model.enums.TaskStatus.SKIPPED).count();
+            long incidents = staffTasks.stream().filter(t -> Boolean.TRUE.equals(t.getHasIncident())).count();
+            double rate    = total > 0 ? Math.round(done * 1000.0 / total) / 10.0 : 0.0;
+
+            BigDecimal totalCost = staffTasks.stream()
+                    .filter(t -> t.getHourlyRate() != null && t.getExtraHours() != null)
+                    .map(t -> t.getHourlyRate().multiply(BigDecimal.valueOf(t.getExtraHours())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            Set<String> properties = staffTasks.stream()
+                    .map(t -> t.getPropertyName() != null ? t.getPropertyName() : t.getBeds24PropertyId())
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("staff", entry.getKey());
+            m.put("totalTasks", total);
+            m.put("doneTasks", done);
+            m.put("skippedTasks", skipped);
+            m.put("pendingTasks", total - done - skipped);
+            m.put("incidents", incidents);
+            m.put("completionRate", rate + "%");
+            if (totalCost.compareTo(BigDecimal.ZERO) > 0) m.put("totalCost", totalCost);
+            m.put("properties", new ArrayList<>(properties));
+            result.add(m);
+        }
+
+        // Tri : taux de complétion décroissant
+        result.sort((a, b) -> {
+            double ra = parseRate((String) a.get("completionRate"));
+            double rb = parseRate((String) b.get("completionRate"));
+            return Double.compare(rb, ra);
+        });
+
+        return Map.of("from", from.toString(), "to", to.toString(), "staff", result, "count", result.size());
+    }
+
+    private double parseRate(String rate) {
+        try { return Double.parseDouble(rate.replace("%", "").trim()); } catch (Exception e) { return 0; }
     }
 
     // ─── Blanchisserie ──────────────────────────────────────────────────────

@@ -223,6 +223,27 @@
     }
   },
   {
+    "name": "get_housekeeper_performance",
+    "description": "Analyse les performances des prestataires de ménage (housekeepers) sur une période donnée : nombre de tâches effectuées, taux de complétion, incidents signalés, coût total, logements couverts. Utiliser pour 'quel prestataire a le meilleur taux de complétion', 'performance des prestataires sur 5 ans', 'qui fait le plus de ménages', 'combien d'incidents pour [prénom]'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début de la période (AAAA-MM-JJ). Si absent, 5 ans en arrière."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin de la période (AAAA-MM-JJ). Si absent, date du jour."
+        },
+        "staffName": {
+          "type": "STRING",
+          "description": "Nom ou prénom du prestataire pour filtrer sur une personne spécifique. Optionnel."
+        }
+      }
+    }
+  },
+  {
     "name": "get_linen_stock",
     "description": "Donne le stock de linge (draps, serviettes, etc.) d'un logement : quantité sur place, quantité au pressing/blanchisserie, seuil minimum, et alerte si stock bas. Utiliser pour 'quel est mon stock de linge pour [logement]'.",
     "parameters": {
