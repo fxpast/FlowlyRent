@@ -8,8 +8,10 @@ import com.flowlyrent.repository.FeedbackRepository;
 import com.flowlyrent.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +27,7 @@ public class SuperAdminController {
     private final AppUserRepository userRepository;
     private final FeedbackRepository feedbackRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping("/stats")
     public ResponseEntity<SuperAdminStatsDTO> getStats() {
@@ -49,8 +52,45 @@ public class SuperAdminController {
     }
 
     @DeleteMapping("/users/{id}")
+    @Transactional
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         return userRepository.findById(id).map(user -> {
+            // Enfants indirects (via tables intermédiaires)
+            jdbcTemplate.update("DELETE FROM task_photos WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM task_linen_usages WHERE task_id IN (SELECT id FROM housekeeping_tasks WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM linen_movements WHERE item_id IN (SELECT id FROM linen_items WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM linen_template_items WHERE template_id IN (SELECT id FROM linen_templates WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM expense_rule_keywords WHERE rule_id IN (SELECT id FROM expense_rules WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM expense_rule_alt_keywords WHERE rule_id IN (SELECT id FROM expense_rules WHERE user_id = ?)", id);
+            jdbcTemplate.update("DELETE FROM property_bundle_members WHERE bundle_id IN (SELECT id FROM property_bundles WHERE user_id = ?)", id);
+            // Références directes à users
+            jdbcTemplate.update("DELETE FROM admin_notification_reads WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM admin_notification_targets WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM analytics_events WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM beds24_accounts WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM booking_time_overrides WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM expense_rules WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM faq_suggestions WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM fcm_tokens WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM housekeeper_profiles WHERE user_id = ? OR linked_user_id = ?", id, id);
+            jdbcTemplate.update("DELETE FROM housekeeping_staff WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM housekeeping_tasks WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM ical_bookings WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM invoices WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM key_boxes WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM linen_items WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM linen_movements WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM linen_templates WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM local_properties WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM manual_expenses WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM message_templates WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM min_stay_strategies WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM property_bundles WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM property_configs WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM property_inventory_items WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM push_subscriptions WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM qonto_accounts WHERE user_id = ?", id);
             userRepository.delete(user);
             return ResponseEntity.ok(Map.of("status", "Compte supprimé"));
         }).orElse(ResponseEntity.notFound().build());
