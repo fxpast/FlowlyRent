@@ -168,7 +168,9 @@
     "arrival": "Arrivo",
     "departure": "Partenza",
     "direct_new": "Nuova prenotazione diretta",
+    "direct_edit": "Modifica prenotazione diretta",
     "direct_created": "Prenotazione diretta creata",
+    "direct_updated": "Prenotazione aggiornata",
     "direct_deleted": "Prenotazione eliminata",
     "direct_delete_confirm": "Eliminare questa prenotazione diretta?"
   },

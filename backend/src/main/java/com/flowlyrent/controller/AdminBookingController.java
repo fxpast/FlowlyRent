@@ -471,6 +471,39 @@ public class AdminBookingController {
         }
     }
 
+    @PutMapping("/direct/{id}")
+    public ResponseEntity<?> updateDirectBooking(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            AppUser user = securityUtils.getCurrentUser();
+            IcalBooking booking = icalBookingRepo.findById(id)
+                    .filter(b -> b.getUser().getId().equals(user.getId()))
+                    .filter(b -> b.getIcalUid() != null && b.getIcalUid().startsWith("direct-"))
+                    .orElseThrow(() -> new IllegalStateException("Réservation introuvable ou non modifiable"));
+            String arrival   = body.get("arrival");
+            String departure = body.get("departure");
+            if (arrival == null || departure == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "arrival et departure sont requis"));
+            }
+            if (body.containsKey("propId")) {
+                Long propId = Long.parseLong(body.get("propId"));
+                LocalProperty prop = localPropertyRepo.findByIdAndUserId(propId, user.getId())
+                        .orElseThrow(() -> new IllegalStateException("Logement introuvable"));
+                booking.setLocalProperty(prop);
+            }
+            String firstName = body.getOrDefault("firstName", "").trim();
+            String lastName  = body.getOrDefault("lastName", "").trim();
+            String summary   = (firstName + " " + lastName).trim();
+            if (summary.isEmpty()) summary = "Réservation directe";
+            booking.setArrival(LocalDate.parse(arrival.substring(0, 10)));
+            booking.setDeparture(LocalDate.parse(departure.substring(0, 10)));
+            booking.setSummary(summary);
+            icalBookingRepo.save(booking);
+            return ResponseEntity.ok(icalToMap(booking));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
     @DeleteMapping("/direct/{id}")
     public ResponseEntity<?> deleteDirectBooking(@PathVariable Long id) {
         try {

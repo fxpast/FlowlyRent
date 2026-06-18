@@ -52,7 +52,7 @@ import { environment } from '@env/environment';
     @if (isIcalMode() && directFormOpen()) {
       <mat-card class="direct-form-card">
         <mat-card-header>
-          <mat-card-title>{{ 'bookings.direct_new' | translate }}</mat-card-title>
+          <mat-card-title>{{ (directEditId() ? 'bookings.direct_edit' : 'bookings.direct_new') | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="direct-form">
@@ -82,11 +82,11 @@ import { environment } from '@env/environment';
             </mat-form-field>
           </div>
           <div class="direct-form-actions">
-            <button mat-flat-button color="primary" (click)="createDirectBooking()"
+            <button mat-flat-button color="primary" (click)="saveDirectBooking()"
                     [disabled]="directSaving() || !directForm.propId || !directForm.arrival || !directForm.departure">
               {{ 'common.save' | translate }}
             </button>
-            <button mat-button (click)="directFormOpen.set(false)">{{ 'common.cancel' | translate }}</button>
+            <button mat-button (click)="closeDirectForm()">{{ 'common.cancel' | translate }}</button>
           </div>
         </mat-card-content>
       </mat-card>
@@ -213,6 +213,9 @@ import { environment } from '@env/environment';
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
                 @if (isDirectBooking(b)) {
+                  <button mat-icon-button (click)="openEditDirectForm(b)" [matTooltip]="'common.edit' | translate">
+                    <mat-icon>edit</mat-icon>
+                  </button>
                   <button mat-icon-button color="warn" (click)="deleteDirectBooking(b)" [matTooltip]="'common.delete' | translate">
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -296,6 +299,7 @@ export class BookingsComponent implements OnInit {
   icalProperties = signal<{id: string, name: string}[]>([]);
   directFormOpen = signal(false);
   directSaving   = signal(false);
+  directEditId   = signal<string | null>(null);
   directForm = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
   searchText = signal('');
   filterStatus = signal('');
@@ -445,26 +449,54 @@ export class BookingsComponent implements OnInit {
   }
 
   openDirectForm(): void {
+    this.directEditId.set(null);
     this.directForm = { propId: this.icalProperties()[0]?.id ?? '', firstName: '', lastName: '', arrival: '', departure: '' };
     this.directFormOpen.set(true);
   }
 
-  createDirectBooking(): void {
+  openEditDirectForm(b: any): void {
+    this.directEditId.set(String(b['id']));
+    const firstName = b['firstName'] || b['guestFirstName'] || '';
+    const lastName  = b['lastName']  || b['guestLastName']  || '';
+    const propId    = String(b['propId'] ?? this.icalProperties()[0]?.id ?? '');
+    const arrival   = (b['arrival'] ?? '').substring(0, 10);
+    const departure = (b['departure'] ?? '').substring(0, 10);
+    this.directForm = { propId, firstName, lastName, arrival, departure };
+    this.directFormOpen.set(true);
+  }
+
+  closeDirectForm(): void {
+    this.directFormOpen.set(false);
+    this.directEditId.set(null);
+  }
+
+  saveDirectBooking(): void {
     if (!this.directForm.propId || !this.directForm.arrival || !this.directForm.departure) return;
     this.directSaving.set(true);
-    this.http.post<any>(`${environment.apiUrl}/admin/bookings/direct`, {
+    const body = {
       propId:    this.directForm.propId,
       firstName: this.directForm.firstName.trim(),
       lastName:  this.directForm.lastName.trim(),
       arrival:   this.directForm.arrival,
       departure: this.directForm.departure
-    }).subscribe({
-      next: b => {
+    };
+    const editId = this.directEditId();
+    const req$ = editId
+      ? this.http.put<any>(`${environment.apiUrl}/admin/bookings/direct/${editId}`, body)
+      : this.http.post<any>(`${environment.apiUrl}/admin/bookings/direct`, body);
+
+    req$.subscribe({
+      next: saved => {
         const prop = this.icalProperties().find(p => p.id === this.directForm.propId);
-        this.bookings.update(list => [{ ...b, propName: prop?.name }, ...list]);
+        if (editId) {
+          this.bookings.update(list => list.map(x => String(x['id']) === editId ? { ...saved, propName: prop?.name } : x));
+          this.snackBar.open(this.t.instant('bookings.direct_updated'), '', { duration: 2500 });
+        } else {
+          this.bookings.update(list => [{ ...saved, propName: prop?.name }, ...list]);
+          this.snackBar.open(this.t.instant('bookings.direct_created'), '', { duration: 2500 });
+        }
         this.directSaving.set(false);
-        this.directFormOpen.set(false);
-        this.snackBar.open(this.t.instant('bookings.direct_created'), '', { duration: 2500 });
+        this.closeDirectForm();
       },
       error: err => {
         this.directSaving.set(false);
@@ -490,6 +522,10 @@ export class BookingsComponent implements OnInit {
   }
 
   editBooking(b: any): void {
+    if (this.isIcalMode() && this.isDirectBooking(b)) {
+      this.openEditDirectForm(b);
+      return;
+    }
     this.router.navigate(['/admin/bookings', b['id'], 'edit'], { state: { booking: b } });
   }
 

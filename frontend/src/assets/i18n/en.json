@@ -168,7 +168,9 @@
     "arrival": "Check-in",
     "departure": "Check-out",
     "direct_new": "New direct booking",
+    "direct_edit": "Edit direct booking",
     "direct_created": "Direct booking created",
+    "direct_updated": "Booking updated",
     "direct_deleted": "Booking deleted",
     "direct_delete_confirm": "Delete this direct booking?"
   },
