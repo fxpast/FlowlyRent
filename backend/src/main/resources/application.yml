@@ -56,7 +56,7 @@ jwt:
 app:
   name: ${APP_NAME:FlowlyRent}
   cors:
-    allowed-origins: "http://localhost:4200,http://localhost:3000"
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
   analytics:
     internal-emails: ${ANALYTICS_INTERNAL_EMAILS:}
   encryption:
