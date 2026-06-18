@@ -14,6 +14,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -32,6 +34,7 @@ import { environment } from '@env/environment';
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatTableModule, MatSortModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatInputModule, MatSelectModule, MatCardModule, MatSnackBarModule, MatFormFieldModule,
+    MatDatepickerModule, MatNativeDateModule,
     MatTooltipModule, MatPaginatorModule, TranslateModule
   ],
   template: `
@@ -74,11 +77,19 @@ import { environment } from '@env/environment';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'bookings.arrival' | translate }}</mat-label>
-              <input matInput type="date" [(ngModel)]="directForm.arrival">
+              <input matInput [matDatepicker]="directArrPicker"
+                     [ngModel]="directArrivalDate"
+                     (ngModelChange)="onDirectArrivalChange($event)">
+              <mat-datepicker-toggle matIconSuffix [for]="directArrPicker"></mat-datepicker-toggle>
+              <mat-datepicker #directArrPicker></mat-datepicker>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'bookings.departure' | translate }}</mat-label>
-              <input matInput type="date" [(ngModel)]="directForm.departure">
+              <input matInput [matDatepicker]="directDepPicker"
+                     [ngModel]="directDepartureDate"
+                     (ngModelChange)="onDirectDepartureChange($event)">
+              <mat-datepicker-toggle matIconSuffix [for]="directDepPicker"></mat-datepicker-toggle>
+              <mat-datepicker #directDepPicker></mat-datepicker>
             </mat-form-field>
           </div>
           <div class="direct-form-actions">
@@ -297,10 +308,12 @@ export class BookingsComponent implements OnInit {
   bookings     = signal<any[]>([]);
   isIcalMode   = signal(false);
   icalProperties = signal<{id: string, name: string}[]>([]);
-  directFormOpen = signal(false);
-  directSaving   = signal(false);
-  directEditId   = signal<string | null>(null);
-  directForm = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
+  directFormOpen    = signal(false);
+  directSaving      = signal(false);
+  directEditId      = signal<string | null>(null);
+  directForm        = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
+  directArrivalDate: Date | null = null;
+  directDepartureDate: Date | null = null;
   searchText = signal('');
   filterStatus = signal('');
   filterChannel = signal('');
@@ -448,9 +461,19 @@ export class BookingsComponent implements OnInit {
     return this.isIcalMode() && String(b['status'] ?? '') === 'direct';
   }
 
+  private strToDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  private dateToStr(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  onDirectArrivalChange(d: Date | null): void { this.directArrivalDate = d; this.directForm.arrival = this.dateToStr(d); }
+  onDirectDepartureChange(d: Date | null): void { this.directDepartureDate = d; this.directForm.departure = this.dateToStr(d); }
+
   openDirectForm(): void {
     this.directEditId.set(null);
     this.directForm = { propId: this.icalProperties()[0]?.id ?? '', firstName: '', lastName: '', arrival: '', departure: '' };
+    this.directArrivalDate = null;
+    this.directDepartureDate = null;
     this.directFormOpen.set(true);
   }
 
@@ -462,12 +485,16 @@ export class BookingsComponent implements OnInit {
     const arrival   = (b['arrival'] ?? '').substring(0, 10);
     const departure = (b['departure'] ?? '').substring(0, 10);
     this.directForm = { propId, firstName, lastName, arrival, departure };
+    this.directArrivalDate   = this.strToDate(arrival);
+    this.directDepartureDate = this.strToDate(departure);
     this.directFormOpen.set(true);
   }
 
   closeDirectForm(): void {
     this.directFormOpen.set(false);
     this.directEditId.set(null);
+    this.directArrivalDate   = null;
+    this.directDepartureDate = null;
   }
 
   saveDirectBooking(): void {

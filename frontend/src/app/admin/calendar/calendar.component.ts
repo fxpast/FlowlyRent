@@ -11,6 +11,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -72,6 +74,7 @@ const CHANNEL_COLORS: Record<string, string> = {
     CommonModule, FormsModule, RouterLink, MatDialogModule,
     MatButtonModule, MatIconModule, MatSelectModule, MatFormFieldModule,
     MatInputModule, MatCardModule, MatSnackBarModule,
+    MatDatepickerModule, MatNativeDateModule,
     MatTooltipModule, MatProgressSpinnerModule, TranslateModule
   ],
   template: `
@@ -114,11 +117,19 @@ const CHANNEL_COLORS: Record<string, string> = {
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'bookings.arrival' | translate }}</mat-label>
-              <input matInput type="date" [(ngModel)]="directForm.arrival">
+              <input matInput [matDatepicker]="calArrPicker"
+                     [ngModel]="directArrivalDate"
+                     (ngModelChange)="onDirectArrivalChange($event)">
+              <mat-datepicker-toggle matIconSuffix [for]="calArrPicker"></mat-datepicker-toggle>
+              <mat-datepicker #calArrPicker></mat-datepicker>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'bookings.departure' | translate }}</mat-label>
-              <input matInput type="date" [(ngModel)]="directForm.departure">
+              <input matInput [matDatepicker]="calDepPicker"
+                     [ngModel]="directDepartureDate"
+                     (ngModelChange)="onDirectDepartureChange($event)">
+              <mat-datepicker-toggle matIconSuffix [for]="calDepPicker"></mat-datepicker-toggle>
+              <mat-datepicker #calDepPicker></mat-datepicker>
             </mat-form-field>
           </div>
           <div class="direct-form-actions">
@@ -457,12 +468,14 @@ export class CalendarComponent implements OnInit {
   days = computed(() => this.buildDays(this.year(), this.month()));
   grid = signal<{ property: CalProperty; cells: DayCell[] }[]>([]);
 
-  sidebarCollapsed   = signal(false);
-  icalProperties     = signal<{id: string, name: string}[]>([]);
-  directFormOpen     = signal(false);
-  directSaving       = signal(false);
-  directEditId       = signal<string | null>(null);
-  directForm = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
+  sidebarCollapsed    = signal(false);
+  icalProperties      = signal<{id: string, name: string}[]>([]);
+  directFormOpen      = signal(false);
+  directSaving        = signal(false);
+  directEditId        = signal<string | null>(null);
+  directForm          = { propId: '', firstName: '', lastName: '', arrival: '', departure: '' };
+  directArrivalDate: Date | null   = null;
+  directDepartureDate: Date | null = null;
 
   private dragging = false;
   private dragPropId = signal<string | null>(null);
@@ -496,9 +509,19 @@ export class CalendarComponent implements OnInit {
     }
   }
 
+  private strToDate(s: string): Date | null { return s ? new Date(s + 'T12:00:00') : null; }
+  private dateToStr(d: Date | null): string {
+    if (!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  onDirectArrivalChange(d: Date | null): void { this.directArrivalDate = d; this.directForm.arrival = this.dateToStr(d); }
+  onDirectDepartureChange(d: Date | null): void { this.directDepartureDate = d; this.directForm.departure = this.dateToStr(d); }
+
   openDirectForm(): void {
     this.directEditId.set(null);
     this.directForm = { propId: this.icalProperties()[0]?.id ?? '', firstName: '', lastName: '', arrival: '', departure: '' };
+    this.directArrivalDate = null;
+    this.directDepartureDate = null;
     this.directFormOpen.set(true);
   }
 
@@ -509,7 +532,9 @@ export class CalendarComponent implements OnInit {
     const propId    = String(b['propId'] ?? b['propertyId'] ?? this.icalProperties()[0]?.id ?? '');
     const arrival   = (b['arrival']   ?? '').substring(0, 10);
     const departure = (b['departure'] ?? '').substring(0, 10);
-    this.directForm = { propId, firstName, lastName, arrival, departure };
+    this.directForm      = { propId, firstName, lastName, arrival, departure };
+    this.directArrivalDate   = this.strToDate(arrival);
+    this.directDepartureDate = this.strToDate(departure);
     this.directFormOpen.set(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
   }
@@ -517,6 +542,8 @@ export class CalendarComponent implements OnInit {
   closeDirectForm(): void {
     this.directFormOpen.set(false);
     this.directEditId.set(null);
+    this.directArrivalDate   = null;
+    this.directDepartureDate = null;
   }
 
   saveDirectBooking(): void {
