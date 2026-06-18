@@ -17,6 +17,7 @@ import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { HttpClient } from '@angular/common/http';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../core/services/booking.service';
+import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
 function requireContact(group: AbstractControl): ValidationErrors | null {
@@ -303,6 +304,7 @@ export class BookingFormComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private bookingService: BookingService,
+    private auth: AuthService,
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
@@ -330,6 +332,10 @@ export class BookingFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.auth.isIcal()) {
+      this.router.navigate(['/admin/bookings']);
+      return;
+    }
     this.bookingService.getPropertyNames().subscribe({
       next: names => {
         this.properties.set(

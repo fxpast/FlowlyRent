@@ -15,6 +15,7 @@ import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { BookingDetailDialogComponent } from '../booking-detail-dialog/booking-detail-dialog.component';
 import { BookingService } from '../../core/services/booking.service';
+import { AuthService } from '../../core/services/auth.service';
 import { BlackoutDialogComponent, BlackoutDialogResult } from '../blackout-dialog/blackout-dialog.component';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 
@@ -71,9 +72,11 @@ const CHANNEL_COLORS: Record<string, string> = {
   template: `
     <div class="cal-header">
       <h2>{{ 'calendar.page_title' | translate }}</h2>
-      <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
-        <mat-icon>add</mat-icon> {{ 'calendar.new_booking' | translate }}
-      </a>
+      @if (!auth.isIcal()) {
+        <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
+          <mat-icon>add</mat-icon> {{ 'calendar.new_booking' | translate }}
+        </a>
+      }
     </div>
 
     <!-- Navigation mois -->
@@ -415,7 +418,7 @@ export class CalendarComponent implements OnInit {
 
   dragToBlockLabel = '';
 
-  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService) {
+  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService, private auth: AuthService) {
     this.t.get('calendar.drag_to_block').subscribe(v => this.dragToBlockLabel = v);
   }
 
