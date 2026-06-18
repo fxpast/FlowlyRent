@@ -72,7 +72,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   template: `
     <div class="cal-header">
       <h2>{{ 'calendar.page_title' | translate }}</h2>
-      @if (!auth.isIcal()) {
+      @if (!isIcalMode()) {
         <a mat-raised-button color="primary" routerLink="/admin/bookings/new">
           <mat-icon>add</mat-icon> {{ 'calendar.new_booking' | translate }}
         </a>
@@ -417,6 +417,8 @@ export class CalendarComponent implements OnInit {
   });
 
   dragToBlockLabel = '';
+
+  isIcalMode(): boolean { return this.auth.isIcal(); }
 
   constructor(private http: HttpClient, private router: Router, private dialog: MatDialog, private bookingService: BookingService, private t: TranslateService, private auth: AuthService) {
     this.t.get('calendar.drag_to_block').subscribe(v => this.dragToBlockLabel = v);
