@@ -224,7 +224,7 @@
   },
   {
     "name": "get_housekeeper_performance",
-    "description": "Analyse les performances des prestataires de ménage (housekeepers) sur une période donnée : nombre de tâches effectuées, taux de complétion, incidents signalés, coût total, logements couverts. Utiliser pour 'quel prestataire a le meilleur taux de complétion', 'performance des prestataires sur 5 ans', 'qui fait le plus de ménages', 'combien d'incidents pour [prénom]'.",
+    "description": "Analyse les performances des prestataires de ménage (housekeepers) sur une période donnée : nombre de tâches effectuées, taux de complétion, incidents signalés, gains totaux du prestataire (rémunération = heures × taux horaire), logements couverts. Utiliser pour 'quel prestataire a le meilleur taux de complétion', 'combien a gagné le prestataire le plus performant', 'performance des prestataires sur 5 ans', 'qui fait le plus de ménages', 'combien d'incidents pour [prénom]', 'quels sont les gains de [prénom]'. Le champ totalEarnings contient la rémunération totale du prestataire sur la période.",
     "parameters": {
       "type": "OBJECT",
       "properties": {

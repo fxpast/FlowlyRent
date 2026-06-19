@@ -534,9 +534,12 @@ public class ChatbotToolService {
             long incidents = staffTasks.stream().filter(t -> Boolean.TRUE.equals(t.getHasIncident())).count();
             double rate    = total > 0 ? Math.round(done * 1000.0 / total) / 10.0 : 0.0;
 
-            BigDecimal totalCost = staffTasks.stream()
-                    .filter(t -> t.getHourlyRate() != null && t.getExtraHours() != null)
-                    .map(t -> t.getHourlyRate().multiply(BigDecimal.valueOf(t.getExtraHours())))
+            // Gains = hourlyRate × extraHours sur les tâches non-skippées (même logique que HousekeepingReportService)
+            BigDecimal totalEarnings = staffTasks.stream()
+                    .filter(t -> t.getStatus() != com.flowlyrent.model.enums.TaskStatus.SKIPPED)
+                    .filter(t -> t.getHourlyRate() != null && t.getExtraHours() != null && t.getExtraHours() > 0)
+                    .map(t -> t.getHourlyRate().multiply(BigDecimal.valueOf(t.getExtraHours()))
+                            .setScale(2, java.math.RoundingMode.HALF_UP))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             Set<String> properties = staffTasks.stream()
@@ -552,7 +555,8 @@ public class ChatbotToolService {
             m.put("pendingTasks", total - done - skipped);
             m.put("incidents", incidents);
             m.put("completionRate", rate + "%");
-            if (totalCost.compareTo(BigDecimal.ZERO) > 0) m.put("totalCost", totalCost);
+            m.put("totalEarnings", totalEarnings.compareTo(BigDecimal.ZERO) > 0
+                    ? totalEarnings.setScale(2, java.math.RoundingMode.HALF_UP) + "€" : "non renseigné");
             m.put("properties", new ArrayList<>(properties));
             result.add(m);
         }
