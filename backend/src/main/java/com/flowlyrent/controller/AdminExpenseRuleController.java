@@ -3,7 +3,9 @@ package com.flowlyrent.controller;
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.ExpenseRule;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.ExpenseRuleRepository;
+import com.flowlyrent.repository.PropertyConfigRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -21,13 +24,25 @@ import java.util.stream.Collectors;
 public class AdminExpenseRuleController {
 
     private final ExpenseRuleRepository ruleRepo;
+    private final PropertyConfigRepository propertyConfigRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping
     public List<Map<String, Object>> list() {
-        Long userId = securityUtils.getCurrentUserId();
-        return ruleRepo.findByUserIdAndActiveTrue(userId)
-                .stream().map(this::toMap).collect(Collectors.toList());
+        AppUser user = securityUtils.getCurrentUser();
+        Long userId = user.getId();
+
+        Set<String> validPropIds = user.getChannelType() == ChannelType.ICAL
+                ? propertyConfigRepo.findByUserIdAndLocalPropertyIdIsNotNull(userId)
+                        .stream().map(c -> c.getBeds24PropertyId()).collect(Collectors.toSet())
+                : propertyConfigRepo.findByUserIdAndLocalPropertyIdIsNull(userId)
+                        .stream().map(c -> c.getBeds24PropertyId()).collect(Collectors.toSet());
+
+        return ruleRepo.findByUserIdAndActiveTrue(userId).stream()
+                .filter(r -> r.getBeds24PropertyId() == null || r.getBeds24PropertyId().isBlank()
+                             || validPropIds.contains(r.getBeds24PropertyId()))
+                .map(this::toMap)
+                .collect(Collectors.toList());
     }
 
     @PostMapping
