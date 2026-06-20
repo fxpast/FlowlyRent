@@ -1,12 +1,14 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { superadminGuard } from './core/guards/superadmin.guard';
+import { startGuard } from './core/guards/start.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/public/home',
-    pathMatch: 'full'
+    pathMatch: 'full',
+    canActivate: [startGuard],
+    loadComponent: () => import('./public/home/home.component').then(m => m.HomeComponent)
   },
   {
     path: 'public',
