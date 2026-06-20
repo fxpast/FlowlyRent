@@ -95,6 +95,7 @@ interface NavItem { icon: string; label: string; route: string; }
     }
     .logo-img { width: 160px; height: auto; filter: brightness(0) invert(1); }
     .close-btn { margin-left: auto; color: white; }
+    mat-nav-list { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important; }
     mat-nav-list a { color: rgba(255,255,255,0.85); margin: 4px 8px; border-radius: 8px; }
     .active-link { background: rgba(255,255,255,0.15) !important; color: white !important; }
     .toolbar-logo { height: 32px; width: auto; filter: brightness(0) invert(1); }
