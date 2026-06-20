@@ -92,6 +92,7 @@ public class SuperAdminController {
             jdbcTemplate.update("DELETE FROM property_ical_sources WHERE local_property_id IN (SELECT id FROM local_properties WHERE user_id = ?)", id);
             jdbcTemplate.update("DELETE FROM local_properties WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM manual_expenses WHERE user_id = ?", id);
+            jdbcTemplate.update("DELETE FROM manual_revenues WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM message_templates WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM min_stay_strategies WHERE user_id = ?", id);
             jdbcTemplate.update("DELETE FROM property_bundles WHERE user_id = ?", id);

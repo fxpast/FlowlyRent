@@ -689,6 +689,7 @@
     "hk_costs": "Reinigung/Wartung",
     "commission": "Plattformgebühr",
     "manual_expenses": "manuelle Ausgaben",
+    "manual_revenues": "manuelle Einnahmen",
     "ical_no_revenue": "iCal-Modus — Umsätze nicht verfügbar (keine Preise in iCal-Feeds). Nur Nächte und Auslastung werden berechnet."
   },
   "reports": {
@@ -849,7 +850,20 @@
     "manual_expense_saved": "Ausgabe gespeichert",
     "manual_expense_deleted": "Ausgabe gelöscht",
     "delete_manual_expense_confirm": "Ausgabe löschen",
-    "manual_expenses_total": "Gesamt"
+    "manual_expenses_total": "Gesamt",
+    "manual_revenues": "Manuelle Einnahmen",
+    "manual_revenues_hint": "Erfassen Sie hier Einnahmen, die nicht über Beds24 laufen (direkte Überweisungen, nicht gemeldete Vermietungen usw.). Sie werden zur Marge des ausgewählten Monats hinzugefügt.",
+    "new_manual_revenue": "Neue Einnahme",
+    "edit_manual_revenue_title": "Einnahme bearbeiten",
+    "manual_revenue_label": "Bezeichnung",
+    "manual_revenue_amount": "Betrag (€)",
+    "manual_revenue_property_hint": "Ordnen Sie diese Einnahme einer Unterkunft für die unterkunftsbezogene Margenberechnung zu",
+    "manual_revenue_recurring": "Wiederkehrend (ab diesem Monat jeden Monat angewendet)",
+    "no_manual_revenues": "Keine manuellen Einnahmen für diesen Monat.",
+    "manual_revenue_saved": "Einnahme gespeichert",
+    "manual_revenue_deleted": "Einnahme gelöscht",
+    "delete_manual_revenue_confirm": "Einnahme löschen",
+    "manual_revenues_total": "Gesamt"
   },
   "housekeeper": {
     "title": "Aufgaben",

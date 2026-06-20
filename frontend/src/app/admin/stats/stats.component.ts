@@ -13,6 +13,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
+import { ManualRevenueService, ManualRevenue } from '../../core/services/manual-revenue.service';
 import { AuthService } from '../../core/services/auth.service';
 
 interface RevenueData {
@@ -45,6 +46,7 @@ interface PropertyMargin {
   hkExpenses: number;
   commission: number;
   manualExpenses: number;
+  manualRevenues: number;
   margin: number;
   marginRate: number;
 }
@@ -148,7 +150,8 @@ interface HousekeepingCosts {
                     @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
                     @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
                     @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
-                    @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
+                    @if (manualRevenuesTotal > 0) { + {{ 'stats.manual_revenues' | translate }} {{ manualRevenuesTotal | number:'1.2-2' }} € }
+                    @if (data()!.caTotal > 0 || manualRevenuesTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
                   </div>
                 } @else {
                   <div class="kpi-value kpi-na">—</div>
@@ -217,6 +220,7 @@ interface HousekeepingCosts {
                         @if (pm.hkExpenses > 0) { <span>{{ 'stats.hk_costs' | translate }} {{ pm.hkExpenses | number:'1.0-0' }} €</span> }
                         @if (pm.commission > 0) { <span>{{ 'stats.commission' | translate }} {{ pm.commission | number:'1.0-0' }} €</span> }
                         @if (pm.manualExpenses > 0) { <span>{{ 'stats.manual_expenses' | translate }} {{ pm.manualExpenses | number:'1.0-0' }} €</span> }
+                        @if (pm.manualRevenues > 0) { <span class="value-positive">+ {{ 'stats.manual_revenues' | translate }} {{ pm.manualRevenues | number:'1.0-0' }} €</span> }
                       </div>
                     }
                   </div>
@@ -298,6 +302,7 @@ export class StatsComponent implements OnInit {
   qontoData      = signal<QontoSummary | null>(null);
   hkCosts        = signal<HousekeepingCosts | null>(null);
   manualExpenses = signal<ManualExpense[]>([]);
+  manualRevenues = signal<ManualRevenue[]>([]);
   loading        = signal(false);
   error          = signal('');
 
@@ -311,6 +316,7 @@ export class StatsComponent implements OnInit {
     private http: HttpClient,
     private t: TranslateService,
     private manualExpenseService: ManualExpenseService,
+    private manualRevenueService: ManualRevenueService,
     private auth: AuthService
   ) {}
 
@@ -335,6 +341,7 @@ export class StatsComponent implements OnInit {
     this.qontoData.set(null);
     this.hkCosts.set(null);
     this.manualExpenses.set([]);
+    this.manualRevenues.set([]);
 
     this.http.get<RevenueData>(
       `${environment.apiUrl}/admin/stats/revenue?year=${this.selectedYear}&month=${this.selectedMonth}`
@@ -359,6 +366,10 @@ export class StatsComponent implements OnInit {
     this.manualExpenseService.list(this.selectedYear, this.selectedMonth)
       .pipe(catchError(() => of([])))
       .subscribe(e => this.manualExpenses.set(e));
+
+    this.manualRevenueService.list(this.selectedYear, this.selectedMonth)
+      .pipe(catchError(() => of([])))
+      .subscribe(r => this.manualRevenues.set(r));
   }
 
   prevMonth(): void {
@@ -396,6 +407,10 @@ export class StatsComponent implements OnInit {
     return this.manualExpenses().reduce((s, e) => s + Number(e.amount || 0), 0);
   }
 
+  get manualRevenuesTotal(): number {
+    return this.manualRevenues().reduce((s, r) => s + Number(r.amount || 0), 0);
+  }
+
   // Dépenses Qonto catégorisées uniquement (les transactions NON_CATEGORISE
   // ne sont pas encore validées comme charges et ne doivent pas impacter la marge)
   get qontoExpensesTotal(): number {
@@ -409,13 +424,15 @@ export class StatsComponent implements OnInit {
     const d = this.data();
     const q = this.qontoData();
     if (!d || !q) return 0;
-    return Math.round((d.caTotal - this.qontoExpensesTotal - this.hkCostsTotal - this.commissionTotal - this.manualExpensesTotal) * 100) / 100;
+    return Math.round((d.caTotal + this.manualRevenuesTotal - this.qontoExpensesTotal - this.hkCostsTotal - this.commissionTotal - this.manualExpensesTotal) * 100) / 100;
   }
 
   get margeRate(): number {
     const d = this.data();
-    if (!d || d.caTotal === 0) return 0;
-    return Math.round((this.marge / d.caTotal) * 10000) / 100;
+    if (!d) return 0;
+    const totalCA = d.caTotal + this.manualRevenuesTotal;
+    if (totalCA === 0) return 0;
+    return Math.round((this.marge / totalCA) * 10000) / 100;
   }
 
   propertyMargins(): PropertyMargin[] {
@@ -432,9 +449,15 @@ export class StatsComponent implements OnInit {
           .filter(e => e.beds24PropertyId === p.propId)
           .reduce((s, e) => s + Number(e.amount || 0), 0) * 100
       ) / 100;
+      const manualRevenues = Math.round(
+        this.manualRevenues()
+          .filter(r => r.beds24PropertyId === p.propId)
+          .reduce((s, r) => s + Number(r.amount || 0), 0) * 100
+      ) / 100;
       const expenses = Math.round((qontoExpenses + hkExpenses + commission + manualExpenses) * 100) / 100;
-      const margin = Math.round((p.ca - expenses) * 100) / 100;
-      const marginRate = p.ca > 0 ? margin / p.ca : -Infinity;
+      const effectiveCA = Math.round((p.ca + manualRevenues) * 100) / 100;
+      const margin = Math.round((effectiveCA - expenses) * 100) / 100;
+      const marginRate = effectiveCA > 0 ? margin / effectiveCA : -Infinity;
       return {
         propId:       p.propId,
         propertyName: p.propertyName,
@@ -444,6 +467,7 @@ export class StatsComponent implements OnInit {
         hkExpenses,
         commission,
         manualExpenses,
+        manualRevenues,
         margin,
         marginRate
       };

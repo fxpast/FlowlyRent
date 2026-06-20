@@ -20,6 +20,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QontoService, QontoTransaction, ExpenseRule, QontoSummary, QontoStatus } from '../../core/services/qonto.service';
 import { BookingService } from '../../core/services/booking.service';
 import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
+import { ManualRevenueService, ManualRevenue } from '../../core/services/manual-revenue.service';
 
 const COLOR_PALETTE = [
   '#1976d2','#388e3c','#f57c00','#7b1fa2','#c62828',
@@ -438,6 +439,113 @@ const COLOR_PALETTE = [
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'expenses.manual_revenues' | translate">
+          <div class="tab-content">
+            <p class="rules-hint">{{ 'expenses.manual_revenues_hint' | translate }}</p>
+
+            <div class="summary-filters">
+              <mat-form-field>
+                <mat-label>{{ 'expenses.summary_year' | translate }}</mat-label>
+                <mat-select [(ngModel)]="manualRevenueYear" (selectionChange)="onManualRevenuePeriodChange()">
+                  @for (y of years; track y) {
+                    <mat-option [value]="y">{{ y }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>{{ 'expenses.summary_month' | translate }}</mat-label>
+                <mat-select [(ngModel)]="manualRevenueMonth" (selectionChange)="onManualRevenuePeriodChange()">
+                  @for (m of months; track m) {
+                    <mat-option [value]="m">{{ getMonthName(m) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="rules-header">
+              <span></span>
+              <button mat-flat-button color="primary" (click)="openManualRevenueForm()">
+                <mat-icon>add</mat-icon> {{ 'expenses.new_manual_revenue' | translate }}
+              </button>
+            </div>
+
+            @if (showManualRevenueForm()) {
+              <mat-card class="rule-form-card">
+                <mat-card-header>
+                  <mat-card-title>{{ (editingManualRevenue()?.id ? 'expenses.edit_manual_revenue_title' : 'expenses.new_manual_revenue') | translate }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="rule-form">
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_revenue_label' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="manualRevenueForm.label" />
+                    </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_revenue_amount' | translate }}</mat-label>
+                      <input matInput type="number" step="0.01" [(ngModel)]="manualRevenueForm.amount" />
+                    </mat-form-field>
+                    <mat-form-field class="full-width">
+                      <mat-label>{{ 'expenses.rule_property' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="manualRevenueForm.beds24PropertyId">
+                        <mat-option value="">{{ 'expenses.rule_property_none' | translate }}</mat-option>
+                        @for (p of properties(); track p.id) {
+                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-hint>{{ 'expenses.manual_revenue_property_hint' | translate }}</mat-hint>
+                    </mat-form-field>
+                    <mat-checkbox [(ngModel)]="manualRevenueForm.recurring">
+                      {{ 'expenses.manual_revenue_recurring' | translate }}
+                    </mat-checkbox>
+                  </div>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-flat-button color="primary" (click)="saveManualRevenue()" [disabled]="savingManualRevenue()">
+                    @if (savingManualRevenue()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
+                  </button>
+                  <button mat-stroked-button (click)="cancelManualRevenueForm()" style="margin-left:8px">{{ 'common.cancel' | translate }}</button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            @if (loadingManualRevenues()) {
+              <div class="center"><mat-spinner /></div>
+            } @else if (manualRevenues().length === 0) {
+              <div class="empty">{{ 'expenses.no_manual_revenues' | translate }}</div>
+            } @else {
+              <div class="rules-list">
+                @for (revenue of manualRevenues(); track revenue.id) {
+                  <div class="rule-row">
+                    <div class="rule-info">
+                      <strong>{{ revenue.label }}</strong>
+                      @if (revenue.beds24PropertyId) {
+                        <span class="property-chip">{{ propertyName(revenue.beds24PropertyId) }}</span>
+                      }
+                      @if (revenue.recurring) {
+                        <span class="recurring-chip">{{ 'expenses.recurring_badge' | translate }}</span>
+                      }
+                    </div>
+                    <div class="manual-expense-amount">{{ revenue.amount | number:'1.2-2' }} €</div>
+                    <div class="rule-actions">
+                      <button mat-icon-button (click)="editManualRevenue(revenue)" [matTooltip]="'common.edit' | translate">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteManualRevenue(revenue)" [matTooltip]="'common.delete' | translate">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+                <div class="rule-row total-row">
+                  <div class="rule-info"><strong>{{ 'expenses.manual_revenues_total' | translate }}</strong></div>
+                  <div class="manual-expense-amount"><strong>{{ manualRevenuesTotal() | number:'1.2-2' }} €</strong></div>
+                  <div class="rule-actions"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     }
   `,
@@ -581,10 +689,21 @@ export class ExpensesComponent implements OnInit {
   manualExpenseYear = new Date().getFullYear();
   manualExpenseMonth = new Date().getMonth() + 1;
 
+  // Manual revenues
+  manualRevenues = signal<ManualRevenue[]>([]);
+  loadingManualRevenues = signal(false);
+  showManualRevenueForm = signal(false);
+  editingManualRevenue = signal<ManualRevenue | null>(null);
+  savingManualRevenue = signal(false);
+  manualRevenueForm = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
+  manualRevenueYear = new Date().getFullYear();
+  manualRevenueMonth = new Date().getMonth() + 1;
+
   constructor(
     private qontoService: QontoService,
     private bookingService: BookingService,
     private manualExpenseService: ManualExpenseService,
+    private manualRevenueService: ManualRevenueService,
     private snack: MatSnackBar,
     private t: TranslateService
   ) {}
@@ -598,6 +717,7 @@ export class ExpensesComponent implements OnInit {
         this.loadSummary();
         this.loadProperties();
         this.loadManualExpenses();
+        this.loadManualRevenues();
       }
     });
   }
@@ -864,6 +984,83 @@ export class ExpensesComponent implements OnInit {
 
   manualExpensesTotal(): number {
     return this.manualExpenses().reduce((s, e) => s + Number(e.amount || 0), 0);
+  }
+
+  // ─── Revenus manuels ───────────────────────────────────────────────────
+
+  loadManualRevenues(): void {
+    this.loadingManualRevenues.set(true);
+    this.manualRevenueService.list(this.manualRevenueYear, this.manualRevenueMonth).subscribe({
+      next: r => { this.manualRevenues.set(r); this.loadingManualRevenues.set(false); },
+      error: () => this.loadingManualRevenues.set(false)
+    });
+  }
+
+  onManualRevenuePeriodChange(): void {
+    this.loadManualRevenues();
+  }
+
+  openManualRevenueForm(): void {
+    this.editingManualRevenue.set(null);
+    this.manualRevenueForm = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
+    this.showManualRevenueForm.set(true);
+  }
+
+  editManualRevenue(revenue: ManualRevenue): void {
+    this.editingManualRevenue.set(revenue);
+    this.manualRevenueForm = {
+      label: revenue.label,
+      amount: revenue.amount,
+      beds24PropertyId: revenue.beds24PropertyId || '',
+      recurring: revenue.recurring
+    };
+    this.showManualRevenueForm.set(true);
+  }
+
+  cancelManualRevenueForm(): void {
+    this.showManualRevenueForm.set(false);
+    this.editingManualRevenue.set(null);
+  }
+
+  saveManualRevenue(): void {
+    if (!this.manualRevenueForm.label.trim() || !this.manualRevenueForm.amount) return;
+    this.savingManualRevenue.set(true);
+
+    const editing = this.editingManualRevenue();
+    const payload = {
+      label: this.manualRevenueForm.label.trim(),
+      amount: this.manualRevenueForm.amount,
+      beds24PropertyId: this.manualRevenueForm.beds24PropertyId || undefined,
+      year: this.manualRevenueYear,
+      month: this.manualRevenueMonth,
+      recurring: this.manualRevenueForm.recurring
+    };
+
+    const req = editing
+      ? this.manualRevenueService.update(editing.id, payload)
+      : this.manualRevenueService.create(payload);
+
+    req.subscribe({
+      next: () => {
+        this.savingManualRevenue.set(false);
+        this.showManualRevenueForm.set(false);
+        this.loadManualRevenues();
+        this.snack.open(this.t.instant('expenses.manual_revenue_saved'), '', { duration: 2000 });
+      },
+      error: () => this.savingManualRevenue.set(false)
+    });
+  }
+
+  deleteManualRevenue(revenue: ManualRevenue): void {
+    if (!confirm(this.t.instant('expenses.delete_manual_revenue_confirm') + ' "' + revenue.label + '" ?')) return;
+    this.manualRevenueService.delete(revenue.id).subscribe(() => {
+      this.loadManualRevenues();
+      this.snack.open(this.t.instant('expenses.manual_revenue_deleted'), '', { duration: 2000 });
+    });
+  }
+
+  manualRevenuesTotal(): number {
+    return this.manualRevenues().reduce((s, r) => s + Number(r.amount || 0), 0);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────

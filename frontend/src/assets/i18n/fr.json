@@ -689,6 +689,7 @@
     "hk_costs": "ménage/dépannage",
     "commission": "commission plateforme",
     "manual_expenses": "charges manuelles",
+    "manual_revenues": "revenus manuels",
     "ical_no_revenue": "Mode iCal — le chiffre d'affaires n'est pas disponible (aucun prix dans les flux iCal). Seules les nuits et le taux d'occupation sont calculés."
   },
   "reports": {
@@ -849,7 +850,20 @@
     "manual_expense_saved": "Charge enregistrée",
     "manual_expense_deleted": "Charge supprimée",
     "delete_manual_expense_confirm": "Supprimer la charge",
-    "manual_expenses_total": "Total"
+    "manual_expenses_total": "Total",
+    "manual_revenues": "Revenus manuels",
+    "manual_revenues_hint": "Saisissez ici les revenus qui ne transitent pas par Beds24 (virements directs, locations non déclarées, etc.). Ils seront ajoutés à la marge du mois sélectionné.",
+    "new_manual_revenue": "Nouveau revenu",
+    "edit_manual_revenue_title": "Modifier le revenu",
+    "manual_revenue_label": "Libellé",
+    "manual_revenue_amount": "Montant (€)",
+    "manual_revenue_property_hint": "Permet d'attribuer ce revenu à un logement pour le calcul de la marge par logement",
+    "manual_revenue_recurring": "Récurrent (appliqué chaque mois à partir de ce mois)",
+    "no_manual_revenues": "Aucun revenu manuel pour ce mois.",
+    "manual_revenue_saved": "Revenu enregistré",
+    "manual_revenue_deleted": "Revenu supprimé",
+    "delete_manual_revenue_confirm": "Supprimer le revenu",
+    "manual_revenues_total": "Total"
   },
   "housekeeper": {
     "title": "Missions",

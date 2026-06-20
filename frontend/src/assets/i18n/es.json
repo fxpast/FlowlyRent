@@ -689,6 +689,7 @@
     "hk_costs": "limpieza/mantenimiento",
     "commission": "comisión de la plataforma",
     "manual_expenses": "gastos manuales",
+    "manual_revenues": "ingresos manuales",
     "ical_no_revenue": "Modo iCal — los ingresos no están disponibles (sin precios en los flujos iCal). Solo se calculan las noches y la tasa de ocupación."
   },
   "reports": {
@@ -849,7 +850,20 @@
     "manual_expense_saved": "Gasto guardado",
     "manual_expense_deleted": "Gasto eliminado",
     "delete_manual_expense_confirm": "Eliminar el gasto",
-    "manual_expenses_total": "Total"
+    "manual_expenses_total": "Total",
+    "manual_revenues": "Ingresos manuales",
+    "manual_revenues_hint": "Introduce aquí los ingresos que no pasan por Beds24 (transferencias directas, alquileres no declarados, etc.). Se añadirán al margen del mes seleccionado.",
+    "new_manual_revenue": "Nuevo ingreso",
+    "edit_manual_revenue_title": "Editar ingreso",
+    "manual_revenue_label": "Etiqueta",
+    "manual_revenue_amount": "Importe (€)",
+    "manual_revenue_property_hint": "Asigna este ingreso a un alojamiento para el cálculo del margen por alojamiento",
+    "manual_revenue_recurring": "Recurrente (aplicado cada mes a partir de este mes)",
+    "no_manual_revenues": "Sin ingresos manuales para este mes.",
+    "manual_revenue_saved": "Ingreso guardado",
+    "manual_revenue_deleted": "Ingreso eliminado",
+    "delete_manual_revenue_confirm": "Eliminar el ingreso",
+    "manual_revenues_total": "Total"
   },
   "housekeeper": {
     "title": "Tareas",

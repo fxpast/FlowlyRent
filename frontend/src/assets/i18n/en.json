@@ -689,6 +689,7 @@
     "hk_costs": "cleaning/maintenance",
     "commission": "platform commission",
     "manual_expenses": "manual expenses",
+    "manual_revenues": "manual revenues",
     "ical_no_revenue": "iCal mode — revenue is not available (no prices in iCal feeds). Only nights and occupancy rate are calculated."
   },
   "reports": {
@@ -849,7 +850,20 @@
     "manual_expense_saved": "Expense saved",
     "manual_expense_deleted": "Expense deleted",
     "delete_manual_expense_confirm": "Delete expense",
-    "manual_expenses_total": "Total"
+    "manual_expenses_total": "Total",
+    "manual_revenues": "Manual revenues",
+    "manual_revenues_hint": "Enter here revenues that do not go through Beds24 (direct transfers, undeclared rentals, etc.). They will be added to the margin for the selected month.",
+    "new_manual_revenue": "New revenue",
+    "edit_manual_revenue_title": "Edit revenue",
+    "manual_revenue_label": "Label",
+    "manual_revenue_amount": "Amount (€)",
+    "manual_revenue_property_hint": "Assign this revenue to a property for per-property margin calculation",
+    "manual_revenue_recurring": "Recurring (applied every month from this month)",
+    "no_manual_revenues": "No manual revenues for this month.",
+    "manual_revenue_saved": "Revenue saved",
+    "manual_revenue_deleted": "Revenue deleted",
+    "delete_manual_revenue_confirm": "Delete revenue",
+    "manual_revenues_total": "Total"
   },
   "housekeeper": {
     "title": "Tasks",

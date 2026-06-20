@@ -689,6 +689,7 @@
     "hk_costs": "pulizia/manutenzione",
     "commission": "commissione piattaforma",
     "manual_expenses": "spese manuali",
+    "manual_revenues": "ricavi manuali",
     "ical_no_revenue": "Modalità iCal — i ricavi non sono disponibili (nessun prezzo nei feed iCal). Vengono calcolate solo le notti e il tasso di occupazione."
   },
   "reports": {
@@ -849,7 +850,20 @@
     "manual_expense_saved": "Spesa salvata",
     "manual_expense_deleted": "Spesa eliminata",
     "delete_manual_expense_confirm": "Eliminare la spesa",
-    "manual_expenses_total": "Totale"
+    "manual_expenses_total": "Totale",
+    "manual_revenues": "Ricavi manuali",
+    "manual_revenues_hint": "Inserisci qui i ricavi che non transitano tramite Beds24 (bonifici diretti, locazioni non dichiarate, ecc.). Verranno aggiunti al margine del mese selezionato.",
+    "new_manual_revenue": "Nuovo ricavo",
+    "edit_manual_revenue_title": "Modifica ricavo",
+    "manual_revenue_label": "Descrizione",
+    "manual_revenue_amount": "Importo (€)",
+    "manual_revenue_property_hint": "Assegna questo ricavo a un alloggio per il calcolo del margine per alloggio",
+    "manual_revenue_recurring": "Ricorrente (applicato ogni mese da questo mese in poi)",
+    "no_manual_revenues": "Nessun ricavo manuale per questo mese.",
+    "manual_revenue_saved": "Ricavo salvato",
+    "manual_revenue_deleted": "Ricavo eliminato",
+    "delete_manual_revenue_confirm": "Eliminare il ricavo",
+    "manual_revenues_total": "Totale"
   },
   "housekeeper": {
     "title": "Compiti",
