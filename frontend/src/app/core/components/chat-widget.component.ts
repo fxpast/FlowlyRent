@@ -135,12 +135,25 @@ interface ChatMessage { role: 'user' | 'assistant'; text: string; }
 
     @media (max-width: 768px) {
       .widget-host {
-        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-        right: 20px;
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        right: 16px;
       }
       .chat-panel {
-        width: calc(100vw - 40px);
+        position: fixed;
+        left: 0;
         right: 0;
+        bottom: 0;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 80vh;
+        max-height: 80dvh;
+      }
+      .chat-messages {
+        max-height: calc(80vh - 120px);
+        max-height: calc(80dvh - 120px);
+      }
+      .chat-input {
+        font-size: 16px;
       }
     }
   `]
