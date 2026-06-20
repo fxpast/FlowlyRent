@@ -136,20 +136,50 @@ export PDF. Une facture peut être pré-remplie à partir d'une réservation exi
 
 ## Dépenses (Expenses)
 
-Nécessite une connexion bancaire **Qonto** (configurée dans Paramètres). Permet de
-catégoriser les transactions bancaires par type, logement et période, de saisir
-manuellement des dépenses hors banque (main d'œuvre, fournitures), et de visualiser
-la répartition des dépenses par catégorie et par logement.
+Nécessite une connexion bancaire **Qonto** (configurée dans Paramètres). La page est
+organisée en onglets :
+
+- **Transactions** : liste des transactions bancaires Qonto, filtrables par période,
+  catégorie et sens (débit/crédit). Chaque transaction peut être catégorisée et affectée
+  à un logement.
+- **Règles de catégorie** : règles automatiques d'affectation par mots-clés dans le
+  libellé Qonto. Une règle peut être liée à un logement précis ou globale (tous logements).
+  En mode iCal, seules les règles sans logement ou liées à des logements iCal s'affichent
+  (les règles channel manager ne sont pas visibles).
+- **Récapitulatif** : synthèse mensuelle des dépenses par catégorie et par logement, avec
+  évolution sur les mois précédents.
+- **Charges manuelles** : dépenses hors Qonto (loyer, assurance, taxe foncière…) saisies
+  manuellement par mois. Chaque charge peut être récurrente (appliquée chaque mois à partir
+  du mois saisi) ou ponctuelle, et peut être affectée à un logement. Le total des charges
+  manuelles est déduit de la marge dans la page Revenus.
 
 ## Revenus (Stats)
 
-Tableau de bord mensuel des indicateurs clés :
+La page Revenus est organisée en deux onglets :
+
+### Onglet Statistiques
+
+Tableau de bord mensuel des indicateurs clés, avec navigation mois par mois :
 - **Chiffre d'affaires (CA)** total et par logement, nombre de nuits vendues, taux d'occupation.
-- **Marge bénéficiaire** : CA total moins le total des débits Qonto du mois (vert si
-  positif, rouge si négatif).
-- **Marge par logement** : répartition des dépenses Qonto par logement (via les règles
-  de catégorisation) pour calculer la marge de chaque bien — affichée uniquement si
-  Qonto est connecté.
+- **Marge bénéficiaire** : CA total + revenus manuels − dépenses Qonto catégorisées − frais
+  de ménage − commission plateforme − charges manuelles (vert si positif, rouge si négatif).
+  Affichée uniquement si Qonto est connecté.
+- **Marge par logement** : répartition des dépenses Qonto par logement (via règles de
+  catégorisation) pour calculer la marge de chaque bien — affichée uniquement si Qonto est
+  connecté.
+- **Mode iCal** : seules les nuits vendues et le taux d'occupation sont affichés. Le CA et
+  la marge ne sont pas disponibles (les flux iCal ne contiennent pas les prix). Une bannière
+  l'explique.
+
+### Onglet Revenus manuels
+
+Permet de saisir des revenus qui ne transitent pas par Beds24 (virements directs, locations
+non déclarées sur les plateformes, etc.). Chaque revenu peut être :
+- récurrent (appliqué chaque mois à partir du mois saisi) ou ponctuel,
+- affecté à un logement précis (pour le calcul de la marge par logement) ou global.
+
+Les revenus manuels s'ajoutent au CA pour le calcul de la marge bénéficiaire. La navigation
+mois/année de la page s'applique aux deux onglets.
 
 ## Avis (Feedback)
 
@@ -197,7 +227,17 @@ Interface simplifiée, pensée mobile, pour les prestataires de ménage : onglet
 déclaration d'heures supplémentaires) et onglet **Signalements** (suivi des incidents
 déclarés et échanges avec l'hôte).
 
+## Session et connexion persistante
+
+Le token de session (JWT, durée 365 jours) est conservé dans le navigateur. Dès le
+prochain démarrage de l'application (web ou Android), l'utilisateur est automatiquement
+redirigé vers son tableau de bord sans avoir à saisir à nouveau ses identifiants — aussi
+bien pour les propriétaires/hôtes que pour les prestataires. La déconnexion explicite
+(bouton "Déconnexion") efface la session et réaffiche l'écran de connexion.
+
 ## Application mobile
 
 FlowlyRent dispose d'une application Android (WebView vers flowlyrent.com) avec
-notifications push (web push + Firebase Cloud Messaging).
+notifications push (web push + Firebase Cloud Messaging). La session persistante s'applique
+également sur mobile : après la première connexion, l'application s'ouvre directement sur
+le tableau de bord.
