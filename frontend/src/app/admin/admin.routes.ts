@@ -70,6 +70,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
       },
       {
+        path: 'dynamic-pricing',
+        loadComponent: () => import('./dynamic-pricing/dynamic-pricing.component').then(m => m.DynamicPricingComponent)
+      },
+      {
         path: 'reports',
         component: ComingSoonComponent,
         data: { title: 'Rapports' }

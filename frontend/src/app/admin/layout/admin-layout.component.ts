@@ -141,6 +141,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'receipt_long',       label: 'nav.invoices',    route: 'invoices' },
     { icon: 'account_balance',   label: 'nav.expenses',    route: 'expenses' },
     { icon: 'bar_chart',         label: 'nav.stats',       route: 'stats' },
+    { icon: 'trending_up',       label: 'nav.dynamic_pricing', route: 'dynamic-pricing' },
     { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
     { icon: 'quiz',              label: 'nav.faq',         route: 'faq' },
     { icon: 'settings',          label: 'nav.settings',    route: 'settings' }
