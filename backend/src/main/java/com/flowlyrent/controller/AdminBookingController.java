@@ -551,22 +551,25 @@ public class AdminBookingController {
     @PostMapping("/mark-sent")
     public ResponseEntity<?> markSent(@RequestBody Map<String, String> body) {
         Long userId = securityUtils.getCurrentUserId();
-        String bookingId = body.get("bookingId");
+        String bookingId  = body.get("bookingId");
+        String propertyId = body.get("propertyId");
+        String type       = body.get("type");
         if (bookingId == null || bookingId.isBlank()) return ResponseEntity.badRequest().build();
-        if (!messageLogRepo.existsByUserIdAndBookingId(userId, bookingId)) {
-            BookingMessageLog log = new BookingMessageLog();
-            log.setUserId(userId);
-            log.setBookingId(bookingId);
-            messageLogRepo.save(log);
-        }
+        if (propertyId == null || propertyId.isBlank()) return ResponseEntity.badRequest().build();
+        if (type == null || type.isBlank()) return ResponseEntity.badRequest().build();
+        BookingMessageLog log = messageLogRepo
+                .findByUserIdAndPropertyIdAndType(userId, propertyId, type)
+                .orElseGet(() -> { BookingMessageLog l = new BookingMessageLog(); l.setUserId(userId); l.setPropertyId(propertyId); l.setType(type); return l; });
+        log.setBookingId(bookingId);
+        messageLogRepo.save(log);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/sent-ids")
-    public List<String> getSentIds() {
+    public List<Map<String, String>> getSentIds() {
         Long userId = securityUtils.getCurrentUserId();
         return messageLogRepo.findByUserId(userId).stream()
-                .map(BookingMessageLog::getBookingId)
+                .map(l -> Map.of("bookingId", l.getBookingId(), "propertyId", l.getPropertyId(), "type", l.getType()))
                 .collect(Collectors.toList());
     }
 

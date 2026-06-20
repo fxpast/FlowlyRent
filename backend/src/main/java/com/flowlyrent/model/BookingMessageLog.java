@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "booking_message_logs",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "booking_id"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "property_id", "type"}))
 @Data
 public class BookingMessageLog {
 
@@ -18,6 +18,12 @@ public class BookingMessageLog {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @Column(name = "property_id", nullable = false, length = 100)
+    private String propertyId;
+
+    @Column(name = "type", nullable = false, length = 20)
+    private String type;
 
     @Column(name = "booking_id", nullable = false, length = 100)
     private String bookingId;

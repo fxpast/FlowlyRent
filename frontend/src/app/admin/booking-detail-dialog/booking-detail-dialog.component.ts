@@ -1103,7 +1103,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       const wa = phone.startsWith('+') ? phone.slice(1) : phone;
       window.open(`https://wa.me/${wa}?text=${body}`, '_blank');
     }
-    this.reminderService.markSent(this.data['id']);
+    this.markReminderSent();
 
     const bookingId = Number(this.data['id']);
     if (bookingId) {
@@ -1113,7 +1113,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
           this.messages.update(list => [...list, localMsg]);
           this.newMessage = '';
           this.selectedTemplate = null;
-          this.reminderService.markSent(bookingId);
+          this.markReminderSent();
           setTimeout(() => this.scrollToBottom(), 80);
         },
         error: () => { this.newMessage = ''; }
@@ -1134,11 +1134,20 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         this.messages.update(list => [...list, localMsg]);
         this.newMessage = '';
         this.sendingMsg.set(false);
-        this.reminderService.markSent(bookingId);
+        this.markReminderSent();
         setTimeout(() => this.scrollToBottom(), 80);
       },
       error: () => { this.sendingMsg.set(false); }
     });
+  }
+
+  private markReminderSent(): void {
+    const bookingId = this.data['id'];
+    const propertyId = this.data['propId'] ?? this.data['propertyId'] ?? '';
+    if (!propertyId) return;
+    const ctx = this.data['templateContext'];
+    const type: 'arrival' | 'departure' = ctx === 'checkout' ? 'departure' : 'arrival';
+    this.reminderService.markSent(bookingId, propertyId, type);
   }
 
   private scrollToBottom(): void {

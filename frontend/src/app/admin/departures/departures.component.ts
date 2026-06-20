@@ -36,7 +36,7 @@ import { localDateStr } from '../../core/utils/date.utils';
           <div class="mc-top">
             <strong>{{ guestName(b) }}</strong>
             <div style="display:flex;align-items:center;gap:6px">
-              @if (!isPast(b['departure']) && !reminder.hasSent(b['id'])) {
+              @if (!isPast(b['departure']) && !reminder.hasSent(b['id'], b['propId'] ?? b['propertyId'], 'departure')) {
                 <mat-icon class="msg-reminder" [matTooltip]="'departures.checkout_message_unsent' | translate">mark_email_unread</mat-icon>
               }
               <mat-chip [class]="'status-' + b['status']">{{ 'status.' + b['status'] | translate }}</mat-chip>
@@ -93,7 +93,7 @@ import { localDateStr } from '../../core/utils/date.utils';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let b" class="actions-cell" (click)="$event.stopPropagation()">
-              @if (!isPast(b['departure']) && !reminder.hasSent(b['id'])) {
+              @if (!isPast(b['departure']) && !reminder.hasSent(b['id'], b['propId'] ?? b['propertyId'], 'departure')) {
                 <mat-icon class="msg-reminder" [matTooltip]="'departures.checkout_message_unsent' | translate">mark_email_unread</mat-icon>
               }
               @if (b['status'] !== 'cancelled') {

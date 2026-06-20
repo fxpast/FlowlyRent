@@ -52,11 +52,11 @@ import { localDateStr } from '../../core/utils/date.utils';
               <p class="empty">{{ 'today.no_departures' | translate }}</p>
             } @else {
               @for (b of departures(); track b.id) {
-                <div class="booking-row" (click)="openBooking(b)">
+                <div class="booking-row" (click)="openBooking(b, 'checkout')">
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
-                      @if (!reminder.hasSent(b.id)) {
+                      @if (!reminder.hasSent(b.id, b.propId, 'departure')) {
                         <mat-icon class="msg-reminder" [matTooltip]="'today.checkout_msg_pending' | translate">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
@@ -89,11 +89,11 @@ import { localDateStr } from '../../core/utils/date.utils';
               <p class="empty">{{ 'today.no_arrivals' | translate }}</p>
             } @else {
               @for (b of arrivals(); track b.id) {
-                <div class="booking-row" (click)="openBooking(b)">
+                <div class="booking-row" (click)="openBooking(b, 'checkin')">
                   <div class="row-main">
                     <span class="guest">{{ guestName(b) }}</span>
                     <span style="display:flex;align-items:center;gap:4px">
-                      @if (!reminder.hasSent(b.id)) {
+                      @if (!reminder.hasSent(b.id, b.propId, 'arrival')) {
                         <mat-icon class="msg-reminder" [matTooltip]="'today.checkin_msg_pending' | translate">mark_email_unread</mat-icon>
                       }
                       <span class="nights">{{ nights(b) }}n</span>
@@ -229,9 +229,9 @@ export class TodayComponent implements OnInit {
     });
   }
 
-  openBooking(b: any): void {
+  openBooking(b: any, templateContext: string = 'checkin'): void {
     const ref = this.dialog.open(BookingDetailDialogComponent, {
-      data: { ...b, propName: this.propName(b) },
+      data: { ...b, propName: this.propName(b), templateContext },
       width: '600px'
     });
     ref.afterClosed().subscribe(result => {

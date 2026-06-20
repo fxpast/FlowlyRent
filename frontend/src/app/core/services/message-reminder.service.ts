@@ -5,24 +5,30 @@ import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class MessageReminderService {
-  private sentIds = new Set<string>();
+  private sentMap = new Map<string, string>();
 
   constructor(private http: HttpClient) {}
 
-  load(): Observable<string[]> {
-    return this.http.get<string[]>(`${environment.apiUrl}/admin/bookings/sent-ids`).pipe(
-      tap(ids => this.sentIds = new Set(ids))
+  load(): Observable<{ bookingId: string; propertyId: string; type: string }[]> {
+    return this.http.get<{ bookingId: string; propertyId: string; type: string }[]>(
+      `${environment.apiUrl}/admin/bookings/sent-ids`
+    ).pipe(
+      tap(entries => {
+        this.sentMap.clear();
+        entries.forEach(e => this.sentMap.set(`${e.propertyId}:${e.type}`, e.bookingId));
+      })
     );
   }
 
-  markSent(bookingId: string | number): void {
-    const id = String(bookingId);
-    this.sentIds.add(id);
-    this.http.post(`${environment.apiUrl}/admin/bookings/mark-sent`, { bookingId: id })
+  markSent(bookingId: string | number, propertyId: string | number, type: 'arrival' | 'departure'): void {
+    const bid = String(bookingId);
+    const pid = String(propertyId);
+    this.sentMap.set(`${pid}:${type}`, bid);
+    this.http.post(`${environment.apiUrl}/admin/bookings/mark-sent`, { bookingId: bid, propertyId: pid, type })
       .subscribe({ error: () => {} });
   }
 
-  hasSent(bookingId: string | number): boolean {
-    return this.sentIds.has(String(bookingId));
+  hasSent(bookingId: string | number, propertyId: string | number, type: 'arrival' | 'departure'): boolean {
+    return this.sentMap.get(`${String(propertyId)}:${type}`) === String(bookingId);
   }
 }
