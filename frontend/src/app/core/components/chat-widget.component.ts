@@ -147,6 +147,7 @@ interface ChatMessage { role: 'user' | 'assistant'; text: string; }
         border-radius: 16px 16px 0 0;
         max-height: 80vh;
         max-height: 80dvh;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       .chat-messages {
         max-height: calc(80vh - 120px);
