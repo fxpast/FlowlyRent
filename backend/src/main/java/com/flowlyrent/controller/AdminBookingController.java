@@ -3,11 +3,13 @@ package com.flowlyrent.controller;
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.BookingMessageLog;
 import com.flowlyrent.model.IcalBooking;
 import com.flowlyrent.model.LocalProperty;
 import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.BookingMessageLogRepository;
 import com.flowlyrent.repository.IcalBookingRepository;
 import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
@@ -38,6 +40,7 @@ public class AdminBookingController {
     private final PropertyConfigRepository propConfigRepo;
     private final IcalBookingRepository icalBookingRepo;
     private final LocalPropertyRepository localPropertyRepo;
+    private final BookingMessageLogRepository messageLogRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/estimate")
@@ -543,6 +546,28 @@ public class AdminBookingController {
         m.put("channel", isDirect ? "direct" : "iCal");
         m.put("source",  isDirect ? "direct" : "ical");
         return m;
+    }
+
+    @PostMapping("/mark-sent")
+    public ResponseEntity<?> markSent(@RequestBody Map<String, String> body) {
+        Long userId = securityUtils.getCurrentUserId();
+        String bookingId = body.get("bookingId");
+        if (bookingId == null || bookingId.isBlank()) return ResponseEntity.badRequest().build();
+        if (!messageLogRepo.existsByUserIdAndBookingId(userId, bookingId)) {
+            BookingMessageLog log = new BookingMessageLog();
+            log.setUserId(userId);
+            log.setBookingId(bookingId);
+            messageLogRepo.save(log);
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/sent-ids")
+    public List<String> getSentIds() {
+        Long userId = securityUtils.getCurrentUserId();
+        return messageLogRepo.findByUserId(userId).stream()
+                .map(BookingMessageLog::getBookingId)
+                .collect(Collectors.toList());
     }
 
     private Beds24Account requireAccount() {

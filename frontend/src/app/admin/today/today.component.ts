@@ -204,7 +204,7 @@ export class TodayComponent implements OnInit {
     return new Date().toLocaleDateString(this.t.currentLang || 'fr', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { this.load(); this.reminder.load().subscribe({ error: () => {} }); }
 
   load(): void {
     this.loading.set(true);

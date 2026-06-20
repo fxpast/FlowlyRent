@@ -152,7 +152,7 @@ export class DeparturesComponent implements OnInit {
 
   constructor(private bookingService: BookingService, private snackBar: MatSnackBar, private dialog: MatDialog, private router: Router, readonly reminder: MessageReminderService, private t: TranslateService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { this.load(); this.reminder.load().subscribe({ error: () => {} }); }
 
   load(): void {
     const ws = localDateStr(this.weekStart());
