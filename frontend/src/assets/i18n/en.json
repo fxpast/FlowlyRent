@@ -670,6 +670,7 @@
   },
   "stats": {
     "title": "Revenue",
+    "tab_stats": "Statistics",
     "ca_total": "Revenue",
     "nights_sold": "Nights sold",
     "occupancy": "Occupancy rate",

@@ -670,6 +670,7 @@
   },
   "stats": {
     "title": "Ricavi",
+    "tab_stats": "Statistiche",
     "ca_total": "Fatturato",
     "nights_sold": "Notti vendute",
     "occupancy": "Tasso di occupazione",

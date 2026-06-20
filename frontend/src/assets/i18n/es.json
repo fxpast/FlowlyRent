@@ -670,6 +670,7 @@
   },
   "stats": {
     "title": "Ingresos",
+    "tab_stats": "Estadísticas",
     "ca_total": "Facturación",
     "nights_sold": "Noches vendidas",
     "occupancy": "Tasa de ocupación",

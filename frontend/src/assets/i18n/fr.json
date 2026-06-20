@@ -670,6 +670,7 @@
   },
   "stats": {
     "title": "Revenus",
+    "tab_stats": "Statistiques",
     "ca_total": "Chiffre d'affaires",
     "nights_sold": "Nuits vendues",
     "occupancy": "Taux d'occupation",

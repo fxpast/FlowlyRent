@@ -670,6 +670,7 @@
   },
   "stats": {
     "title": "Einnahmen",
+    "tab_stats": "Statistiken",
     "ca_total": "Umsatz",
     "nights_sold": "Verkaufte Nächte",
     "occupancy": "Auslastung",

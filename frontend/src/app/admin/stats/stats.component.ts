@@ -10,10 +10,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
 import { ManualRevenueService, ManualRevenue } from '../../core/services/manual-revenue.service';
+import { BookingService } from '../../core/services/booking.service';
 import { AuthService } from '../../core/services/auth.service';
 
 interface RevenueData {
@@ -62,7 +68,9 @@ interface HousekeepingCosts {
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
-    MatProgressSpinnerModule, MatTooltipModule, MatDividerModule, TranslateModule
+    MatProgressSpinnerModule, MatTooltipModule, MatDividerModule,
+    MatTabsModule, MatInputModule, MatFormFieldModule, MatCheckboxModule,
+    MatSnackBarModule, TranslateModule
   ],
   template: `
     <div class="page">
@@ -91,146 +99,240 @@ interface HousekeepingCosts {
         </div>
       </div>
 
-      @if (loading()) {
-        <div class="center"><mat-spinner diameter="48" /></div>
-      } @else if (error()) {
-        <mat-card class="error-card">
-          <mat-card-content>
-            <mat-icon class="error-icon">cloud_off</mat-icon>
-            <p>{{ error() }}</p>
-          </mat-card-content>
-        </mat-card>
-      } @else if (data()) {
-        @if (isIcal()) {
-          <div class="ical-banner">
-            <mat-icon>info</mat-icon>
-            <span>{{ 'stats.ical_no_revenue' | translate }}</span>
-          </div>
-        }
-        <div class="kpis">
-          @if (!isIcal()) {
-            <mat-card class="kpi-card primary">
-              <mat-card-content>
-                <div class="kpi-label">{{ 'stats.ca_total' | translate }}</div>
-                <div class="kpi-value">{{ data()!.caTotal | number:'1.2-2' }} €</div>
-                <div class="kpi-sub">{{ data()!.monthLabel }} {{ data()!.year }}</div>
-              </mat-card-content>
-            </mat-card>
-          }
+      <mat-tab-group animationDuration="200ms">
 
-          <mat-card class="kpi-card" [class.primary]="isIcal()">
-            <mat-card-content>
-              <div class="kpi-label">{{ 'stats.nights_sold' | translate }}</div>
-              <div class="kpi-value">{{ data()!.nights }}</div>
-              <div class="kpi-sub">/ {{ data()!.daysInMonth }} {{ 'stats.days' | translate }}</div>
-            </mat-card-content>
-          </mat-card>
-
-          <mat-card class="kpi-card">
-            <mat-card-content>
-              <div class="kpi-label">{{ 'stats.occupancy' | translate }}</div>
-              <div class="kpi-value">{{ data()!.occupancyRate }} %</div>
-              @if (!isIcal()) {
-                <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
+        <mat-tab [label]="'stats.tab_stats' | translate">
+          <div class="tab-content">
+            @if (loading()) {
+              <div class="center"><mat-spinner diameter="48" /></div>
+            } @else if (error()) {
+              <mat-card class="error-card">
+                <mat-card-content>
+                  <mat-icon class="error-icon">cloud_off</mat-icon>
+                  <p>{{ error() }}</p>
+                </mat-card-content>
+              </mat-card>
+            } @else if (data()) {
+              @if (isIcal()) {
+                <div class="ical-banner">
+                  <mat-icon>info</mat-icon>
+                  <span>{{ 'stats.ical_no_revenue' | translate }}</span>
+                </div>
               }
-            </mat-card-content>
-          </mat-card>
-
-          @if (!isIcal()) {
-            <mat-card class="kpi-card" [class.margin-positive]="qontoData() !== null && marge >= 0"
-                                       [class.margin-negative]="qontoData() !== null && marge < 0">
-              <mat-card-content>
-                <div class="kpi-label">{{ 'stats.margin' | translate }}</div>
-                @if (qontoData()) {
-                  <div class="kpi-value" [class.value-positive]="marge >= 0" [class.value-negative]="marge < 0">
-                    {{ marge | number:'1.2-2' }} €
-                  </div>
-                  <div class="kpi-sub">
-                    {{ 'stats.expenses' | translate }} {{ qontoExpensesTotal | number:'1.2-2' }} €
-                    @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
-                    @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
-                    @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
-                    @if (manualRevenuesTotal > 0) { + {{ 'stats.manual_revenues' | translate }} {{ manualRevenuesTotal | number:'1.2-2' }} € }
-                    @if (data()!.caTotal > 0 || manualRevenuesTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
-                  </div>
-                } @else {
-                  <div class="kpi-value kpi-na">—</div>
-                  <div class="kpi-sub">{{ 'stats.no_qonto' | translate }}</div>
-                }
-              </mat-card-content>
-            </mat-card>
-          }
-        </div>
-
-        @if (data()!.byProperty.length > 0) {
-          <mat-card class="prop-card">
-            <mat-card-header>
-              <mat-card-title>{{ 'stats.by_property' | translate }}</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="prop-list">
-                @for (p of data()!.byProperty; track p.propertyName) {
-                  <div class="prop-row">
-                    <div class="prop-name">{{ p.propertyName }}</div>
-                    <div class="prop-bar-wrap">
-                      <div class="prop-bar" [style.width]="barWidth(p.ca) + '%'"></div>
-                    </div>
-                    <div class="prop-nights">{{ p.nights }} {{ 'stats.nights_unit' | translate }}</div>
-                    @if (!isIcal()) {
-                      <div class="prop-ca">{{ p.ca | number:'1.2-2' }} €</div>
-                    }
-                  </div>
-                }
-              </div>
-              <mat-divider class="divider" />
-              <div class="prop-row total-row">
-                <div class="prop-name"><strong>Total</strong></div>
-                <div class="prop-bar-wrap"></div>
-                <div class="prop-nights"><strong>{{ data()!.nights }}</strong></div>
+              <div class="kpis">
                 @if (!isIcal()) {
-                  <div class="prop-ca"><strong>{{ data()!.caTotal | number:'1.2-2' }} €</strong></div>
+                  <mat-card class="kpi-card primary">
+                    <mat-card-content>
+                      <div class="kpi-label">{{ 'stats.ca_total' | translate }}</div>
+                      <div class="kpi-value">{{ data()!.caTotal | number:'1.2-2' }} €</div>
+                      <div class="kpi-sub">{{ data()!.monthLabel }} {{ data()!.year }}</div>
+                    </mat-card-content>
+                  </mat-card>
+                }
+
+                <mat-card class="kpi-card" [class.primary]="isIcal()">
+                  <mat-card-content>
+                    <div class="kpi-label">{{ 'stats.nights_sold' | translate }}</div>
+                    <div class="kpi-value">{{ data()!.nights }}</div>
+                    <div class="kpi-sub">/ {{ data()!.daysInMonth }} {{ 'stats.days' | translate }}</div>
+                  </mat-card-content>
+                </mat-card>
+
+                <mat-card class="kpi-card">
+                  <mat-card-content>
+                    <div class="kpi-label">{{ 'stats.occupancy' | translate }}</div>
+                    <div class="kpi-value">{{ data()!.occupancyRate }} %</div>
+                    @if (!isIcal()) {
+                      <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
+                    }
+                  </mat-card-content>
+                </mat-card>
+
+                @if (!isIcal()) {
+                  <mat-card class="kpi-card" [class.margin-positive]="qontoData() !== null && marge >= 0"
+                                             [class.margin-negative]="qontoData() !== null && marge < 0">
+                    <mat-card-content>
+                      <div class="kpi-label">{{ 'stats.margin' | translate }}</div>
+                      @if (qontoData()) {
+                        <div class="kpi-value" [class.value-positive]="marge >= 0" [class.value-negative]="marge < 0">
+                          {{ marge | number:'1.2-2' }} €
+                        </div>
+                        <div class="kpi-sub">
+                          {{ 'stats.expenses' | translate }} {{ qontoExpensesTotal | number:'1.2-2' }} €
+                          @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
+                          @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
+                          @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
+                          @if (manualRevenuesTotal > 0) { + {{ 'stats.manual_revenues' | translate }} {{ manualRevenuesTotal | number:'1.2-2' }} € }
+                          @if (data()!.caTotal > 0 || manualRevenuesTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
+                        </div>
+                      } @else {
+                        <div class="kpi-value kpi-na">—</div>
+                        <div class="kpi-sub">{{ 'stats.no_qonto' | translate }}</div>
+                      }
+                    </mat-card-content>
+                  </mat-card>
                 }
               </div>
-            </mat-card-content>
-          </mat-card>
-        } @else {
-          <div class="empty">{{ 'stats.no_data' | translate }}</div>
-        }
 
-        @if (qontoData() && propertyMargins().length > 0) {
-          <mat-card class="prop-card">
-            <mat-card-header>
-              <mat-card-title>{{ 'stats.margin_by_property' | translate }}</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="margin-list">
-                @for (pm of propertyMargins(); track pm.propId) {
-                  <div class="margin-item">
-                    <div class="margin-row">
-                      <div class="margin-name">{{ pm.propertyName }}</div>
-                      <div class="margin-ca">{{ pm.ca | number:'1.0-0' }} €</div>
-                      <div class="margin-exp">− {{ pm.expenses | number:'1.0-0' }} €</div>
-                      <div class="margin-val" [class.value-positive]="pm.margin >= 0" [class.value-negative]="pm.margin < 0">
-                        = {{ pm.margin | number:'1.0-0' }} € <span class="margin-pct">({{ propMarginRate(pm) }})</span>
-                      </div>
+              @if (data()!.byProperty.length > 0) {
+                <mat-card class="prop-card">
+                  <mat-card-header>
+                    <mat-card-title>{{ 'stats.by_property' | translate }}</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="prop-list">
+                      @for (p of data()!.byProperty; track p.propertyName) {
+                        <div class="prop-row">
+                          <div class="prop-name">{{ p.propertyName }}</div>
+                          <div class="prop-bar-wrap">
+                            <div class="prop-bar" [style.width]="barWidth(p.ca) + '%'"></div>
+                          </div>
+                          <div class="prop-nights">{{ p.nights }} {{ 'stats.nights_unit' | translate }}</div>
+                          @if (!isIcal()) {
+                            <div class="prop-ca">{{ p.ca | number:'1.2-2' }} €</div>
+                          }
+                        </div>
+                      }
                     </div>
-                    @if (pm.expenses > 0) {
-                      <div class="margin-detail">
-                        @if (pm.qontoExpenses > 0) { <span>Qonto {{ pm.qontoExpenses | number:'1.0-0' }} €</span> }
-                        @if (pm.hkExpenses > 0) { <span>{{ 'stats.hk_costs' | translate }} {{ pm.hkExpenses | number:'1.0-0' }} €</span> }
-                        @if (pm.commission > 0) { <span>{{ 'stats.commission' | translate }} {{ pm.commission | number:'1.0-0' }} €</span> }
-                        @if (pm.manualExpenses > 0) { <span>{{ 'stats.manual_expenses' | translate }} {{ pm.manualExpenses | number:'1.0-0' }} €</span> }
-                        @if (pm.manualRevenues > 0) { <span class="value-positive">+ {{ 'stats.manual_revenues' | translate }} {{ pm.manualRevenues | number:'1.0-0' }} €</span> }
-                      </div>
-                    }
+                    <mat-divider class="divider" />
+                    <div class="prop-row total-row">
+                      <div class="prop-name"><strong>Total</strong></div>
+                      <div class="prop-bar-wrap"></div>
+                      <div class="prop-nights"><strong>{{ data()!.nights }}</strong></div>
+                      @if (!isIcal()) {
+                        <div class="prop-ca"><strong>{{ data()!.caTotal | number:'1.2-2' }} €</strong></div>
+                      }
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              } @else {
+                <div class="empty">{{ 'stats.no_data' | translate }}</div>
+              }
+
+              @if (qontoData() && propertyMargins().length > 0) {
+                <mat-card class="prop-card">
+                  <mat-card-header>
+                    <mat-card-title>{{ 'stats.margin_by_property' | translate }}</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="margin-list">
+                      @for (pm of propertyMargins(); track pm.propId) {
+                        <div class="margin-item">
+                          <div class="margin-row">
+                            <div class="margin-name">{{ pm.propertyName }}</div>
+                            <div class="margin-ca">{{ pm.ca | number:'1.0-0' }} €</div>
+                            <div class="margin-exp">− {{ pm.expenses | number:'1.0-0' }} €</div>
+                            <div class="margin-val" [class.value-positive]="pm.margin >= 0" [class.value-negative]="pm.margin < 0">
+                              = {{ pm.margin | number:'1.0-0' }} € <span class="margin-pct">({{ propMarginRate(pm) }})</span>
+                            </div>
+                          </div>
+                          @if (pm.expenses > 0) {
+                            <div class="margin-detail">
+                              @if (pm.qontoExpenses > 0) { <span>Qonto {{ pm.qontoExpenses | number:'1.0-0' }} €</span> }
+                              @if (pm.hkExpenses > 0) { <span>{{ 'stats.hk_costs' | translate }} {{ pm.hkExpenses | number:'1.0-0' }} €</span> }
+                              @if (pm.commission > 0) { <span>{{ 'stats.commission' | translate }} {{ pm.commission | number:'1.0-0' }} €</span> }
+                              @if (pm.manualExpenses > 0) { <span>{{ 'stats.manual_expenses' | translate }} {{ pm.manualExpenses | number:'1.0-0' }} €</span> }
+                              @if (pm.manualRevenues > 0) { <span class="value-positive">+ {{ 'stats.manual_revenues' | translate }} {{ pm.manualRevenues | number:'1.0-0' }} €</span> }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                    <div class="margin-note">{{ 'stats.margin_note' | translate }}</div>
+                  </mat-card-content>
+                </mat-card>
+              }
+            }
+          </div>
+        </mat-tab>
+
+        <mat-tab [label]="'expenses.manual_revenues' | translate">
+          <div class="tab-content">
+            <p class="rv-hint">{{ 'expenses.manual_revenues_hint' | translate }}</p>
+
+            <div class="rv-header">
+              <span></span>
+              <button mat-flat-button color="primary" (click)="openManualRevenueForm()">
+                <mat-icon>add</mat-icon> {{ 'expenses.new_manual_revenue' | translate }}
+              </button>
+            </div>
+
+            @if (showManualRevenueForm()) {
+              <mat-card class="rv-form-card">
+                <mat-card-header>
+                  <mat-card-title>{{ (editingManualRevenue()?.id ? 'expenses.edit_manual_revenue_title' : 'expenses.new_manual_revenue') | translate }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="rv-form">
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_revenue_label' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="manualRevenueForm.label" />
+                    </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>{{ 'expenses.manual_revenue_amount' | translate }}</mat-label>
+                      <input matInput type="number" step="0.01" [(ngModel)]="manualRevenueForm.amount" />
+                    </mat-form-field>
+                    <mat-form-field class="rv-form-full">
+                      <mat-label>{{ 'expenses.rule_property' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="manualRevenueForm.beds24PropertyId">
+                        <mat-option value="">{{ 'expenses.rule_property_none' | translate }}</mat-option>
+                        @for (p of properties(); track p.id) {
+                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-hint>{{ 'expenses.manual_revenue_property_hint' | translate }}</mat-hint>
+                    </mat-form-field>
+                    <mat-checkbox [(ngModel)]="manualRevenueForm.recurring">
+                      {{ 'expenses.manual_revenue_recurring' | translate }}
+                    </mat-checkbox>
+                  </div>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-flat-button color="primary" (click)="saveManualRevenue()" [disabled]="savingManualRevenue()">
+                    @if (savingManualRevenue()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
+                  </button>
+                  <button mat-stroked-button (click)="cancelManualRevenueForm()" style="margin-left:8px">{{ 'common.cancel' | translate }}</button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            @if (manualRevenues().length === 0) {
+              <div class="empty">{{ 'expenses.no_manual_revenues' | translate }}</div>
+            } @else {
+              <div class="rv-list">
+                @for (revenue of manualRevenues(); track revenue.id) {
+                  <div class="rv-row">
+                    <div class="rv-info">
+                      <strong>{{ revenue.label }}</strong>
+                      @if (revenue.beds24PropertyId) {
+                        <span class="rv-prop-chip">{{ propertyName(revenue.beds24PropertyId) }}</span>
+                      }
+                      @if (revenue.recurring) {
+                        <span class="rv-recur-chip">{{ 'expenses.recurring_badge' | translate }}</span>
+                      }
+                    </div>
+                    <div class="rv-amount">{{ revenue.amount | number:'1.2-2' }} €</div>
+                    <div class="rv-actions">
+                      <button mat-icon-button (click)="editManualRevenue(revenue)" [matTooltip]="'common.edit' | translate">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteManualRevenue(revenue)" [matTooltip]="'common.delete' | translate">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
                   </div>
                 }
+                <div class="rv-row rv-total-row">
+                  <div class="rv-info"><strong>{{ 'expenses.manual_revenues_total' | translate }}</strong></div>
+                  <div class="rv-amount"><strong>{{ manualRevenuesTotal | number:'1.2-2' }} €</strong></div>
+                  <div class="rv-actions"></div>
+                </div>
               </div>
-              <div class="margin-note">{{ 'stats.margin_note' | translate }}</div>
-            </mat-card-content>
-          </mat-card>
-        }
-      }
+            }
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
     </div>
   `,
   styles: [`
@@ -286,6 +388,25 @@ interface HousekeepingCosts {
     .margin-detail { display: flex; gap: 12px; flex-wrap: wrap; padding-left: 168px; font-size: 11px; color: #999; }
     .margin-note { font-size: 11px; color: #aaa; margin-top: 12px; font-style: italic; }
 
+    .tab-content { padding: 20px 0; }
+
+    /* Revenus manuels tab */
+    .rv-hint { margin: 0 0 16px; font-size: 13px; color: #666; max-width: 600px; }
+    .rv-header { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+    .rv-form-card { margin-bottom: 20px; max-width: 700px; }
+    .rv-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+    .rv-form mat-form-field { width: 200px; }
+    .rv-form-full { width: 100% !important; }
+    .rv-list { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; max-width: 700px; }
+    .rv-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; background: white; }
+    .rv-row:last-child { border-bottom: none; }
+    .rv-total-row { background: #fafafa; }
+    .rv-info { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+    .rv-amount { width: 100px; text-align: right; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .rv-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .rv-prop-chip { background: #e3f2fd; color: #1565c0; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+    .rv-recur-chip { background: #f3e5f5; color: #7b1fa2; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+
     @media (max-width: 600px) {
       .page { padding: 16px; }
       .kpis { flex-direction: column; }
@@ -306,6 +427,12 @@ export class StatsComponent implements OnInit {
   loading        = signal(false);
   error          = signal('');
 
+  properties            = signal<{ id: string; name: string }[]>([]);
+  showManualRevenueForm = signal(false);
+  editingManualRevenue  = signal<ManualRevenue | null>(null);
+  savingManualRevenue   = signal(false);
+  manualRevenueForm     = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
+
   selectedYear  = new Date().getFullYear();
   selectedMonth = new Date().getMonth() + 1;
 
@@ -317,6 +444,8 @@ export class StatsComponent implements OnInit {
     private t: TranslateService,
     private manualExpenseService: ManualExpenseService,
     private manualRevenueService: ManualRevenueService,
+    private bookingService: BookingService,
+    private snack: MatSnackBar,
     private auth: AuthService
   ) {}
 
@@ -325,6 +454,7 @@ export class StatsComponent implements OnInit {
   ngOnInit(): void {
     this.buildMonths();
     this.load();
+    this.loadProperties();
   }
 
   private buildMonths(): void {
@@ -483,5 +613,76 @@ export class StatsComponent implements OnInit {
     const d = this.data();
     if (!d || d.caTotal === 0) return 0;
     return (ca / d.caTotal) * 100;
+  }
+
+  private loadProperties(): void {
+    this.bookingService.getPropertiesWithDisplayNames().subscribe(props => {
+      this.properties.set((props ?? []).map((p: Record<string, unknown>) => ({
+        id: String(p['id'] ?? p['propId'] ?? ''),
+        name: String(p['name'] || '')
+      })).filter((p: { id: string; name: string }) => p.id));
+    });
+  }
+
+  propertyName(propId: string): string {
+    return this.properties().find(p => p.id === propId)?.name || propId;
+  }
+
+  openManualRevenueForm(): void {
+    this.editingManualRevenue.set(null);
+    this.manualRevenueForm = { label: '', amount: 0, beds24PropertyId: '', recurring: false };
+    this.showManualRevenueForm.set(true);
+  }
+
+  editManualRevenue(revenue: ManualRevenue): void {
+    this.editingManualRevenue.set(revenue);
+    this.manualRevenueForm = {
+      label: revenue.label,
+      amount: revenue.amount,
+      beds24PropertyId: revenue.beds24PropertyId || '',
+      recurring: revenue.recurring
+    };
+    this.showManualRevenueForm.set(true);
+  }
+
+  cancelManualRevenueForm(): void {
+    this.showManualRevenueForm.set(false);
+    this.editingManualRevenue.set(null);
+  }
+
+  saveManualRevenue(): void {
+    if (!this.manualRevenueForm.label.trim() || !this.manualRevenueForm.amount) return;
+    this.savingManualRevenue.set(true);
+    const editing = this.editingManualRevenue();
+    const payload = {
+      label: this.manualRevenueForm.label.trim(),
+      amount: this.manualRevenueForm.amount,
+      beds24PropertyId: this.manualRevenueForm.beds24PropertyId || undefined,
+      year: this.selectedYear,
+      month: this.selectedMonth,
+      recurring: this.manualRevenueForm.recurring
+    };
+    const req = editing
+      ? this.manualRevenueService.update(editing.id, payload)
+      : this.manualRevenueService.create(payload);
+    req.subscribe({
+      next: () => {
+        this.savingManualRevenue.set(false);
+        this.showManualRevenueForm.set(false);
+        this.manualRevenueService.list(this.selectedYear, this.selectedMonth)
+          .pipe(catchError(() => of([])))
+          .subscribe(r => this.manualRevenues.set(r));
+        this.snack.open(this.t.instant('expenses.manual_revenue_saved'), '', { duration: 2000 });
+      },
+      error: () => this.savingManualRevenue.set(false)
+    });
+  }
+
+  deleteManualRevenue(revenue: ManualRevenue): void {
+    if (!confirm(this.t.instant('expenses.delete_manual_revenue_confirm') + ' "' + revenue.label + '" ?')) return;
+    this.manualRevenueService.delete(revenue.id).subscribe(() => {
+      this.manualRevenues.set(this.manualRevenues().filter(r => r.id !== revenue.id));
+      this.snack.open(this.t.instant('expenses.manual_revenue_deleted'), '', { duration: 2000 });
+    });
   }
 }
