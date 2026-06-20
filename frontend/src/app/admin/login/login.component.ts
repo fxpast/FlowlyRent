@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -83,7 +83,7 @@ import { LangSwitcherComponent } from '../../core/components/lang-switcher.compo
     @media (max-width: 480px) { .back-label { display: none; } }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   username = '';
   password = '';
   loading = signal(false);
@@ -100,6 +100,13 @@ export class LoginComponent {
     private route: ActivatedRoute,
     private t: TranslateService
   ) {}
+
+  ngOnInit(): void {
+    if (!this.auth.isLoggedIn()) return;
+    if (this.auth.isAdmin()) { this.router.navigate(['/superadmin/dashboard']); return; }
+    if (this.auth.isHousekeeper()) { this.router.navigate(['/housekeeper/tasks']); return; }
+    this.redirectOwner();
+  }
 
   onSubmit(): void {
     if (!this.username || !this.password) return;
