@@ -656,7 +656,17 @@
     "beds24_owner_id_hint": "Find your ownerid in Beds24 → Account",
     "listings_slug": "Page name (all properties)",
     "listings_slug_hint": "E.g.: listings, properties, reservations",
-    "listings_url": "URL — all properties"
+    "listings_url": "URL — all properties",
+    "mode_title": "Management mode",
+    "mode_subtitle": "Switch between iCal mode and the Beds24 channel manager",
+    "mode_ical": "iCal",
+    "mode_beds24": "Channel manager (Beds24)",
+    "mode_current": "Current mode:",
+    "mode_no_data_loss": "No data is deleted when switching modes.",
+    "mode_switch_to_beds24": "Switch to Beds24 mode",
+    "mode_switch_to_ical": "Switch to iCal mode",
+    "mode_switched": "Mode changed, redirecting…",
+    "mode_switch_error": "Error while changing mode"
   },
   "stats": {
     "title": "Revenue",

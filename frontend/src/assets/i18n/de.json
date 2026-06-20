@@ -656,7 +656,17 @@
     "beds24_owner_id_hint": "Ihre ownerid finden Sie in Beds24 → Account",
     "listings_slug": "Seitenname (alle Unterkünfte)",
     "listings_slug_hint": "Z.B.: inserate, unterkuenfte, buchungen",
-    "listings_url": "URL — alle Unterkünfte"
+    "listings_url": "URL — alle Unterkünfte",
+    "mode_title": "Verwaltungsmodus",
+    "mode_subtitle": "Wechseln Sie zwischen iCal-Modus und Beds24 Channel Manager",
+    "mode_ical": "iCal",
+    "mode_beds24": "Channel Manager (Beds24)",
+    "mode_current": "Aktueller Modus:",
+    "mode_no_data_loss": "Beim Wechsel des Modus werden keine Daten gelöscht.",
+    "mode_switch_to_beds24": "Zum Beds24-Modus wechseln",
+    "mode_switch_to_ical": "Zum iCal-Modus wechseln",
+    "mode_switched": "Modus geändert, Weiterleitung…",
+    "mode_switch_error": "Fehler beim Moduswechsel"
   },
   "stats": {
     "title": "Einnahmen",

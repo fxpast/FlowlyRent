@@ -656,7 +656,17 @@
     "beds24_owner_id_hint": "Trova il tuo ownerid in Beds24 → Account",
     "listings_slug": "Nome pagina (tutti gli alloggi)",
     "listings_slug_hint": "Es.: annunci, alloggi, prenotazioni",
-    "listings_url": "URL — tutti gli alloggi"
+    "listings_url": "URL — tutti gli alloggi",
+    "mode_title": "Modalità di gestione",
+    "mode_subtitle": "Passa dalla modalità iCal al channel manager Beds24",
+    "mode_ical": "iCal",
+    "mode_beds24": "Channel manager (Beds24)",
+    "mode_current": "Modalità attuale:",
+    "mode_no_data_loss": "Nessun dato viene eliminato durante il cambio di modalità.",
+    "mode_switch_to_beds24": "Passa alla modalità Beds24",
+    "mode_switch_to_ical": "Passa alla modalità iCal",
+    "mode_switched": "Modalità cambiata, reindirizzamento…",
+    "mode_switch_error": "Errore durante il cambio di modalità"
   },
   "stats": {
     "title": "Ricavi",

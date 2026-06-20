@@ -12,8 +12,10 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UserService, UserProfile, Beds24Status } from '../../core/services/user.service';
 import { QontoService, QontoStatus } from '../../core/services/qonto.service';
 import { MinStayService, MinStayStrategy } from '../../core/services/min-stay.service';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../core/services/auth.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -441,6 +443,47 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
       </mat-card-actions>
     </mat-card>
 
+    <!-- Mode de gestion -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>swap_horiz</mat-icon>
+        <mat-card-title>{{ 'settings.mode_title' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'settings.mode_subtitle' | translate }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="mode-row">
+          <div class="mode-chip" [class.mode-active]="currentChannelType() === 'ICAL'">
+            <mat-icon>rss_feed</mat-icon>
+            <span>{{ 'settings.mode_ical' | translate }}</span>
+          </div>
+          <mat-icon class="mode-arrow">arrow_forward</mat-icon>
+          <div class="mode-chip" [class.mode-active]="currentChannelType() === 'BEDS24'">
+            <mat-icon>sync</mat-icon>
+            <span>{{ 'settings.mode_beds24' | translate }}</span>
+          </div>
+        </div>
+        <p class="mode-current">
+          {{ 'settings.mode_current' | translate }}
+          <strong>{{ currentChannelType() === 'ICAL' ? ('settings.mode_ical' | translate) : ('settings.mode_beds24' | translate) }}</strong>
+        </p>
+        <p class="mode-hint">{{ 'settings.mode_no_data_loss' | translate }}</p>
+        @if (switchModeMsg()) {
+          <p class="msg" [class.error]="switchModeError()">{{ switchModeMsg() }}</p>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        @if (currentChannelType() === 'ICAL') {
+          <button mat-flat-button color="primary" (click)="switchMode('BEDS24')" [disabled]="switchingMode()">
+            @if (switchingMode()) { <mat-spinner diameter="18" /> } @else { {{ 'settings.mode_switch_to_beds24' | translate }} }
+          </button>
+        } @else {
+          <button mat-flat-button color="accent" (click)="switchMode('ICAL')" [disabled]="switchingMode()">
+            @if (switchingMode()) { <mat-spinner diameter="18" /> } @else { {{ 'settings.mode_switch_to_ical' | translate }} }
+          </button>
+        }
+      </mat-card-actions>
+    </mat-card>
+
   `,
   styles: [`
     h2 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
@@ -481,6 +524,13 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .beds24-banner-text span { font-size: 13px; color: #1565c0; }
     .beds24-banner-arrow { color: #1976d2; font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
     .beds24-highlight { border: 2px solid #1976d2 !important; box-shadow: 0 0 0 4px rgba(25,118,210,0.1); }
+    .mode-row { display: flex; align-items: center; gap: 12px; margin: 12px 0 8px; }
+    .mode-chip { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; border: 2px solid #e0e0e0; font-size: 14px; color: #666; }
+    .mode-chip.mode-active { border-color: #1976d2; color: #1976d2; background: #e3f2fd; font-weight: 600; }
+    .mode-chip.mode-active mat-icon { color: #1976d2; }
+    .mode-arrow { color: #999; }
+    .mode-current { font-size: 14px; color: #555; margin: 8px 0 4px; }
+    .mode-hint { font-size: 13px; color: #888; margin: 0 0 8px; }
   `]
 })
 export class SettingsComponent implements OnInit {
@@ -522,14 +572,53 @@ export class SettingsComponent implements OnInit {
   pwdError = signal(false);
   showPwd = signal(false);
 
+  switchingMode = signal(false);
+  switchModeMsg = signal('');
+  switchModeError = signal(false);
+
   constructor(
     private userService: UserService,
     private qontoService: QontoService,
     private minStayService: MinStayService,
     private route: ActivatedRoute,
+    private router: Router,
+    private http: HttpClient,
+    private auth: AuthService,
     private snackBar: MatSnackBar,
     private t: TranslateService
   ) {}
+
+  currentChannelType(): string {
+    return this.auth.getChannelType() ?? 'BEDS24';
+  }
+
+  switchMode(target: string): void {
+    if (this.switchingMode()) return;
+    this.switchingMode.set(true);
+    this.switchModeMsg.set('');
+    this.http.post('/api/user/channel', { channelType: target }).subscribe({
+      next: () => {
+        const stored = localStorage.getItem('flr_user');
+        if (stored) {
+          try {
+            const u = JSON.parse(stored);
+            u.channelType = target;
+            localStorage.setItem('flr_user', JSON.stringify(u));
+          } catch { /* ignore */ }
+        }
+        this.switchingMode.set(false);
+        this.switchModeMsg.set(this.t.instant('settings.mode_switched'));
+        this.switchModeError.set(false);
+        const dest = target === 'ICAL' ? '/admin/properties' : '/admin/dashboard';
+        setTimeout(() => this.router.navigate([dest]), 1200);
+      },
+      error: () => {
+        this.switchingMode.set(false);
+        this.switchModeMsg.set(this.t.instant('settings.mode_switch_error'));
+        this.switchModeError.set(true);
+      }
+    });
+  }
 
   listingsUrl(): string {
     const slug = this.profileEdit.publicSiteSlug;
