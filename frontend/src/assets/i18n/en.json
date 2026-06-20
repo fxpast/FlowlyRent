@@ -688,7 +688,8 @@
     "margin_note": "* Qonto expenses assigned to this property + cleaning/maintenance costs + platform commission + manual expenses",
     "hk_costs": "cleaning/maintenance",
     "commission": "platform commission",
-    "manual_expenses": "manual expenses"
+    "manual_expenses": "manual expenses",
+    "ical_no_revenue": "iCal mode — revenue is not available (no prices in iCal feeds). Only nights and occupancy rate are calculated."
   },
   "reports": {
     "title": "Reports",

@@ -688,7 +688,8 @@
     "margin_note": "* Spese Qonto assegnate a questo alloggio + spese di pulizia/manutenzione + commissione piattaforma + spese manuali",
     "hk_costs": "pulizia/manutenzione",
     "commission": "commissione piattaforma",
-    "manual_expenses": "spese manuali"
+    "manual_expenses": "spese manuali",
+    "ical_no_revenue": "Modalità iCal — i ricavi non sono disponibili (nessun prezzo nei feed iCal). Vengono calcolate solo le notti e il tasso di occupazione."
   },
   "reports": {
     "title": "Report",

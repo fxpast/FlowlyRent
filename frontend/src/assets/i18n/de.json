@@ -688,7 +688,8 @@
     "margin_note": "* Qonto-Ausgaben dieser Unterkunft + Reinigungs-/Wartungskosten + Plattformgebühr + manuelle Ausgaben",
     "hk_costs": "Reinigung/Wartung",
     "commission": "Plattformgebühr",
-    "manual_expenses": "manuelle Ausgaben"
+    "manual_expenses": "manuelle Ausgaben",
+    "ical_no_revenue": "iCal-Modus — Umsätze nicht verfügbar (keine Preise in iCal-Feeds). Nur Nächte und Auslastung werden berechnet."
   },
   "reports": {
     "title": "Berichte",

@@ -13,6 +13,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ManualExpenseService, ManualExpense } from '../../core/services/manual-expense.service';
+import { AuthService } from '../../core/services/auth.service';
 
 interface RevenueData {
   year: number;
@@ -98,16 +99,24 @@ interface HousekeepingCosts {
           </mat-card-content>
         </mat-card>
       } @else if (data()) {
+        @if (isIcal()) {
+          <div class="ical-banner">
+            <mat-icon>info</mat-icon>
+            <span>{{ 'stats.ical_no_revenue' | translate }}</span>
+          </div>
+        }
         <div class="kpis">
-          <mat-card class="kpi-card primary">
-            <mat-card-content>
-              <div class="kpi-label">{{ 'stats.ca_total' | translate }}</div>
-              <div class="kpi-value">{{ data()!.caTotal | number:'1.2-2' }} €</div>
-              <div class="kpi-sub">{{ data()!.monthLabel }} {{ data()!.year }}</div>
-            </mat-card-content>
-          </mat-card>
+          @if (!isIcal()) {
+            <mat-card class="kpi-card primary">
+              <mat-card-content>
+                <div class="kpi-label">{{ 'stats.ca_total' | translate }}</div>
+                <div class="kpi-value">{{ data()!.caTotal | number:'1.2-2' }} €</div>
+                <div class="kpi-sub">{{ data()!.monthLabel }} {{ data()!.year }}</div>
+              </mat-card-content>
+            </mat-card>
+          }
 
-          <mat-card class="kpi-card">
+          <mat-card class="kpi-card" [class.primary]="isIcal()">
             <mat-card-content>
               <div class="kpi-label">{{ 'stats.nights_sold' | translate }}</div>
               <div class="kpi-value">{{ data()!.nights }}</div>
@@ -119,31 +128,35 @@ interface HousekeepingCosts {
             <mat-card-content>
               <div class="kpi-label">{{ 'stats.occupancy' | translate }}</div>
               <div class="kpi-value">{{ data()!.occupancyRate }} %</div>
-              <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
-            </mat-card-content>
-          </mat-card>
-
-          <mat-card class="kpi-card" [class.margin-positive]="qontoData() !== null && marge >= 0"
-                                     [class.margin-negative]="qontoData() !== null && marge < 0">
-            <mat-card-content>
-              <div class="kpi-label">{{ 'stats.margin' | translate }}</div>
-              @if (qontoData()) {
-                <div class="kpi-value" [class.value-positive]="marge >= 0" [class.value-negative]="marge < 0">
-                  {{ marge | number:'1.2-2' }} €
-                </div>
-                <div class="kpi-sub">
-                  {{ 'stats.expenses' | translate }} {{ qontoExpensesTotal | number:'1.2-2' }} €
-                  @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
-                  @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
-                  @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
-                  @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
-                </div>
-              } @else {
-                <div class="kpi-value kpi-na">—</div>
-                <div class="kpi-sub">{{ 'stats.no_qonto' | translate }}</div>
+              @if (!isIcal()) {
+                <div class="kpi-sub">{{ 'stats.avg_per_night' | translate }} {{ avgPerNight() | number:'1.2-2' }} €</div>
               }
             </mat-card-content>
           </mat-card>
+
+          @if (!isIcal()) {
+            <mat-card class="kpi-card" [class.margin-positive]="qontoData() !== null && marge >= 0"
+                                       [class.margin-negative]="qontoData() !== null && marge < 0">
+              <mat-card-content>
+                <div class="kpi-label">{{ 'stats.margin' | translate }}</div>
+                @if (qontoData()) {
+                  <div class="kpi-value" [class.value-positive]="marge >= 0" [class.value-negative]="marge < 0">
+                    {{ marge | number:'1.2-2' }} €
+                  </div>
+                  <div class="kpi-sub">
+                    {{ 'stats.expenses' | translate }} {{ qontoExpensesTotal | number:'1.2-2' }} €
+                    @if (hkCostsTotal > 0) { + {{ 'stats.hk_costs' | translate }} {{ hkCostsTotal | number:'1.2-2' }} € }
+                    @if (commissionTotal > 0) { + {{ 'stats.commission' | translate }} {{ commissionTotal | number:'1.2-2' }} € }
+                    @if (manualExpensesTotal > 0) { + {{ 'stats.manual_expenses' | translate }} {{ manualExpensesTotal | number:'1.2-2' }} € }
+                    @if (data()!.caTotal > 0) { · {{ margeRate | number:'1.0-0' }}% }
+                  </div>
+                } @else {
+                  <div class="kpi-value kpi-na">—</div>
+                  <div class="kpi-sub">{{ 'stats.no_qonto' | translate }}</div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
         </div>
 
         @if (data()!.byProperty.length > 0) {
@@ -160,7 +173,9 @@ interface HousekeepingCosts {
                       <div class="prop-bar" [style.width]="barWidth(p.ca) + '%'"></div>
                     </div>
                     <div class="prop-nights">{{ p.nights }} {{ 'stats.nights_unit' | translate }}</div>
-                    <div class="prop-ca">{{ p.ca | number:'1.2-2' }} €</div>
+                    @if (!isIcal()) {
+                      <div class="prop-ca">{{ p.ca | number:'1.2-2' }} €</div>
+                    }
                   </div>
                 }
               </div>
@@ -169,7 +184,9 @@ interface HousekeepingCosts {
                 <div class="prop-name"><strong>Total</strong></div>
                 <div class="prop-bar-wrap"></div>
                 <div class="prop-nights"><strong>{{ data()!.nights }}</strong></div>
-                <div class="prop-ca"><strong>{{ data()!.caTotal | number:'1.2-2' }} €</strong></div>
+                @if (!isIcal()) {
+                  <div class="prop-ca"><strong>{{ data()!.caTotal | number:'1.2-2' }} €</strong></div>
+                }
               </div>
             </mat-card-content>
           </mat-card>
@@ -250,6 +267,8 @@ interface HousekeepingCosts {
     .divider { margin: 12px 0 8px; }
     .total-row { margin-top: 4px; }
 
+    .ical-banner { display: flex; align-items: center; gap: 10px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; font-size: 13px; color: #795548; }
+    .ical-banner mat-icon { color: #f9a825; font-size: 20px; height: 20px; width: 20px; flex-shrink: 0; }
     .empty { text-align: center; color: #999; padding: 48px 0; font-size: 15px; }
 
     .margin-list { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
@@ -291,8 +310,11 @@ export class StatsComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private t: TranslateService,
-    private manualExpenseService: ManualExpenseService
+    private manualExpenseService: ManualExpenseService,
+    private auth: AuthService
   ) {}
+
+  isIcal(): boolean { return this.auth.isIcal(); }
 
   ngOnInit(): void {
     this.buildMonths();

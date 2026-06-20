@@ -688,7 +688,8 @@
     "margin_note": "* Dépenses Qonto affectées à ce logement + frais de ménage/dépannage + commission plateforme + charges manuelles",
     "hk_costs": "ménage/dépannage",
     "commission": "commission plateforme",
-    "manual_expenses": "charges manuelles"
+    "manual_expenses": "charges manuelles",
+    "ical_no_revenue": "Mode iCal — le chiffre d'affaires n'est pas disponible (aucun prix dans les flux iCal). Seules les nuits et le taux d'occupation sont calculés."
   },
   "reports": {
     "title": "Rapports",
