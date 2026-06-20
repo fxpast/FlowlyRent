@@ -196,12 +196,26 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Sync iCal au login** : `AuthController` déclenche `IcalSyncService.syncUser(userId)` en arrière-plan (`CompletableFuture.runAsync`) à chaque connexion en mode iCal
 - **Sync bundles au login** : `PropertyBundleService.syncAllBundlesForUser(userId)` déclenché de même à chaque connexion en mode Beds24 si des bundles actifs existent
 
+### Séparation des entités iCal / Channel Manager
+
+| Entité / Table | Mode | Rôle |
+|---|---|---|
+| `LocalProperty` (`local_properties`) | iCal uniquement | Logements créés manuellement par l'hôte en mode iCal |
+| `PropertyConfig` avec `localPropertyId = null` | Channel (Beds24) | Config Beds24 : shortName, code d'accès, frais ménage… |
+| `PropertyConfig` avec `localPropertyId ≠ null` | iCal (pont) | Pendant d'un `LocalProperty` — permet aux modules (entretien, linge, boîte à clé) de fonctionner en mode iCal |
+
+- **`PropertyConfig.localPropertyId`** : `null` = config Beds24 classique ; `non null` = pont iCal (FK → `local_properties.id`)
+- **`GET /admin/property-configs`** : retourne uniquement les configs du mode actif (`channelType == ICAL` → `localPropertyId IS NOT NULL`, sinon → `localPropertyId IS NULL`)
+- **Migration `@PostConstruct`** dans `AdminLocalPropertyController` : backfill `localPropertyId` sur les configs iCal existantes
+- **`GET /admin/stats/revenue`** (mode iCal) : nuits + taux d'occupation depuis `IcalBooking` — sans appel Beds24 ; KPIs CA et Marge masqués dans le frontend
+
 ### Revenus — KPIs Qonto
 - La page Revenus (`/admin/stats`) charge en parallèle le CA Beds24 ET le summary Qonto du même mois
 - **Marge bénéficiaire** (KPI) : `caTotal - totalDebits Qonto` — vert/rouge selon signe
 - **Marge par logement** : triée par taux de marge décroissant (% = marge / CA), pas par montant absolu
 - `caMonthly()` retourne maintenant `propId` dans chaque entrée `byProperty`
 - `fetchSummary()` retourne `byProperty` : map `beds24PropertyId → total débits`
+- **Mode iCal** : bannière d'info + seules nuits/occupation affichées (pas de CA ni de marge)
 
 ### Boîtes à clé — Suppression automatique des orphelines
 - Quand un logement est dissocié de sa boîte à clé (`keyBoxId` vide dans `PUT /admin/property-configs/{id}`), si la boîte n'est plus associée à aucun autre logement (`repo.findByKeyBoxId().isEmpty()`), elle est supprimée automatiquement de la base

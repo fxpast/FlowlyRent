@@ -4,6 +4,7 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.KeyBox;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.KeyBoxRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,8 +33,11 @@ public class AdminPropertyConfigController {
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getAll() {
-        Long userId = securityUtils.getCurrentUserId();
-        List<Map<String, Object>> result = repo.findByUserId(userId).stream()
+        AppUser user = securityUtils.getCurrentUser();
+        List<PropertyConfig> configs = user.getChannelType() == ChannelType.ICAL
+                ? repo.findByUserIdAndLocalPropertyIdIsNotNull(user.getId())
+                : repo.findByUserIdAndLocalPropertyIdIsNull(user.getId());
+        List<Map<String, Object>> result = configs.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(result);

@@ -47,6 +47,15 @@ public class AdminLocalPropertyController {
                 src.setUrl(p.getIcalUrl());
                 icalSourceRepo.save(src);
             }
+            // Backfill localPropertyId sur les PropertyConfig iCal existants
+            propertyConfigRepo.findByUserIdAndBeds24PropertyId(
+                    p.getUser().getId(), p.getId().toString()
+            ).ifPresent(cfg -> {
+                if (cfg.getLocalPropertyId() == null) {
+                    cfg.setLocalPropertyId(p.getId());
+                    propertyConfigRepo.save(cfg);
+                }
+            });
         });
     }
 
@@ -72,7 +81,7 @@ public class AdminLocalPropertyController {
         LocalProperty saved = localPropertyRepo.save(prop);
         String savedId = saved.getId().toString();
 
-        // Auto-création PropertyConfig pour que les autres modules fonctionnent
+        // Auto-création PropertyConfig iCal (pont pour modules entretien/linge/boîte à clé)
         PropertyConfig cfg = propertyConfigRepo
                 .findByUserIdAndBeds24PropertyId(user.getId(), savedId)
                 .orElseGet(() -> {
@@ -84,6 +93,7 @@ public class AdminLocalPropertyController {
         if (cfg.getShortName() == null || cfg.getShortName().isBlank()) {
             cfg.setShortName(saved.getShortName());
         }
+        cfg.setLocalPropertyId(saved.getId());
         propertyConfigRepo.save(cfg);
 
         return ResponseEntity.ok(toMap(saved));

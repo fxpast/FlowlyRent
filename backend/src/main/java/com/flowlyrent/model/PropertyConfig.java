@@ -47,6 +47,11 @@ public class PropertyConfig {
 
     private Float discount28Nights;
 
+    /** Non null → ce PropertyConfig est le pendant iCal d'un LocalProperty (mode iCal).
+     *  Null  → PropertyConfig Beds24 classique (mode channel manager). */
+    @Column(name = "local_property_id")
+    private Long localPropertyId;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
