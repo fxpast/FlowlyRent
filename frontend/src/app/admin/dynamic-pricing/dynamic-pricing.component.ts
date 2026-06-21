@@ -465,7 +465,10 @@ export class DynamicPricingComponent implements OnInit {
 
   ngOnInit(): void {
     this.bookingService.getPropertiesWithDisplayNames().subscribe({
-      next: props => this.properties.set(props.map(p => ({ id: p.id, name: p.name }))),
+      next: (props: any[]) => this.properties.set(props.map(p => ({
+        id: String(p['id'] ?? p['propId'] ?? ''),
+        name: p.name ?? ''
+      }))),
       error: () => {}
     });
     this.loadZones();
@@ -480,18 +483,19 @@ export class DynamicPricingComponent implements OnInit {
     this.pricingSvc.listPropertyConfigs().subscribe({
       next: configs => {
         this.configMap.clear();
-        configs.forEach(c => this.configMap.set(c.beds24PropertyId, c));
+        configs.forEach(c => this.configMap.set(String(c.beds24PropertyId), c));
         this.configs.set(configs);
       },
-      error: (e) => console.error('[dynamic-pricing] loadConfigs error:', e?.error ?? e)
+      error: () => {}
     });
   }
 
   configFor(propId: string): PropertyPricingConfig {
-    if (!this.configMap.has(propId)) {
-      this.configMap.set(propId, { beds24PropertyId: propId, zoneId: null, marketMin: null, marketMax: null });
+    const key = String(propId);
+    if (!this.configMap.has(key)) {
+      this.configMap.set(key, { beds24PropertyId: key, zoneId: null, marketMin: null, marketMax: null });
     }
-    return this.configMap.get(propId)!;
+    return this.configMap.get(key)!;
   }
 
   onStartDateChange(d: Date | null): void {
@@ -587,11 +591,12 @@ export class DynamicPricingComponent implements OnInit {
   }
 
   saveConfig(propId: string): void {
-    const config = this.configFor(propId);
-    this.savingConfig.set(propId);
-    this.pricingSvc.savePropertyConfig({ ...config, beds24PropertyId: propId }).subscribe({
+    const key = String(propId);
+    const config = this.configFor(key);
+    this.savingConfig.set(key);
+    this.pricingSvc.savePropertyConfig({ ...config, beds24PropertyId: key }).subscribe({
       next: saved => {
-        this.configMap.set(propId, saved);
+        this.configMap.set(key, saved);
         this.savingConfig.set(null);
         this.snack.open(this.t.instant('common.saved'), '', { duration: 2000 });
       },
