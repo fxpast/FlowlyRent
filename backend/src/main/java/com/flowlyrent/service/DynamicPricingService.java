@@ -32,12 +32,13 @@ public class DynamicPricingService {
         String token = beds24.tokenFor(account);
 
         // 1. Historique 12 mois pour ce logement
+        // Pas de filtre status côté API — sensible à la casse et peu fiable en v2, on filtre en Java
         Map<String, String> histParams = new HashMap<>();
         histParams.put("arrivalFrom", start.minusYears(1).toString());
         histParams.put("arrivalTo", start.minusDays(1).toString());
-        histParams.put("status", "confirmed");
         List<Map<String, Object>> propBookings = beds24.getBookings(token, histParams).stream()
                 .filter(b -> propId.equals(str(b, "propId")))
+                .filter(b -> { String s = str(b, "status"); return s != null && (s.equalsIgnoreCase("confirmed") || s.equalsIgnoreCase("new")); })
                 .collect(Collectors.toList());
 
         // 2. Prix de base = moyenne prix/nuit sur le même mois ±1
@@ -119,25 +120,32 @@ public class DynamicPricingService {
         if (marketMin != null && suggestedMin < marketMin) suggestedMin = marketMin;
         if (marketMax != null && suggestedMax > marketMax) suggestedMax = marketMax;
 
-        // 7. Prix actuel depuis le calendrier Beds24
+        // 7. Prix moyen/nuit des réservations sur la période analysée (même logique que menu Revenus)
         Double currentPrice = null;
         try {
-            Map<String, String> calParams = new HashMap<>();
-            calParams.put("startDate", startDate);
-            calParams.put("endDate", startDate);
-            List<Map<String, Object>> calData = beds24.getCalendar(token, calParams);
-            for (Map<String, Object> room : calData) {
-                if (propId.equals(str(room, "propertyId"))) {
-                    List<Map<String, Object>> cal = (List<Map<String, Object>>) room.get("calendar");
-                    if (cal != null && !cal.isEmpty()) {
-                        Object p1 = cal.get(0).get("price1");
-                        if (p1 != null) currentPrice = Double.parseDouble(p1.toString());
-                    }
-                    break;
-                }
+            Map<String, String> curParams = new HashMap<>();
+            curParams.put("arrivalTo", endDate);
+            curParams.put("departureFrom", startDate);
+            List<Double> periodPrices = new ArrayList<>();
+            for (Map<String, Object> b : beds24.getBookings(token, curParams)) {
+                if (!propId.equals(str(b, "propId"))) continue;
+                String s = str(b, "status");
+                if (s == null || (!s.equalsIgnoreCase("confirmed") && !s.equalsIgnoreCase("new"))) continue;
+                Double price = dbl(b, "totalPrice");
+                if (price == null) price = dbl(b, "price");
+                if (price == null || price <= 0) continue;
+                String arr = str(b, "arrival");
+                String dep = str(b, "departure");
+                if (arr == null || dep == null) continue;
+                long nights = ChronoUnit.DAYS.between(LocalDate.parse(arr), LocalDate.parse(dep));
+                if (nights <= 0) continue;
+                periodPrices.add(price / nights);
+            }
+            if (!periodPrices.isEmpty()) {
+                currentPrice = periodPrices.stream().mapToDouble(Double::doubleValue).average().orElse(0);
             }
         } catch (Exception e) {
-            log.debug("Could not fetch current price from calendar: {}", e.getMessage());
+            log.debug("Could not fetch current period bookings: {}", e.getMessage());
         }
 
         // 8. Alerte
