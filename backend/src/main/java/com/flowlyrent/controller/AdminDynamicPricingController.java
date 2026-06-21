@@ -42,9 +42,15 @@ public class AdminDynamicPricingController {
     }
 
     @GetMapping("/property-configs")
-    public List<Map<String, Object>> getPropertyConfigs() {
-        Long userId = securityUtils.getCurrentUserId();
-        return propPricingRepo.findByUserId(userId).stream().map(this::toMap).collect(Collectors.toList());
+    public ResponseEntity<?> getPropertyConfigs() {
+        try {
+            Long userId = securityUtils.getCurrentUserId();
+            List<Map<String, Object>> result = propPricingRepo.findByUserId(userId).stream()
+                    .map(this::toMap).collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
+        }
     }
 
     @PostMapping("/property-configs")
