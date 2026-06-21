@@ -105,6 +105,7 @@ flutter build appbundle --release  # AAB Play Store (keystore dans android/key.p
 - **Retour de navigation** : `location.back()` plutôt que `router.navigate()`
 - **Templates messages** : `MessageTemplateService.apply(content, booking, accessCode?, checkinTime?, checkoutTime?, previousAccessCode?)`
 - **Arrow functions dans templates Angular** : ne jamais utiliser `=>` ou `<` / `>` inline dans `(click)=""` — créer une méthode dans le composant
+- **Champs date** : toujours utiliser `MatDatepicker` (`MatDatepickerModule` + `MatNativeDateModule`) plutôt que `<input type="date">` — pattern : `[matDatepicker]="picker"` + `(ngModelChange)="onXxxChange($event)"` pour convertir `Date → string` via `localDate()`, et `[min]="someDate"` avec une vraie `Date` (pas une string)
 - **Affichage notes multi-lignes** : `white-space: pre-wrap` + `cdkTextareaAutosize cdkAutosizeMinRows="5"`
 - **Validation formulaires** : aligner les contraintes Angular (`minlength`, `required`, `#ref="ngModel"`) sur les annotations Spring (`@Size`, `@NotBlank`) — évite de gérer le format `ProblemDetail` des erreurs de validation `@Valid`
 - **Erreurs HTTP silencieuses** : utiliser `catchError(() => of(null))` pour les endpoints optionnels (ex: booking-time-overrides, Qonto) — toujours ajouter un guard `if (!result) return;` après
