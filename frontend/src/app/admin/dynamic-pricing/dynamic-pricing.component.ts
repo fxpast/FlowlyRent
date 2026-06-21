@@ -483,7 +483,7 @@ export class DynamicPricingComponent implements OnInit {
         this.configMap.clear();
         configs.forEach(c => this.configMap.set(c.beds24PropertyId, c));
       },
-      error: () => {}
+      error: (e) => console.error('[dynamic-pricing] loadConfigs error:', e?.error ?? e)
     });
   }
 

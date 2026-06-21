@@ -7,6 +7,7 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PropertyPricingConfigRepository;
 import com.flowlyrent.service.DynamicPricingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/admin/dynamic-pricing")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminDynamicPricingController {
 
     private final DynamicPricingService pricingService;
@@ -50,6 +52,7 @@ public class AdminDynamicPricingController {
                     .map(this::toMap).collect(Collectors.toList());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("[property-configs GET] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
@@ -58,7 +61,8 @@ public class AdminDynamicPricingController {
     public ResponseEntity<?> savePropertyConfig(@RequestBody Map<String, Object> body) {
         try {
             Long userId = securityUtils.getCurrentUserId();
-            String propId = (String) body.get("beds24PropertyId");
+            Object propIdRaw = body.get("beds24PropertyId");
+            String propId = propIdRaw != null ? propIdRaw.toString() : null;
             if (propId == null || propId.isBlank()) return ResponseEntity.badRequest().build();
             PropertyPricingConfig config = propPricingRepo
                     .findByUserIdAndBeds24PropertyId(userId, propId)
@@ -78,6 +82,7 @@ public class AdminDynamicPricingController {
             PropertyPricingConfig saved = propPricingRepo.save(config);
             return ResponseEntity.ok(toMap(saved));
         } catch (Exception e) {
+            log.error("[property-configs POST] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
