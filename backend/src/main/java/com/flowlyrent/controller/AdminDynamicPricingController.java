@@ -80,6 +80,7 @@ public class AdminDynamicPricingController {
             Object mMax = body.get("marketMax");
             config.setMarketMax(mMax != null && !mMax.toString().isBlank() ? new BigDecimal(mMax.toString()) : null);
             PropertyPricingConfig saved = propPricingRepo.save(config);
+            log.debug("[property-configs POST] saved propId={} id={}", propId, saved.getId());
             return ResponseEntity.ok(toMap(saved));
         } catch (Exception e) {
             log.error("[property-configs POST] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
