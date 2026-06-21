@@ -34,7 +34,7 @@ public class DynamicPricingService {
         // 1. Historique 12 mois pour ce logement
         // Pas de filtre status côté API — sensible à la casse et peu fiable en v2, on filtre en Java
         Map<String, String> histParams = new HashMap<>();
-        histParams.put("arrivalFrom", start.minusYears(1).toString());
+        histParams.put("arrivalFrom", start.minusYears(2).toString());
         histParams.put("arrivalTo", start.minusDays(1).toString());
         List<Map<String, Object>> propBookings = beds24.getBookings(token, histParams).stream()
                 .filter(b -> propId.equals(str(b, "propId")))
