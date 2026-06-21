@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -93,13 +94,23 @@ public class AdminPricingZoneController {
 
     private Map<String, Object> toMap(PricingZone z) {
         List<Map<String, Object>> periods = periodRepo.findByZoneId(z.getId()).stream()
-                .map(p -> Map.<String, Object>of(
-                        "id", p.getId(), "name", p.getName(),
-                        "startMonth", p.getStartMonth(), "startDay", p.getStartDay(),
-                        "endMonth", p.getEndMonth(), "endDay", p.getEndDay(),
-                        "adjustmentPercent", p.getAdjustmentPercent()))
+                .map(p -> {
+                    Map<String, Object> pm = new HashMap<>();
+                    pm.put("id", p.getId());
+                    pm.put("name", p.getName());
+                    pm.put("startMonth", p.getStartMonth());
+                    pm.put("startDay", p.getStartDay());
+                    pm.put("endMonth", p.getEndMonth());
+                    pm.put("endDay", p.getEndDay());
+                    pm.put("adjustmentPercent", p.getAdjustmentPercent());
+                    return pm;
+                })
                 .collect(Collectors.toList());
-        return Map.of("id", z.getId(), "name", z.getName(), "periods", periods);
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", z.getId());
+        m.put("name", z.getName());
+        m.put("periods", periods);
+        return m;
     }
 
     private int intVal(Map<String, Object> m, String k) {

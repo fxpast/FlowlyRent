@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,28 +56,39 @@ public class AdminDynamicPricingController {
 
     @PostMapping("/property-configs")
     public ResponseEntity<?> savePropertyConfig(@RequestBody Map<String, Object> body) {
-        Long userId = securityUtils.getCurrentUserId();
-        String propId = (String) body.get("beds24PropertyId");
-        if (propId == null || propId.isBlank()) return ResponseEntity.badRequest().build();
-        PropertyPricingConfig config = propPricingRepo
-                .findByUserIdAndBeds24PropertyId(userId, propId)
-                .orElseGet(() -> { PropertyPricingConfig c = new PropertyPricingConfig(); c.setUserId(userId); c.setBeds24PropertyId(propId); return c; });
-        Object zoneId = body.get("zoneId");
-        config.setZoneId(zoneId != null ? Long.parseLong(zoneId.toString()) : null);
-        Object mMin = body.get("marketMin");
-        config.setMarketMin(mMin != null && !mMin.toString().isBlank() ? new BigDecimal(mMin.toString()) : null);
-        Object mMax = body.get("marketMax");
-        config.setMarketMax(mMax != null && !mMax.toString().isBlank() ? new BigDecimal(mMax.toString()) : null);
-        propPricingRepo.save(config);
-        return ResponseEntity.ok(toMap(config));
+        try {
+            Long userId = securityUtils.getCurrentUserId();
+            String propId = (String) body.get("beds24PropertyId");
+            if (propId == null || propId.isBlank()) return ResponseEntity.badRequest().build();
+            PropertyPricingConfig config = propPricingRepo
+                    .findByUserIdAndBeds24PropertyId(userId, propId)
+                    .orElseGet(() -> {
+                        PropertyPricingConfig c = new PropertyPricingConfig();
+                        c.setUserId(userId);
+                        c.setBeds24PropertyId(propId);
+                        return c;
+                    });
+            Object zoneId = body.get("zoneId");
+            String zoneStr = zoneId != null ? zoneId.toString().trim() : "";
+            config.setZoneId(!zoneStr.isEmpty() && !zoneStr.equals("null") ? ((Number) new BigDecimal(zoneStr)).longValue() : null);
+            Object mMin = body.get("marketMin");
+            config.setMarketMin(mMin != null && !mMin.toString().isBlank() ? new BigDecimal(mMin.toString()) : null);
+            Object mMax = body.get("marketMax");
+            config.setMarketMax(mMax != null && !mMax.toString().isBlank() ? new BigDecimal(mMax.toString()) : null);
+            PropertyPricingConfig saved = propPricingRepo.save(config);
+            return ResponseEntity.ok(toMap(saved));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
+        }
     }
 
     private Map<String, Object> toMap(PropertyPricingConfig c) {
-        return Map.of(
-                "id", c.getId(),
-                "beds24PropertyId", c.getBeds24PropertyId(),
-                "zoneId", c.getZoneId() != null ? c.getZoneId() : "",
-                "marketMin", c.getMarketMin() != null ? c.getMarketMin() : "",
-                "marketMax", c.getMarketMax() != null ? c.getMarketMax() : "");
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", c.getId());
+        m.put("beds24PropertyId", c.getBeds24PropertyId());
+        m.put("zoneId", c.getZoneId());
+        m.put("marketMin", c.getMarketMin());
+        m.put("marketMax", c.getMarketMax());
+        return m;
     }
 }
