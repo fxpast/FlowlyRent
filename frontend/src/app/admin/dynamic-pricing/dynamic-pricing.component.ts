@@ -479,9 +479,9 @@ export class DynamicPricingComponent implements OnInit {
   private loadConfigs(): void {
     this.pricingSvc.listPropertyConfigs().subscribe({
       next: configs => {
-        this.configs.set(configs);
         this.configMap.clear();
         configs.forEach(c => this.configMap.set(c.beds24PropertyId, c));
+        this.configs.set(configs);
       },
       error: (e) => console.error('[dynamic-pricing] loadConfigs error:', e?.error ?? e)
     });
@@ -489,8 +489,7 @@ export class DynamicPricingComponent implements OnInit {
 
   configFor(propId: string): PropertyPricingConfig {
     if (!this.configMap.has(propId)) {
-      const c: PropertyPricingConfig = { beds24PropertyId: propId, zoneId: null, marketMin: null, marketMax: null };
-      this.configMap.set(propId, c);
+      this.configMap.set(propId, { beds24PropertyId: propId, zoneId: null, marketMin: null, marketMax: null });
     }
     return this.configMap.get(propId)!;
   }
