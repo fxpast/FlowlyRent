@@ -181,6 +181,42 @@ non déclarées sur les plateformes, etc.). Chaque revenu peut être :
 Les revenus manuels s'ajoutent au CA pour le calcul de la marge bénéficiaire. La navigation
 mois/année de la page s'applique aux deux onglets.
 
+## Prix dynamique
+
+La page **Prix dynamique** (menu "Prix dynamique") permet à l'hôte d'obtenir des suggestions
+de prix pour ses logements en fonction des données historiques et de la saisonnalité.
+
+### Onglet Analyse
+
+L'hôte sélectionne un logement, une date de début et une date de fin, puis clique sur
+"Analyser". L'algorithme calcule en 4 étapes :
+
+1. **Prix historique moyen** : moyenne des prix réels des séjours passés sur la même période
+   (même plage de mois), à partir des réservations Beds24.
+2. **Ajustement saisonnier** : si un secteur (zone) est configuré pour ce logement, le prix
+   de base est majoré ou minoré selon le pourcentage défini pour la période concernée.
+3. **Ajustement taux d'occupation** : si le taux d'occupation de la période est élevé
+   (> 80%), le prix est augmenté de 10% ; si faible (< 30%), réduit de 10%.
+4. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
+   configurés pour ce logement (optionnel).
+
+Le résultat affiche : le prix actuel Beds24 pour la période, la fourchette suggérée
+(min/max), et une alerte colorée : **sous-évalué** (orange), **surévalué** (rouge),
+**optimal** (vert), ou **données insuffisantes** (gris). Un bouton "Ajuster le prix"
+ouvre le formulaire de mise à jour du tarif directement dans Beds24 via l'API.
+
+### Onglet Zones & Saisons
+
+L'hôte définit des **secteurs** (zones géographiques ou groupes de logements) avec des
+périodes saisonnières. Chaque période a un nom, des dates de début et fin (jour/mois),
+et un pourcentage d'ajustement (positif = haute saison, négatif = basse saison). Les
+périodes peuvent chevaucher deux années (ex. décembre–janvier).
+
+### Onglet Configuration
+
+Associe chaque logement à un secteur et permet de saisir manuellement le prix minimum
+et maximum du marché local (concurrence). Ces valeurs cadrent la fourchette suggérée.
+
 ## Avis (Feedback)
 
 Formulaire permettant à l'hôte de signaler un bug, suggérer une amélioration ou demander

@@ -15,6 +15,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion } from '../../core/services/dynamic-pricing.service';
 import { BookingService } from '../../core/services/booking.service';
@@ -38,7 +40,7 @@ function localDate(d: Date): string {
     CommonModule, FormsModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule,
     MatSnackBarModule, MatTooltipModule, MatDividerModule, MatChipsModule, MatDialogModule,
-    TranslateModule
+    MatDatepickerModule, MatNativeDateModule, TranslateModule
   ],
   template: `
     <div class="page-header">
@@ -64,11 +66,17 @@ function localDate(d: Date): string {
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'pricing.start_date' | translate }}</mat-label>
-                  <input matInput type="date" [(ngModel)]="startDate" [min]="today">
+                  <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDateVal"
+                         (ngModelChange)="onStartDateChange($event)" [min]="todayDate">
+                  <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #startPicker></mat-datepicker>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'pricing.end_date' | translate }}</mat-label>
-                  <input matInput type="date" [(ngModel)]="endDate" [min]="startDate || today">
+                  <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDateVal"
+                         (ngModelChange)="onEndDateChange($event)" [min]="startDateVal ?? todayDate">
+                  <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #endPicker></mat-datepicker>
                 </mat-form-field>
                 <button mat-raised-button color="primary" (click)="analyze()"
                         [disabled]="!selectedPropId || !startDate || !endDate || loading()">
@@ -424,7 +432,6 @@ function localDate(d: Date): string {
 })
 export class DynamicPricingComponent implements OnInit {
   readonly months = MONTHS;
-  readonly today = localDate(new Date());
 
   properties = signal<{ id: string; name: string }[]>([]);
   zones = signal<PricingZone[]>([]);
@@ -433,6 +440,9 @@ export class DynamicPricingComponent implements OnInit {
   selectedPropId = '';
   startDate = '';
   endDate = '';
+  startDateVal: Date | null = null;
+  endDateVal: Date | null = null;
+  readonly todayDate = new Date();
   suggestion = signal<PricingSuggestion | null>(null);
   loading = signal(false);
 
@@ -483,6 +493,14 @@ export class DynamicPricingComponent implements OnInit {
       this.configMap.set(propId, c);
     }
     return this.configMap.get(propId)!;
+  }
+
+  onStartDateChange(d: Date | null): void {
+    this.startDate = d ? localDate(d) : '';
+  }
+
+  onEndDateChange(d: Date | null): void {
+    this.endDate = d ? localDate(d) : '';
   }
 
   analyze(): void {
