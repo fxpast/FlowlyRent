@@ -216,7 +216,9 @@ public class AdminHousekeepingController {
         task.setStatus(status);
         if (status == TaskStatus.DONE) {
             task.setCompletedAt(LocalDateTime.now());
-            linenService.deductLinenForTask(task, user);
+            if (task.getType() != TaskType.MAINTENANCE && task.getType() != TaskType.INSPECTION) {
+                linenService.deductLinenForTask(task, user);
+            }
         }
         return ResponseEntity.ok(taskRepo.save(task));
     }
