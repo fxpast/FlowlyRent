@@ -1295,6 +1295,7 @@
     "no_zone_assigned": "Aucune zone",
     "market_min": "Marché min",
     "market_max": "Marché max",
+    "local_event": "Événement local",
     "local_events": "Événements locaux",
     "add_event": "Ajouter un événement",
     "event_name": "Nom de l'événement",

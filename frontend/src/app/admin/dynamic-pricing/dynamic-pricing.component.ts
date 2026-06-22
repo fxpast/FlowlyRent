@@ -175,6 +175,15 @@ function localDate(d: Date): string {
                       </span>
                     </strong>
                   </div>
+                  @if (suggestion()!.eventName) {
+                    <div class="detail-row">
+                      <span>{{ 'pricing.local_event' | translate }}</span>
+                      <strong>
+                        {{ suggestion()!.eventName }}
+                        <span class="adj pos">(+{{ suggestion()!.eventAdjustmentPercent }}%)</span>
+                      </strong>
+                    </div>
+                  }
                   @if (suggestion()!.marketMin || suggestion()!.marketMax) {
                     <div class="detail-row">
                       <span>{{ 'pricing.market_range' | translate }}</span>

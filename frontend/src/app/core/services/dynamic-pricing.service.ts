@@ -39,6 +39,8 @@ export interface PricingSuggestion {
   marketMin: number | null; marketMax: number | null;
   alert: 'underpriced' | 'overpriced' | 'ok' | 'no_data' | 'no_current_price';
   historicalBookingsCount: number;
+  eventName: string | null;
+  eventAdjustmentPercent: number;
 }
 
 const BASE = environment.apiUrl;

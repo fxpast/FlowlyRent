@@ -1,8 +1,11 @@
 package com.flowlyrent.service;
 
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.LocalEvent;
 import com.flowlyrent.model.PricingZonePeriod;
 import com.flowlyrent.model.PropertyPricingConfig;
+import com.flowlyrent.model.enums.ImpactLevel;
+import com.flowlyrent.repository.LocalEventRepository;
 import com.flowlyrent.repository.PricingZonePeriodRepository;
 import com.flowlyrent.repository.PropertyPricingConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class DynamicPricingService {
     private final Beds24ApiClient beds24;
     private final PricingZonePeriodRepository periodRepo;
     private final PropertyPricingConfigRepository propPricingRepo;
+    private final LocalEventRepository eventRepo;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> calculateSuggestion(
@@ -31,15 +35,26 @@ public class DynamicPricingService {
         LocalDate start = LocalDate.parse(startDate);
         String token = beds24.tokenFor(account);
 
-        // 1. Historique 12 mois pour ce logement
+        // 1. Historique 24 mois pour ce logement
         // Pas de filtre status côté API — sensible à la casse et peu fiable en v2, on filtre en Java
         Map<String, String> histParams = new HashMap<>();
         histParams.put("arrivalFrom", start.minusYears(2).toString());
         histParams.put("arrivalTo", start.minusDays(1).toString());
-        List<Map<String, Object>> propBookings = beds24.getBookings(token, histParams).stream()
-                .filter(b -> propId.equals(str(b, "propId")))
+        List<Map<String, Object>> allHistBookings = beds24.getBookings(token, histParams);
+        log.debug("[pricing] propId={} — {} réservations brutes Beds24 ({} → {})", propId, allHistBookings.size(), histParams.get("arrivalFrom"), histParams.get("arrivalTo"));
+        if (!allHistBookings.isEmpty()) {
+            Map<String, Object> sample = allHistBookings.get(0);
+            log.debug("[pricing] Champs dispo : keys={} propId={} propertyId={} status={} totalPrice={} price={}",
+                    sample.keySet(), sample.get("propId"), sample.get("propertyId"), sample.get("status"), sample.get("totalPrice"), sample.get("price"));
+        }
+        List<Map<String, Object>> propBookings = allHistBookings.stream()
+                .filter(b -> {
+                    String bPropId = str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId");
+                    return propId.equals(bPropId);
+                })
                 .filter(b -> { String s = str(b, "status"); return s != null && (s.equalsIgnoreCase("confirmed") || s.equalsIgnoreCase("new")); })
                 .collect(Collectors.toList());
+        log.debug("[pricing] propId={} — {} réservations après filtres propId+status", propId, propBookings.size());
 
         // 2. Prix de base = moyenne prix/nuit sur le même mois ±1
         int targetMonth = start.getMonthValue();
@@ -53,6 +68,7 @@ public class DynamicPricingService {
             if (monthDiff > 1 && monthDiff < 11) continue;
             Double price = dbl(b, "totalPrice");
             if (price == null) price = dbl(b, "price");
+            log.debug("[pricing] résa arrival={} bMonth={} monthDiff={} totalPrice={} price={}", arr, bMonth, monthDiff, dbl(b, "totalPrice"), dbl(b, "price"));
             if (price == null || price <= 0) continue;
             LocalDate a = LocalDate.parse(arr);
             LocalDate d = LocalDate.parse(dep);
@@ -60,6 +76,7 @@ public class DynamicPricingService {
             if (nights <= 0) continue;
             pricesPerNight.add(price / nights);
         }
+        log.debug("[pricing] pricesPerNight count={} targetMonth={}", pricesPerNight.size(), targetMonth);
         double basePrice = pricesPerNight.isEmpty() ? 0
                 : pricesPerNight.stream().mapToDouble(Double::doubleValue).average().orElse(0);
 
@@ -85,9 +102,9 @@ public class DynamicPricingService {
         Map<String, String> occParams = new HashMap<>();
         occParams.put("arrivalFrom", occFrom.toString());
         occParams.put("arrivalTo", occTo.toString());
-        occParams.put("status", "confirmed");
         List<Map<String, Object>> futureBookings = beds24.getBookings(token, occParams).stream()
-                .filter(b -> propId.equals(str(b, "propId")))
+                .filter(b -> { String s = str(b, "status"); return s != null && (s.equalsIgnoreCase("confirmed") || s.equalsIgnoreCase("new")); })
+                .filter(b -> propId.equals(str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId")))
                 .collect(Collectors.toList());
         long bookedNights = 0;
         for (Map<String, Object> b : futureBookings) {
@@ -108,7 +125,21 @@ public class DynamicPricingService {
         else if (occupancyRate <= 0.30) occFactor = 0.85;
         else occFactor = 0.85 + (occupancyRate - 0.30) / 0.50 * 0.30;
 
-        double suggestedMid = adjustedPrice * occFactor;
+        // 5b. Ajustement événements locaux (FAIBLE=+5%, MOYEN=+15%, FORT=+30%)
+        LocalDate analysisEnd = LocalDate.parse(endDate);
+        List<LocalEvent> matchingEvents = eventRepo.findByUserIdOrderByStartDateAsc(userId).stream()
+                .filter(e -> e.getZoneId() == null || (config != null && e.getZoneId().equals(config.getZoneId())))
+                .filter(e -> overlapsAnalysisPeriod(e, start, analysisEnd))
+                .collect(Collectors.toList());
+        int eventAdj = matchingEvents.stream()
+                .mapToInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 5; case MOYEN -> 15; case FORT -> 30; })
+                .max().orElse(0);
+        String eventName = matchingEvents.isEmpty() ? null : matchingEvents.stream()
+                .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; }))
+                .map(LocalEvent::getName).orElse(null);
+        double eventFactor = 1.0 + eventAdj / 100.0;
+
+        double suggestedMid = adjustedPrice * occFactor * eventFactor;
         double suggestedMin = Math.round(suggestedMid * 0.90);
         double suggestedMax = Math.round(suggestedMid * 1.10);
 
@@ -128,7 +159,8 @@ public class DynamicPricingService {
             curParams.put("departureFrom", startDate);
             List<Double> periodPrices = new ArrayList<>();
             for (Map<String, Object> b : beds24.getBookings(token, curParams)) {
-                if (!propId.equals(str(b, "propId"))) continue;
+                String bPropId = str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId");
+                if (!propId.equals(bPropId)) continue;
                 String s = str(b, "status");
                 if (s == null || (!s.equalsIgnoreCase("confirmed") && !s.equalsIgnoreCase("new"))) continue;
                 Double price = dbl(b, "totalPrice");
@@ -167,11 +199,24 @@ public class DynamicPricingService {
         result.put("seasonalAdjustmentPercent", seasonAdj);
         result.put("occupancyRate", Math.round(occupancyRate * 100) / 100.0);
         result.put("occupancyAdjustmentPercent", (int) Math.round((occFactor - 1.0) * 100));
+        result.put("eventName", eventName);
+        result.put("eventAdjustmentPercent", eventAdj);
         result.put("marketMin", marketMin);
         result.put("marketMax", marketMax);
         result.put("alert", alert);
         result.put("historicalBookingsCount", propBookings.size());
         return result;
+    }
+
+    private boolean overlapsAnalysisPeriod(LocalEvent event, LocalDate start, LocalDate end) {
+        if (event.isRecurring()) {
+            int evtS = event.getStartDate().getMonthValue() * 100 + event.getStartDate().getDayOfMonth();
+            int evtE = event.getEndDate().getMonthValue()   * 100 + event.getEndDate().getDayOfMonth();
+            int anaS = start.getMonthValue() * 100 + start.getDayOfMonth();
+            int anaE = end.getMonthValue()   * 100 + end.getDayOfMonth();
+            return !(evtE < anaS || evtS > anaE);
+        }
+        return !event.getEndDate().isBefore(start) && !event.getStartDate().isAfter(end);
     }
 
     private boolean isDateInPeriod(LocalDate date, PricingZonePeriod p) {
