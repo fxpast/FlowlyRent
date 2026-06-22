@@ -158,7 +158,13 @@ function localDate(d: Date): string {
                   <div class="detail-row">
                     <span>{{ 'pricing.season' | translate }}</span>
                     <strong>
-                      {{ suggestion()!.seasonName || ('pricing.no_season' | translate) }}
+                      @if (suggestion()!.seasonName) {
+                        {{ suggestion()!.seasonName }}
+                      } @else if (suggestion()!.zoneConfigured) {
+                        {{ 'pricing.no_season_for_period' | translate }}
+                      } @else {
+                        {{ 'pricing.no_season' | translate }}
+                      }
                       @if (suggestion()!.seasonalAdjustmentPercent !== 0) {
                         <span class="adj" [class.pos]="suggestion()!.seasonalAdjustmentPercent > 0">
                           ({{ suggestion()!.seasonalAdjustmentPercent > 0 ? '+' : '' }}{{ suggestion()!.seasonalAdjustmentPercent }}%)

@@ -1263,6 +1263,7 @@
     "base_price": "Prix moyen historique",
     "season": "Saison",
     "no_season": "Aucune (zone non configurée)",
+    "no_season_for_period": "Aucune saison pour cette période",
     "occupancy": "Taux d'occupation (60j)",
     "market_range": "Fourchette marché",
     "ignore": "Ignorer",

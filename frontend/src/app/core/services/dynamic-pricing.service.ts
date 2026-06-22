@@ -34,6 +34,7 @@ export interface PricingSuggestion {
   propertyId: string; startDate: string; endDate: string;
   currentPrice: number | null;
   basePrice: number | null; suggestedMin: number | null; suggestedMax: number | null;
+  zoneConfigured: boolean;
   seasonName: string | null; seasonalAdjustmentPercent: number;
   occupancyRate: number; occupancyAdjustmentPercent: number;
   marketMin: number | null; marketMax: number | null;

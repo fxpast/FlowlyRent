@@ -195,6 +195,7 @@ public class DynamicPricingService {
         result.put("basePrice", pricesPerNight.isEmpty() ? null : (long) Math.round(basePrice));
         result.put("suggestedMin", pricesPerNight.isEmpty() ? null : (long) suggestedMin);
         result.put("suggestedMax", pricesPerNight.isEmpty() ? null : (long) suggestedMax);
+        result.put("zoneConfigured", config != null && config.getZoneId() != null);
         result.put("seasonName", seasonName);
         result.put("seasonalAdjustmentPercent", seasonAdj);
         result.put("occupancyRate", Math.round(occupancyRate * 100) / 100.0);
