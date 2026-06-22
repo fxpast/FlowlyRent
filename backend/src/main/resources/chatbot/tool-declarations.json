@@ -258,6 +258,23 @@
     }
   },
   {
+    "name": "get_local_events",
+    "description": "Liste les événements locaux configurés par l'hôte (festivals, marchés, salons, concerts…) qui impactent les prix suggérés en tarification dynamique. Peut filtrer par période pour voir quels événements sont actifs sur une plage de dates donnée. Utiliser pour 'quels événements j'ai configuré', 'y a-t-il un événement en juillet', 'quel est l'impact des 24H du Mans'.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "from": {
+          "type": "STRING",
+          "description": "Date de début de la période (AAAA-MM-JJ). Si absent, liste tous les événements sans filtre de date."
+        },
+        "to": {
+          "type": "STRING",
+          "description": "Date de fin de la période (AAAA-MM-JJ). Si absent, identique à 'from'."
+        }
+      }
+    }
+  },
+  {
     "name": "block_dates",
     "description": "ACTION D'ÉCRITURE — bloque (rend indisponible à la réservation) une ou plusieurs dates pour un logement, sur Beds24 et toutes les plateformes connectées (Airbnb, Booking.com, etc.). N'appelle cet outil QUE SI l'hôte a explicitement confirmé l'action après que tu lui as présenté un récapitulatif (logement et dates) dans ta réponse précédente.",
     "parameters": {

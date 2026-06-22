@@ -6,6 +6,8 @@ import com.flowlyrent.model.Feedback;
 import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.LinenItem;
+import com.flowlyrent.model.LocalEvent;
+import com.flowlyrent.model.PricingZone;
 import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.MovementDirection;
 import com.flowlyrent.model.enums.TaskStatus;
@@ -15,7 +17,9 @@ import com.flowlyrent.repository.FaqSuggestionRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
 import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.LinenMovementRepository;
+import com.flowlyrent.repository.LocalEventRepository;
 import com.flowlyrent.repository.ManualExpenseRepository;
+import com.flowlyrent.repository.PricingZoneRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +56,8 @@ public class ChatbotToolService {
     private final FeedbackRepository feedbackRepo;
     private final FaqSuggestionRepository faqSuggestionRepo;
     private final ManualExpenseRepository manualExpenseRepo;
+    private final LocalEventRepository localEventRepo;
+    private final PricingZoneRepository pricingZoneRepo;
     private final SecurityUtils securityUtils;
 
     public Map<String, Object> execute(String toolName, Map<String, Object> args, String lang) {
@@ -79,6 +85,7 @@ public class ChatbotToolService {
                 case "get_housekeeper_performance" -> getHousekeeperPerformance(userId,
                         dateArg(args, "from"), dateArg(args, "to"), strArg(args, "staffName"));
                 case "get_linen_stock" -> getLinenStock(userId, strArg(args, "propertyName"));
+                case "get_local_events" -> getLocalEvents(userId, dateArg(args, "from"), dateArg(args, "to"));
                 case "block_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "blackout");
                 case "unblock_dates" -> setBlackout(userId, strArg(args, "propertyName"), dateArg(args, "from"), dateArg(args, "to"), "none");
                 case "suggest_faq" -> suggestFaq(userId, lang, strArg(args, "question"), strArg(args, "answer"));
@@ -599,6 +606,60 @@ public class ChatbotToolService {
             return m;
         }).collect(Collectors.toList());
         return Map.of("propertyName", propertyName, "items", result);
+    }
+
+    // ─── Événements locaux ──────────────────────────────────────────────────
+
+    private Map<String, Object> getLocalEvents(Long userId, LocalDate from, LocalDate to) {
+        if (to == null && from != null) to = from;
+
+        Map<Long, String> zoneNames = new HashMap<>();
+        for (PricingZone z : pricingZoneRepo.findByUserId(userId)) {
+            zoneNames.put(z.getId(), z.getName());
+        }
+
+        final LocalDate filterFrom = from;
+        final LocalDate filterTo = to;
+
+        List<Map<String, Object>> result = localEventRepo.findByUserIdOrderByStartDateAsc(userId).stream()
+                .filter(e -> {
+                    if (filterFrom == null) return true;
+                    return overlaps(e, filterFrom, filterTo);
+                })
+                .map(e -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("name", e.getName());
+                    m.put("startDate", e.getStartDate().toString());
+                    m.put("endDate", e.getEndDate().toString());
+                    m.put("impactLevel", e.getImpactLevel().name());
+                    m.put("impactPercent", switch (e.getImpactLevel()) {
+                        case FAIBLE -> "+25%"; case MOYEN -> "+50%"; case FORT -> "+75%";
+                    });
+                    m.put("recurring", e.isRecurring());
+                    m.put("zone", e.getZoneId() != null ? zoneNames.getOrDefault(e.getZoneId(), "Zone " + e.getZoneId()) : "Tous logements");
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        if (filterFrom != null) {
+            response.put("from", filterFrom.toString());
+            response.put("to", filterTo.toString());
+        }
+        response.put("count", result.size());
+        response.put("events", result);
+        return response;
+    }
+
+    private boolean overlaps(LocalEvent e, LocalDate from, LocalDate to) {
+        if (e.isRecurring()) {
+            int evtS = e.getStartDate().getMonthValue() * 100 + e.getStartDate().getDayOfMonth();
+            int evtE = e.getEndDate().getMonthValue()   * 100 + e.getEndDate().getDayOfMonth();
+            int anaS = from.getMonthValue() * 100 + from.getDayOfMonth();
+            int anaE = to.getMonthValue()   * 100 + to.getDayOfMonth();
+            return !(evtE < anaS || evtS > anaE);
+        }
+        return !e.getEndDate().isBefore(from) && !e.getStartDate().isAfter(to);
     }
 
     // ─── Calendrier (action d'écriture) ────────────────────────────────────
