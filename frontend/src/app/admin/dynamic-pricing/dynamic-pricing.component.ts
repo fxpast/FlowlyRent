@@ -220,8 +220,12 @@ function localDate(d: Date): string {
         <div class="tab-content">
           <div class="zones-header">
             <p class="zones-desc">{{ 'pricing.zones_desc' | translate }}</p>
-            <button mat-raised-button color="primary" (click)="startNewZone()">
+            <button mat-raised-button color="primary" (click)="startNewZone()" class="add-zone-desktop">
               <mat-icon>add</mat-icon> {{ 'pricing.add_zone' | translate }}
+            </button>
+            <button mat-mini-fab color="primary" (click)="startNewZone()" class="add-zone-mobile"
+                    [matTooltip]="'pricing.add_zone' | translate">
+              <mat-icon>add</mat-icon>
             </button>
           </div>
 
@@ -512,9 +516,11 @@ function localDate(d: Date): string {
     /* ── Zones ── */
     .zones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
     .zones-desc { margin: 0; font-size: 13px; color: #666; max-width: 500px; }
+    .add-zone-mobile { display: none; }
     @media (max-width: 600px) {
-      .zones-header { flex-direction: column; align-items: stretch; }
-      .zones-header button { width: 100%; min-height: 44px; }
+      .zones-header { align-items: center; }
+      .add-zone-desktop { display: none; }
+      .add-zone-mobile { display: inline-flex; flex-shrink: 0; }
     }
     .zone-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
     .full { width: 100%; }
