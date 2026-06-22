@@ -199,7 +199,7 @@ L'hôte sélectionne un logement, une date de début et une date de fin, puis cl
    élevé (> 80%), le prix est augmenté jusqu'à +15% ; si faible (< 30%), réduit jusqu'à -15%.
 4. **Ajustement événements locaux** : si un événement local (festival, marché, concert…)
    est configuré et chevauche la période analysée, un bonus est appliqué selon son niveau
-   d'impact — Faible (+5%), Moyen (+15%), Fort (+30%). Si plusieurs événements se chevauchent,
+   d'impact — Faible (+25%), Moyen (+50%), Fort (+75%). Si plusieurs événements se chevauchent,
    seul le plus fort impact est retenu. L'événement appliqué est affiché dans le détail du calcul.
 5. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
    configurés pour ce logement (optionnel).
@@ -219,7 +219,7 @@ périodes peuvent chevaucher deux années (ex. décembre–janvier).
 L'hôte peut également saisir des **événements locaux** (festivals, marchés, concerts,
 salons, événements sportifs…) dans ce même onglet. Chaque événement a :
 - un **nom**, des **dates de début et fin**,
-- un **niveau d'impact** : Faible (+5%), Moyen (+15%), Fort (+30%),
+- un **niveau d'impact** : Faible (+25%), Moyen (+50%), Fort (+75%),
 - une option **récurrent** : si activée, l'événement est comparé par mois/jour uniquement
   (sans tenir compte de l'année), ce qui permet de le déclarer une seule fois pour qu'il
   s'applique chaque année automatiquement (ex. festival annuel en juillet),

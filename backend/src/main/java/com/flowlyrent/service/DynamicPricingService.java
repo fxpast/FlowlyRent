@@ -132,7 +132,7 @@ public class DynamicPricingService {
                 .filter(e -> overlapsAnalysisPeriod(e, start, analysisEnd))
                 .collect(Collectors.toList());
         int eventAdj = matchingEvents.stream()
-                .mapToInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 5; case MOYEN -> 15; case FORT -> 30; })
+                .mapToInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 25; case MOYEN -> 50; case FORT -> 75; })
                 .max().orElse(0);
         String eventName = matchingEvents.isEmpty() ? null : matchingEvents.stream()
                 .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; }))
