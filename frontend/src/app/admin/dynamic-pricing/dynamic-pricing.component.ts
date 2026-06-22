@@ -110,7 +110,7 @@ function localDate(d: Date): string {
                       @if (suggestion()!.currentPrice) {
                         <div class="current-price-row">
                           <span class="label">{{ 'pricing.current_price' | translate }}</span>
-                          <span class="value">{{ suggestion()!.currentPrice }}€/nuit</span>
+                          <span class="value">{{ suggestion()!.currentPrice | number:'1.2-2' }}€/nuit</span>
                           @if (suggestion()!.alert === 'underpriced') {
                             <mat-chip class="chip-warn">⚠️</mat-chip>
                           }
