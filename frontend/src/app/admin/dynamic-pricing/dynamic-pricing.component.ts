@@ -510,8 +510,12 @@ function localDate(d: Date): string {
     .empty-hint mat-icon { font-size: 56px; width: 56px; height: 56px; }
 
     /* ── Zones ── */
-    .zones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .zones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
     .zones-desc { margin: 0; font-size: 13px; color: #666; max-width: 500px; }
+    @media (max-width: 600px) {
+      .zones-header { flex-direction: column; align-items: stretch; }
+      .zones-header button { width: 100%; }
+    }
     .zone-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
     .full { width: 100%; }
     .periods-section { margin: 12px 0; }
