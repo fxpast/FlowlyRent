@@ -1294,6 +1294,15 @@
     "zone": "Zone tarifaire",
     "no_zone_assigned": "Aucune zone",
     "market_min": "Marché min",
-    "market_max": "Marché max"
+    "market_max": "Marché max",
+    "local_events": "Événements locaux",
+    "add_event": "Ajouter un événement",
+    "event_name": "Nom de l'événement",
+    "impact_level": "Impact",
+    "impact_faible": "Faible",
+    "impact_moyen": "Moyen",
+    "impact_fort": "Fort",
+    "recurring_event": "Annuel (récurrent)",
+    "no_events": "Aucun événement local défini"
   }
 }

@@ -20,6 +20,16 @@ export interface PropertyPricingConfig {
   zoneId: number | null; marketMin: number | null; marketMax: number | null;
 }
 
+export interface LocalEvent {
+  id?: number;
+  zoneId: number | null;
+  name: string;
+  startDate: string;
+  endDate: string;
+  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT';
+  recurring: boolean;
+}
+
 export interface PricingSuggestion {
   propertyId: string; startDate: string; endDate: string;
   currentPrice: number | null;
@@ -57,6 +67,22 @@ export class DynamicPricingService {
 
   deleteZone(id: number): Observable<void> {
     return this.http.delete<void>(`${BASE}/admin/pricing-zones/${id}`);
+  }
+
+  listEvents(): Observable<LocalEvent[]> {
+    return this.http.get<LocalEvent[]>(`${BASE}/admin/local-events`);
+  }
+
+  createEvent(event: LocalEvent): Observable<LocalEvent> {
+    return this.http.post<LocalEvent>(`${BASE}/admin/local-events`, event);
+  }
+
+  updateEvent(id: number, event: LocalEvent): Observable<LocalEvent> {
+    return this.http.put<LocalEvent>(`${BASE}/admin/local-events/${id}`, event);
+  }
+
+  deleteEvent(id: number): Observable<void> {
+    return this.http.delete<void>(`${BASE}/admin/local-events/${id}`);
   }
 
   listPropertyConfigs(): Observable<PropertyPricingConfig[]> {

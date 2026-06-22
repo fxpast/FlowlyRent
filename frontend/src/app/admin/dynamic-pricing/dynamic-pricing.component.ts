@@ -18,7 +18,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion } from '../../core/services/dynamic-pricing.service';
+import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion, LocalEvent } from '../../core/services/dynamic-pricing.service';
 import { BookingService } from '../../core/services/booking.service';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 import { environment } from '../../../environments/environment';
@@ -301,6 +301,106 @@ function localDate(d: Date): string {
               </mat-card>
             }
           </div>
+
+          <!-- ── ÉVÉNEMENTS LOCAUX ──────────────────────────────────── -->
+          <div class="events-section">
+            <div class="events-header">
+              <h3 class="events-title">
+                <mat-icon>event</mat-icon> {{ 'pricing.local_events' | translate }}
+              </h3>
+              <button mat-raised-button color="accent" (click)="startNewEvent()">
+                <mat-icon>add</mat-icon> {{ 'pricing.add_event' | translate }}
+              </button>
+            </div>
+
+            @if (showEventForm()) {
+              <mat-card class="event-form-card">
+                <mat-card-content>
+                  <div class="event-form-grid">
+                    <mat-form-field appearance="outline" class="ef-name">
+                      <mat-label>{{ 'pricing.event_name' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="eventForm.name" placeholder="Ex: Festival du Vieux-Port">
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="ef-zone">
+                      <mat-label>{{ 'pricing.zone' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="eventForm.zoneId">
+                        <mat-option [value]="null">{{ 'pricing.no_zone_assigned' | translate }}</mat-option>
+                        @for (z of zones(); track z.id) {
+                          <mat-option [value]="z.id">{{ z.name }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="ef-date">
+                      <mat-label>{{ 'pricing.start_date' | translate }}</mat-label>
+                      <input matInput [matDatepicker]="evtStart" [(ngModel)]="eventForm.startDateVal"
+                             (ngModelChange)="onEvtStartChange($event)">
+                      <mat-datepicker-toggle matIconSuffix [for]="evtStart"></mat-datepicker-toggle>
+                      <mat-datepicker #evtStart></mat-datepicker>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="ef-date">
+                      <mat-label>{{ 'pricing.end_date' | translate }}</mat-label>
+                      <input matInput [matDatepicker]="evtEnd" [(ngModel)]="eventForm.endDateVal"
+                             (ngModelChange)="onEvtEndChange($event)">
+                      <mat-datepicker-toggle matIconSuffix [for]="evtEnd"></mat-datepicker-toggle>
+                      <mat-datepicker #evtEnd></mat-datepicker>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="ef-impact">
+                      <mat-label>{{ 'pricing.impact_level' | translate }}</mat-label>
+                      <mat-select [(ngModel)]="eventForm.impactLevel">
+                        <mat-option value="FAIBLE">{{ 'pricing.impact_faible' | translate }}</mat-option>
+                        <mat-option value="MOYEN">{{ 'pricing.impact_moyen' | translate }}</mat-option>
+                        <mat-option value="FORT">{{ 'pricing.impact_fort' | translate }}</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-checkbox [(ngModel)]="eventForm.recurring" class="ef-recurring">
+                      {{ 'pricing.recurring_event' | translate }}
+                    </mat-checkbox>
+                  </div>
+
+                  <div class="form-actions">
+                    <button mat-button (click)="cancelEventForm()">{{ 'common.cancel' | translate }}</button>
+                    <button mat-raised-button color="primary" (click)="saveEvent()"
+                            [disabled]="!eventForm.name || !eventForm.startDate || !eventForm.endDate || savingEvent()">
+                      {{ 'common.save' | translate }}
+                    </button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+
+            <div class="events-list">
+              @for (evt of events(); track evt.id) {
+                <div class="event-row">
+                  <div class="event-impact" [class.impact-faible]="evt.impactLevel === 'FAIBLE'"
+                       [class.impact-moyen]="evt.impactLevel === 'MOYEN'"
+                       [class.impact-fort]="evt.impactLevel === 'FORT'">
+                    {{ evt.impactLevel }}
+                  </div>
+                  <div class="event-info">
+                    <span class="event-name">{{ evt.name }}</span>
+                    @if (evt.recurring) { <mat-icon class="event-recurring-icon" matTooltip="{{ 'pricing.recurring_event' | translate }}">repeat</mat-icon> }
+                    <span class="event-dates">{{ evt.startDate }} → {{ evt.endDate }}</span>
+                    @if (evt.zoneId) {
+                      <span class="event-zone">{{ zoneNameById(evt.zoneId) }}</span>
+                    }
+                  </div>
+                  <div class="event-actions">
+                    <button mat-icon-button (click)="editEvent(evt)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="deleteEvent(evt)"><mat-icon>delete</mat-icon></button>
+                  </div>
+                </div>
+              }
+              @if (events().length === 0 && !showEventForm()) {
+                <p class="no-events">{{ 'pricing.no_events' | translate }}</p>
+              }
+            </div>
+          </div>
+
         </div>
       </mat-tab>
 
@@ -420,6 +520,32 @@ function localDate(d: Date): string {
     .period-badge.positive { background: #e8f5e9; color: #2e7d32; }
     .period-badge.negative { background: #fff3e0; color: #e65100; }
 
+    /* ── Événements ── */
+    .events-section { margin-top: 32px; border-top: 1px solid #e0e0e0; padding-top: 24px; }
+    .events-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .events-title { margin: 0; font-size: 16px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; }
+    .events-title mat-icon { color: #0288d1; }
+    .event-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
+    .event-form-grid { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .ef-name { flex: 3; min-width: 200px; }
+    .ef-zone { flex: 2; min-width: 160px; }
+    .ef-date { flex: 1; min-width: 140px; }
+    .ef-impact { flex: 1; min-width: 130px; }
+    .ef-recurring { white-space: nowrap; }
+    .events-list { display: flex; flex-direction: column; gap: 8px; }
+    .event-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; }
+    .event-impact { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; white-space: nowrap; }
+    .impact-faible { background: #e8f5e9; color: #2e7d32; }
+    .impact-moyen  { background: #fff3e0; color: #e65100; }
+    .impact-fort   { background: #fce4ec; color: #c62828; }
+    .event-info { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+    .event-name { font-size: 14px; font-weight: 600; color: #333; }
+    .event-recurring-icon { font-size: 16px; width: 16px; height: 16px; color: #888; }
+    .event-dates { font-size: 12px; color: #888; }
+    .event-zone { font-size: 12px; padding: 2px 8px; background: #e3f2fd; color: #1565c0; border-radius: 10px; }
+    .event-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .no-events { color: #aaa; font-size: 13px; text-align: center; padding: 16px 0; }
+
     /* ── Config ── */
     .config-desc { font-size: 13px; color: #666; margin-bottom: 20px; }
     .config-list { display: flex; flex-direction: column; gap: 12px; }
@@ -451,6 +577,13 @@ export class DynamicPricingComponent implements OnInit {
   editingZoneId = signal<number | null>(null);
   zoneForm: { name: string; periods: Partial<PricingZonePeriod>[] } = { name: '', periods: [] };
 
+  events = signal<LocalEvent[]>([]);
+  showEventForm = signal(false);
+  savingEvent = signal(false);
+  editingEventId = signal<number | null>(null);
+  eventForm: { name: string; zoneId: number | null; startDate: string; endDate: string; startDateVal: Date | null; endDateVal: Date | null; impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT'; recurring: boolean } =
+    { name: '', zoneId: null, startDate: '', endDate: '', startDateVal: null, endDateVal: null, impactLevel: 'MOYEN', recurring: false };
+
   savingConfig = signal<string | null>(null);
   private configMap = new Map<string, PropertyPricingConfig>();
 
@@ -472,11 +605,16 @@ export class DynamicPricingComponent implements OnInit {
       error: () => {}
     });
     this.loadZones();
+    this.loadEvents();
     this.loadConfigs();
   }
 
   private loadZones(): void {
     this.pricingSvc.listZones().subscribe({ next: z => this.zones.set(z), error: () => {} });
+  }
+
+  private loadEvents(): void {
+    this.pricingSvc.listEvents().subscribe({ next: e => this.events.set(e), error: () => {} });
   }
 
   private loadConfigs(): void {
@@ -588,6 +726,57 @@ export class DynamicPricingComponent implements OnInit {
       next: () => this.loadZones(),
       error: () => this.snack.open(this.t.instant('common.error'), '', { duration: 3000 })
     });
+  }
+
+  startNewEvent(): void {
+    this.editingEventId.set(null);
+    this.eventForm = { name: '', zoneId: null, startDate: '', endDate: '', startDateVal: null, endDateVal: null, impactLevel: 'MOYEN', recurring: false };
+    this.showEventForm.set(true);
+  }
+
+  editEvent(evt: LocalEvent): void {
+    this.editingEventId.set(evt.id ?? null);
+    this.eventForm = {
+      name: evt.name, zoneId: evt.zoneId,
+      startDate: evt.startDate, endDate: evt.endDate,
+      startDateVal: evt.startDate ? new Date(evt.startDate) : null,
+      endDateVal: evt.endDate ? new Date(evt.endDate) : null,
+      impactLevel: evt.impactLevel, recurring: evt.recurring
+    };
+    this.showEventForm.set(true);
+  }
+
+  cancelEventForm(): void { this.showEventForm.set(false); }
+
+  onEvtStartChange(d: Date | null): void { this.eventForm.startDate = d ? localDate(d) : ''; }
+  onEvtEndChange(d: Date | null): void   { this.eventForm.endDate   = d ? localDate(d) : ''; }
+
+  saveEvent(): void {
+    if (!this.eventForm.name || !this.eventForm.startDate || !this.eventForm.endDate) return;
+    this.savingEvent.set(true);
+    const payload: LocalEvent = {
+      zoneId: this.eventForm.zoneId, name: this.eventForm.name,
+      startDate: this.eventForm.startDate, endDate: this.eventForm.endDate,
+      impactLevel: this.eventForm.impactLevel, recurring: this.eventForm.recurring
+    };
+    const id = this.editingEventId();
+    const req = id ? this.pricingSvc.updateEvent(id, payload) : this.pricingSvc.createEvent(payload);
+    req.subscribe({
+      next: () => { this.loadEvents(); this.showEventForm.set(false); this.savingEvent.set(false); },
+      error: () => { this.savingEvent.set(false); this.snack.open(this.t.instant('common.error'), '', { duration: 3000 }); }
+    });
+  }
+
+  deleteEvent(evt: LocalEvent): void {
+    if (!evt.id) return;
+    this.pricingSvc.deleteEvent(evt.id).subscribe({
+      next: () => this.loadEvents(),
+      error: () => this.snack.open(this.t.instant('common.error'), '', { duration: 3000 })
+    });
+  }
+
+  zoneNameById(zoneId: number): string {
+    return this.zones().find(z => z.id === zoneId)?.name ?? '';
   }
 
   saveConfig(propId: string): void {
