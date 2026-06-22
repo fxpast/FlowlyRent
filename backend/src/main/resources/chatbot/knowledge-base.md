@@ -189,21 +189,25 @@ de prix pour ses logements en fonction des données historiques et de la saisonn
 ### Onglet Analyse
 
 L'hôte sélectionne un logement, une date de début et une date de fin, puis clique sur
-"Analyser". L'algorithme calcule en 4 étapes :
+"Analyser". L'algorithme calcule en 5 étapes :
 
 1. **Prix historique moyen** : moyenne des prix réels des séjours passés sur la même période
-   (même plage de mois), à partir des réservations Beds24.
+   (même plage de mois), à partir des réservations Beds24 sur les 24 derniers mois.
 2. **Ajustement saisonnier** : si un secteur (zone) est configuré pour ce logement, le prix
    de base est majoré ou minoré selon le pourcentage défini pour la période concernée.
-3. **Ajustement taux d'occupation** : si le taux d'occupation de la période est élevé
-   (> 80%), le prix est augmenté de 10% ; si faible (< 30%), réduit de 10%.
-4. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
+3. **Ajustement taux d'occupation** : si le taux d'occupation des 60 prochains jours est
+   élevé (> 80%), le prix est augmenté jusqu'à +15% ; si faible (< 30%), réduit jusqu'à -15%.
+4. **Ajustement événements locaux** : si un événement local (festival, marché, concert…)
+   est configuré et chevauche la période analysée, un bonus est appliqué selon son niveau
+   d'impact — Faible (+5%), Moyen (+15%), Fort (+30%). Si plusieurs événements se chevauchent,
+   seul le plus fort impact est retenu. L'événement appliqué est affiché dans le détail du calcul.
+5. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
    configurés pour ce logement (optionnel).
 
-Le résultat affiche : le prix actuel Beds24 pour la période, la fourchette suggérée
-(min/max), et une alerte colorée : **sous-évalué** (orange), **surévalué** (rouge),
-**optimal** (vert), ou **données insuffisantes** (gris). Un bouton "Ajuster le prix"
-ouvre le formulaire de mise à jour du tarif directement dans Beds24 via l'API.
+Le résultat affiche : le prix actuel pour la période (moyenne des réservations existantes),
+la fourchette suggérée (min/max), et une alerte colorée : **sous-évalué** (orange),
+**surévalué** (rouge), **optimal** (vert), ou **données insuffisantes** (gris). Un bouton
+"Ajuster le prix" ouvre le formulaire de mise à jour du tarif directement dans Beds24 via l'API.
 
 ### Onglet Zones & Saisons
 
@@ -211,6 +215,18 @@ L'hôte définit des **secteurs** (zones géographiques ou groupes de logements)
 périodes saisonnières. Chaque période a un nom, des dates de début et fin (jour/mois),
 et un pourcentage d'ajustement (positif = haute saison, négatif = basse saison). Les
 périodes peuvent chevaucher deux années (ex. décembre–janvier).
+
+L'hôte peut également saisir des **événements locaux** (festivals, marchés, concerts,
+salons, événements sportifs…) dans ce même onglet. Chaque événement a :
+- un **nom**, des **dates de début et fin**,
+- un **niveau d'impact** : Faible (+5%), Moyen (+15%), Fort (+30%),
+- une option **récurrent** : si activée, l'événement est comparé par mois/jour uniquement
+  (sans tenir compte de l'année), ce qui permet de le déclarer une seule fois pour qu'il
+  s'applique chaque année automatiquement (ex. festival annuel en juillet),
+- un **secteur** optionnel : si renseigné, l'événement ne s'applique qu'aux logements de
+  ce secteur ; sinon il s'applique à tous les logements de l'hôte.
+
+Les événements locaux sont pris en compte automatiquement dans le calcul de prix (étape 4).
 
 ### Onglet Configuration
 
