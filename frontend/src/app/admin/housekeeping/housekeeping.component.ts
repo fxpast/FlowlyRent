@@ -215,7 +215,7 @@ const STATUS_KEYS: Record<string, string> = {
                     {{ 'housekeeping.estimated_total' | translate }} <strong>{{ +newTask.extraHours * +newTask.hourlyRate | number:'1.2-2' }} €</strong>
                   </div>
                 }
-                @if (taskLinenItems().length > 0) {
+                @if (taskLinenItems().length > 0 && newTask.type !== 'MAINTENANCE' && newTask.type !== 'INSPECTION') {
                   <div class="task-linen-preset">
                     <div class="task-linen-title" [class.expanded]="linenExpanded()" (click)="linenExpanded.set(!linenExpanded())">
                       <mat-icon>local_laundry_service</mat-icon> {{ 'housekeeping.linen_used' | translate }}
