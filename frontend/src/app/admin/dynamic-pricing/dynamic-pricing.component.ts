@@ -514,7 +514,7 @@ function localDate(d: Date): string {
     .zones-desc { margin: 0; font-size: 13px; color: #666; max-width: 500px; }
     @media (max-width: 600px) {
       .zones-header { flex-direction: column; align-items: stretch; }
-      .zones-header button { width: 100%; }
+      .zones-header button { width: 100%; height: auto; white-space: normal; padding: 10px 16px; line-height: 1.4; }
     }
     .zone-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
     .full { width: 100%; }
