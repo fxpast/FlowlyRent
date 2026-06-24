@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
@@ -31,6 +32,10 @@ import java.util.*;
 public class QontoService {
 
     private static final String BASE_URL = "https://thirdparty.qonto.com/v2";
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     private final QontoAccountRepository qontoAccountRepository;
     private final ExpenseRuleRepository expenseRuleRepository;
@@ -247,11 +252,11 @@ public class QontoService {
                 .uri(URI.create(BASE_URL + path))
                 .header("Authorization", login + ":" + secretKey)
                 .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(25))
                 .GET()
                 .build();
 
-        HttpResponse<String> response = HttpClient.newHttpClient()
-                .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 401 || response.statusCode() == 403) {
             throw new IllegalStateException("Authentification Qonto refusée (vérifiez login / clé secrète)");

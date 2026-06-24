@@ -13,6 +13,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -21,6 +22,10 @@ import java.time.LocalDateTime;
 public class Beds24TokenService {
 
     private static final String BEDS24_API = "https://beds24.com/api/v2";
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     private final Beds24AccountRepository beds24AccountRepository;
     private final ObjectMapper objectMapper;
@@ -81,10 +86,10 @@ public class Beds24TokenService {
                 .uri(URI.create(url))
                 .header("Accept", "application/json")
                 .header(headerName, headerValue)
+                .timeout(Duration.ofSeconds(25))
                 .GET()
                 .build();
-        HttpResponse<String> response = HttpClient.newHttpClient()
-                .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Beds24 HTTP " + response.statusCode() + " : " + response.body());
         }
