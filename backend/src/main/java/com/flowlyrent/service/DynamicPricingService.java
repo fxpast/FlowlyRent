@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -38,8 +40,11 @@ public class DynamicPricingService {
             Long userId, Beds24Account account,
             String propId, String startDate, String endDate) throws Exception {
 
+        Instant t0 = Instant.now();
+        log.info("[pricing] BEGIN propId={} {}→{}", propId, startDate, endDate);
         LocalDate start = LocalDate.parse(startDate);
         String token = beds24.tokenFor(account);
+        log.info("[pricing] propId={} token OK (+{}ms)", propId, Duration.between(t0, Instant.now()).toMillis());
 
         // 1. Historique 24 mois pour ce logement
         // Pas de filtre status côté API — sensible à la casse et peu fiable en v2, on filtre en Java
@@ -47,7 +52,10 @@ public class DynamicPricingService {
         histParams.put("propId", propId);
         histParams.put("arrivalFrom", start.minusYears(2).toString());
         histParams.put("arrivalTo", start.minusDays(1).toString());
+        Instant tHist = Instant.now();
         List<Map<String, Object>> allHistBookings = beds24.getBookings(token, histParams);
+        log.info("[pricing] propId={} step=history fetched={} (+{}ms, total+{}ms)", propId, allHistBookings.size(),
+                Duration.between(tHist, Instant.now()).toMillis(), Duration.between(t0, Instant.now()).toMillis());
         log.debug("[pricing] propId={} — {} réservations brutes Beds24 ({} → {})", propId, allHistBookings.size(), histParams.get("arrivalFrom"), histParams.get("arrivalTo"));
         if (!allHistBookings.isEmpty()) {
             Map<String, Object> sample = allHistBookings.get(0);
@@ -110,7 +118,11 @@ public class DynamicPricingService {
         occParams.put("propId", propId);
         occParams.put("arrivalFrom", occFrom.toString());
         occParams.put("arrivalTo", occTo.toString());
-        List<Map<String, Object>> futureBookings = beds24.getBookings(token, occParams).stream()
+        Instant tOcc = Instant.now();
+        List<Map<String, Object>> occRaw = beds24.getBookings(token, occParams);
+        log.info("[pricing] propId={} step=occupancy fetched={} (+{}ms, total+{}ms)", propId, occRaw.size(),
+                Duration.between(tOcc, Instant.now()).toMillis(), Duration.between(t0, Instant.now()).toMillis());
+        List<Map<String, Object>> futureBookings = occRaw.stream()
                 .filter(b -> { String s = str(b, "status"); return s != null && (s.equalsIgnoreCase("confirmed") || s.equalsIgnoreCase("new")); })
                 .filter(b -> propId.equals(str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId")))
                 .collect(Collectors.toList());
@@ -142,12 +154,16 @@ public class DynamicPricingService {
         // 7. Réservations sur la période analysée (même logique que menu Revenus), gardées par séjour
         //    pour calculer un prix actuel propre à chaque segment (étape 9)
         List<PeriodBooking> periodBookings = new ArrayList<>();
+        Instant tCur = Instant.now();
         try {
             Map<String, String> curParams = new HashMap<>();
             curParams.put("propId", propId);
             curParams.put("arrivalTo", endDate);
             curParams.put("departureFrom", startDate);
-            for (Map<String, Object> b : beds24.getBookings(token, curParams)) {
+            List<Map<String, Object>> curRaw = beds24.getBookings(token, curParams);
+            log.info("[pricing] propId={} step=currentPeriod fetched={} (+{}ms, total+{}ms)", propId, curRaw.size(),
+                    Duration.between(tCur, Instant.now()).toMillis(), Duration.between(t0, Instant.now()).toMillis());
+            for (Map<String, Object> b : curRaw) {
                 String bPropId = str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId");
                 if (!propId.equals(bPropId)) continue;
                 String s = str(b, "status");
@@ -165,7 +181,9 @@ public class DynamicPricingService {
                 periodBookings.add(new PeriodBooking(a, d, price / nights));
             }
         } catch (Exception e) {
-            log.debug("Could not fetch current period bookings: {}", e.getMessage());
+            log.warn("[pricing] propId={} step=currentPeriod ÉCHEC (+{}ms, total+{}ms) {}: {}", propId,
+                    Duration.between(tCur, Instant.now()).toMillis(), Duration.between(t0, Instant.now()).toMillis(),
+                    e.getClass().getSimpleName(), e.getMessage());
         }
 
         // 8. Ajustement événements locaux par jour (pourcentages configurables par l'hôte, défaut
@@ -254,6 +272,8 @@ public class DynamicPricingService {
         result.put("marketMax", marketMax);
         result.put("historicalBookingsCount", propBookings.size());
         result.put("segments", segments);
+        log.info("[pricing] propId={} END days={} segments={} (total={}ms)", propId, days.size(), segments.size(),
+                Duration.between(t0, Instant.now()).toMillis());
         return result;
     }
 
