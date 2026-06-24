@@ -7,6 +7,7 @@ import com.flowlyrent.model.FaqSuggestion;
 import com.flowlyrent.model.HousekeepingTask;
 import com.flowlyrent.model.LinenItem;
 import com.flowlyrent.model.LocalEvent;
+import com.flowlyrent.model.PricingEventImpactConfig;
 import com.flowlyrent.model.PricingZone;
 import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.MovementDirection;
@@ -19,6 +20,7 @@ import com.flowlyrent.repository.LinenItemRepository;
 import com.flowlyrent.repository.LinenMovementRepository;
 import com.flowlyrent.repository.LocalEventRepository;
 import com.flowlyrent.repository.ManualExpenseRepository;
+import com.flowlyrent.repository.PricingEventImpactConfigRepository;
 import com.flowlyrent.repository.PricingZoneRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +60,7 @@ public class ChatbotToolService {
     private final ManualExpenseRepository manualExpenseRepo;
     private final LocalEventRepository localEventRepo;
     private final PricingZoneRepository pricingZoneRepo;
+    private final PricingEventImpactConfigRepository eventImpactConfigRepo;
     private final SecurityUtils securityUtils;
 
     public Map<String, Object> execute(String toolName, Map<String, Object> args, String lang) {
@@ -618,6 +621,9 @@ public class ChatbotToolService {
             zoneNames.put(z.getId(), z.getName());
         }
 
+        PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
+                .orElseGet(PricingEventImpactConfig::new);
+
         final LocalDate filterFrom = from;
         final LocalDate filterTo = to;
 
@@ -632,9 +638,12 @@ public class ChatbotToolService {
                     m.put("startDate", e.getStartDate().toString());
                     m.put("endDate", e.getEndDate().toString());
                     m.put("impactLevel", e.getImpactLevel().name());
-                    m.put("impactPercent", switch (e.getImpactLevel()) {
-                        case FAIBLE -> "+25%"; case MOYEN -> "+50%"; case FORT -> "+75%";
-                    });
+                    m.put("impactPercent", "+" + switch (e.getImpactLevel()) {
+                        case FAIBLE -> impactConfig.getFaiblePercent();
+                        case MOYEN -> impactConfig.getMoyenPercent();
+                        case FORT -> impactConfig.getFortPercent();
+                        case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
+                    } + "%");
                     m.put("recurring", e.isRecurring());
                     m.put("zone", e.getZoneId() != null ? zoneNames.getOrDefault(e.getZoneId(), "Zone " + e.getZoneId()) : "Tous logements");
                     return m;

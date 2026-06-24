@@ -112,6 +112,7 @@ public class AdminDynamicPricingController {
             if (body.get("faiblePercent") != null) config.setFaiblePercent(Integer.parseInt(body.get("faiblePercent").toString()));
             if (body.get("moyenPercent") != null) config.setMoyenPercent(Integer.parseInt(body.get("moyenPercent").toString()));
             if (body.get("fortPercent") != null) config.setFortPercent(Integer.parseInt(body.get("fortPercent").toString()));
+            if (body.get("exceptionnelPercent") != null) config.setExceptionnelPercent(Integer.parseInt(body.get("exceptionnelPercent").toString()));
             return ResponseEntity.ok(toMap(eventImpactConfigRepo.save(config)));
         } catch (Exception e) {
             log.error("[event-impact-config PUT] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
@@ -123,6 +124,7 @@ public class AdminDynamicPricingController {
         Map<String, Object> m = new HashMap<>();
         m.put("faiblePercent", c.getFaiblePercent());
         m.put("moyenPercent", c.getMoyenPercent());
+        m.put("exceptionnelPercent", c.getExceptionnelPercent());
         m.put("fortPercent", c.getFortPercent());
         return m;
     }

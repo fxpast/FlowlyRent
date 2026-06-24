@@ -1296,6 +1296,7 @@
     "impact_faible": "Niedrig",
     "impact_moyen": "Mittel",
     "impact_fort": "Hoch",
+    "impact_exceptionnel": "Außergewöhnlich",
     "event_impact_title": "Einfluss lokaler Veranstaltungen auf den Preis",
     "event_impact_desc": "Legen Sie fest, um wie viel der empfohlene Preis je nach Einflussstärke einer lokalen Veranstaltung steigt."
   }

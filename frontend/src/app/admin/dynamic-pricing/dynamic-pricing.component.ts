@@ -373,6 +373,7 @@ function localDate(d: Date): string {
                         <mat-option value="FAIBLE">{{ 'pricing.impact_faible' | translate }}</mat-option>
                         <mat-option value="MOYEN">{{ 'pricing.impact_moyen' | translate }}</mat-option>
                         <mat-option value="FORT">{{ 'pricing.impact_fort' | translate }}</mat-option>
+                        <mat-option value="EXCEPTIONNEL">{{ 'pricing.impact_exceptionnel' | translate }}</mat-option>
                       </mat-select>
                     </mat-form-field>
 
@@ -397,7 +398,8 @@ function localDate(d: Date): string {
                 <div class="event-row">
                   <div class="event-impact" [class.impact-faible]="evt.impactLevel === 'FAIBLE'"
                        [class.impact-moyen]="evt.impactLevel === 'MOYEN'"
-                       [class.impact-fort]="evt.impactLevel === 'FORT'">
+                       [class.impact-fort]="evt.impactLevel === 'FORT'"
+                       [class.impact-exceptionnel]="evt.impactLevel === 'EXCEPTIONNEL'">
                     {{ evt.impactLevel }}
                   </div>
                   <div class="event-info">
@@ -446,6 +448,11 @@ function localDate(d: Date): string {
                 <mat-form-field appearance="outline" class="impact-pct">
                   <mat-label>{{ 'pricing.impact_fort' | translate }}</mat-label>
                   <input matInput type="number" min="0" [(ngModel)]="eventImpactConfig.fortPercent">
+                  <span matSuffix>%</span>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="impact-pct">
+                  <mat-label>{{ 'pricing.impact_exceptionnel' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="eventImpactConfig.exceptionnelPercent">
                   <span matSuffix>%</span>
                 </mat-form-field>
                 <button mat-raised-button color="primary" (click)="saveEventImpactConfig()"
@@ -594,6 +601,7 @@ function localDate(d: Date): string {
     .impact-faible { background: #e8f5e9; color: #2e7d32; }
     .impact-moyen  { background: #fff3e0; color: #e65100; }
     .impact-fort   { background: #fce4ec; color: #c62828; }
+    .impact-exceptionnel { background: #f3e5f5; color: #6a1b9a; }
     .event-info { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
     .event-name { font-size: 14px; font-weight: 600; color: #333; }
     .event-recurring-icon { font-size: 16px; width: 16px; height: 16px; color: #888; }
@@ -642,13 +650,13 @@ export class DynamicPricingComponent implements OnInit {
   showEventForm = signal(false);
   savingEvent = signal(false);
   editingEventId = signal<number | null>(null);
-  eventForm: { name: string; zoneId: number | null; startDate: string; endDate: string; startDateVal: Date | null; endDateVal: Date | null; impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT'; recurring: boolean } =
+  eventForm: { name: string; zoneId: number | null; startDate: string; endDate: string; startDateVal: Date | null; endDateVal: Date | null; impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT' | 'EXCEPTIONNEL'; recurring: boolean } =
     { name: '', zoneId: null, startDate: '', endDate: '', startDateVal: null, endDateVal: null, impactLevel: 'MOYEN', recurring: false };
 
   savingConfig = signal<string | null>(null);
   private configMap = new Map<string, PropertyPricingConfig>();
 
-  eventImpactConfig: EventImpactConfig = { faiblePercent: 25, moyenPercent: 50, fortPercent: 75 };
+  eventImpactConfig: EventImpactConfig = { faiblePercent: 5, moyenPercent: 10, fortPercent: 20, exceptionnelPercent: 500 };
   savingEventImpact = signal(false);
 
   constructor(

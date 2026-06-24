@@ -1298,6 +1298,7 @@
     "impact_faible": "Low",
     "impact_moyen": "Medium",
     "impact_fort": "High",
+    "impact_exceptionnel": "Exceptional",
     "event_impact_title": "Local event impact on price",
     "event_impact_desc": "Define how much the suggested price increases based on a local event's impact level."
   }

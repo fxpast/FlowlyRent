@@ -1304,6 +1304,7 @@
     "impact_faible": "Faible",
     "impact_moyen": "Moyen",
     "impact_fort": "Fort",
+    "impact_exceptionnel": "Exceptionnel",
     "recurring_event": "Annuel (récurrent)",
     "no_events": "Aucun événement local défini",
     "event_impact_title": "Impact des événements locaux sur le prix",

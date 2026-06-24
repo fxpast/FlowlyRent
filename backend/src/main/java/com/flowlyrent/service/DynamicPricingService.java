@@ -128,7 +128,7 @@ public class DynamicPricingService {
         else if (occupancyRate <= 0.30) occFactor = 0.85;
         else occFactor = 0.85 + (occupancyRate - 0.30) / 0.50 * 0.30;
 
-        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+25%, MOYEN=+50%, FORT=+75%)
+        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+5%, MOYEN=+10%, FORT=+20%, EXCEPTIONNEL=+500%)
         PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
                 .orElseGet(PricingEventImpactConfig::new);
         LocalDate analysisEnd = LocalDate.parse(endDate);
@@ -141,10 +141,11 @@ public class DynamicPricingService {
                     case FAIBLE -> impactConfig.getFaiblePercent();
                     case MOYEN -> impactConfig.getMoyenPercent();
                     case FORT -> impactConfig.getFortPercent();
+                    case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
                 })
                 .max().orElse(0);
         String eventName = matchingEvents.isEmpty() ? null : matchingEvents.stream()
-                .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; }))
+                .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; case EXCEPTIONNEL -> 4; }))
                 .map(LocalEvent::getName).orElse(null);
         double eventFactor = 1.0 + eventAdj / 100.0;
 

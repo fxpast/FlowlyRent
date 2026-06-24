@@ -26,7 +26,7 @@ export interface LocalEvent {
   name: string;
   startDate: string;
   endDate: string;
-  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT';
+  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT' | 'EXCEPTIONNEL';
   recurring: boolean;
 }
 
@@ -34,6 +34,7 @@ export interface EventImpactConfig {
   faiblePercent: number;
   moyenPercent: number;
   fortPercent: number;
+  exceptionnelPercent: number;
 }
 
 export interface PricingSuggestion {
