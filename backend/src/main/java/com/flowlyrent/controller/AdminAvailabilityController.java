@@ -10,6 +10,7 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.IcalBookingRepository;
 import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.RoomIdResolverService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class AdminAvailabilityController {
     private final LocalPropertyRepository localPropertyRepo;
     private final IcalBookingRepository icalBookingRepo;
     private final SecurityUtils securityUtils;
+    private final RoomIdResolverService roomIdResolver;
 
     @GetMapping("/calendar")
     public ResponseEntity<?> getCalendar(@RequestParam String from, @RequestParam String to) {
@@ -301,7 +303,7 @@ public class AdminAvailabilityController {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            Long roomId = beds24.resolveRoomId(token, propertyId, from, to);
+            Long roomId = roomIdResolver.resolveRoomId(securityUtils.getCurrentUserId(), token, propertyId, from, to);
             beds24.updateCalendar(token, List.of(Map.of(
                     "roomId",   roomId,
                     "calendar", List.of(Map.of("from", from, "to", to, "override", override))
@@ -321,7 +323,7 @@ public class AdminAvailabilityController {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            Long roomId = beds24.resolveRoomId(token, propertyId, from, to);
+            Long roomId = roomIdResolver.resolveRoomId(securityUtils.getCurrentUserId(), token, propertyId, from, to);
             Map<String, Object> calEntry = new HashMap<>();
             calEntry.put("from", from);
             calEntry.put("to",   to);

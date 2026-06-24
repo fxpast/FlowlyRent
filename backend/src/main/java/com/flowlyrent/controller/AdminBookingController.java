@@ -14,6 +14,7 @@ import com.flowlyrent.repository.IcalBookingRepository;
 import com.flowlyrent.repository.LocalPropertyRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.RoomIdResolverService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class AdminBookingController {
     private final LocalPropertyRepository localPropertyRepo;
     private final BookingMessageLogRepository messageLogRepo;
     private final SecurityUtils securityUtils;
+    private final RoomIdResolverService roomIdResolver;
 
     @GetMapping("/estimate")
     public ResponseEntity<?> estimate(@RequestParam String propId,
@@ -384,7 +386,7 @@ public class AdminBookingController {
                         String propId = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
                         if (propId == null) throw new IllegalArgumentException("propId manquant");
                         String arrival = Objects.toString(b.get("arrival"), LocalDate.now().toString()).substring(0, 10);
-                        b.put("roomId", beds24.resolveRoomId(token, propId, arrival, arrival));
+                        b.put("roomId", roomIdResolver.resolveRoomId(securityUtils.getCurrentUserId(), token, propId, arrival, arrival));
                     }
                 }
 

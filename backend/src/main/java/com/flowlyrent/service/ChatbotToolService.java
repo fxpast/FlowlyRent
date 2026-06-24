@@ -61,6 +61,7 @@ public class ChatbotToolService {
     private final LocalEventRepository localEventRepo;
     private final PricingZoneRepository pricingZoneRepo;
     private final PricingEventImpactConfigRepository eventImpactConfigRepo;
+    private final RoomIdResolverService roomIdResolver;
     private final SecurityUtils securityUtils;
 
     public Map<String, Object> execute(String toolName, Map<String, Object> args, String lang) {
@@ -694,7 +695,7 @@ public class ChatbotToolService {
 
         Long roomId;
         try {
-            roomId = beds24.resolveRoomId(token, propId, from.toString(), to.toString());
+            roomId = roomIdResolver.resolveRoomId(userId, token, propId, from.toString(), to.toString());
         } catch (IllegalArgumentException e) {
             return Map.of("error", "Chambre introuvable pour ce logement.");
         }
