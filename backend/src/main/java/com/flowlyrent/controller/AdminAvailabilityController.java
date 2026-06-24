@@ -301,17 +301,9 @@ public class AdminAvailabilityController {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            Map<String, String> calParams = new HashMap<>();
-            calParams.put("startDate", from);
-            calParams.put("endDate",   to);
-            List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
-            String roomId = rooms.stream()
-                    .filter(r -> propertyId.equals(idStr(r.get("propertyId"))))
-                    .map(r -> idStr(r.get("roomId")))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Chambre non trouvée pour propriété " + propertyId));
+            Long roomId = beds24.resolveRoomId(token, propertyId, from, to);
             beds24.updateCalendar(token, List.of(Map.of(
-                    "roomId",   Long.parseLong(roomId),
+                    "roomId",   roomId,
                     "calendar", List.of(Map.of("from", from, "to", to, "override", override))
             )));
             return ResponseEntity.ok(Map.of("success", true));
@@ -329,22 +321,14 @@ public class AdminAvailabilityController {
         try {
             Beds24Account account = requireAccount();
             String token = beds24.tokenFor(account);
-            Map<String, String> calParams = new HashMap<>();
-            calParams.put("startDate", from);
-            calParams.put("endDate",   to);
-            List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
-            String roomId = rooms.stream()
-                    .filter(r -> propertyId.equals(idStr(r.get("propertyId"))))
-                    .map(r -> idStr(r.get("roomId")))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Chambre non trouvée pour propriété " + propertyId));
+            Long roomId = beds24.resolveRoomId(token, propertyId, from, to);
             Map<String, Object> calEntry = new HashMap<>();
             calEntry.put("from", from);
             calEntry.put("to",   to);
             if (price   != null) calEntry.put("price1",  price);
             if (minStay != null) calEntry.put("minStay", minStay);
             beds24.updateCalendar(token, List.of(Map.of(
-                    "roomId",   Long.parseLong(roomId),
+                    "roomId",   roomId,
                     "calendar", List.of(calEntry)
             )));
             return ResponseEntity.ok(Map.of("success", true));

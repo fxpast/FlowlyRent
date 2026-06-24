@@ -692,21 +692,15 @@ public class ChatbotToolService {
         Beds24Account account = requireBeds24Account(userId);
         String token = beds24.tokenFor(account);
 
-        Map<String, String> calParams = new HashMap<>();
-        calParams.put("startDate", from.toString());
-        calParams.put("endDate", to.toString());
-        List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
-        String roomId = rooms.stream()
-                .filter(r -> propId.equals(idStr(r.get("propertyId"))))
-                .map(r -> idStr(r.get("roomId")))
-                .findFirst()
-                .orElse(null);
-        if (roomId == null) {
+        Long roomId;
+        try {
+            roomId = beds24.resolveRoomId(token, propId, from.toString(), to.toString());
+        } catch (IllegalArgumentException e) {
             return Map.of("error", "Chambre introuvable pour ce logement.");
         }
 
         beds24.updateCalendar(token, List.of(Map.of(
-                "roomId", Long.parseLong(roomId),
+                "roomId", roomId,
                 "calendar", List.of(Map.of("from", from.toString(), "to", to.toString(), "override", override))
         )));
 

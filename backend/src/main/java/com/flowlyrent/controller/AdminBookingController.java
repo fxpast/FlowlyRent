@@ -384,16 +384,7 @@ public class AdminBookingController {
                         String propId = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
                         if (propId == null) throw new IllegalArgumentException("propId manquant");
                         String arrival = Objects.toString(b.get("arrival"), LocalDate.now().toString()).substring(0, 10);
-                        Map<String, String> calParams = new HashMap<>();
-                        calParams.put("startDate", arrival);
-                        calParams.put("endDate",   arrival);
-                        List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
-                        String roomId = rooms.stream()
-                                .filter(r -> propId.equals(idStr(r.get("propertyId"))))
-                                .map(r -> idStr(r.get("roomId")))
-                                .findFirst()
-                                .orElseThrow(() -> new IllegalArgumentException("Chambre non trouvée pour propriété " + propId));
-                        b.put("roomId", Long.parseLong(roomId));
+                        b.put("roomId", beds24.resolveRoomId(token, propId, arrival, arrival));
                     }
                 }
 

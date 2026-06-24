@@ -15,6 +15,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +36,10 @@ public class Beds24ApiClient {
 
     private final Beds24TokenService tokenService;
     private final ObjectMapper objectMapper;
+
+    // propertyId → roomId — quasi-statique côté Beds24, mis en cache pour éviter de
+    // re-consommer des crédits d'API à chaque mise à jour de prix/blocage/réservation
+    private final Map<String, Long> roomIdCache = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
     // Token helper
@@ -121,6 +126,37 @@ public class Beds24ApiClient {
 
     public List<Map<String, Object>> getCalendar(String token, Map<String, String> params) throws Exception {
         return fetchAll("/inventory/rooms/calendar", token, params);
+    }
+
+    /**
+     * Résout le roomId Beds24 d'une propriété, en cache après le premier appel — la
+     * correspondance propertyId → roomId ne change pas, inutile de la re-demander à
+     * chaque mise à jour de prix/blocage/réservation (ça coûte des crédits d'API Beds24).
+     */
+    public Long resolveRoomId(String token, String propertyId, String from, String to) throws Exception {
+        Long cached = roomIdCache.get(propertyId);
+        if (cached != null) return cached;
+
+        Map<String, String> calParams = new HashMap<>();
+        calParams.put("startDate", from);
+        calParams.put("endDate", to);
+        for (Map<String, Object> r : getCalendar(token, calParams)) {
+            if (propertyId.equals(idStr(r.get("propertyId")))) {
+                Long roomId = Long.parseLong(idStr(r.get("roomId")));
+                roomIdCache.put(propertyId, roomId);
+                return roomId;
+            }
+        }
+        throw new IllegalArgumentException("Chambre non trouvée pour propriété " + propertyId);
+    }
+
+    private String idStr(Object value) {
+        if (value == null) return null;
+        String s = value.toString();
+        if (s.contains(".")) {
+            try { return String.valueOf((long) Double.parseDouble(s)); } catch (Exception ignored) {}
+        }
+        return s.isBlank() ? null : s;
     }
 
     public List<Map<String, Object>> updateCalendar(String token, List<Map<String, Object>> payload) throws Exception {
