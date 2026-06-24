@@ -417,6 +417,6 @@ public class AdminAvailabilityController {
     }
 
     private ResponseEntity<Map<String, String>> error(Exception e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        return ResponseEntity.badRequest().body(Map.of("error", Beds24ApiClient.friendlyMessage(e)));
     }
 }

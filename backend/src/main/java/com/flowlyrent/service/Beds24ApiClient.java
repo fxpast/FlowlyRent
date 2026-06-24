@@ -220,10 +220,25 @@ public class Beds24ApiClient {
 
     private String send(HttpRequest request) throws Exception {
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 429) {
+            throw new RuntimeException("Limite de requêtes Beds24 atteinte — réessayez dans quelques minutes (HTTP 429 : " + response.body() + ")");
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Beds24 HTTP " + response.statusCode() + " : " + response.body());
         }
         return response.body();
+    }
+
+    /**
+     * Message d'erreur lisible par l'hôte pour les exceptions issues de cette classe —
+     * à utiliser dans les contrôleurs au lieu de e.getMessage() brut.
+     */
+    public static String friendlyMessage(Throwable e) {
+        String msg = e.getMessage();
+        if (msg != null && msg.contains("HTTP 429")) {
+            return "Limite de requêtes Beds24 atteinte — réessayez dans quelques minutes.";
+        }
+        return msg;
     }
 
     private String buildUrl(String base, Map<String, String> params) {

@@ -7,6 +7,7 @@ import com.flowlyrent.model.PropertyPricingConfig;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PricingEventImpactConfigRepository;
 import com.flowlyrent.repository.PropertyPricingConfigRepository;
+import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.DynamicPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,7 @@ public class AdminDynamicPricingController {
             return ResponseEntity.ok(pricingService.calculateSuggestion(userId, account, propId, startDate, endDate));
         } catch (Exception e) {
             log.error("[dynamic-pricing/suggestion] propId={} {}→{} — {}: {}", propId, startDate, endDate, e.getClass().getSimpleName(), e.getMessage(), e);
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", Beds24ApiClient.friendlyMessage(e)));
         }
     }
 
