@@ -17,14 +17,14 @@ public class PricingEventImpactConfig {
     private Long userId;
 
     @Column(name = "faible_percent", nullable = false)
-    private int faiblePercent = 5;
+    private int faiblePercent = 20;
 
     @Column(name = "moyen_percent", nullable = false)
-    private int moyenPercent = 10;
+    private int moyenPercent = 50;
 
     @Column(name = "fort_percent", nullable = false)
-    private int fortPercent = 20;
+    private int fortPercent = 200;
 
     @Column(name = "exceptionnel_percent", nullable = false)
-    private int exceptionnelPercent = 500;
+    private int exceptionnelPercent = 400;
 }

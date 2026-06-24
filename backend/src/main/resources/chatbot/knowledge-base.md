@@ -200,9 +200,11 @@ L'hôte sélectionne un logement, une date de début et une date de fin, puis cl
 4. **Ajustement événements locaux** : si un événement local (festival, marché, concert…)
    est configuré et chevauche la période analysée, un bonus est appliqué selon son niveau
    d'impact — Faible, Moyen, Fort, Exceptionnel. Les pourcentages associés à chaque niveau
-   sont configurables par l'hôte dans l'onglet Configuration (défaut : Faible +5%, Moyen +10%,
-   Fort +20%, Exceptionnel +500%). Si plusieurs événements se chevauchent, seul le plus fort
-   impact est retenu. L'événement appliqué est affiché dans le détail du calcul.
+   sont configurables par l'hôte dans l'onglet Configuration (défaut : Faible +20%, Moyen +50%,
+   Fort +200%, Exceptionnel +400%). Si plusieurs événements se chevauchent sur la période
+   analysée, seul le plus fort impact est retenu pour le calcul du prix, mais le détail
+   du calcul liste **toutes** les lignes d'événements couvrant la période (nom, dates,
+   pourcentage), avec une coche sur celui effectivement appliqué.
 5. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
    configurés pour ce logement (optionnel).
 
@@ -234,7 +236,7 @@ Les événements locaux sont pris en compte automatiquement dans le calcul de pr
 
 En haut de l'onglet, l'hôte définit le **pourcentage d'impact des événements locaux**
 appliqué selon le niveau (Faible, Moyen, Fort, Exceptionnel) — valeurs par défaut
-5% / 10% / 20% / 500%, modifiables à tout moment et utilisées immédiatement dans le
+20% / 50% / 200% / 400%, modifiables à tout moment et utilisées immédiatement dans le
 calcul de prix (étape 4).
 
 Plus bas, l'onglet associe chaque logement à un secteur et permet de saisir manuellement

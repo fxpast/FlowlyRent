@@ -128,7 +128,7 @@ public class DynamicPricingService {
         else if (occupancyRate <= 0.30) occFactor = 0.85;
         else occFactor = 0.85 + (occupancyRate - 0.30) / 0.50 * 0.30;
 
-        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+5%, MOYEN=+10%, FORT=+20%, EXCEPTIONNEL=+500%)
+        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+20%, MOYEN=+50%, FORT=+200%, EXCEPTIONNEL=+400%)
         PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
                 .orElseGet(PricingEventImpactConfig::new);
         LocalDate analysisEnd = LocalDate.parse(endDate);
@@ -144,10 +144,30 @@ public class DynamicPricingService {
                     case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
                 })
                 .max().orElse(0);
-        String eventName = matchingEvents.isEmpty() ? null : matchingEvents.stream()
+        LocalEvent appliedEvent = matchingEvents.isEmpty() ? null : matchingEvents.stream()
                 .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; case EXCEPTIONNEL -> 4; }))
-                .map(LocalEvent::getName).orElse(null);
+                .orElse(null);
+        String eventName = appliedEvent != null ? appliedEvent.getName() : null;
         double eventFactor = 1.0 + eventAdj / 100.0;
+
+        List<Map<String, Object>> matchingEventsOut = matchingEvents.stream()
+                .map(e -> {
+                    int pct = switch (e.getImpactLevel()) {
+                        case FAIBLE -> impactConfig.getFaiblePercent();
+                        case MOYEN -> impactConfig.getMoyenPercent();
+                        case FORT -> impactConfig.getFortPercent();
+                        case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
+                    };
+                    Map<String, Object> em = new LinkedHashMap<>();
+                    em.put("name", e.getName());
+                    em.put("startDate", e.getStartDate().toString());
+                    em.put("endDate", e.getEndDate().toString());
+                    em.put("impactLevel", e.getImpactLevel().name());
+                    em.put("adjustmentPercent", pct);
+                    em.put("applied", e.getId().equals(appliedEvent.getId()));
+                    return em;
+                })
+                .collect(Collectors.toList());
 
         double suggestedMid = adjustedPrice * occFactor * eventFactor;
         double suggestedMin = Math.round(suggestedMid * 0.90);
@@ -212,6 +232,7 @@ public class DynamicPricingService {
         result.put("occupancyAdjustmentPercent", (int) Math.round((occFactor - 1.0) * 100));
         result.put("eventName", eventName);
         result.put("eventAdjustmentPercent", eventAdj);
+        result.put("matchingEvents", matchingEventsOut);
         result.put("marketMin", marketMin);
         result.put("marketMax", marketMax);
         result.put("alert", alert);

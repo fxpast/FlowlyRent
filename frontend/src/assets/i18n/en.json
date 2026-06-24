@@ -1300,6 +1300,8 @@
     "impact_fort": "High",
     "impact_exceptionnel": "Exceptional",
     "event_impact_title": "Local event impact on price",
-    "event_impact_desc": "Define how much the suggested price increases based on a local event's impact level."
+    "event_impact_desc": "Define how much the suggested price increases based on a local event's impact level.",
+    "local_events": "Local events",
+    "event_applied": "Applied to calculation"
   }
 }

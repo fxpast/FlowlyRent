@@ -182,14 +182,24 @@ function localDate(d: Date): string {
                       </span>
                     </strong>
                   </div>
-                  @if (suggestion()!.eventName) {
-                    <div class="detail-row">
-                      <span>{{ 'pricing.local_event' | translate }}</span>
-                      <strong>
-                        {{ suggestion()!.eventName }}
-                        <span class="adj pos">(+{{ suggestion()!.eventAdjustmentPercent }}%)</span>
-                      </strong>
+                  @if (suggestion()!.matchingEvents.length) {
+                    <div class="detail-row events-label">
+                      <span>{{ 'pricing.local_events' | translate }}</span>
                     </div>
+                    @for (evt of suggestion()!.matchingEvents; track evt.name + evt.startDate) {
+                      <div class="detail-row event-detail-row" [class.not-applied]="!evt.applied">
+                        <span class="event-detail-name">
+                          {{ evt.name }}
+                          <span class="event-detail-dates">({{ evt.startDate }} → {{ evt.endDate }})</span>
+                        </span>
+                        <strong class="adj pos">
+                          +{{ evt.adjustmentPercent }}%
+                          @if (evt.applied) {
+                            <mat-icon class="applied-icon" [matTooltip]="'pricing.event_applied' | translate">check_circle</mat-icon>
+                          }
+                        </strong>
+                      </div>
+                    }
                   }
                   @if (suggestion()!.marketMin || suggestion()!.marketMax) {
                     <div class="detail-row">
@@ -548,6 +558,12 @@ function localDate(d: Date): string {
     .adj { font-size: 12px; margin-left: 4px; color: #e53935; }
     .adj.pos { color: #43a047; }
     .divider { margin: 8px 0; }
+    .events-label { padding-bottom: 0; font-size: 13px; color: #666; }
+    .event-detail-row { padding-left: 8px; }
+    .event-detail-row.not-applied { opacity: 0.55; }
+    .event-detail-name { font-size: 13px; }
+    .event-detail-dates { font-size: 11px; color: #888; margin-left: 4px; }
+    .applied-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; margin-left: 2px; color: #43a047; }
 
     .empty-hint { text-align: center; padding: 60px 24px; color: #aaa; }
     .empty-hint mat-icon { font-size: 56px; width: 56px; height: 56px; }
@@ -657,7 +673,7 @@ export class DynamicPricingComponent implements OnInit {
   savingConfig = signal<string | null>(null);
   private configMap = new Map<string, PropertyPricingConfig>();
 
-  eventImpactConfig: EventImpactConfig = { faiblePercent: 5, moyenPercent: 10, fortPercent: 20, exceptionnelPercent: 500 };
+  eventImpactConfig: EventImpactConfig = { faiblePercent: 20, moyenPercent: 50, fortPercent: 200, exceptionnelPercent: 400 };
   savingEventImpact = signal(false);
 
   constructor(

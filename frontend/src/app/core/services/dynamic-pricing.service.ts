@@ -37,6 +37,15 @@ export interface EventImpactConfig {
   exceptionnelPercent: number;
 }
 
+export interface MatchingEvent {
+  name: string;
+  startDate: string;
+  endDate: string;
+  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT' | 'EXCEPTIONNEL';
+  adjustmentPercent: number;
+  applied: boolean;
+}
+
 export interface PricingSuggestion {
   propertyId: string; startDate: string; endDate: string;
   currentPrice: number | null;
@@ -49,6 +58,7 @@ export interface PricingSuggestion {
   historicalBookingsCount: number;
   eventName: string | null;
   eventAdjustmentPercent: number;
+  matchingEvents: MatchingEvent[];
 }
 
 const BASE = environment.apiUrl;

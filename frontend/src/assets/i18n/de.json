@@ -1298,6 +1298,8 @@
     "impact_fort": "Hoch",
     "impact_exceptionnel": "Außergewöhnlich",
     "event_impact_title": "Einfluss lokaler Veranstaltungen auf den Preis",
-    "event_impact_desc": "Legen Sie fest, um wie viel der empfohlene Preis je nach Einflussstärke einer lokalen Veranstaltung steigt."
+    "event_impact_desc": "Legen Sie fest, um wie viel der empfohlene Preis je nach Einflussstärke einer lokalen Veranstaltung steigt.",
+    "local_events": "Lokale Veranstaltungen",
+    "event_applied": "Auf Berechnung angewendet"
   }
 }
