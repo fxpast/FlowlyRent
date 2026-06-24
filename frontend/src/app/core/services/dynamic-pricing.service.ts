@@ -37,28 +37,25 @@ export interface EventImpactConfig {
   exceptionnelPercent: number;
 }
 
-export interface MatchingEvent {
-  name: string;
-  startDate: string;
-  endDate: string;
-  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT' | 'EXCEPTIONNEL';
-  adjustmentPercent: number;
-  applied: boolean;
+export interface PricingSegment {
+  startDate: string; endDate: string;
+  eventName: string | null;
+  impactLevel: 'FAIBLE' | 'MOYEN' | 'FORT' | 'EXCEPTIONNEL' | null;
+  eventAdjustmentPercent: number;
+  currentPrice: number | null;
+  suggestedMin: number | null; suggestedMax: number | null;
+  alert: 'underpriced' | 'overpriced' | 'ok' | 'no_data' | 'no_current_price';
 }
 
 export interface PricingSuggestion {
   propertyId: string; startDate: string; endDate: string;
-  currentPrice: number | null;
-  basePrice: number | null; suggestedMin: number | null; suggestedMax: number | null;
+  basePrice: number | null;
   zoneConfigured: boolean;
   seasonName: string | null; seasonalAdjustmentPercent: number;
   occupancyRate: number; occupancyAdjustmentPercent: number;
   marketMin: number | null; marketMax: number | null;
-  alert: 'underpriced' | 'overpriced' | 'ok' | 'no_data' | 'no_current_price';
   historicalBookingsCount: number;
-  eventName: string | null;
-  eventAdjustmentPercent: number;
-  matchingEvents: MatchingEvent[];
+  segments: PricingSegment[];
 }
 
 const BASE = environment.apiUrl;

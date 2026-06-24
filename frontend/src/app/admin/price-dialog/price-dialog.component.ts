@@ -13,6 +13,7 @@ import { TranslateModule } from '@ngx-translate/core';
 export interface PriceDialogData {
   propertyName: string;
   date: string;
+  dateTo?: string;
   field: 'price' | 'minStay';
   price?: number;
   minStay?: number;
@@ -104,9 +105,9 @@ export class PriceDialogComponent {
     private dialogRef: MatDialogRef<PriceDialogComponent>
   ) {
     this.from    = data.date;
-    this.to      = data.date;
+    this.to      = data.dateTo ?? data.date;
     this.fromDateVal = this.toDate(data.date);
-    this.toDateVal   = this.toDate(data.date);
+    this.toDateVal   = this.toDate(this.to);
     this.price   = data.price   ?? null;
     this.minStay = data.minStay ?? null;
   }

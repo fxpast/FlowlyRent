@@ -30,6 +30,9 @@ public class DynamicPricingService {
     private final LocalEventRepository eventRepo;
     private final PricingEventImpactConfigRepository eventImpactConfigRepo;
 
+    private record DaySlot(int percent, String eventName, String impactLevel) {}
+    private record PeriodBooking(LocalDate arrival, LocalDate departure, double pricePerNight) {}
+
     @SuppressWarnings("unchecked")
     public Map<String, Object> calculateSuggestion(
             Long userId, Beds24Account account,
@@ -128,66 +131,19 @@ public class DynamicPricingService {
         else if (occupancyRate <= 0.30) occFactor = 0.85;
         else occFactor = 0.85 + (occupancyRate - 0.30) / 0.50 * 0.30;
 
-        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+20%, MOYEN=+50%, FORT=+200%, EXCEPTIONNEL=+400%)
-        PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
-                .orElseGet(PricingEventImpactConfig::new);
-        LocalDate analysisEnd = LocalDate.parse(endDate);
-        List<LocalEvent> matchingEvents = eventRepo.findByUserIdOrderByStartDateAsc(userId).stream()
-                .filter(e -> e.getZoneId() == null || (config != null && e.getZoneId().equals(config.getZoneId())))
-                .filter(e -> overlapsAnalysisPeriod(e, start, analysisEnd))
-                .collect(Collectors.toList());
-        int eventAdj = matchingEvents.stream()
-                .mapToInt(e -> switch (e.getImpactLevel()) {
-                    case FAIBLE -> impactConfig.getFaiblePercent();
-                    case MOYEN -> impactConfig.getMoyenPercent();
-                    case FORT -> impactConfig.getFortPercent();
-                    case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
-                })
-                .max().orElse(0);
-        LocalEvent appliedEvent = matchingEvents.isEmpty() ? null : matchingEvents.stream()
-                .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; case EXCEPTIONNEL -> 4; }))
-                .orElse(null);
-        String eventName = appliedEvent != null ? appliedEvent.getName() : null;
-        double eventFactor = 1.0 + eventAdj / 100.0;
-
-        List<Map<String, Object>> matchingEventsOut = matchingEvents.stream()
-                .map(e -> {
-                    int pct = switch (e.getImpactLevel()) {
-                        case FAIBLE -> impactConfig.getFaiblePercent();
-                        case MOYEN -> impactConfig.getMoyenPercent();
-                        case FORT -> impactConfig.getFortPercent();
-                        case EXCEPTIONNEL -> impactConfig.getExceptionnelPercent();
-                    };
-                    Map<String, Object> em = new LinkedHashMap<>();
-                    em.put("name", e.getName());
-                    em.put("startDate", e.getStartDate().toString());
-                    em.put("endDate", e.getEndDate().toString());
-                    em.put("impactLevel", e.getImpactLevel().name());
-                    em.put("adjustmentPercent", pct);
-                    em.put("applied", e.getId().equals(appliedEvent.getId()));
-                    return em;
-                })
-                .collect(Collectors.toList());
-
-        double suggestedMid = adjustedPrice * occFactor * eventFactor;
-        double suggestedMin = Math.round(suggestedMid * 0.90);
-        double suggestedMax = Math.round(suggestedMid * 1.10);
-
         // 6. Recalage fourchette marché
         Double marketMin = config != null && config.getMarketMin() != null
                 ? config.getMarketMin().doubleValue() : null;
         Double marketMax = config != null && config.getMarketMax() != null
                 ? config.getMarketMax().doubleValue() : null;
-        if (marketMin != null && suggestedMin < marketMin) suggestedMin = marketMin;
-        if (marketMax != null && suggestedMax > marketMax) suggestedMax = marketMax;
 
-        // 7. Prix moyen/nuit des réservations sur la période analysée (même logique que menu Revenus)
-        Double currentPrice = null;
+        // 7. Réservations sur la période analysée (même logique que menu Revenus), gardées par séjour
+        //    pour calculer un prix actuel propre à chaque segment (étape 9)
+        List<PeriodBooking> periodBookings = new ArrayList<>();
         try {
             Map<String, String> curParams = new HashMap<>();
             curParams.put("arrivalTo", endDate);
             curParams.put("departureFrom", startDate);
-            List<Double> periodPrices = new ArrayList<>();
             for (Map<String, Object> b : beds24.getBookings(token, curParams)) {
                 String bPropId = str(b, "propId") != null ? str(b, "propId") : str(b, "propertyId");
                 if (!propId.equals(bPropId)) continue;
@@ -199,45 +155,122 @@ public class DynamicPricingService {
                 String arr = str(b, "arrival");
                 String dep = str(b, "departure");
                 if (arr == null || dep == null) continue;
-                long nights = ChronoUnit.DAYS.between(LocalDate.parse(arr), LocalDate.parse(dep));
+                LocalDate a = LocalDate.parse(arr);
+                LocalDate d = LocalDate.parse(dep);
+                long nights = ChronoUnit.DAYS.between(a, d);
                 if (nights <= 0) continue;
-                periodPrices.add(price / nights);
-            }
-            if (!periodPrices.isEmpty()) {
-                currentPrice = periodPrices.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+                periodBookings.add(new PeriodBooking(a, d, price / nights));
             }
         } catch (Exception e) {
             log.debug("Could not fetch current period bookings: {}", e.getMessage());
         }
 
-        // 8. Alerte
-        String alert = pricesPerNight.isEmpty() ? "no_data"
-                : currentPrice == null ? "no_current_price"
-                : currentPrice < suggestedMin ? "underpriced"
-                : currentPrice > suggestedMax ? "overpriced"
-                : "ok";
+        // 8. Ajustement événements locaux par jour (pourcentages configurables par l'hôte, défaut
+        //    FAIBLE=+20%, MOYEN=+50%, FORT=+200%, EXCEPTIONNEL=+400%) — un même événement peut ne
+        //    couvrir qu'une partie de la période analysée, le reste reste au tarif "normal"
+        PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
+                .orElseGet(PricingEventImpactConfig::new);
+        LocalDate analysisEnd = LocalDate.parse(endDate);
+        List<LocalEvent> matchingEvents = eventRepo.findByUserIdOrderByStartDateAsc(userId).stream()
+                .filter(e -> e.getZoneId() == null || (config != null && e.getZoneId().equals(config.getZoneId())))
+                .filter(e -> overlapsAnalysisPeriod(e, start, analysisEnd))
+                .collect(Collectors.toList());
+
+        List<LocalDate> days = new ArrayList<>();
+        for (LocalDate d = start; !d.isAfter(analysisEnd); d = d.plusDays(1)) days.add(d);
+
+        List<DaySlot> perDay = new ArrayList<>();
+        for (LocalDate d : days) {
+            int bestPct = 0;
+            String bestName = null;
+            String bestLevel = null;
+            for (LocalEvent e : matchingEvents) {
+                if (!coversDay(e, d)) continue;
+                int pct = percentFor(e.getImpactLevel(), impactConfig);
+                if (pct > bestPct) { bestPct = pct; bestName = e.getName(); bestLevel = e.getImpactLevel().name(); }
+            }
+            perDay.add(new DaySlot(bestPct, bestName, bestLevel));
+        }
+
+        // 9. Regroupement en segments (jours consécutifs avec le même événement appliqué, ou aucun)
+        //    et calcul d'une fourchette + d'un prix actuel propres à chaque segment
+        List<Map<String, Object>> segments = new ArrayList<>();
+        int segStartIdx = 0;
+        for (int i = 1; i <= days.size(); i++) {
+            if (i != days.size() && perDay.get(i).equals(perDay.get(segStartIdx))) continue;
+
+            LocalDate segStart = days.get(segStartIdx);
+            LocalDate segEnd = days.get(i - 1);
+            DaySlot slot = perDay.get(segStartIdx);
+
+            double segMid = adjustedPrice * occFactor * (1.0 + slot.percent() / 100.0);
+            double segMin = Math.round(segMid * 0.90);
+            double segMax = Math.round(segMid * 1.10);
+            if (marketMin != null && segMin < marketMin) segMin = marketMin;
+            if (marketMax != null && segMax > marketMax) segMax = marketMax;
+
+            List<Double> segPrices = periodBookings.stream()
+                    .filter(pb -> !pb.arrival().isAfter(segEnd) && pb.departure().isAfter(segStart))
+                    .map(PeriodBooking::pricePerNight)
+                    .collect(Collectors.toList());
+            Double segCurrentPrice = segPrices.isEmpty() ? null
+                    : segPrices.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+
+            String segAlert = pricesPerNight.isEmpty() ? "no_data"
+                    : segCurrentPrice == null ? "no_current_price"
+                    : segCurrentPrice < segMin ? "underpriced"
+                    : segCurrentPrice > segMax ? "overpriced"
+                    : "ok";
+
+            Map<String, Object> segMap = new LinkedHashMap<>();
+            segMap.put("startDate", segStart.toString());
+            segMap.put("endDate", segEnd.toString());
+            segMap.put("eventName", slot.eventName());
+            segMap.put("impactLevel", slot.impactLevel());
+            segMap.put("eventAdjustmentPercent", slot.percent());
+            segMap.put("currentPrice", segCurrentPrice);
+            segMap.put("suggestedMin", pricesPerNight.isEmpty() ? null : (long) segMin);
+            segMap.put("suggestedMax", pricesPerNight.isEmpty() ? null : (long) segMax);
+            segMap.put("alert", segAlert);
+            segments.add(segMap);
+
+            segStartIdx = i;
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("propertyId", propId);
         result.put("startDate", startDate);
         result.put("endDate", endDate);
-        result.put("currentPrice", currentPrice);
         result.put("basePrice", pricesPerNight.isEmpty() ? null : (long) Math.round(basePrice));
-        result.put("suggestedMin", pricesPerNight.isEmpty() ? null : (long) suggestedMin);
-        result.put("suggestedMax", pricesPerNight.isEmpty() ? null : (long) suggestedMax);
         result.put("zoneConfigured", config != null && config.getZoneId() != null);
         result.put("seasonName", seasonName);
         result.put("seasonalAdjustmentPercent", seasonAdj);
         result.put("occupancyRate", Math.round(occupancyRate * 100) / 100.0);
         result.put("occupancyAdjustmentPercent", (int) Math.round((occFactor - 1.0) * 100));
-        result.put("eventName", eventName);
-        result.put("eventAdjustmentPercent", eventAdj);
-        result.put("matchingEvents", matchingEventsOut);
         result.put("marketMin", marketMin);
         result.put("marketMax", marketMax);
-        result.put("alert", alert);
         result.put("historicalBookingsCount", propBookings.size());
+        result.put("segments", segments);
         return result;
+    }
+
+    private int percentFor(ImpactLevel level, PricingEventImpactConfig cfg) {
+        return switch (level) {
+            case FAIBLE -> cfg.getFaiblePercent();
+            case MOYEN -> cfg.getMoyenPercent();
+            case FORT -> cfg.getFortPercent();
+            case EXCEPTIONNEL -> cfg.getExceptionnelPercent();
+        };
+    }
+
+    private boolean coversDay(LocalEvent event, LocalDate day) {
+        if (event.isRecurring()) {
+            int evtS = event.getStartDate().getMonthValue() * 100 + event.getStartDate().getDayOfMonth();
+            int evtE = event.getEndDate().getMonthValue()   * 100 + event.getEndDate().getDayOfMonth();
+            int dayOrd = day.getMonthValue() * 100 + day.getDayOfMonth();
+            return evtS <= evtE ? (dayOrd >= evtS && dayOrd <= evtE) : (dayOrd >= evtS || dayOrd <= evtE);
+        }
+        return !day.isBefore(event.getStartDate()) && !day.isAfter(event.getEndDate());
     }
 
     private boolean overlapsAnalysisPeriod(LocalEvent event, LocalDate start, LocalDate end) {

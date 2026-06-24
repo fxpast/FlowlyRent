@@ -19,7 +19,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion, LocalEvent, EventImpactConfig } from '../../core/services/dynamic-pricing.service';
+import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion, PricingSegment, LocalEvent, EventImpactConfig } from '../../core/services/dynamic-pricing.service';
 import { BookingService } from '../../core/services/booking.service';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 import { environment } from '../../../environments/environment';
@@ -90,63 +90,8 @@ function localDate(d: Date): string {
           </mat-card>
 
           @if (suggestion()) {
-            <div class="result-grid">
-              <!-- Carte alerte -->
-              <mat-card class="alert-card" [class.underpriced]="suggestion()!.alert === 'underpriced'"
-                        [class.overpriced]="suggestion()!.alert === 'overpriced'"
-                        [class.ok]="suggestion()!.alert === 'ok'"
-                        [class.no-data]="suggestion()!.alert === 'no_data'">
-                <mat-card-content>
-                  <div class="alert-header">
-                    <mat-icon class="alert-icon">
-                      {{ suggestion()!.alert === 'underpriced' ? 'trending_down'
-                       : suggestion()!.alert === 'overpriced' ? 'trending_up'
-                       : suggestion()!.alert === 'ok' ? 'check_circle'
-                       : 'info' }}
-                    </mat-icon>
-                    <div class="alert-text">
-                      <div class="alert-title">
-                        {{ ('pricing.alert_' + suggestion()!.alert) | translate }}
-                      </div>
-                      @if (suggestion()!.currentPrice) {
-                        <div class="current-price-row">
-                          <span class="label">{{ 'pricing.current_price' | translate }}</span>
-                          <span class="value">{{ suggestion()!.currentPrice | number:'1.2-2' }}€/nuit</span>
-                          @if (suggestion()!.alert === 'underpriced') {
-                            <mat-chip class="chip-warn">⚠️</mat-chip>
-                          }
-                        </div>
-                      }
-                      @if (suggestion()!.suggestedMin) {
-                        <div class="range-row">
-                          <span class="label">{{ 'pricing.suggested_range' | translate }}</span>
-                          <span class="value range">{{ suggestion()!.suggestedMin }}€ – {{ suggestion()!.suggestedMax }}€/nuit</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  @if (suggestion()!.alert === 'underpriced') {
-                    <div class="under-msg">
-                      → {{ 'pricing.underpriced_hint' | translate }}
-                      {{ undervaluedPercent() }}%
-                      {{ 'pricing.for_this_period' | translate }}
-                    </div>
-                  }
-                  @if (suggestion()!.suggestedMin) {
-                    <div class="action-row">
-                      <button mat-stroked-button (click)="suggestion.set(null)">
-                        {{ 'pricing.ignore' | translate }}
-                      </button>
-                      <button mat-raised-button color="primary" (click)="openAdjust()">
-                        <mat-icon>edit</mat-icon>
-                        {{ 'pricing.adjust_price' | translate }}
-                      </button>
-                    </div>
-                  }
-                </mat-card-content>
-              </mat-card>
-
-              <!-- Carte détail calcul -->
+            <div class="result-stack">
+              <!-- Carte détail calcul (commun à toute la période analysée) -->
               <mat-card class="detail-card">
                 <mat-card-header>
                   <mat-card-title>{{ 'pricing.calculation_detail' | translate }}</mat-card-title>
@@ -182,25 +127,6 @@ function localDate(d: Date): string {
                       </span>
                     </strong>
                   </div>
-                  @if (suggestion()!.matchingEvents.length) {
-                    <div class="detail-row events-label">
-                      <span>{{ 'pricing.local_events' | translate }}</span>
-                    </div>
-                    @for (evt of suggestion()!.matchingEvents; track evt.name + evt.startDate) {
-                      <div class="detail-row event-detail-row" [class.not-applied]="!evt.applied">
-                        <span class="event-detail-name">
-                          {{ evt.name }}
-                          <span class="event-detail-dates">({{ evt.startDate }} → {{ evt.endDate }})</span>
-                        </span>
-                        <strong class="adj pos">
-                          +{{ evt.adjustmentPercent }}%
-                          @if (evt.applied) {
-                            <mat-icon class="applied-icon" [matTooltip]="'pricing.event_applied' | translate">check_circle</mat-icon>
-                          }
-                        </strong>
-                      </div>
-                    }
-                  }
                   @if (suggestion()!.marketMin || suggestion()!.marketMax) {
                     <div class="detail-row">
                       <span>{{ 'pricing.market_range' | translate }}</span>
@@ -214,6 +140,74 @@ function localDate(d: Date): string {
                   </div>
                 </mat-card-content>
               </mat-card>
+
+              <div class="dismiss-row">
+                <button mat-stroked-button (click)="suggestion.set(null)">
+                  {{ 'pricing.ignore' | translate }}
+                </button>
+              </div>
+
+              <!-- Une carte par segment : jours normaux et jours couverts par un événement local -->
+              @for (seg of suggestion()!.segments; track seg.startDate) {
+                <mat-card class="alert-card" [class.underpriced]="seg.alert === 'underpriced'"
+                          [class.overpriced]="seg.alert === 'overpriced'"
+                          [class.ok]="seg.alert === 'ok'"
+                          [class.no-data]="seg.alert === 'no_data'">
+                  <mat-card-content>
+                    <div class="segment-header">
+                      <span class="segment-dates">{{ seg.startDate }} → {{ seg.endDate }}</span>
+                      @if (seg.eventName) {
+                        <span class="segment-badge event">{{ seg.eventName }} (+{{ seg.eventAdjustmentPercent }}%)</span>
+                      } @else {
+                        <span class="segment-badge normal">{{ 'pricing.normal_days' | translate }}</span>
+                      }
+                    </div>
+                    <div class="alert-header">
+                      <mat-icon class="alert-icon">
+                        {{ seg.alert === 'underpriced' ? 'trending_down'
+                         : seg.alert === 'overpriced' ? 'trending_up'
+                         : seg.alert === 'ok' ? 'check_circle'
+                         : 'info' }}
+                      </mat-icon>
+                      <div class="alert-text">
+                        <div class="alert-title">
+                          {{ ('pricing.alert_' + seg.alert) | translate }}
+                        </div>
+                        @if (seg.currentPrice) {
+                          <div class="current-price-row">
+                            <span class="label">{{ 'pricing.current_price' | translate }}</span>
+                            <span class="value">{{ seg.currentPrice | number:'1.2-2' }}€/nuit</span>
+                            @if (seg.alert === 'underpriced') {
+                              <mat-chip class="chip-warn">⚠️</mat-chip>
+                            }
+                          </div>
+                        }
+                        @if (seg.suggestedMin) {
+                          <div class="range-row">
+                            <span class="label">{{ 'pricing.suggested_range' | translate }}</span>
+                            <span class="value range">{{ seg.suggestedMin }}€ – {{ seg.suggestedMax }}€/nuit</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                    @if (seg.alert === 'underpriced') {
+                      <div class="under-msg">
+                        → {{ 'pricing.underpriced_hint' | translate }}
+                        {{ undervaluedPercent(seg) }}%
+                        {{ 'pricing.for_this_period' | translate }}
+                      </div>
+                    }
+                    @if (seg.suggestedMin) {
+                      <div class="action-row">
+                        <button mat-raised-button color="primary" (click)="openAdjust(seg)">
+                          <mat-icon>edit</mat-icon>
+                          {{ 'pricing.adjust_price' | translate }}
+                        </button>
+                      </div>
+                    }
+                  </mat-card-content>
+                </mat-card>
+              }
             </div>
           }
 
@@ -528,8 +522,14 @@ function localDate(d: Date): string {
     .form-row .wide { flex: 2; min-width: 200px; }
     .form-row mat-form-field { flex: 1; min-width: 140px; }
     .form-row button { height: 56px; white-space: nowrap; }
-    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+    .result-stack { display: flex; flex-direction: column; gap: 20px; }
+    .dismiss-row { display: flex; justify-content: flex-end; margin-top: -8px; }
+
+    .segment-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .segment-dates { font-size: 13px; font-weight: 600; color: #555; }
+    .segment-badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; background: #f0f0f0; color: #555; }
+    .segment-badge.event { background: #fce4ec; color: #c62828; }
+    .segment-badge.normal { background: #e3f2fd; color: #1565c0; }
 
     .alert-card { border-left: 5px solid #ccc; }
     .alert-card.underpriced { border-left-color: #f57c00; background: #fff8f0; }
@@ -558,12 +558,6 @@ function localDate(d: Date): string {
     .adj { font-size: 12px; margin-left: 4px; color: #e53935; }
     .adj.pos { color: #43a047; }
     .divider { margin: 8px 0; }
-    .events-label { padding-bottom: 0; font-size: 13px; color: #666; }
-    .event-detail-row { padding-left: 8px; }
-    .event-detail-row.not-applied { opacity: 0.55; }
-    .event-detail-name { font-size: 13px; }
-    .event-detail-dates { font-size: 11px; color: #888; margin-left: 4px; }
-    .applied-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; margin-left: 2px; color: #43a047; }
 
     .empty-hint { text-align: center; padding: 60px 24px; color: #aaa; }
     .empty-hint mat-icon { font-size: 56px; width: 56px; height: 56px; }
@@ -747,19 +741,17 @@ export class DynamicPricingComponent implements OnInit {
     });
   }
 
-  undervaluedPercent(): number {
-    const s = this.suggestion();
-    if (!s?.currentPrice || !s.suggestedMin) return 0;
-    return Math.round(((s.suggestedMin - s.currentPrice) / s.currentPrice) * 100);
+  undervaluedPercent(seg: PricingSegment): number {
+    if (!seg.currentPrice || !seg.suggestedMin) return 0;
+    return Math.round(((seg.suggestedMin - seg.currentPrice) / seg.currentPrice) * 100);
   }
 
-  openAdjust(): void {
-    const s = this.suggestion();
-    if (!s?.suggestedMin) return;
-    const mid = Math.round((s.suggestedMin + (s.suggestedMax ?? s.suggestedMin)) / 2);
+  openAdjust(seg: PricingSegment): void {
+    if (!seg.suggestedMin) return;
+    const mid = Math.round((seg.suggestedMin + (seg.suggestedMax ?? seg.suggestedMin)) / 2);
     const propName = this.properties().find(p => p.id === this.selectedPropId)?.name ?? '';
     const ref = this.dialog.open(PriceDialogComponent, {
-      data: { propertyName: propName, date: this.startDate, field: 'price', price: mid },
+      data: { propertyName: propName, date: seg.startDate, dateTo: seg.endDate, field: 'price', price: mid },
       width: '380px'
     });
     ref.afterClosed().subscribe((result: PriceDialogResult | undefined) => {

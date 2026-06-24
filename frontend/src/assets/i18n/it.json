@@ -1300,6 +1300,6 @@
     "event_impact_title": "Impatto degli eventi locali sul prezzo",
     "event_impact_desc": "Definisci di quanto aumenta il prezzo suggerito in base al livello di impatto di un evento locale.",
     "local_events": "Eventi locali",
-    "event_applied": "Applicato al calcolo"
+    "normal_days": "Giorni normali"
   }
 }

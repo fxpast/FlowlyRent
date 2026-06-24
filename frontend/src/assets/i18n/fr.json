@@ -1309,6 +1309,6 @@
     "no_events": "Aucun événement local défini",
     "event_impact_title": "Impact des événements locaux sur le prix",
     "event_impact_desc": "Définissez de combien le prix suggéré augmente selon le niveau d'impact d'un événement local.",
-    "event_applied": "Appliqué au calcul"
+    "normal_days": "Jours normaux"
   }
 }

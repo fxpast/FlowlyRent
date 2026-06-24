@@ -189,7 +189,7 @@ de prix pour ses logements en fonction des données historiques et de la saisonn
 ### Onglet Analyse
 
 L'hôte sélectionne un logement, une date de début et une date de fin, puis clique sur
-"Analyser". L'algorithme calcule en 5 étapes :
+"Analyser". L'algorithme calcule :
 
 1. **Prix historique moyen** : moyenne des prix réels des séjours passés sur la même période
    (même plage de mois), à partir des réservations Beds24 sur les 24 derniers mois.
@@ -197,21 +197,24 @@ L'hôte sélectionne un logement, une date de début et une date de fin, puis cl
    de base est majoré ou minoré selon le pourcentage défini pour la période concernée.
 3. **Ajustement taux d'occupation** : si le taux d'occupation des 60 prochains jours est
    élevé (> 80%), le prix est augmenté jusqu'à +15% ; si faible (< 30%), réduit jusqu'à -15%.
-4. **Ajustement événements locaux** : si un événement local (festival, marché, concert…)
-   est configuré et chevauche la période analysée, un bonus est appliqué selon son niveau
-   d'impact — Faible, Moyen, Fort, Exceptionnel. Les pourcentages associés à chaque niveau
-   sont configurables par l'hôte dans l'onglet Configuration (défaut : Faible +20%, Moyen +50%,
-   Fort +200%, Exceptionnel +400%). Si plusieurs événements se chevauchent sur la période
-   analysée, seul le plus fort impact est retenu pour le calcul du prix, mais le détail
-   du calcul liste **toutes** les lignes d'événements couvrant la période (nom, dates,
-   pourcentage), avec une coche sur celui effectivement appliqué.
-5. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
+4. **Découpage en segments selon les événements locaux** : la période analysée est découpée
+   jour par jour selon les événements locaux qui la couvrent (festival, marché, concert…).
+   Chaque jour reçoit le pourcentage du niveau d'impact le plus fort qui le couvre — Faible,
+   Moyen, Fort, Exceptionnel (pourcentages configurables par l'hôte dans l'onglet Configuration,
+   défaut : Faible +20%, Moyen +50%, Fort +200%, Exceptionnel +400%) — ou aucun bonus si le
+   jour n'est couvert par aucun événement. Les jours consécutifs ayant le même statut sont
+   regroupés en un **segment** ; un même événement de quelques jours au sein d'une période
+   plus longue produit ainsi un segment "jours normaux" et un segment "événement" distincts,
+   chacun avec sa propre fourchette de prix suggérée.
+5. **Cadrage marché** : chaque segment est borné entre le prix minimum et maximum marché
    configurés pour ce logement (optionnel).
 
-Le résultat affiche : le prix actuel pour la période (moyenne des réservations existantes),
+Le résultat affiche, **pour chaque segment** : ses dates, l'événement éventuellement appliqué,
+le prix actuel moyen sur ces dates (moyenne des réservations existantes qui les recouvrent),
 la fourchette suggérée (min/max), et une alerte colorée : **sous-évalué** (orange),
 **surévalué** (rouge), **optimal** (vert), ou **données insuffisantes** (gris). Un bouton
-"Ajuster le prix" ouvre le formulaire de mise à jour du tarif directement dans Beds24 via l'API.
+"Ajuster le prix" par segment ouvre le formulaire de mise à jour du tarif directement dans
+Beds24 via l'API, pré-rempli avec les dates de ce segment.
 
 ### Onglet Zones & Saisons
 
