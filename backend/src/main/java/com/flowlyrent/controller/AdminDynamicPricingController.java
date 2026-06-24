@@ -43,6 +43,7 @@ public class AdminDynamicPricingController {
                     .orElseThrow(() -> new IllegalStateException("Compte Beds24 non connecté"));
             return ResponseEntity.ok(pricingService.calculateSuggestion(userId, account, propId, startDate, endDate));
         } catch (Exception e) {
+            log.error("[dynamic-pricing/suggestion] propId={} {}→{} — {}: {}", propId, startDate, endDate, e.getClass().getSimpleName(), e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

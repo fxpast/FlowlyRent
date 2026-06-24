@@ -44,6 +44,7 @@ public class DynamicPricingService {
         // 1. Historique 24 mois pour ce logement
         // Pas de filtre status côté API — sensible à la casse et peu fiable en v2, on filtre en Java
         Map<String, String> histParams = new HashMap<>();
+        histParams.put("propId", propId);
         histParams.put("arrivalFrom", start.minusYears(2).toString());
         histParams.put("arrivalTo", start.minusDays(1).toString());
         List<Map<String, Object>> allHistBookings = beds24.getBookings(token, histParams);
@@ -106,6 +107,7 @@ public class DynamicPricingService {
         LocalDate occFrom = LocalDate.now();
         LocalDate occTo = occFrom.plusDays(60);
         Map<String, String> occParams = new HashMap<>();
+        occParams.put("propId", propId);
         occParams.put("arrivalFrom", occFrom.toString());
         occParams.put("arrivalTo", occTo.toString());
         List<Map<String, Object>> futureBookings = beds24.getBookings(token, occParams).stream()
@@ -142,6 +144,7 @@ public class DynamicPricingService {
         List<PeriodBooking> periodBookings = new ArrayList<>();
         try {
             Map<String, String> curParams = new HashMap<>();
+            curParams.put("propId", propId);
             curParams.put("arrivalTo", endDate);
             curParams.put("departureFrom", startDate);
             for (Map<String, Object> b : beds24.getBookings(token, curParams)) {
