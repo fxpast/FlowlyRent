@@ -30,7 +30,7 @@ public class LocalEvent {
     private LocalDate endDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "impact_level", nullable = false, length = 10)
+    @Column(name = "impact_level", nullable = false, length = 20)
     private ImpactLevel impactLevel;
 
     @Column(nullable = false)
