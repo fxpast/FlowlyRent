@@ -26,6 +26,10 @@ public class GeminiChatbotService {
     private static final int MAX_TOOL_ITERATIONS = 3;
     private static final int MAX_HISTORY_MESSAGES = 20;
 
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
     private final ChatbotPromptService chatbotPromptService;
     private final ChatbotToolService chatbotToolService;
     private final ObjectMapper objectMapper;
@@ -125,10 +129,7 @@ public class GeminiChatbotService {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build()
-                .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             log.error("Gemini HTTP {} : {}", response.statusCode(), response.body());

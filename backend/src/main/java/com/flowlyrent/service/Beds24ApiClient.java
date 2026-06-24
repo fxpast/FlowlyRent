@@ -28,6 +28,11 @@ public class Beds24ApiClient {
 
     private static final String BASE = "https://beds24.com/api/v2";
 
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
     private final Beds24TokenService tokenService;
     private final ObjectMapper objectMapper;
 
@@ -214,11 +219,7 @@ public class Beds24ApiClient {
     }
 
     private String send(HttpRequest request) throws Exception {
-        HttpResponse<String> response = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(10))
-                .build()
-                .send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Beds24 HTTP " + response.statusCode() + " : " + response.body());
         }
