@@ -7,7 +7,6 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,7 +29,6 @@ public class Beds24TokenService {
     private final Beds24AccountRepository beds24AccountRepository;
     private final ObjectMapper objectMapper;
 
-    @Transactional
     public void connectWithSetupToken(Beds24Account account, String inviteCode) throws Exception {
         log.info("[Beds24] connexion avec code invitation");
         String body = getWithHeader(BEDS24_API + "/authentication/setup", "code", inviteCode);
@@ -43,7 +41,6 @@ public class Beds24TokenService {
         log.info("[Beds24] compte connecté pour user {}", account.getAppUser().getId());
     }
 
-    @Transactional
     public String getValidToken(Beds24Account account) throws Exception {
         if (isTokenValid(account)) return account.getAccessToken();
 
