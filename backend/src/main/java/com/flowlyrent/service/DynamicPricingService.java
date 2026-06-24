@@ -2,10 +2,12 @@ package com.flowlyrent.service;
 
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.LocalEvent;
+import com.flowlyrent.model.PricingEventImpactConfig;
 import com.flowlyrent.model.PricingZonePeriod;
 import com.flowlyrent.model.PropertyPricingConfig;
 import com.flowlyrent.model.enums.ImpactLevel;
 import com.flowlyrent.repository.LocalEventRepository;
+import com.flowlyrent.repository.PricingEventImpactConfigRepository;
 import com.flowlyrent.repository.PricingZonePeriodRepository;
 import com.flowlyrent.repository.PropertyPricingConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class DynamicPricingService {
     private final PricingZonePeriodRepository periodRepo;
     private final PropertyPricingConfigRepository propPricingRepo;
     private final LocalEventRepository eventRepo;
+    private final PricingEventImpactConfigRepository eventImpactConfigRepo;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> calculateSuggestion(
@@ -125,14 +128,20 @@ public class DynamicPricingService {
         else if (occupancyRate <= 0.30) occFactor = 0.85;
         else occFactor = 0.85 + (occupancyRate - 0.30) / 0.50 * 0.30;
 
-        // 5b. Ajustement événements locaux (FAIBLE=+5%, MOYEN=+15%, FORT=+30%)
+        // 5b. Ajustement événements locaux (pourcentages configurables par l'hôte, défaut FAIBLE=+25%, MOYEN=+50%, FORT=+75%)
+        PricingEventImpactConfig impactConfig = eventImpactConfigRepo.findByUserId(userId)
+                .orElseGet(PricingEventImpactConfig::new);
         LocalDate analysisEnd = LocalDate.parse(endDate);
         List<LocalEvent> matchingEvents = eventRepo.findByUserIdOrderByStartDateAsc(userId).stream()
                 .filter(e -> e.getZoneId() == null || (config != null && e.getZoneId().equals(config.getZoneId())))
                 .filter(e -> overlapsAnalysisPeriod(e, start, analysisEnd))
                 .collect(Collectors.toList());
         int eventAdj = matchingEvents.stream()
-                .mapToInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 25; case MOYEN -> 50; case FORT -> 75; })
+                .mapToInt(e -> switch (e.getImpactLevel()) {
+                    case FAIBLE -> impactConfig.getFaiblePercent();
+                    case MOYEN -> impactConfig.getMoyenPercent();
+                    case FORT -> impactConfig.getFortPercent();
+                })
                 .max().orElse(0);
         String eventName = matchingEvents.isEmpty() ? null : matchingEvents.stream()
                 .max(Comparator.comparingInt(e -> switch (e.getImpactLevel()) { case FAIBLE -> 1; case MOYEN -> 2; case FORT -> 3; }))

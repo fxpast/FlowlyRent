@@ -18,7 +18,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion, LocalEvent } from '../../core/services/dynamic-pricing.service';
+import { DynamicPricingService, PricingZone, PricingZonePeriod, PropertyPricingConfig, PricingSuggestion, LocalEvent, EventImpactConfig } from '../../core/services/dynamic-pricing.service';
 import { BookingService } from '../../core/services/booking.service';
 import { PriceDialogComponent, PriceDialogResult } from '../price-dialog/price-dialog.component';
 import { environment } from '../../../environments/environment';
@@ -426,6 +426,37 @@ function localDate(d: Date): string {
       <!-- ── TAB 3 : CONFIGURATION PAR LOGEMENT ─────────────────────── -->
       <mat-tab [label]="'pricing.tab_config' | translate">
         <div class="tab-content">
+          <mat-card class="event-impact-card">
+            <mat-card-header>
+              <mat-card-title>{{ 'pricing.event_impact_title' | translate }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="event-impact-desc">{{ 'pricing.event_impact_desc' | translate }}</p>
+              <div class="event-impact-row">
+                <mat-form-field appearance="outline" class="impact-pct">
+                  <mat-label>{{ 'pricing.impact_faible' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="eventImpactConfig.faiblePercent">
+                  <span matSuffix>%</span>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="impact-pct">
+                  <mat-label>{{ 'pricing.impact_moyen' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="eventImpactConfig.moyenPercent">
+                  <span matSuffix>%</span>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="impact-pct">
+                  <mat-label>{{ 'pricing.impact_fort' | translate }}</mat-label>
+                  <input matInput type="number" min="0" [(ngModel)]="eventImpactConfig.fortPercent">
+                  <span matSuffix>%</span>
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="saveEventImpactConfig()"
+                        [disabled]="savingEventImpact()">
+                  @if (savingEventImpact()) { <mat-spinner diameter="18"></mat-spinner> }
+                  @else { <mat-icon>save</mat-icon> }
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
           <p class="config-desc">{{ 'pricing.config_desc' | translate }}</p>
           <div class="config-list">
             @for (p of properties(); track p.id) {
@@ -572,6 +603,11 @@ function localDate(d: Date): string {
     .no-events { color: #aaa; font-size: 13px; text-align: center; padding: 16px 0; }
 
     /* ── Config ── */
+    .event-impact-card { margin-bottom: 24px; }
+    .event-impact-desc { font-size: 13px; color: #666; margin: 0 0 16px; }
+    .event-impact-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .impact-pct { width: 120px; }
+    .event-impact-row button { height: 56px; }
     .config-desc { font-size: 13px; color: #666; margin-bottom: 20px; }
     .config-list { display: flex; flex-direction: column; gap: 12px; }
     .config-prop-name { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #333; }
@@ -612,6 +648,9 @@ export class DynamicPricingComponent implements OnInit {
   savingConfig = signal<string | null>(null);
   private configMap = new Map<string, PropertyPricingConfig>();
 
+  eventImpactConfig: EventImpactConfig = { faiblePercent: 25, moyenPercent: 50, fortPercent: 75 };
+  savingEventImpact = signal(false);
+
   constructor(
     private pricingSvc: DynamicPricingService,
     private bookingService: BookingService,
@@ -632,6 +671,7 @@ export class DynamicPricingComponent implements OnInit {
     this.loadZones();
     this.loadEvents();
     this.loadConfigs();
+    this.loadEventImpactConfig();
   }
 
   private loadZones(): void {
@@ -819,4 +859,23 @@ export class DynamicPricingComponent implements OnInit {
   }
 
   monthLabel(m: number): string { return MONTHS.find(x => x.v === m)?.l ?? String(m); }
+
+  private loadEventImpactConfig(): void {
+    this.pricingSvc.getEventImpactConfig().subscribe({
+      next: c => this.eventImpactConfig = c,
+      error: () => {}
+    });
+  }
+
+  saveEventImpactConfig(): void {
+    this.savingEventImpact.set(true);
+    this.pricingSvc.saveEventImpactConfig(this.eventImpactConfig).subscribe({
+      next: c => {
+        this.eventImpactConfig = c;
+        this.savingEventImpact.set(false);
+        this.snack.open(this.t.instant('common.saved'), '', { duration: 2000 });
+      },
+      error: () => { this.savingEventImpact.set(false); this.snack.open(this.t.instant('common.error'), '', { duration: 3000 }); }
+    });
+  }
 }

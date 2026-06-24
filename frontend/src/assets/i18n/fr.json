@@ -1305,6 +1305,8 @@
     "impact_moyen": "Moyen",
     "impact_fort": "Fort",
     "recurring_event": "Annuel (récurrent)",
-    "no_events": "Aucun événement local défini"
+    "no_events": "Aucun événement local défini",
+    "event_impact_title": "Impact des événements locaux sur le prix",
+    "event_impact_desc": "Définissez de combien le prix suggéré augmente selon le niveau d'impact d'un événement local."
   }
 }

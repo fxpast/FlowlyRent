@@ -1294,6 +1294,11 @@
     "zone": "Pricing zone",
     "no_zone_assigned": "No zone",
     "market_min": "Market min",
-    "market_max": "Market max"
+    "market_max": "Market max",
+    "impact_faible": "Low",
+    "impact_moyen": "Medium",
+    "impact_fort": "High",
+    "event_impact_title": "Local event impact on price",
+    "event_impact_desc": "Define how much the suggested price increases based on a local event's impact level."
   }
 }

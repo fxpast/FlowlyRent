@@ -30,6 +30,12 @@ export interface LocalEvent {
   recurring: boolean;
 }
 
+export interface EventImpactConfig {
+  faiblePercent: number;
+  moyenPercent: number;
+  fortPercent: number;
+}
+
 export interface PricingSuggestion {
   propertyId: string; startDate: string; endDate: string;
   currentPrice: number | null;
@@ -94,5 +100,13 @@ export class DynamicPricingService {
 
   savePropertyConfig(config: PropertyPricingConfig): Observable<PropertyPricingConfig> {
     return this.http.post<PropertyPricingConfig>(`${BASE}/admin/dynamic-pricing/property-configs`, config);
+  }
+
+  getEventImpactConfig(): Observable<EventImpactConfig> {
+    return this.http.get<EventImpactConfig>(`${BASE}/admin/dynamic-pricing/event-impact-config`);
+  }
+
+  saveEventImpactConfig(config: EventImpactConfig): Observable<EventImpactConfig> {
+    return this.http.put<EventImpactConfig>(`${BASE}/admin/dynamic-pricing/event-impact-config`, config);
   }
 }

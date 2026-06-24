@@ -1292,6 +1292,11 @@
     "zone": "Zona tarifaria",
     "no_zone_assigned": "Sin zona",
     "market_min": "Mercado mín",
-    "market_max": "Mercado máx"
+    "market_max": "Mercado máx",
+    "impact_faible": "Bajo",
+    "impact_moyen": "Medio",
+    "impact_fort": "Alto",
+    "event_impact_title": "Impacto de los eventos locales en el precio",
+    "event_impact_desc": "Define en qué medida aumenta el precio sugerido según el nivel de impacto de un evento local."
   }
 }

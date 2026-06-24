@@ -2,8 +2,10 @@ package com.flowlyrent.controller;
 
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.Beds24Account;
+import com.flowlyrent.model.PricingEventImpactConfig;
 import com.flowlyrent.model.PropertyPricingConfig;
 import com.flowlyrent.repository.Beds24AccountRepository;
+import com.flowlyrent.repository.PricingEventImpactConfigRepository;
 import com.flowlyrent.repository.PropertyPricingConfigRepository;
 import com.flowlyrent.service.DynamicPricingService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AdminDynamicPricingController {
     private final DynamicPricingService pricingService;
     private final Beds24AccountRepository accountRepo;
     private final PropertyPricingConfigRepository propPricingRepo;
+    private final PricingEventImpactConfigRepository eventImpactConfigRepo;
     private final SecurityUtils securityUtils;
 
     @GetMapping("/suggestion")
@@ -86,6 +89,42 @@ public class AdminDynamicPricingController {
             log.error("[property-configs POST] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/event-impact-config")
+    public ResponseEntity<?> getEventImpactConfig() {
+        Long userId = securityUtils.getCurrentUserId();
+        PricingEventImpactConfig config = eventImpactConfigRepo.findByUserId(userId)
+                .orElseGet(PricingEventImpactConfig::new);
+        return ResponseEntity.ok(toMap(config));
+    }
+
+    @PutMapping("/event-impact-config")
+    public ResponseEntity<?> saveEventImpactConfig(@RequestBody Map<String, Object> body) {
+        try {
+            Long userId = securityUtils.getCurrentUserId();
+            PricingEventImpactConfig config = eventImpactConfigRepo.findByUserId(userId)
+                    .orElseGet(() -> {
+                        PricingEventImpactConfig c = new PricingEventImpactConfig();
+                        c.setUserId(userId);
+                        return c;
+                    });
+            if (body.get("faiblePercent") != null) config.setFaiblePercent(Integer.parseInt(body.get("faiblePercent").toString()));
+            if (body.get("moyenPercent") != null) config.setMoyenPercent(Integer.parseInt(body.get("moyenPercent").toString()));
+            if (body.get("fortPercent") != null) config.setFortPercent(Integer.parseInt(body.get("fortPercent").toString()));
+            return ResponseEntity.ok(toMap(eventImpactConfigRepo.save(config)));
+        } catch (Exception e) {
+            log.error("[event-impact-config PUT] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
+        }
+    }
+
+    private Map<String, Object> toMap(PricingEventImpactConfig c) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("faiblePercent", c.getFaiblePercent());
+        m.put("moyenPercent", c.getMoyenPercent());
+        m.put("fortPercent", c.getFortPercent());
+        return m;
     }
 
     private Map<String, Object> toMap(PropertyPricingConfig c) {

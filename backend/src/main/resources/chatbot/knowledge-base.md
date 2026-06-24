@@ -199,8 +199,10 @@ L'hôte sélectionne un logement, une date de début et une date de fin, puis cl
    élevé (> 80%), le prix est augmenté jusqu'à +15% ; si faible (< 30%), réduit jusqu'à -15%.
 4. **Ajustement événements locaux** : si un événement local (festival, marché, concert…)
    est configuré et chevauche la période analysée, un bonus est appliqué selon son niveau
-   d'impact — Faible (+25%), Moyen (+50%), Fort (+75%). Si plusieurs événements se chevauchent,
-   seul le plus fort impact est retenu. L'événement appliqué est affiché dans le détail du calcul.
+   d'impact — Faible, Moyen, Fort. Les pourcentages associés à chaque niveau sont configurables
+   par l'hôte dans l'onglet Configuration (défaut : Faible +25%, Moyen +50%, Fort +75%). Si
+   plusieurs événements se chevauchent, seul le plus fort impact est retenu. L'événement
+   appliqué est affiché dans le détail du calcul.
 5. **Cadrage marché** : le prix suggéré est borné entre le prix minimum et maximum marché
    configurés pour ce logement (optionnel).
 
@@ -219,7 +221,7 @@ périodes peuvent chevaucher deux années (ex. décembre–janvier).
 L'hôte peut également saisir des **événements locaux** (festivals, marchés, concerts,
 salons, événements sportifs…) dans ce même onglet. Chaque événement a :
 - un **nom**, des **dates de début et fin**,
-- un **niveau d'impact** : Faible (+25%), Moyen (+50%), Fort (+75%),
+- un **niveau d'impact** : Faible, Moyen ou Fort (pourcentages configurables, voir ci-dessous),
 - une option **récurrent** : si activée, l'événement est comparé par mois/jour uniquement
   (sans tenir compte de l'année), ce qui permet de le déclarer une seule fois pour qu'il
   s'applique chaque année automatiquement (ex. festival annuel en juillet),
@@ -230,8 +232,13 @@ Les événements locaux sont pris en compte automatiquement dans le calcul de pr
 
 ### Onglet Configuration
 
-Associe chaque logement à un secteur et permet de saisir manuellement le prix minimum
-et maximum du marché local (concurrence). Ces valeurs cadrent la fourchette suggérée.
+En haut de l'onglet, l'hôte définit le **pourcentage d'impact des événements locaux**
+appliqué selon le niveau (Faible, Moyen, Fort) — valeurs par défaut 25% / 50% / 75%,
+modifiables à tout moment et utilisées immédiatement dans le calcul de prix (étape 4).
+
+Plus bas, l'onglet associe chaque logement à un secteur et permet de saisir manuellement
+le prix minimum et maximum du marché local (concurrence). Ces valeurs cadrent la fourchette
+suggérée.
 
 ## Avis (Feedback)
 
