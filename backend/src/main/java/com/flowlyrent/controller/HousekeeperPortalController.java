@@ -10,6 +10,7 @@ import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.HousekeeperProfileRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
+import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.CloudinaryService;
@@ -46,6 +47,7 @@ public class HousekeeperPortalController {
     private final HousekeeperProfileRepository profileRepo;
     private final HousekeepingTaskRepository taskRepo;
     private final TaskPhotoRepository photoRepo;
+    private final PropertyConfigRepository propConfigRepo;
     private final CloudinaryService cloudinaryService;
     private final LinenService linenService;
     private final SecurityUtils securityUtils;
@@ -220,8 +222,8 @@ public class HousekeeperPortalController {
     public ResponseEntity<?> arrivals() {
         try {
             HousekeeperProfile profile = myProfile();
-            Beds24Account account = accountRepo.findByAppUserId(profile.getUser().getId())
-                    .orElse(null);
+            Long userId = profile.getUser().getId();
+            Beds24Account account = accountRepo.findByAppUserId(userId).orElse(null);
             if (account == null) return ResponseEntity.ok(List.of());
             String token = beds24.tokenFor(account);
             LocalDate today = LocalDate.now();
@@ -229,8 +231,11 @@ public class HousekeeperPortalController {
                     "arrivalFrom", today.toString(),
                     "arrivalTo",   today.plusDays(6).toString()
             );
+            Map<String, String> propNames = buildPropNames(userId);
             List<Map<String, Object>> bookings = beds24.getBookings(token, params);
-            return ResponseEntity.ok(bookings.stream().map(this::stripPrices).toList());
+            return ResponseEntity.ok(bookings.stream()
+                    .map(b -> enrichWithPropName(stripPrices(b), propNames))
+                    .toList());
         } catch (Exception e) {
             log.error("arrivals error: {}", e.getMessage(), e);
             return ResponseEntity.ok(List.of());
@@ -241,8 +246,8 @@ public class HousekeeperPortalController {
     public ResponseEntity<?> departures() {
         try {
             HousekeeperProfile profile = myProfile();
-            Beds24Account account = accountRepo.findByAppUserId(profile.getUser().getId())
-                    .orElse(null);
+            Long userId = profile.getUser().getId();
+            Beds24Account account = accountRepo.findByAppUserId(userId).orElse(null);
             if (account == null) return ResponseEntity.ok(List.of());
             String token = beds24.tokenFor(account);
             LocalDate today = LocalDate.now();
@@ -250,12 +255,45 @@ public class HousekeeperPortalController {
                     "departureFrom", today.toString(),
                     "departureTo",   today.plusDays(6).toString()
             );
+            Map<String, String> propNames = buildPropNames(userId);
             List<Map<String, Object>> bookings = beds24.getBookings(token, params);
-            return ResponseEntity.ok(bookings.stream().map(this::stripPrices).toList());
+            return ResponseEntity.ok(bookings.stream()
+                    .map(b -> enrichWithPropName(stripPrices(b), propNames))
+                    .toList());
         } catch (Exception e) {
             log.error("departures error: {}", e.getMessage(), e);
             return ResponseEntity.ok(List.of());
         }
+    }
+
+    /** Construit une map beds24PropertyId → nom du logement pour cet hôte. */
+    private Map<String, String> buildPropNames(Long userId) {
+        Map<String, String> names = new java.util.HashMap<>();
+        for (var cfg : propConfigRepo.findByUserIdAndLocalPropertyIdIsNull(userId)) {
+            String pid = cfg.getBeds24PropertyId();
+            if (pid == null) continue;
+            String name = cfg.getShortName() != null && !cfg.getShortName().isBlank()
+                    ? cfg.getShortName() : pid;
+            names.put(pid, name);
+        }
+        return names;
+    }
+
+    /** Ajoute le champ propName au booking à partir de son propertyId. */
+    private Map<String, Object> enrichWithPropName(Map<String, Object> booking,
+                                                    Map<String, String> propNames) {
+        Object pid = booking.get("propertyId");
+        if (pid == null) pid = booking.get("propId");
+        if (pid == null) return booking;
+        String propId = pid.toString().contains(".")
+                ? String.valueOf((long) Double.parseDouble(pid.toString())) : pid.toString();
+        String name = propNames.get(propId);
+        if (name != null) {
+            Map<String, Object> enriched = new LinkedHashMap<>(booking);
+            enriched.put("propName", name);
+            return enriched;
+        }
+        return booking;
     }
 
     private Map<String, Object> stripPrices(Map<String, Object> booking) {
