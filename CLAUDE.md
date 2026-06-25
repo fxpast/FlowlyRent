@@ -110,6 +110,11 @@ flutter build appbundle --release  # AAB Play Store (keystore dans android/key.p
 - **Validation formulaires** : aligner les contraintes Angular (`minlength`, `required`, `#ref="ngModel"`) sur les annotations Spring (`@Size`, `@NotBlank`) — évite de gérer le format `ProblemDetail` des erreurs de validation `@Valid`
 - **Erreurs HTTP silencieuses** : utiliser `catchError(() => of(null))` pour les endpoints optionnels (ex: booking-time-overrides, Qonto) — toujours ajouter un guard `if (!result) return;` après
 - **Beds24 API timeouts** : `connectTimeout(10s)` + `requestTimeout(25s)` configurés dans `Beds24ApiClient` — ne pas modifier sans raison
+- **Beds24 API — HttpClient partagé** : `Beds24ApiClient`, `GeminiChatbotService`, `GroqChatbotService`, `QontoService` et `Beds24TokenService` utilisent chacun un `HttpClient` **statique partagé** (`private static final HttpClient HTTP_CLIENT = …`). Ne jamais recréer un `HttpClient` par appel — c'est la cause #1 d'épuisement de ressources sous charge (threads, file descriptors).
+- **Beds24 API — quota de crédits** : l'API Beds24 v2 impose un système de "crédits" par fenêtre de temps. Chaque appel `getBookings` / `getCalendar` / `updateCalendar` coûte des crédits. Les erreurs 429 "Credit limit exceeded" sont attrapées par `Beds24ApiClient.send()` et renvoient un message lisible via `Beds24ApiClient.friendlyMessage()`. Toujours éviter les appels redondants : ex. `resolveRoomId()` ne fait UN appel `getCalendar` QUE la première fois par logement (cache mémoire + DB `PropertyConfig.roomId`).
+- **Beds24 API — résolution roomId** : `RoomIdResolverService.resolveRoomId(userId, token, propertyId, from, to)` résout `propertyId → roomId` avec cache à deux niveaux : DB (`PropertyConfig.roomId`, persisté dès le 1ᵉʳ lookup) puis mémoire (`Beds24ApiClient.roomIdCache`). Ne jamais appeler `beds24.getCalendar()` manuellement pour retrouver un roomId — utiliser ce service.
+- **Hibernate 6 + MySQL / MariaDB — ENUM natif** : Hibernate 6 mappe `@Enumerated(EnumType.STRING)` en type ENUM natif MySQL par défaut. Le `ddl-auto: update` **ne redimensionne jamais** un ENUM existant quand on ajoute une constante Java → erreur d'insertion silencieuse. Toujours forcer `columnDefinition = "VARCHAR(N)"` sur les champs enum susceptibles d'évoluer (voir `LocalEvent.impactLevel`). En cas d'ajout de valeur sur une colonne existante : `ALTER TABLE … MODIFY … VARCHAR(N) NOT NULL;` sur chaque base (dev + Railway prod).
+- **Beds24TokenService** : `getValidToken()` ne doit **pas** être `@Transactional` — la méthode fait un appel réseau externe AVANT tout accès DB, donc une transaction ouvrirait une connexion HikariCP qui resterait bloquée jusqu'à 25s pendant l'appel Beds24, épuisant le pool sous charge concurrente.
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Git** : travailler sur `dev`, ne jamais toucher à `master`
 
@@ -158,6 +163,7 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Code d'accès** : toujours visible (pas de condition `@if undefined`) — chargé dans `ngOnInit()` avec le `cleaningFee`
 - **Taxe de séjour** : `(totalPrice - cleaningFee) × 2.75%` — affichée en badge bleu sous le prix total
 - **Nom/prénom** : `mapField()` écrase toujours le champ destination (fix : suppression de `!b.containsKey(to)`)
+- **Nom du logement dans la note auto-générée** : `draft['propName']` est vide (Beds24 ne l'inclut pas dans la réponse réservation). Le nom est résolu via `BookingService.getPropertyNames()` (cache interne, aucun appel Beds24) dans `generateCleaningNotes()`. Idem dans `housekeeping.component.ts` via `generateNewTaskNotes()`. Ne jamais utiliser `draft['propName']` comme source de vérité pour le nom du logement.
 
 ### Factures — Bas de page global
 - `AppUser.invoiceFooter` (TEXT) : texte libre affiché en pied de toutes les factures PDF
@@ -217,6 +223,17 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - `caMonthly()` retourne maintenant `propId` dans chaque entrée `byProperty`
 - `fetchSummary()` retourne `byProperty` : map `beds24PropertyId → total débits`
 - **Mode iCal** : bannière d'info + seules nuits/occupation affichées (pas de CA ni de marge)
+
+### Prix dynamique — Événements locaux et segmentation
+
+- **`ImpactLevel`** : enum `FAIBLE | MOYEN | FORT | EXCEPTIONNEL`. La colonne DB `local_events.impact_level` est `VARCHAR(20)` (forçé via `columnDefinition` — voir piège Hibernate ENUM ci-dessus).
+- **`PricingEventImpactConfig`** (`pricing_event_impact_configs`) : une ligne par hôte, 4 champs `faiblePercent / moyenPercent / fortPercent / exceptionnelPercent` (défauts 20/50/200/400). Géré dans l'onglet **Configuration** du menu Prix dynamique. Endpoints : `GET/PUT /admin/dynamic-pricing/event-impact-config`.
+- **Segmentation de l'analyse** : `DynamicPricingService.calculateSuggestion()` découpe la période analysée jour par jour selon les événements locaux qui la couvrent, puis regroupe les jours consécutifs avec le même statut en **segments** (jours normaux / jours événement). Chaque segment a sa propre fourchette de prix (`suggestedMin/Max`), son propre prix actuel et sa propre alerte. Le résultat renvoie `segments: List<Map>` — les anciennes clés top-level `suggestedMin/Max`, `currentPrice`, `alert`, `eventName`, `eventAdjustmentPercent` n'existent plus.
+- **Logs de diagnostic** : `DynamicPricingService` émet des logs `INFO` (`[pricing] BEGIN/END/step=history/step=occupancy/step=currentPeriod`) pour mesurer le temps de chaque appel Beds24 et le nombre de réservations récupérées — visible dans les logs Railway sans activer le DEBUG.
+- **Mise à jour des prix** : `POST /admin/availability/price` et `/blackout` utilisent `RoomIdResolverService` (pas de `getCalendar()` redondant). La plage `from`/`to` est envoyée en un seul appel `updateCalendar` — jamais jour par jour (référence legacy : `php_code/formulaire_upd_cal.php`).
+
+### PropertyConfig — Champ roomId
+- `PropertyConfig.roomId` (colonne `room_id`) : correspondance `beds24PropertyId → roomId` persistée en DB dès le 1ᵉʳ lookup via `RoomIdResolverService`. Évite un appel `getCalendar()` à chaque mise à jour de prix, blocage de dates ou création de réservation. N'est **pas** exposé dans le DTO retourné par `/admin/property-configs` (filtré dans `toDto()`).
 
 ### Boîtes à clé — Suppression automatique des orphelines
 - Quand un logement est dissocié de sa boîte à clé (`keyBoxId` vide dans `PUT /admin/property-configs/{id}`), si la boîte n'est plus associée à aucun autre logement (`repo.findByKeyBoxId().isEmpty()`), elle est supprimée automatiquement de la base
