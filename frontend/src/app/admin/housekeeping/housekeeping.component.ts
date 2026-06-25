@@ -1320,10 +1320,8 @@ export class HousekeepingComponent implements OnInit {
   private generateNewTaskNotes(hk: HousekeeperProfile): void {
     const pid      = String(this.newTask.propertyId ?? '');
     const departure = this.fromDate(this.newTaskDate);
-    const prop     = this.properties().find(p => String(p.id) === pid);
-    const propName = prop?.name ?? '';
 
-    const buildNotes = (nextCheckinTime?: string) => {
+    const buildNotes = (propName: string, nextCheckinTime?: string) => {
       const cfg      = this.propConfigs().find(c => c.beds24PropertyId === pid);
       const code     = cfg?.accessCode ?? '';
       const prevCode = cfg?.previousAccessCode ?? '';
@@ -1333,8 +1331,8 @@ export class HousekeepingComponent implements OnInit {
       this.newTask.notes = msg;
     };
 
-    const checkNextArrival = () => {
-      if (!departure || !pid) { buildNotes(); return; }
+    const checkNextArrival = (propName: string) => {
+      if (!departure || !pid) { buildNotes(propName); return; }
       this.bookingService.getArrivals(departure).subscribe({
         next: arrivals => {
           const next = (arrivals ?? []).find((b: any) => {
@@ -1348,13 +1346,17 @@ export class HousekeepingComponent implements OnInit {
             const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
             checkinTime = (t && t !== '00:00') ? t : '16:00';
           }
-          buildNotes(checkinTime);
+          buildNotes(propName, checkinTime);
         },
-        error: () => buildNotes()
+        error: () => buildNotes(propName)
       });
     };
 
-    checkNextArrival();
+    const fallback = this.properties().find(p => String(p.id) === pid)?.name ?? '';
+    this.bookingService.getPropertyNames().subscribe({
+      next: names => checkNextArrival(names[pid] || fallback),
+      error: () => checkNextArrival(fallback)
+    });
   }
 
   private loadTaskLinenDefaults(pid: string): void {

@@ -1272,9 +1272,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   private generateCleaningNotes(hk: HousekeeperProfile): void {
     const departure = (this.draft['departure'] || '').toString().substring(0, 10);
     const pid       = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
-    const propName  = this.draft['propName'] || this.draft['propertyName'] || '';
 
-    const buildNotes = (nextCheckinTime?: string) => {
+    const buildNotes = (propName: string, nextCheckinTime?: string) => {
       const code     = this.propAccessCode() ?? '';
       const prevCode = this.propPreviousAccessCode() ?? '';
       const hours    = this.taskForm.extraHours ? ` — ${this.taskForm.extraHours}h` : '';
@@ -1285,8 +1284,8 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       this.taskForm.notes = msg;
     };
 
-    const checkNextArrival = () => {
-      if (!departure || !pid) { buildNotes(); return; }
+    const checkNextArrival = (propName: string) => {
+      if (!departure || !pid) { buildNotes(propName); return; }
       this.bookingService.getArrivals(departure).subscribe({
         next: arrivals => {
           const next = (arrivals ?? []).find(b => {
@@ -1294,22 +1293,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
             const arrDate = (b['arrival'] || '').toString().substring(0, 10);
             return bpid === pid && arrDate === departure;
           });
-          if (!next) { buildNotes(); return; }
+          if (!next) { buildNotes(propName); return; }
           const arrStr = (next['arrival'] || '').toString();
           const t = arrStr.includes('T') ? arrStr.substring(11, 16) : '';
           const rawTime = (t && t !== '00:00') ? t : '16:00';
           const nextId = String(next['id'] ?? '');
-          if (!nextId) { buildNotes(rawTime); return; }
+          if (!nextId) { buildNotes(propName, rawTime); return; }
           this.timeOverrideService.get(nextId).subscribe({
-            next: ov => buildNotes(ov?.checkinTime || rawTime),
-            error: () => buildNotes(rawTime)
+            next: ov => buildNotes(propName, ov?.checkinTime || rawTime),
+            error: () => buildNotes(propName, rawTime)
           });
         },
-        error: () => buildNotes()
+        error: () => buildNotes(propName)
       });
     };
 
-    checkNextArrival();
+    const fallback = this.draft['propName'] || this.draft['propertyName'] || '';
+    this.bookingService.getPropertyNames().subscribe({
+      next: names => checkNextArrival(names[pid] || fallback),
+      error: () => checkNextArrival(fallback)
+    });
   }
 
   private toFrDate(iso: string): string {
