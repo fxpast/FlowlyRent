@@ -81,7 +81,32 @@
     "sync": "Synchronisation",
     "stats": "Revenus",
     "dynamic_pricing": "Prix dynamique",
-    "reports": "Rapports"
+    "reports": "Rapports",
+    "auto_responder": "Répondeur auto"
+  },
+  "autoresponder": {
+    "title": "Répondeur automatique",
+    "tab_config": "Configuration",
+    "tab_logs": "Journal",
+    "enabled_label": "Répondeur automatique actif",
+    "enabled_desc": "Répond automatiquement aux messages voyageurs entrants. Les cas sensibles déclenchent une alerte.",
+    "webhook_hint": "Configurer dans Beds24 : Settings → API → Notifications → URL du webhook :",
+    "transitional_title": "Cas sensibles & alertes",
+    "transitional_desc": "Si le message contient un mot-clé sensible (urgence, fuite, remboursement…), ce message transitoire est envoyé au voyageur et vous recevez une notification push immédiate.",
+    "transitional_label": "Message de réponse transitoire",
+    "transitional_placeholder": "Ex : Merci pour votre message. Votre hôte a été notifié et vous répondra dans les meilleurs délais.",
+    "keywords_label": "Mots-clés déclenchant une alerte",
+    "keywords_field": "Mots-clés personnalisés",
+    "keywords_placeholder": "urgence,fuite,panne,remboursement,annulation",
+    "keywords_hint": "Séparés par des virgules. Laissez vide pour utiliser la liste par défaut.",
+    "default_keywords": "Liste par défaut",
+    "prompt_title": "Instructions IA pour les réponses simples",
+    "prompt_desc": "Ajoutez des instructions spécifiques au ton ou au style de vos réponses. L'IA répond toujours dans la langue du voyageur.",
+    "prompt_label": "Instructions supplémentaires (optionnel)",
+    "prompt_placeholder": "Ex : Soyez toujours très chaleureux. Mentionnez que le parking est gratuit. Ne donnez pas le code d'accès avant J-2.",
+    "no_logs": "Aucune activité récente du répondeur automatique.",
+    "replied": "Réponse envoyée",
+    "log_booking": "Réservation"
   },
   "status": {
     "pending": "En attente",

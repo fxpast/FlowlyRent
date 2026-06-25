@@ -306,3 +306,38 @@ FlowlyRent dispose d'une application Android (WebView vers flowlyrent.com) avec
 notifications push (web push + Firebase Cloud Messaging). La session persistante s'applique
 également sur mobile : après la première connexion, l'application s'ouvre directement sur
 le tableau de bord.
+
+## Répondeur automatique de messages voyageurs
+
+La page **Répondeur automatique** (menu "Répondeur auto") permet à l'hôte de configurer
+une réponse automatique aux messages entrants des voyageurs Beds24.
+
+### Fonctionnement
+- Les messages voyageurs sont reçus via un webhook Beds24 configuré à l'adresse
+  `https://flowlyrent-production.up.railway.app/api/webhooks/beds24/{userId}`.
+- Chaque message est classifié :
+  - **SIMPLE** : le répondeur génère une réponse via l'IA (Groq/Llama) en tenant compte
+    du contexte du séjour (dates, code d'accès, FAQ, historique des messages), puis l'envoie
+    automatiquement via Beds24. L'IA répond toujours dans la langue du voyageur.
+  - **SENSIBLE** : si le message contient un mot-clé sensible (urgence, fuite, remboursement,
+    annulation, incident, dangereux, blessé, police…), un message transitoire est envoyé au
+    voyageur pour patienter, et l'hôte reçoit une **notification push immédiate** ainsi qu'une
+    notification in-app lui demandant de répondre manuellement.
+
+### Configuration (onglet Configuration)
+- **Activation** : on/off global.
+- **Message transitoire** : texte envoyé au voyageur pour les cas sensibles.
+- **Mots-clés sensibles** : liste personnalisable séparée par des virgules (si vide, liste
+  par défaut intégrée). Les mots-clés par défaut incluent des termes en français et en anglais.
+- **Instructions IA** : instructions supplémentaires injectées dans le prompt (ton, style,
+  informations spécifiques à ne pas oublier, restrictions).
+
+### Journal (onglet Journal)
+- Historique de tous les messages traités : date, réservation, classification (SIMPLE/SENSIBLE),
+  extrait du message voyageur, indicateur si une réponse a été envoyée.
+
+### Précautions
+- Le répondeur ne prend jamais d'engagement financier (le prompt IA l'interdit explicitement).
+- En cas de quota dépassé sur l'API Groq, la génération échoue silencieusement (sans envoyer
+  de réponse erronée).
+- Disponible uniquement en mode Beds24 (messagerie directe non disponible en mode iCal).

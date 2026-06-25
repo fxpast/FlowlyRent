@@ -81,7 +81,32 @@
     "sync": "Synchronisation",
     "stats": "Einnahmen",
     "dynamic_pricing": "Dynamische Preise",
-    "reports": "Berichte"
+    "reports": "Berichte",
+    "auto_responder": "Auto-Antwort"
+  },
+  "autoresponder": {
+    "title": "Automatische Antwort",
+    "tab_config": "Konfiguration",
+    "tab_logs": "Protokoll",
+    "enabled_label": "Automatische Antwort aktiv",
+    "enabled_desc": "Antwortet automatisch auf eingehende Gästenachrichten. Heikle Fälle lösen einen Alarm aus.",
+    "webhook_hint": "In Beds24 konfigurieren: Settings → API → Notifications → Webhook-URL:",
+    "transitional_title": "Heikle Fälle & Alarme",
+    "transitional_desc": "Enthält eine Nachricht ein sensibles Stichwort, wird diese Übergangsnachricht gesendet und Sie erhalten eine Push-Benachrichtigung.",
+    "transitional_label": "Übergangsnachricht",
+    "transitional_placeholder": "z.B. Vielen Dank für Ihre Nachricht. Ihr Gastgeber wurde benachrichtigt.",
+    "keywords_label": "Schlüsselwörter für Alarm",
+    "keywords_field": "Benutzerdefinierte Schlüsselwörter",
+    "keywords_placeholder": "Notfall,Leck,Panne,Erstattung,Stornierung",
+    "keywords_hint": "Durch Kommas getrennt. Leer lassen für die Standardliste.",
+    "default_keywords": "Standardliste",
+    "prompt_title": "KI-Anweisungen für einfache Antworten",
+    "prompt_desc": "Fügen Sie spezifische Ton- oder Stilanweisungen hinzu. Die KI antwortet immer in der Sprache des Gastes.",
+    "prompt_label": "Zusätzliche Anweisungen (optional)",
+    "prompt_placeholder": "z.B. Seien Sie sehr herzlich. Erwähnen Sie kostenloses Parken.",
+    "no_logs": "Keine neueste Aktivität des automatischen Antwortgebers.",
+    "replied": "Antwort gesendet",
+    "log_booking": "Buchung"
   },
   "status": {
     "pending": "Ausstehend",

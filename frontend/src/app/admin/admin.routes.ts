@@ -40,6 +40,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./messages/messages.component').then(m => m.MessagesComponent)
       },
       {
+        path: 'auto-responder',
+        loadComponent: () => import('./auto-responder/auto-responder.component').then(m => m.AutoResponderComponent)
+      },
+      {
         path: 'payments',
         component: ComingSoonComponent,
         data: { title: 'Paiements' }

@@ -81,7 +81,32 @@
     "sync": "Sync",
     "stats": "Revenue",
     "dynamic_pricing": "Dynamic Pricing",
-    "reports": "Reports"
+    "reports": "Reports",
+    "auto_responder": "Auto Responder"
+  },
+  "autoresponder": {
+    "title": "Auto Responder",
+    "tab_config": "Configuration",
+    "tab_logs": "Log",
+    "enabled_label": "Auto responder active",
+    "enabled_desc": "Automatically replies to incoming guest messages. Sensitive cases trigger an alert.",
+    "webhook_hint": "Configure in Beds24: Settings → API → Notifications → Webhook URL:",
+    "transitional_title": "Sensitive cases & alerts",
+    "transitional_desc": "If a message contains a sensitive keyword (emergency, leak, refund…), this transitional message is sent to the guest and you receive an immediate push notification.",
+    "transitional_label": "Transitional reply message",
+    "transitional_placeholder": "e.g. Thank you for your message. Your host has been notified and will reply shortly.",
+    "keywords_label": "Keywords triggering an alert",
+    "keywords_field": "Custom keywords",
+    "keywords_placeholder": "emergency,leak,broken,refund,cancel",
+    "keywords_hint": "Comma-separated. Leave empty to use the default list.",
+    "default_keywords": "Default list",
+    "prompt_title": "AI instructions for simple replies",
+    "prompt_desc": "Add specific tone or style instructions. The AI always replies in the guest's language.",
+    "prompt_label": "Additional instructions (optional)",
+    "prompt_placeholder": "e.g. Be very warm. Mention free parking. Do not share the access code before D-2.",
+    "no_logs": "No recent auto-responder activity.",
+    "replied": "Reply sent",
+    "log_booking": "Booking"
   },
   "status": {
     "pending": "Pending",

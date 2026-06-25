@@ -6,6 +6,7 @@ import com.flowlyrent.model.enums.TaskStatus;
 import com.flowlyrent.model.enums.TaskType;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.HousekeepingTaskRepository;
+import com.flowlyrent.service.AutoResponderService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,18 +31,39 @@ public class Beds24WebhookController {
 
     private final HousekeepingTaskRepository taskRepo;
     private final AppUserRepository userRepo;
+    private final AutoResponderService autoResponder;
 
     @PostMapping("/{userId}")
     public ResponseEntity<String> handleWebhook(
             @PathVariable Long userId,
             @RequestBody Map<String, Object> payload) {
 
-        log.debug("[Webhook Beds24] userId={} payload={}", userId, payload);
+        log.info("[Webhook Beds24] userId={} payload keys={}", userId, payload.keySet());
 
         try {
             AppUser user = userRepo.findById(userId).orElse(null);
             if (user == null) return ResponseEntity.ok("ignored");
 
+            // ── Détection : message voyageur entrant ────────────────────────────
+            // Beds24 envoie un payload différent pour les messages : champ "message" présent + source != "host"
+            String messageField = getString(payload, "message");
+            String messageId    = getString(payload, "messageId");
+            // fallback : certains schémas Beds24 utilisent "id" pour l'identifiant du message
+            if (messageId == null) messageId = getString(payload, "id");
+            String msgSource    = getString(payload, "source");
+            String msgBookingId = getString(payload, "bookingId");
+
+            if (messageField != null && !messageField.isBlank()
+                    && msgBookingId != null
+                    && !"host".equalsIgnoreCase(msgSource)) {
+                String msgPropertyId = getString(payload, "propertyId");
+                log.info("[Webhook Beds24] messageId={} bookingId={} → répondeur automatique", messageId, msgBookingId);
+                autoResponder.processMessage(userId, messageId != null ? messageId : msgBookingId + "_" + System.currentTimeMillis(),
+                        msgBookingId, msgPropertyId, messageField);
+                return ResponseEntity.ok("message_received");
+            }
+
+            // ── Détection : nouvelle réservation (comportement existant) ────────
             String status = getString(payload, "status");
             String bookingId = getString(payload, "id");
             String propertyId = getString(payload, "propertyId");
