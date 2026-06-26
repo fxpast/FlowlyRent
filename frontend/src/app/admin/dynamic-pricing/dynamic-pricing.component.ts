@@ -252,7 +252,6 @@ function localDate(d: Date): string {
                       </mat-form-field>
                       <div class="period-month">
                         <mat-form-field appearance="outline" style="width:100%">
-                          <mat-label>{{ 'pricing.period_start_month' | translate }}</mat-label>
                           <mat-select [(ngModel)]="p.startMonth">
                             @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
                           </mat-select>
@@ -265,7 +264,6 @@ function localDate(d: Date): string {
                       <span class="arrow">→</span>
                       <div class="period-month">
                         <mat-form-field appearance="outline" style="width:100%">
-                          <mat-label>{{ 'pricing.period_end_month' | translate }}</mat-label>
                           <mat-select [(ngModel)]="p.endMonth">
                             @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
                           </mat-select>
@@ -581,15 +579,12 @@ function localDate(d: Date): string {
     .periods-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #333; }
     .period-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .period-name { flex: 2; min-width: 160px; }
-    .period-month { flex: 1; min-width: 90px; }
+    .period-month { flex: 1; min-width: 90px; max-width: 130px; }
     .period-day { width: 80px; }
     .period-adj { width: 100px; }
     .arrow { color: #888; font-size: 18px; padding: 0 4px; }
     .add-period-btn { margin-top: 8px; }
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
-    @media (max-width: 600px) {
-      .period-month { flex: none; width: 90px; min-width: 0; }
-    }
 
     .zones-list { display: flex; flex-direction: column; gap: 16px; }
     .zone-card mat-card-header { display: flex; justify-content: space-between; align-items: center; }
