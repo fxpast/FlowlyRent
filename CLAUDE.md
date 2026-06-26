@@ -238,6 +238,14 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 ### Boîtes à clé — Suppression automatique des orphelines
 - Quand un logement est dissocié de sa boîte à clé (`keyBoxId` vide dans `PUT /admin/property-configs/{id}`), si la boîte n'est plus associée à aucun autre logement (`repo.findByKeyBoxId().isEmpty()`), elle est supprimée automatiquement de la base
 
+### Arrivées/Départs — Filtre de prolongation
+- **Règle** : si deux réservations partagent le même logement (`propId`), le même prénom ET nom, et que `departure` de l'une = `arrival` de l'autre → c'est une prolongation
+- La réservation sortante est **masquée des départs** ; la réservation entrante est **masquée des arrivées**
+- Filtrage appliqué côté backend dans `AdminBookingController` : `getToday`, `getArrivals`, `getDepartures`
+- Pour `getArrivals` et `getDepartures`, un second appel Beds24 (ou requête iCal) est fait pour obtenir la liste croisée nécessaire au filtre
+- La liste `ongoing` n'est **pas** filtrée : le nouveau séjour prolongé doit bien apparaître en cours
+- Méthodes : `filterProlongations()`, `isProlongation()`, `bookingName()` — comparaison insensible à la casse
+
 ### Navigation — Modifier réservation directe depuis dashboard/today/arrivées/départs
 - Le dialog `BookingDetailDialogComponent` retourne `{ editDirect: true }` via `afterClosed()`
 - Les composants `dashboard`, `today`, `arrivals`, `departures` redirigent vers `/admin/bookings` avec `history.state = { editDirectBooking: booking }`
