@@ -250,23 +250,27 @@ function localDate(d: Date): string {
                         <mat-label>{{ 'pricing.period_name' | translate }}</mat-label>
                         <input matInput [(ngModel)]="p.name" placeholder="Ex: Haute saison">
                       </mat-form-field>
-                      <mat-form-field appearance="outline" class="period-month">
-                        <mat-label>{{ 'pricing.period_start_month' | translate }}</mat-label>
-                        <mat-select [(ngModel)]="p.startMonth">
-                          @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
-                        </mat-select>
-                      </mat-form-field>
+                      <div class="period-month">
+                        <mat-form-field appearance="outline" style="width:100%">
+                          <mat-label>{{ 'pricing.period_start_month' | translate }}</mat-label>
+                          <mat-select [(ngModel)]="p.startMonth">
+                            @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
+                          </mat-select>
+                        </mat-form-field>
+                      </div>
                       <mat-form-field appearance="outline" class="period-day">
                         <mat-label>{{ 'pricing.period_start_day' | translate }}</mat-label>
                         <input matInput type="number" min="1" max="31" [(ngModel)]="p.startDay">
                       </mat-form-field>
                       <span class="arrow">→</span>
-                      <mat-form-field appearance="outline" class="period-month">
-                        <mat-label>{{ 'pricing.period_end_month' | translate }}</mat-label>
-                        <mat-select [(ngModel)]="p.endMonth">
-                          @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
-                        </mat-select>
-                      </mat-form-field>
+                      <div class="period-month">
+                        <mat-form-field appearance="outline" style="width:100%">
+                          <mat-label>{{ 'pricing.period_end_month' | translate }}</mat-label>
+                          <mat-select [(ngModel)]="p.endMonth">
+                            @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
+                          </mat-select>
+                        </mat-form-field>
+                      </div>
                       <mat-form-field appearance="outline" class="period-day">
                         <mat-label>{{ 'pricing.period_end_day' | translate }}</mat-label>
                         <input matInput type="number" min="1" max="31" [(ngModel)]="p.endDay">
