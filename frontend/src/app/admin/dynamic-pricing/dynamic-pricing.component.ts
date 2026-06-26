@@ -251,7 +251,7 @@ function localDate(d: Date): string {
                         <input matInput [(ngModel)]="p.name" placeholder="Ex: Haute saison">
                       </mat-form-field>
                       <div class="period-month">
-                        <mat-form-field appearance="outline" style="width:100%">
+                        <mat-form-field appearance="outline" style="flex:1;min-width:0">
                           <mat-select [(ngModel)]="p.startMonth">
                             @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
                           </mat-select>
@@ -263,7 +263,7 @@ function localDate(d: Date): string {
                       </mat-form-field>
                       <span class="arrow">→</span>
                       <div class="period-month">
-                        <mat-form-field appearance="outline" style="width:100%">
+                        <mat-form-field appearance="outline" style="flex:1;min-width:0">
                           <mat-select [(ngModel)]="p.endMonth">
                             @for (m of months; track m.v) { <mat-option [value]="m.v">{{ m.l }}</mat-option> }
                           </mat-select>
@@ -579,7 +579,7 @@ function localDate(d: Date): string {
     .periods-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #333; }
     .period-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .period-name { flex: 2; min-width: 160px; }
-    .period-month { flex: 1; min-width: 90px; max-width: 130px; }
+    .period-month { flex: 1; min-width: 90px; max-width: 130px; display: flex; }
     .period-day { width: 80px; }
     .period-adj { width: 100px; }
     .arrow { color: #888; font-size: 18px; padding: 0 4px; }
