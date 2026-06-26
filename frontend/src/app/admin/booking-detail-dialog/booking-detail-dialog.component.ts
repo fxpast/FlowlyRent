@@ -767,6 +767,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
       .messages-layout { height: auto; overflow: visible; }
       .chat-area { flex: none; overflow-y: visible; min-height: 200px; }
       .chat-field textarea { min-height: 60px !important; }
+      .chat-input-bar { padding-bottom: max(4px, env(safe-area-inset-bottom)); }
     }
   `]
 })
