@@ -570,6 +570,7 @@ function localDate(d: Date): string {
       .zones-header { align-items: center; }
       .add-zone-desktop { display: none; }
       .add-zone-mobile { display: inline-flex; flex-shrink: 0; }
+      .period-month { flex: none; width: 82px; }
     }
     .zone-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
     .full { width: 100%; }
@@ -577,7 +578,7 @@ function localDate(d: Date): string {
     .periods-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #333; }
     .period-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .period-name { flex: 2; min-width: 160px; }
-    .period-month { width: 90px; flex-shrink: 0; }
+    .period-month { flex: 1; min-width: 90px; }
     .period-day { width: 80px; }
     .period-adj { width: 100px; }
     .arrow { color: #888; font-size: 18px; padding: 0 4px; }
