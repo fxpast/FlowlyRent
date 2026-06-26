@@ -44,13 +44,16 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 | ORM | Spring Data JPA / Hibernate (`ddl-auto: update`) |
 | Authentification | JWT (jjwt 0.12.5) — sujet = email, durée **365 jours** + `POST /auth/refresh` |
 | Paiement | Stripe (Checkout Session + Payment Intent + Webhooks) |
-| Messagerie | WebSocket (STOMP via SockJS) |
-| Sync plateformes | Beds24 API v2 + iCal (legacy) |
+| Messagerie | WebSocket (STOMP via SockJS) + répondeur auto (webhook Beds24 + Groq) |
+| Mode Channel | Beds24 API v2 — propriétés et réservations consommées via API (pas d'entités JPA) |
+| Mode iCal | `LocalProperty` + `IcalBooking` + `PropertyIcalSource` — logements créés manuellement |
 | Stockage photos | Cloudinary (`cloudinary-http45` 1.38.0) — cloud `dlixzbkue` |
 | App mobile | Flutter WebView (`flowlyrent_app/`) → `flowlyrent.com` — package `com.flowlyrent.flowlyrent_app` |
 | Infrastructure dev | Docker Compose / XAMPP local |
 | Infrastructure prod | Netlify (frontend) + Railway (backend + MySQL) |
 | Chatbot IA | Gemini 2.5 Flash (principal) + Groq `llama-3.3-70b-versatile` (fallback) — function calling |
+| Intégration comptable | Qonto API v2 — transactions + catégorisation + KPI marge |
+| Push notifications | Web Push (VAPID) + Firebase Cloud Messaging (FCM) |
 
 ---
 
@@ -67,9 +70,11 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 
 ## Architecture multi-tenant
 
-Chaque entité est rattachée à un `AppUser` via `user_id` sur `Property`.
-Toutes les routes admin lisent l'utilisateur via `SecurityUtils.getCurrentUserId()`.
+Toutes les entités sont rattachées à un `AppUser` via `userId` (présent sur `PropertyConfig`, `HousekeepingTask`, `LocalProperty`, `IcalBooking`, etc.).
+Les routes admin lisent l'utilisateur via `SecurityUtils.getCurrentUserId()`.
 **Règle absolue : ne jamais retourner de données appartenant à un autre utilisateur.**
+
+> En mode Beds24, les entités `Property`, `Booking`, `Guest` n'existent **pas** en base — elles sont consommées directement via l'API Beds24 et retournées comme DTOs.
 
 ---
 
@@ -115,6 +120,8 @@ flutter build appbundle --release  # AAB Play Store (keystore dans android/key.p
 - **Beds24 API — résolution roomId** : `RoomIdResolverService.resolveRoomId(userId, token, propertyId, from, to)` résout `propertyId → roomId` avec cache à deux niveaux : DB (`PropertyConfig.roomId`, persisté dès le 1ᵉʳ lookup) puis mémoire (`Beds24ApiClient.roomIdCache`). Ne jamais appeler `beds24.getCalendar()` manuellement pour retrouver un roomId — utiliser ce service.
 - **Hibernate 6 + MySQL / MariaDB — ENUM natif** : Hibernate 6 mappe `@Enumerated(EnumType.STRING)` en type ENUM natif MySQL par défaut. Le `ddl-auto: update` **ne redimensionne jamais** un ENUM existant quand on ajoute une constante Java → erreur d'insertion silencieuse. Toujours forcer `columnDefinition = "VARCHAR(N)"` sur les champs enum susceptibles d'évoluer (voir `LocalEvent.impactLevel`). En cas d'ajout de valeur sur une colonne existante : `ALTER TABLE … MODIFY … VARCHAR(N) NOT NULL;` sur chaque base (dev + Railway prod).
 - **Beds24TokenService** : `getValidToken()` ne doit **pas** être `@Transactional` — la méthode fait un appel réseau externe AVANT tout accès DB, donc une transaction ouvrirait une connexion HikariCP qui resterait bloquée jusqu'à 25s pendant l'appel Beds24, épuisant le pool sous charge concurrente.
+- **`mat-form-field` dans un flex container** : `mat-form-field` peut utiliser `display: contents` sur son hôte en Angular Material 17 → `width`/`flex` appliqués sur l'hôte ont no effet. Envelopper dans un `<div class="ma-classe">` et mettre `style="width:100%"` sur le `mat-form-field`. Voir `dynamic-pricing.component.ts` `.period-month`.
+- **Entretien — coûts pour la marge** : `HousekeepingReportService.costSummary()` doit rester **aligné** sur l'onglet Charges frontend (`housekeeperCharges` computed). Règles : `status == DONE` + `housekeeper != null` (prestataire externe, pas `HousekeepingStaff`) + `extraHours > 0` + taux disponible. Ne modifier l'un sans vérifier l'autre.
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Git** : travailler sur `dev`, ne jamais toucher à `master`
 
@@ -251,13 +258,20 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - Les composants `dashboard`, `today`, `arrivals`, `departures` redirigent vers `/admin/bookings` avec `history.state = { editDirectBooking: booking }`
 - `BookingsComponent` lit `history.state` dans `ngOnInit()` et ouvre le formulaire d'édition après chargement de la liste
 
+### Répondeur automatique — Messages voyageurs
+- **Webhook** : `POST /webhooks/beds24` reçoit les messages voyageurs Beds24 en temps réel
+- **Flux** : message reçu → `AutoResponderService` → Groq (`llama-3.3-70b-versatile`) → réponse postée via `Beds24ApiClient.sendMessage()`
+- **Config** : `AutoResponderConfig` par hôte — actif/inactif, prompt personnalisé, secret webhook
+- **Logs** : chaque réponse auto est enregistrée dans `AutoResponderLog` (bookingId, question, réponse, modèle)
+- **Onglet Tester** : simule une réponse sans envoyer — pour valider le prompt sans impacter les voyageurs
+
 ---
 
 ## Documentation détaillée
 
 | Fichier | Contenu |
 |---------|---------|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Structure des répertoires, schéma BDD, Cloudinary, sync Beds24, code PHP référence |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Structure complète des répertoires, schéma BDD réel (40+ entités), services, contrôleurs, règles métier |
 | [`docs/API.md`](docs/API.md) | Tous les endpoints REST + WebSocket |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Objectifs MVP et statut d'avancement |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Variables d'environnement, lancer le projet, déploiement Netlify/Railway |
