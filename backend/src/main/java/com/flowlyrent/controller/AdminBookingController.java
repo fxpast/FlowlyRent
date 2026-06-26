@@ -282,7 +282,10 @@ public class AdminBookingController {
                 List<Map<String, Object>> ongoing = icalBookingRepo
                         .findByUserIdAndArrivalLessThanAndDepartureGreaterThan(user.getId(), localToday, localToday)
                         .stream().map(this::icalToMap).toList();
-                return ResponseEntity.ok(Map.of("departures", departures, "arrivals", arrivals, "ongoing", ongoing));
+                return ResponseEntity.ok(Map.of(
+                        "departures", filterProlongations(departures, arrivals, "departure"),
+                        "arrivals",   filterProlongations(arrivals,   departures, "arrival"),
+                        "ongoing",    ongoing));
             }
 
             Beds24Account account = requireAccount();
@@ -306,7 +309,10 @@ public class AdminBookingController {
                     })
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(Map.of("departures", departures, "arrivals", arrivals, "ongoing", ongoing));
+            return ResponseEntity.ok(Map.of(
+                    "departures", filterProlongations(departures, arrivals, "departure"),
+                    "arrivals",   filterProlongations(arrivals,   departures, "arrival"),
+                    "ongoing",    ongoing));
         } catch (Exception e) { return error(e); }
     }
 
@@ -314,20 +320,28 @@ public class AdminBookingController {
     public ResponseEntity<?> getArrivals(@RequestParam(defaultValue = "") String weekStart) {
         try {
             LocalDate start = weekStart.isBlank() ? LocalDate.now() : LocalDate.parse(weekStart);
+            LocalDate end   = start.plusDays(6);
             AppUser user = securityUtils.getCurrentUser();
             if (user.getChannelType() == ChannelType.ICAL) {
-                return ResponseEntity.ok(icalBookingRepo
-                        .findByUserIdAndArrivalBetween(user.getId(), start, start.plusDays(6))
-                        .stream().map(this::icalToMap).toList());
+                List<Map<String, Object>> arrivals = icalBookingRepo
+                        .findByUserIdAndArrivalBetween(user.getId(), start, end)
+                        .stream().map(this::icalToMap).toList();
+                List<Map<String, Object>> departures = icalBookingRepo
+                        .findByUserIdAndDepartureBetween(user.getId(), start, end)
+                        .stream().map(this::icalToMap).toList();
+                return ResponseEntity.ok(filterProlongations(arrivals, departures, "arrival"));
             }
-            Map<String, String> params = Map.of("arrivalFrom", start.toString(), "arrivalTo", start.plusDays(6).toString());
             Beds24Account account = requireAccount();
-            List<Map<String, Object>> bookings = beds24.getBookings(beds24.tokenFor(account), params);
-            if (!bookings.isEmpty()) {
-                log.info("[DEBUG] Beds24 booking fields: {}", bookings.get(0).keySet());
-                log.info("[DEBUG] First booking sample: {}", bookings.get(0));
+            String token = beds24.tokenFor(account);
+            List<Map<String, Object>> arrivals = beds24.getBookings(token,
+                    Map.of("arrivalFrom", start.toString(), "arrivalTo", end.toString()));
+            if (!arrivals.isEmpty()) {
+                log.info("[DEBUG] Beds24 booking fields: {}", arrivals.get(0).keySet());
+                log.info("[DEBUG] First booking sample: {}", arrivals.get(0));
             }
-            return ResponseEntity.ok(bookings);
+            List<Map<String, Object>> departures = beds24.getBookings(token,
+                    Map.of("departureFrom", start.toString(), "departureTo", end.toString()));
+            return ResponseEntity.ok(filterProlongations(arrivals, departures, "arrival"));
         } catch (Exception e) {
             return error(e);
         }
@@ -337,15 +351,24 @@ public class AdminBookingController {
     public ResponseEntity<?> getDepartures(@RequestParam(defaultValue = "") String weekStart) {
         try {
             LocalDate start = weekStart.isBlank() ? LocalDate.now() : LocalDate.parse(weekStart);
+            LocalDate end   = start.plusDays(6);
             AppUser user = securityUtils.getCurrentUser();
             if (user.getChannelType() == ChannelType.ICAL) {
-                return ResponseEntity.ok(icalBookingRepo
-                        .findByUserIdAndDepartureBetween(user.getId(), start, start.plusDays(6))
-                        .stream().map(this::icalToMap).toList());
+                List<Map<String, Object>> departures = icalBookingRepo
+                        .findByUserIdAndDepartureBetween(user.getId(), start, end)
+                        .stream().map(this::icalToMap).toList();
+                List<Map<String, Object>> arrivals = icalBookingRepo
+                        .findByUserIdAndArrivalBetween(user.getId(), start, end)
+                        .stream().map(this::icalToMap).toList();
+                return ResponseEntity.ok(filterProlongations(departures, arrivals, "departure"));
             }
-            Map<String, String> params = Map.of("departureFrom", start.toString(), "departureTo", start.plusDays(6).toString());
             Beds24Account account = requireAccount();
-            return ResponseEntity.ok(beds24.getBookings(beds24.tokenFor(account), params));
+            String token = beds24.tokenFor(account);
+            List<Map<String, Object>> departures = beds24.getBookings(token,
+                    Map.of("departureFrom", start.toString(), "departureTo", end.toString()));
+            List<Map<String, Object>> arrivals = beds24.getBookings(token,
+                    Map.of("arrivalFrom", start.toString(), "arrivalTo", end.toString()));
+            return ResponseEntity.ok(filterProlongations(departures, arrivals, "departure"));
         } catch (Exception e) {
             return error(e);
         }
@@ -513,6 +536,48 @@ public class AdminBookingController {
         } catch (Exception e) {
             return error(e);
         }
+    }
+
+    /**
+     * Filtre les réservations en prolongation : même logement, même nom/prénom,
+     * et la date {@code dateField} de la réservation coïncide avec la date opposée dans la liste croisée.
+     * Exemple : une arrivée le 26/06 est exclue si une départ le 26/06 existe pour le même voyageur/logement.
+     */
+    private List<Map<String, Object>> filterProlongations(
+            List<Map<String, Object>> list,
+            List<Map<String, Object>> cross,
+            String dateField) {
+        String crossDateField = dateField.equals("arrival") ? "departure" : "arrival";
+        return list.stream()
+                .filter(b -> !isProlongation(b, dateField, cross, crossDateField))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isProlongation(Map<String, Object> booking, String dateField,
+                                    List<Map<String, Object>> cross, String crossDateField) {
+        String date   = truncateDate(Objects.toString(booking.get(dateField), ""));
+        String propId = Objects.toString(booking.getOrDefault("propId", booking.getOrDefault("propertyId", "")), "").trim();
+        String first  = bookingName(booking, "guestFirstName", "firstName");
+        String last   = bookingName(booking, "guestLastName",  "lastName");
+        if (date.isEmpty() || propId.isEmpty() || (first.isEmpty() && last.isEmpty())) return false;
+        return cross.stream().anyMatch(c -> {
+            String cDate   = truncateDate(Objects.toString(c.get(crossDateField), ""));
+            String cPropId = Objects.toString(c.getOrDefault("propId", c.getOrDefault("propertyId", "")), "").trim();
+            String cFirst  = bookingName(c, "guestFirstName", "firstName");
+            String cLast   = bookingName(c, "guestLastName",  "lastName");
+            return date.equals(cDate)
+                && propId.equals(cPropId)
+                && first.equalsIgnoreCase(cFirst)
+                && last.equalsIgnoreCase(cLast);
+        });
+    }
+
+    private String bookingName(Map<String, Object> b, String... keys) {
+        for (String k : keys) {
+            Object v = b.get(k);
+            if (v != null && !v.toString().isBlank()) return v.toString().trim();
+        }
+        return "";
     }
 
     private Map<String, Object> icalToMap(IcalBooking b) {
