@@ -570,7 +570,6 @@ function localDate(d: Date): string {
       .zones-header { align-items: center; }
       .add-zone-desktop { display: none; }
       .add-zone-mobile { display: inline-flex; flex-shrink: 0; }
-      .period-month { flex: none; width: 82px; }
     }
     .zone-form-card { margin-bottom: 20px; border: 2px solid #0288d1; }
     .full { width: 100%; }
@@ -584,6 +583,9 @@ function localDate(d: Date): string {
     .arrow { color: #888; font-size: 18px; padding: 0 4px; }
     .add-period-btn { margin-top: 8px; }
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+    @media (max-width: 600px) {
+      .period-month { flex: none; width: 90px; min-width: 0; }
+    }
 
     .zones-list { display: flex; flex-direction: column; gap: 16px; }
     .zone-card mat-card-header { display: flex; justify-content: space-between; align-items: center; }
