@@ -207,8 +207,9 @@ public class HousekeepingReportService {
         Map<String, BigDecimal> byProperty = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO;
         for (HousekeepingTask t : tasks) {
-            // Seules les tâches terminées représentent un coût réel
+            // Aligné sur l'onglet Charges frontend : tâche terminée, prestataire assigné
             if (t.getStatus() != TaskStatus.DONE) continue;
+            if (t.getHousekeeper() == null) continue;
             BigDecimal c = effectiveCost(t);
             if (c == null) continue;
             total = total.add(c);
