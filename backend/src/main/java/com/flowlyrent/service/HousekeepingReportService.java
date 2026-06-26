@@ -207,8 +207,9 @@ public class HousekeepingReportService {
         Map<String, BigDecimal> byProperty = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO;
         for (HousekeepingTask t : tasks) {
-            if (t.getStatus() == TaskStatus.SKIPPED) continue;
-            BigDecimal c = cost(t);
+            // Seules les tâches terminées représentent un coût réel
+            if (t.getStatus() != TaskStatus.DONE) continue;
+            BigDecimal c = effectiveCost(t);
             if (c == null) continue;
             total = total.add(c);
             byProperty.merge(t.getBeds24PropertyId(), c, BigDecimal::add);
@@ -225,9 +226,19 @@ public class HousekeepingReportService {
     // Helpers
     // -------------------------------------------------------------------------
 
+    // Coût pour les rapports (taux du task uniquement)
     private BigDecimal cost(HousekeepingTask t) {
         if (t.getHourlyRate() == null || t.getExtraHours() == null || t.getExtraHours() <= 0) return null;
         return BigDecimal.valueOf(t.getExtraHours()).multiply(t.getHourlyRate()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // Coût effectif pour la marge : fallback sur le taux du prestataire si non saisi sur la tâche
+    private BigDecimal effectiveCost(HousekeepingTask t) {
+        if (t.getExtraHours() == null || t.getExtraHours() <= 0) return null;
+        BigDecimal rate = t.getHourlyRate();
+        if (rate == null && t.getHousekeeper() != null) rate = t.getHousekeeper().getHourlyRate();
+        if (rate == null) return null;
+        return BigDecimal.valueOf(t.getExtraHours()).multiply(rate).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Map<String, Object> buildSummary(List<HousekeepingTask> tasks) {
