@@ -333,7 +333,7 @@ interface ReportDraft {
     .task-hours { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1565c0;
       background: #e3f2fd; padding: 4px 10px; border-radius: 8px; margin-bottom: 6px; width: fit-content; }
     .task-hours mat-icon { font-size: 15px; width: 15px; height: 15px; }
-    .task-notes { font-size: 13px; color: #777; font-style: italic; margin-bottom: 8px; }
+    .task-notes { font-size: 13px; color: #777; font-style: italic; margin-bottom: 8px; white-space: pre-wrap; }
     .task-actions { display: flex; gap: 8px; margin: 12px 0 8px; }
     .done-btn { background: #2e7d32 !important; color: white !important; }
     .completed-line { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #2e7d32; margin: 8px 0 4px; }
