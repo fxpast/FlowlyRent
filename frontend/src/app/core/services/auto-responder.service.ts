@@ -42,4 +42,8 @@ export class AutoResponderService {
   getDefaultKeywords(): Observable<{ keywords: string[] }> {
     return this.http.get<{ keywords: string[] }>(`${BASE}/admin/auto-responder/default-keywords`);
   }
+
+  testMessage(body: { message: string; bookingId?: string; propertyId?: string }): Observable<any> {
+    return this.http.post(`${BASE}/admin/auto-responder/test`, body);
+  }
 }

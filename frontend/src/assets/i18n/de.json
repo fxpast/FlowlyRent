@@ -106,7 +106,19 @@
     "prompt_placeholder": "z.B. Seien Sie sehr herzlich. Erwähnen Sie kostenloses Parken.",
     "no_logs": "Keine neueste Aktivität des automatischen Antwortgebers.",
     "replied": "Antwort gesendet",
-    "log_booking": "Buchung"
+    "log_booking": "Buchung",
+    "tab_test": "Testen",
+    "test_title": "Ohne Senden testen",
+    "test_desc": "Simuliert eine Gastnachricht: sie wird klassifiziert und eine Antwort generiert, aber nichts wird gesendet.",
+    "test_booking_id": "Beds24-Buchungs-ID (optional)",
+    "test_booking_id_placeholder": "z.B. 88794808",
+    "test_booking_id_hint": "Falls angegeben, wird der echte Buchungskontext für die KI-Antwort verwendet.",
+    "test_message_label": "Zu testende Gastnachricht",
+    "test_message_placeholder": "z.B. Hallo, ab wann kann ich einchecken?",
+    "test_btn": "Simulieren",
+    "test_would_reply": "Antwort, die gesendet worden wäre",
+    "test_would_send_transitional": "Übergangsnachricht, die gesendet worden wäre",
+    "test_classification": "Klassifizierung"
   },
   "status": {
     "pending": "Ausstehend",

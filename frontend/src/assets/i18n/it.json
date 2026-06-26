@@ -106,7 +106,19 @@
     "prompt_placeholder": "Es: Sii molto caloroso. Menziona il parcheggio gratuito.",
     "no_logs": "Nessuna attività recente del risponditore automatico.",
     "replied": "Risposta inviata",
-    "log_booking": "Prenotazione"
+    "log_booking": "Prenotazione",
+    "tab_test": "Testare",
+    "test_title": "Testare senza inviare",
+    "test_desc": "Simula il trattamento di un messaggio ospite: viene classificato e generata una risposta, ma nulla viene inviato.",
+    "test_booking_id": "ID prenotazione Beds24 (opzionale)",
+    "test_booking_id_placeholder": "Es: 88794808",
+    "test_booking_id_hint": "Se fornito, viene usato il contesto reale della prenotazione per la risposta IA.",
+    "test_message_label": "Messaggio ospite da testare",
+    "test_message_placeholder": "Es: Ciao, a che ora posso fare il check-in?",
+    "test_btn": "Simulare",
+    "test_would_reply": "Risposta che sarebbe stata inviata",
+    "test_would_send_transitional": "Messaggio transitorio che sarebbe stato inviato",
+    "test_classification": "Classificazione"
   },
   "status": {
     "pending": "In attesa",

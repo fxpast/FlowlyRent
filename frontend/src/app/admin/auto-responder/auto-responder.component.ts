@@ -121,6 +121,64 @@ import { AutoResponderService, AutoResponderConfig, AutoResponderLog } from '../
         </div>
       </mat-tab>
 
+      <!-- ── TEST ──────────────────────────────────────────────────────────── -->
+      <mat-tab [label]="'autoresponder.tab_test' | translate">
+        <div class="tab-content">
+          <mat-card class="section-card">
+            <mat-card-header>
+              <mat-card-title>{{ 'autoresponder.test_title' | translate }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="section-desc">{{ 'autoresponder.test_desc' | translate }}</p>
+
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>{{ 'autoresponder.test_booking_id' | translate }}</mat-label>
+                <input matInput [(ngModel)]="testBookingId"
+                       [placeholder]="'autoresponder.test_booking_id_placeholder' | translate">
+                <mat-hint>{{ 'autoresponder.test_booking_id_hint' | translate }}</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full" style="margin-top:16px">
+                <mat-label>{{ 'autoresponder.test_message_label' | translate }}</mat-label>
+                <textarea matInput rows="4" [(ngModel)]="testMessage"
+                          [placeholder]="'autoresponder.test_message_placeholder' | translate"></textarea>
+              </mat-form-field>
+
+              <button mat-raised-button color="accent" (click)="runTest()"
+                      [disabled]="!testMessage.trim() || testing()">
+                @if (testing()) { <mat-spinner diameter="18"></mat-spinner> }
+                @else { <mat-icon>science</mat-icon> }
+                {{ 'autoresponder.test_btn' | translate }}
+              </button>
+
+              @if (testResult()) {
+                <div class="test-result" [class.result-sensitive]="testResult()!.classification === 'SENSITIVE'">
+                  <div class="result-classification">
+                    <mat-icon [class.icon-simple]="testResult()!.classification === 'SIMPLE'"
+                              [class.icon-sensitive]="testResult()!.classification === 'SENSITIVE'">
+                      {{ testResult()!.classification === 'SIMPLE' ? 'check_circle' : 'warning' }}
+                    </mat-icon>
+                    <strong>{{ testResult()!.classification }}</strong>
+                  </div>
+
+                  @if (testResult()!.classification === 'SIMPLE') {
+                    <div class="result-label">{{ 'autoresponder.test_would_reply' | translate }}</div>
+                    <div class="result-text">{{ testResult()!.generatedReply }}</div>
+                  } @else {
+                    <div class="result-label">{{ 'autoresponder.test_would_send_transitional' | translate }}</div>
+                    <div class="result-text">{{ testResult()!.transitionalMessage }}</div>
+                    <div class="result-alert">
+                      <mat-icon>notifications_active</mat-icon>
+                      {{ testResult()!.hostAlert }}
+                    </div>
+                  }
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
       <!-- ── JOURNAL ─────────────────────────────────────────────────────── -->
       <mat-tab [label]="'autoresponder.tab_logs' | translate">
         <div class="tab-content">
@@ -188,6 +246,17 @@ import { AutoResponderService, AutoResponderConfig, AutoResponderLog } from '../
 
     .save-row { display: flex; justify-content: flex-end; }
 
+    /* Test */
+    .test-result { margin-top: 24px; padding: 16px; border-radius: 8px; background: #f5f5f5; border-left: 4px solid #43a047; }
+    .test-result.result-sensitive { border-left-color: #f57c00; background: #fff8f0; }
+    .result-classification { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 12px; }
+    .icon-simple { color: #43a047; }
+    .icon-sensitive { color: #f57c00; }
+    .result-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+    .result-text { font-size: 14px; color: #333; white-space: pre-wrap; line-height: 1.6; }
+    .result-alert { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; color: #f57c00; }
+    .result-alert mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
     /* Logs */
     .empty-hint { text-align: center; padding: 60px 24px; color: #aaa; }
     .empty-hint mat-icon { font-size: 48px; width: 48px; height: 48px; }
@@ -216,6 +285,11 @@ export class AutoResponderComponent implements OnInit {
   saving = signal(false);
   defaultKeywords = signal<string[]>([]);
 
+  testMessage = '';
+  testBookingId = '';
+  testing = signal(false);
+  testResult = signal<any>(null);
+
   get webhookUrl(): string {
     const base = window.location.hostname === 'localhost'
       ? 'https://flowlyrent-production.up.railway.app/api'
@@ -233,6 +307,18 @@ export class AutoResponderComponent implements OnInit {
     this.svc.getConfig().subscribe({ next: c => this.config = c, error: () => {} });
     this.svc.getLogs().subscribe({ next: l => this.logs.set(l), error: () => {} });
     this.svc.getDefaultKeywords().subscribe({ next: d => this.defaultKeywords.set(d.keywords), error: () => {} });
+  }
+
+  runTest(): void {
+    if (!this.testMessage.trim()) return;
+    this.testing.set(true);
+    this.testResult.set(null);
+    const body: any = { message: this.testMessage };
+    if (this.testBookingId.trim()) body.bookingId = this.testBookingId.trim();
+    this.svc.testMessage(body).subscribe({
+      next: r => { this.testResult.set(r); this.testing.set(false); },
+      error: () => { this.testing.set(false); this.snack.open(this.t.instant('common.error'), '', { duration: 3000 }); }
+    });
   }
 
   save(): void {

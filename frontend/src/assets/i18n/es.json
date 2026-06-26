@@ -106,7 +106,19 @@
     "prompt_placeholder": "Ej: Sea muy cálido. Mencione que el aparcamiento es gratuito.",
     "no_logs": "Sin actividad reciente del respondedor automático.",
     "replied": "Respuesta enviada",
-    "log_booking": "Reserva"
+    "log_booking": "Reserva",
+    "tab_test": "Probar",
+    "test_title": "Probar sin enviar",
+    "test_desc": "Simula el procesamiento de un mensaje de huésped: se clasifica y se genera una respuesta, pero no se envía nada.",
+    "test_booking_id": "ID reserva Beds24 (opcional)",
+    "test_booking_id_placeholder": "Ej: 88794808",
+    "test_booking_id_hint": "Si se indica, se usa el contexto real de la reserva para la respuesta IA.",
+    "test_message_label": "Mensaje del huésped a probar",
+    "test_message_placeholder": "Ej: Hola, ¿a qué hora puedo hacer el check-in?",
+    "test_btn": "Simular",
+    "test_would_reply": "Respuesta que se habría enviado",
+    "test_would_send_transitional": "Mensaje transitorio que se habría enviado",
+    "test_classification": "Clasificación"
   },
   "status": {
     "pending": "Pendiente",

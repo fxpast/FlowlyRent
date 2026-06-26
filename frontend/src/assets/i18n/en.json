@@ -106,7 +106,19 @@
     "prompt_placeholder": "e.g. Be very warm. Mention free parking. Do not share the access code before D-2.",
     "no_logs": "No recent auto-responder activity.",
     "replied": "Reply sent",
-    "log_booking": "Booking"
+    "log_booking": "Booking",
+    "tab_test": "Test",
+    "test_title": "Test without sending",
+    "test_desc": "Simulate a guest message: it gets classified and a reply is generated, but nothing is sent to Beds24 or notified.",
+    "test_booking_id": "Beds24 booking ID (optional)",
+    "test_booking_id_placeholder": "e.g. 88794808",
+    "test_booking_id_hint": "If provided, the actual booking context is used for the AI reply.",
+    "test_message_label": "Guest message to test",
+    "test_message_placeholder": "e.g. Hi, what time can I check in?",
+    "test_btn": "Simulate",
+    "test_would_reply": "Reply that would have been sent",
+    "test_would_send_transitional": "Transitional message that would have been sent",
+    "test_classification": "Classification"
   },
   "status": {
     "pending": "Pending",

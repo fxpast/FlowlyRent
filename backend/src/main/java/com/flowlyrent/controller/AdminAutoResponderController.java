@@ -57,6 +57,24 @@ public class AdminAutoResponderController {
         return ResponseEntity.ok(Map.of("keywords", autoResponderService.getDefaultSensitiveKeywords()));
     }
 
+    /**
+     * Simule le traitement d'un message SANS rien envoyer ni notifier.
+     * Retourne la classification + la réponse qui aurait été générée/envoyée.
+     */
+    @PostMapping("/test")
+    public ResponseEntity<?> test(@RequestBody Map<String, String> body) {
+        try {
+            Long userId = securityUtils.getCurrentUserId();
+            String message    = body.getOrDefault("message", "");
+            String bookingId  = body.get("bookingId");
+            String propertyId = body.get("propertyId");
+            if (message.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "message vide"));
+            return ResponseEntity.ok(autoResponderService.testMessage(userId, message, bookingId, propertyId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     private Map<String, Object> toDto(AutoResponderConfig c) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("enabled",             c.isEnabled());

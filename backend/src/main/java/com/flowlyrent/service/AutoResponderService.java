@@ -311,6 +311,35 @@ public class AutoResponderService {
         }
     }
 
+    // ─── Mode test (aucun envoi, aucun log) ──────────────────────────────────
+
+    public Map<String, Object> testMessage(Long userId, String message, String bookingId, String propertyId) {
+        AutoResponderConfig config = getOrCreateConfig(userId);
+        String classification = classify(message, config.getSensitiveKeywords());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("classification", classification);
+
+        if ("SIMPLE".equals(classification)) {
+            try {
+                String reply = generateReply(userId,
+                        bookingId != null && !bookingId.isBlank() ? bookingId : null,
+                        propertyId, message, config);
+                result.put("generatedReply", reply != null ? reply : "(aucune réponse générée — vérifiez GROQ_API_KEY)");
+            } catch (Exception e) {
+                result.put("generatedReply", "(erreur génération IA : " + e.getMessage() + ")");
+            }
+        } else {
+            String transitional = config.getTransitionalMessage();
+            if (transitional == null || transitional.isBlank()) {
+                transitional = "Merci pour votre message. Votre hôte a été notifié et vous répondra dans les meilleurs délais.";
+            }
+            result.put("transitionalMessage", transitional);
+            result.put("hostAlert", "Une notification push aurait été envoyée à l'hôte.");
+        }
+        return result;
+    }
+
     // ─── API publique pour le contrôleur ─────────────────────────────────────
 
     public AutoResponderConfig getOrCreateConfig(Long userId) {

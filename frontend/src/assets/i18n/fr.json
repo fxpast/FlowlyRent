@@ -106,7 +106,19 @@
     "prompt_placeholder": "Ex : Soyez toujours très chaleureux. Mentionnez que le parking est gratuit. Ne donnez pas le code d'accès avant J-2.",
     "no_logs": "Aucune activité récente du répondeur automatique.",
     "replied": "Réponse envoyée",
-    "log_booking": "Réservation"
+    "log_booking": "Réservation",
+    "tab_test": "Tester",
+    "test_title": "Tester le répondeur sans envoyer",
+    "test_desc": "Simulez le traitement d'un message voyageur : classifié et réponse générée, mais rien n'est envoyé à Beds24 ni notifié.",
+    "test_booking_id": "ID réservation Beds24 (optionnel)",
+    "test_booking_id_placeholder": "Ex : 88794808",
+    "test_booking_id_hint": "Si renseigné, le contexte réel du séjour est utilisé pour la réponse IA.",
+    "test_message_label": "Message voyageur à tester",
+    "test_message_placeholder": "Ex : Bonjour, à quelle heure puis-je m'installer ?",
+    "test_btn": "Simuler",
+    "test_would_reply": "Réponse qui aurait été envoyée",
+    "test_would_send_transitional": "Message transitoire qui aurait été envoyé",
+    "test_classification": "Classification"
   },
   "status": {
     "pending": "En attente",
