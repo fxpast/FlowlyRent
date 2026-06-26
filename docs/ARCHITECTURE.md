@@ -64,11 +64,12 @@ FlowlyRent/
 │       │   ├── PaymentService.java    # Stripe Checkout + webhooks
 │       │   ├── AnalyticsService.java  # Enregistrement events + calcul KPIs superadmin
 │       │   ├── LinenService.java      # Déduction stock linge à la fin d'une tâche (idempotent via linenDeducted)
+│       │   ├── HousekeepingReportService.java # Rapports ménage (4 types) + costSummary() pour marge stats
 │       │   └── SyncResult.java        # DTO résultat de sync
 │       ├── controller/
 │       │   ├── AuthController.java                  # /auth/register, /auth/login
 │       │   ├── UserSettingsController.java          # /user/profile, /user/beds24/**, /user/password, /user/feedback
-│       │   ├── AdminBookingController.java          # /admin/bookings/**
+│       │   ├── AdminBookingController.java          # /admin/bookings/** — inclut filtre prolongation (arrivées/départs)
 │       │   ├── AdminMessageController.java          # /admin/messages/**
 │       │   ├── AdminMessageTemplateController.java  # /admin/message-templates/** (CRUD modèles FR+EN)
 │       │   ├── AdminPaymentController.java          # /admin/payments/**
@@ -288,3 +289,56 @@ Le dossier **`C:\FlowlyRent\php_code\`** contient l'application PHP legacy (giti
 | `strategie_minStay.php` | Gestion durée minimum de séjour |
 
 Consulter ces fichiers quand un comportement est incertain (formules, mapping Beds24, logique métier).
+
+---
+
+## Filtre de prolongation — Arrivées / Départs
+
+`AdminBookingController.filterProlongations()` exclut les prolongations des listes d'arrivées et de départs.
+
+**Règle :** une réservation B est une prolongation si :
+- même `beds24PropertyId` que A
+- même nom/prénom (`bookingName()`) que A
+- `checkIn(B) == checkOut(A)`
+
+Dans ce cas, A est masqué des départs et B des arrivées — seul le séjour global est visible (ni départ fictif ni arrivée fictive).
+
+**Implémentation :**
+- Mode Beds24 : un second appel `getBookings()` sur la même fenêtre de ±7 jours fournit les deux listes à croiser
+- Mode iCal : requête `IcalBookingRepository` sur la même plage
+- `bookingName()` normalise `guestFirstName + guestLastName` en minuscules sans espaces
+
+---
+
+## Entretien — Calcul des coûts (`costSummary`)
+
+`HousekeepingReportService.costSummary(userId, from, to)` calcule le total ménage/dépannage pour la page Revenus.
+
+**Règles d'inclusion :** une tâche est comptée si et seulement si :
+1. `status == DONE`
+2. `housekeeper != null` (prestataire externe assigné — `HousekeeperProfile`)
+3. `extraHours > 0` et un taux horaire est disponible
+
+**Taux effectif (`effectiveCost`)** : utilise `task.hourlyRate` en priorité, puis `housekeeper.hourlyRate` en fallback.
+
+Ces règles sont **alignées sur l'onglet Charges du frontend** (`housekeeperCharges` computed) — les deux sources doivent toujours donner le même total. Ne pas modifier l'une sans vérifier l'autre.
+
+> Les tâches assignées à `HousekeepingStaff` (personnel interne) ne sont **pas** comptées ici — elles n'ont pas de `HousekeeperProfile`.
+
+---
+
+## Angular Material 17 — Largeur des `mat-form-field` dans un flex container
+
+`mat-form-field` peut utiliser `display: contents` sur son élément hôte en Angular Material 17 (MDC), ce qui rend `width` et `flex` appliqués sur l'hôte sans effet visuel.
+
+**Solution :** envelopper le `mat-form-field` dans un `<div>` portant la classe de largeur. Le `div` est un flex item fiable — ses propriétés `flex`/`width`/`min-width` s'appliquent correctement.
+
+```html
+<div class="period-month">
+  <mat-form-field appearance="outline" style="width:100%">
+    ...
+  </mat-form-field>
+</div>
+```
+
+Exemple appliqué : champs mois des périodes saisonnières dans `dynamic-pricing.component.ts`.
