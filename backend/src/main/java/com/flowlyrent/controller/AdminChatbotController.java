@@ -1,5 +1,6 @@
 package com.flowlyrent.controller;
 
+import com.flowlyrent.service.CerebrasChatbotService;
 import com.flowlyrent.service.GeminiChatbotService;
 import com.flowlyrent.service.GroqChatbotService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class AdminChatbotController {
 
     private final GeminiChatbotService geminiChatbotService;
     private final GroqChatbotService groqChatbotService;
+    private final CerebrasChatbotService cerebrasChatbotService;
 
     @PostMapping("/ask")
     public ResponseEntity<?> ask(@RequestBody Map<String, Object> body) {
@@ -39,8 +41,16 @@ public class AdminChatbotController {
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
             } catch (IllegalStateException groqError) {
-                log.error("Chatbot erreur (Gemini et Groq indisponibles) : {}", groqError.getMessage());
-                return ResponseEntity.status(503).body(Map.of("error", groqError.getMessage()));
+                log.warn("Groq indisponible ({}), tentative via Cerebras", groqError.getMessage());
+                try {
+                    String answer = cerebrasChatbotService.ask(question, lang, history);
+                    return ResponseEntity.ok(Map.of("answer", answer));
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+                } catch (IllegalStateException cerebrasError) {
+                    log.error("Chatbot erreur (Gemini, Groq et Cerebras indisponibles) : {}", cerebrasError.getMessage());
+                    return ResponseEntity.status(503).body(Map.of("error", cerebrasError.getMessage()));
+                }
             }
         }
     }

@@ -17,12 +17,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Chatbot via l'API Cerebras (compatible OpenAI), utilisé en 3ème repli si Gemini ET Groq
+ * sont indisponibles. Même logique de function calling que GroqChatbotService.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GeminiChatbotService {
+public class CerebrasChatbotService {
 
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+    private static final String API_URL = "https://api.cerebras.ai/v1/chat/completions";
     private static final int MAX_TOOL_ITERATIONS = 3;
     private static final int MAX_HISTORY_MESSAGES = 20;
 
@@ -35,100 +39,95 @@ public class GeminiChatbotService {
     private final RagService ragService;
     private final ObjectMapper objectMapper;
 
-    @Value("${gemini.api-key:}")
+    @Value("${cerebras.api-key:}")
     private String apiKey;
 
-    @Value("${gemini.model:gemini-2.0-flash}")
+    @Value("${cerebras.model:llama-3.3-70b}")
     private String model;
 
     public String ask(String question, String lang, List<Map<String, String>> history) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("L'assistant IA n'est pas configuré");
+            throw new IllegalStateException("L'assistant IA n'est pas configuré (Cerebras)");
         }
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("Question vide");
         }
 
         String context = ragService.retrieve(question);
-        String systemInstruction = context != null
+        String sysInstruction = context != null
                 ? chatbotPromptService.systemInstruction(lang, context)
                 : chatbotPromptService.systemInstruction(lang);
 
-        List<Map<String, Object>> contents = new ArrayList<>();
+        List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", sysInstruction));
         if (history != null) {
             int start = Math.max(0, history.size() - MAX_HISTORY_MESSAGES);
             for (Map<String, String> msg : history.subList(start, history.size())) {
                 String text = msg.get("text");
                 if (text == null || text.isBlank()) continue;
-                String role = "assistant".equals(msg.get("role")) ? "model" : "user";
-                contents.add(Map.of("role", role, "parts", List.of(Map.of("text", text))));
+                String role = "assistant".equals(msg.get("role")) ? "assistant" : "user";
+                messages.add(Map.of("role", role, "content", text));
             }
         }
-        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", question.trim()))));
+        messages.add(Map.of("role", "user", "content", question.trim()));
 
         try {
             for (int iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
                 Map<String, Object> body = new LinkedHashMap<>();
-                body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemInstruction))));
-                body.put("contents", contents);
-                body.put("tools", List.of(Map.of("functionDeclarations", chatbotPromptService.geminiToolDeclarations())));
+                body.put("model", model);
+                body.put("messages", messages);
+                body.put("tools", chatbotPromptService.openAiToolDeclarations());
+                body.put("tool_choice", "auto");
 
-                Map<String, Object> content = extractContent(callGemini(body));
+                Map<String, Object> message = extractMessage(callCerebras(body));
 
                 @SuppressWarnings("unchecked")
-                List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                List<Map<String, Object>> toolCalls = (List<Map<String, Object>>) message.get("tool_calls");
 
-                List<Map<String, Object>> functionCalls = new ArrayList<>();
-                StringBuilder textBuilder = new StringBuilder();
-                for (Map<String, Object> part : parts) {
-                    if (part.get("functionCall") != null) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> functionCall = (Map<String, Object>) part.get("functionCall");
-                        functionCalls.add(functionCall);
-                    } else if (part.get("text") != null) {
-                        textBuilder.append(part.get("text"));
-                    }
-                }
-
-                if (functionCalls.isEmpty()) {
-                    if (textBuilder.length() == 0) {
+                if (toolCalls == null || toolCalls.isEmpty()) {
+                    Object content = message.get("content");
+                    if (content == null || content.toString().isBlank()) {
                         throw new IllegalStateException("Réponse vide de l'assistant IA");
                     }
-                    return textBuilder.toString().trim();
+                    return content.toString().trim();
                 }
 
-                List<Map<String, Object>> modelParts = new ArrayList<>();
-                for (Map<String, Object> functionCall : functionCalls) {
-                    modelParts.add(Map.of("functionCall", functionCall));
-                }
-                contents.add(Map.of("role", "model", "parts", modelParts));
+                messages.add(message);
 
-                List<Map<String, Object>> responseParts = new ArrayList<>();
-                for (Map<String, Object> functionCall : functionCalls) {
-                    String toolName = (String) functionCall.get("name");
+                for (Map<String, Object> toolCall : toolCalls) {
+                    String toolCallId = (String) toolCall.get("id");
                     @SuppressWarnings("unchecked")
-                    Map<String, Object> args = (Map<String, Object>) functionCall.get("args");
+                    Map<String, Object> function = (Map<String, Object>) toolCall.get("function");
+                    String toolName = (String) function.get("name");
+                    String argumentsJson = (String) function.get("arguments");
+                    Map<String, Object> args = (argumentsJson == null || argumentsJson.isBlank())
+                            ? Map.of()
+                            : objectMapper.readValue(argumentsJson, new TypeReference<>() {});
                     Map<String, Object> toolResult = chatbotToolService.execute(toolName, args, lang);
-                    responseParts.add(Map.of("functionResponse", Map.of("name", toolName, "response", toolResult)));
+                    messages.add(Map.of(
+                            "role", "tool",
+                            "tool_call_id", toolCallId,
+                            "content", objectMapper.writeValueAsString(toolResult)
+                    ));
                 }
-                contents.add(Map.of("role", "user", "parts", responseParts));
             }
 
             throw new IllegalStateException("L'assistant IA n'a pas pu répondre");
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Erreur appel Gemini", e);
+            log.error("Erreur appel Cerebras", e);
             throw new IllegalStateException("Erreur lors de l'appel à l'assistant IA");
         }
     }
 
-    private Map<String, Object> callGemini(Map<String, Object> body) throws Exception {
+    private Map<String, Object> callCerebras(Map<String, Object> body) throws Exception {
         String json = objectMapper.writeValueAsString(body);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL.formatted(model, apiKey)))
+                .uri(URI.create(API_URL))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
                 .timeout(Duration.ofSeconds(25))
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
@@ -136,7 +135,7 @@ public class GeminiChatbotService {
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            log.error("Gemini HTTP {} : {}", response.statusCode(), response.body());
+            log.error("Cerebras HTTP {} : {}", response.statusCode(), response.body());
             throw new IllegalStateException("Erreur de l'assistant IA");
         }
 
@@ -144,11 +143,11 @@ public class GeminiChatbotService {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> extractContent(Map<String, Object> result) {
-        List<Map<String, Object>> candidates = (List<Map<String, Object>>) result.get("candidates");
-        if (candidates == null || candidates.isEmpty()) {
+    private Map<String, Object> extractMessage(Map<String, Object> result) {
+        List<Map<String, Object>> choices = (List<Map<String, Object>>) result.get("choices");
+        if (choices == null || choices.isEmpty()) {
             throw new IllegalStateException("Réponse vide de l'assistant IA");
         }
-        return (Map<String, Object>) candidates.get(0).get("content");
+        return (Map<String, Object>) choices.get(0).get("message");
     }
 }

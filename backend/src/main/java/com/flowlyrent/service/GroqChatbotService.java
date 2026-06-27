@@ -37,6 +37,7 @@ public class GroqChatbotService {
 
     private final ChatbotPromptService chatbotPromptService;
     private final ChatbotToolService chatbotToolService;
+    private final RagService ragService;
     private final ObjectMapper objectMapper;
 
     @Value("${groq.api-key:}")
@@ -53,8 +54,13 @@ public class GroqChatbotService {
             throw new IllegalArgumentException("Question vide");
         }
 
+        String context = ragService.retrieve(question);
+        String sysInstruction = context != null
+                ? chatbotPromptService.systemInstruction(lang, context)
+                : chatbotPromptService.systemInstruction(lang);
+
         List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "system", "content", chatbotPromptService.systemInstruction(lang)));
+        messages.add(Map.of("role", "system", "content", sysInstruction));
         if (history != null) {
             int start = Math.max(0, history.size() - MAX_HISTORY_MESSAGES);
             for (Map<String, String> msg : history.subList(start, history.size())) {

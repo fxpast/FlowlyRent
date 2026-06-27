@@ -68,7 +68,18 @@ public class ChatbotPromptService {
         return openAiToolDeclarations;
     }
 
+    /** Mode full-context : envoie toute la base de connaissance + toute la FAQ (fallback si RAG indisponible). */
     public String systemInstruction(String lang) {
+        return buildInstruction(LocalDate.now().toString(),
+                "Base de connaissance FlowlyRent :\n" + knowledgeBase + "\n\nFAQ :\n" + buildFaqContext(lang));
+    }
+
+    /** Mode RAG : envoie uniquement les chunks pertinents récupérés par RagService. */
+    public String systemInstruction(String lang, String retrievedContext) {
+        return buildInstruction(LocalDate.now().toString(), retrievedContext);
+    }
+
+    private String buildInstruction(String date, String context) {
         return """
                 Tu es l'assistant d'aide de FlowlyRent, une plateforme de gestion de location saisonnière pour les hôtes.
 
@@ -108,12 +119,8 @@ public class ChatbotPromptService {
 
                 Date du jour : %s
 
-                Base de connaissance FlowlyRent :
                 %s
-
-                FAQ :
-                %s
-                """.formatted(LocalDate.now(), knowledgeBase, buildFaqContext(lang));
+                """.formatted(date, context);
     }
 
     private String buildFaqContext(String lang) {

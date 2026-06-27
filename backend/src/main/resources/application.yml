@@ -84,6 +84,11 @@ groq:
   api-key: ${GROQ_API_KEY:}
   model: ${GROQ_MODEL:llama-3.3-70b-versatile}
 
+cerebras:
+  # Clé API Cerebras (https://cloud.cerebras.ai) — 3ème repli chatbot si Gemini et Groq indisponibles
+  api-key: ${CEREBRAS_API_KEY:}
+  model: ${CEREBRAS_MODEL:llama-3.3-70b}
+
 admin:
   username: ${ADMIN_USERNAME:}
   password: ${ADMIN_PASSWORD:}
