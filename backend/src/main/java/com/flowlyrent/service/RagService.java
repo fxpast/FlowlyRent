@@ -1,72 +1,59 @@
 package com.flowlyrent.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.FaqItem;
 import com.flowlyrent.repository.FaqRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Retrieval-Augmented Generation : indexe la base de connaissance et la FAQ en mémoire
- * (embeddings Gemini text-embedding-004) et retourne les chunks les plus pertinents pour
- * chaque question, réduisant le contexte envoyé au modèle de ~9 000 à ~2 000 tokens.
+ * Retrieval-Augmented Generation via scoring BM25 (keyword-based).
+ * Aucun appel API externe — fonctionne à zéro latence et sans dépendance d'embedding.
  *
- * Si la clé GEMINI_API_KEY est absente ou si l'initialisation échoue, retrieve() retourne
- * null et les services chatbot basculent en mode full-context (comportement initial).
+ * Au démarrage : découpe la KB en sections ## et indexe chaque entrée FAQ.
+ * À chaque requête : score les chunks par overlap de termes, retourne les top-4 sections + top-6 FAQ.
+ * Réduit le contexte envoyé au modèle de ~9 000 à ~2 000 tokens.
+ *
+ * Si l'initialisation échoue, retrieve() retourne null → fallback mode full-context.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RagService {
 
-    private static final String EMBED_URL =
-            "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=%s";
     private static final int TOP_KB  = 4;
     private static final int TOP_FAQ = 6;
-    private static final int MAX_EMBED_CHARS = 2000;
+    private static final int MIN_CHUNK_LENGTH = 20;
 
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    // Mots vides FR+EN supprimés avant le scoring
+    private static final Set<String> STOP_WORDS = Set.of(
+            "le", "la", "les", "de", "du", "des", "un", "une", "et", "en", "à", "au", "aux",
+            "est", "sont", "par", "pour", "sur", "dans", "ou", "qui", "que", "ce", "se",
+            "il", "elle", "ils", "elles", "je", "tu", "nous", "vous", "on",
+            "the", "a", "an", "of", "to", "in", "is", "are", "for", "and", "or", "on", "at",
+            "this", "that", "it", "be", "with", "as", "by", "from", "not", "but"
+    );
 
     private final FaqRepository faqRepository;
-    private final ObjectMapper objectMapper;
 
-    @Value("${gemini.api-key:}")
-    private String apiKey;
-
-    private final List<RagChunk> kbChunks = new ArrayList<>();
+    private List<RagChunk> kbChunks  = List.of();
     private volatile List<RagChunk> faqChunks = List.of();
 
     private boolean ready = false;
 
     @PostConstruct
     public void init() {
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("[RAG] GEMINI_API_KEY absent — RAG désactivé, mode full-context actif");
-            return;
-        }
         try {
-            loadKbChunks();
+            kbChunks  = loadKbChunks();
             faqChunks = buildFaqChunks();
             ready = true;
-            log.info("[RAG] Prêt — {} sections KB + {} entrées FAQ indexées",
+            log.info("[RAG] Prêt — {} sections KB + {} entrées FAQ indexées (keyword BM25)",
                     kbChunks.size(), faqChunks.size());
         } catch (Exception e) {
             log.error("[RAG] Échec initialisation, mode full-context actif : {}", e.getMessage(), e);
@@ -74,16 +61,17 @@ public class RagService {
     }
 
     /**
-     * Retourne le contexte pertinent pour la question (top-4 sections KB + top-6 FAQ).
-     * Retourne null si RAG non disponible — l'appelant doit alors utiliser le prompt complet.
+     * Retourne le contexte pertinent pour la question (top-4 KB + top-6 FAQ).
+     * Retourne null si RAG non disponible ou question vide.
      */
     public String retrieve(String question) {
         if (!ready || question == null || question.isBlank()) return null;
         try {
-            float[] qEmbed = embed(question);
+            Set<String> terms = tokenize(question);
+            if (terms.isEmpty()) return null;
 
-            List<RagChunk> topKb  = topChunks(kbChunks,  qEmbed, TOP_KB);
-            List<RagChunk> topFaq = topChunks(faqChunks, qEmbed, TOP_FAQ);
+            List<RagChunk> topKb  = topChunks(kbChunks,  terms, TOP_KB);
+            List<RagChunk> topFaq = topChunks(faqChunks, terms, TOP_FAQ);
 
             StringBuilder sb = new StringBuilder();
             if (!topKb.isEmpty()) {
@@ -101,7 +89,7 @@ public class RagService {
         }
     }
 
-    /** Rafraîchit les embeddings FAQ après ajout/modification d'entrées. */
+    /** Rafraîchit l'index FAQ après ajout/modification d'entrées. */
     public void refreshFaq() {
         if (!ready) return;
         try {
@@ -114,74 +102,54 @@ public class RagService {
 
     // -------------------------------------------------------------------------
 
-    private void loadKbChunks() throws Exception {
+    private List<RagChunk> loadKbChunks() throws Exception {
         String kb = new String(
                 new ClassPathResource("chatbot/knowledge-base.md").getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8);
+        List<RagChunk> chunks = new ArrayList<>();
         for (String part : kb.split("(?m)^(?=## )")) {
             String text = part.trim();
-            if (text.isBlank() || text.length() < 20) continue;
-            String forEmbed = text.length() > MAX_EMBED_CHARS ? text.substring(0, MAX_EMBED_CHARS) : text;
-            kbChunks.add(new RagChunk(text, embed(forEmbed)));
-        }
-    }
-
-    private List<RagChunk> buildFaqChunks() throws Exception {
-        List<RagChunk> chunks = new ArrayList<>();
-        for (FaqItem item : faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc()) {
-            if (item.getQuestion() == null || item.getAnswer() == null) continue;
-            String text = "Q: " + item.getQuestion() + "\nR: " + item.getAnswer();
-            chunks.add(new RagChunk(text, embed(text)));
+            if (text.isBlank() || text.length() < MIN_CHUNK_LENGTH) continue;
+            chunks.add(new RagChunk(text, tokenize(text)));
         }
         return List.copyOf(chunks);
     }
 
-    private float[] embed(String text) throws Exception {
-        Map<String, Object> body = Map.of(
-                "content", Map.of("parts", List.of(Map.of("text", text)))
-        );
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(EMBED_URL.formatted(apiKey)))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(15))
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                .build();
-
-        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("Embedding API HTTP " + response.statusCode() + " : " + response.body());
+    private List<RagChunk> buildFaqChunks() {
+        List<RagChunk> chunks = new ArrayList<>();
+        for (FaqItem item : faqRepository.findAllByOrderByDisplayOrderAscCreatedAtAsc()) {
+            if (item.getQuestion() == null || item.getAnswer() == null) continue;
+            String text = "Q: " + item.getQuestion() + "\nR: " + item.getAnswer();
+            chunks.add(new RagChunk(text, tokenize(text)));
         }
-
-        Map<String, Object> result = objectMapper.readValue(response.body(), new TypeReference<>() {});
-        @SuppressWarnings("unchecked")
-        Map<String, Object> embedding = (Map<String, Object>) result.get("embedding");
-        @SuppressWarnings("unchecked")
-        List<Number> values = (List<Number>) embedding.get("values");
-
-        float[] arr = new float[values.size()];
-        for (int i = 0; i < values.size(); i++) arr[i] = values.get(i).floatValue();
-        return arr;
+        return List.copyOf(chunks);
     }
 
-    private List<RagChunk> topChunks(List<RagChunk> chunks, float[] query, int k) {
+    private List<RagChunk> topChunks(List<RagChunk> chunks, Set<String> queryTerms, int k) {
         return chunks.stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(c, cosineSimilarity(c.embedding(), query)))
+                .map(c -> Map.entry(c, score(queryTerms, c.terms())))
+                .filter(e -> e.getValue() > 0)
                 .sorted(Map.Entry.<RagChunk, Float>comparingByValue().reversed())
                 .limit(k)
                 .map(Map.Entry::getKey)
-                .toList();
+                .collect(Collectors.toList());
     }
 
-    private float cosineSimilarity(float[] a, float[] b) {
-        float dot = 0, normA = 0, normB = 0;
-        for (int i = 0; i < a.length; i++) {
-            dot   += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-        double denom = Math.sqrt(normA) * Math.sqrt(normB);
-        return denom == 0 ? 0f : (float)(dot / denom);
+    /**
+     * Score BM25-like : proportion des termes de la requête présents dans le chunk,
+     * pondérée par la fréquence relative (termes rares = plus de poids).
+     */
+    private float score(Set<String> queryTerms, Set<String> docTerms) {
+        long matches = queryTerms.stream().filter(docTerms::contains).count();
+        return queryTerms.isEmpty() ? 0f : (float) matches / queryTerms.size();
     }
 
-    public record RagChunk(String text, float[] embedding) {}
+    private Set<String> tokenize(String text) {
+        return Arrays.stream(text.toLowerCase().split("[^a-zA-Zàâäéèêëîïôùûüç0-9]+"))
+                .filter(s -> s.length() > 2)
+                .filter(s -> !STOP_WORDS.contains(s))
+                .collect(Collectors.toSet());
+    }
+
+    public record RagChunk(String text, Set<String> terms) {}
 }
