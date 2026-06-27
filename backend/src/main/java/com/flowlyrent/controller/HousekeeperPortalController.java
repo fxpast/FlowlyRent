@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @RestController
@@ -227,13 +228,12 @@ public class HousekeeperPortalController {
             if (account == null) return ResponseEntity.ok(List.of());
             String token = beds24.tokenFor(account);
             LocalDate today = LocalDate.now();
-            Map<String, String> params = Map.of(
-                    "arrivalFrom", today.toString(),
-                    "arrivalTo",   today.plusDays(6).toString()
-            );
+            String from = today.toString();
+            String to   = today.plusDays(6).toString();
+            List<Map<String, Object>> arrivals  = beds24.getBookings(token, Map.of("arrivalFrom",   from, "arrivalTo",   to));
+            List<Map<String, Object>> departures = beds24.getBookings(token, Map.of("departureFrom", from, "departureTo", to));
             Map<String, String> propNames = buildPropNames(userId);
-            List<Map<String, Object>> bookings = beds24.getBookings(token, params);
-            return ResponseEntity.ok(bookings.stream()
+            return ResponseEntity.ok(filterProlongations(arrivals, departures, "arrival").stream()
                     .map(b -> enrichWithPropName(stripPrices(b), propNames))
                     .toList());
         } catch (Exception e) {
@@ -251,19 +251,60 @@ public class HousekeeperPortalController {
             if (account == null) return ResponseEntity.ok(List.of());
             String token = beds24.tokenFor(account);
             LocalDate today = LocalDate.now();
-            Map<String, String> params = Map.of(
-                    "departureFrom", today.toString(),
-                    "departureTo",   today.plusDays(6).toString()
-            );
+            String from = today.toString();
+            String to   = today.plusDays(6).toString();
+            List<Map<String, Object>> departures = beds24.getBookings(token, Map.of("departureFrom", from, "departureTo", to));
+            List<Map<String, Object>> arrivals   = beds24.getBookings(token, Map.of("arrivalFrom",   from, "arrivalTo",   to));
             Map<String, String> propNames = buildPropNames(userId);
-            List<Map<String, Object>> bookings = beds24.getBookings(token, params);
-            return ResponseEntity.ok(bookings.stream()
+            return ResponseEntity.ok(filterProlongations(departures, arrivals, "departure").stream()
                     .map(b -> enrichWithPropName(stripPrices(b), propNames))
                     .toList());
         } catch (Exception e) {
             log.error("departures error: {}", e.getMessage(), e);
             return ResponseEntity.ok(List.of());
         }
+    }
+
+    private List<Map<String, Object>> filterProlongations(
+            List<Map<String, Object>> list,
+            List<Map<String, Object>> cross,
+            String dateField) {
+        String crossDateField = dateField.equals("arrival") ? "departure" : "arrival";
+        return list.stream()
+                .filter(b -> !isProlongation(b, dateField, cross, crossDateField))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private boolean isProlongation(Map<String, Object> booking, String dateField,
+                                    List<Map<String, Object>> cross, String crossDateField) {
+        String date   = truncateDate(Objects.toString(booking.get(dateField), ""));
+        String propId = Objects.toString(booking.getOrDefault("propId", booking.getOrDefault("propertyId", "")), "").trim();
+        String first  = bookingName(booking, "guestFirstName", "firstName");
+        String last   = bookingName(booking, "guestLastName",  "lastName");
+        if (date.isEmpty() || propId.isEmpty() || (first.isEmpty() && last.isEmpty())) return false;
+        return cross.stream().anyMatch(c -> {
+            String cDate   = truncateDate(Objects.toString(c.get(crossDateField), ""));
+            String cPropId = Objects.toString(c.getOrDefault("propId", c.getOrDefault("propertyId", "")), "").trim();
+            String cFirst  = bookingName(c, "guestFirstName", "firstName");
+            String cLast   = bookingName(c, "guestLastName",  "lastName");
+            return date.equals(cDate)
+                && propId.equals(cPropId)
+                && first.equalsIgnoreCase(cFirst)
+                && last.equalsIgnoreCase(cLast);
+        });
+    }
+
+    private String bookingName(Map<String, Object> b, String... keys) {
+        for (String k : keys) {
+            Object v = b.get(k);
+            if (v != null && !v.toString().isBlank()) return v.toString().trim();
+        }
+        return "";
+    }
+
+    private String truncateDate(String date) {
+        if (date == null || date.length() < 10) return date == null ? "" : date;
+        return date.substring(0, 10);
     }
 
     /** Construit une map beds24PropertyId → nom du logement pour cet hôte. */
