@@ -60,6 +60,14 @@ coordonnées du voyageur, logement, dates, nombre de nuits et de voyageurs, plat
 d'origine (Direct, Airbnb, Booking, Abritel...), statut, et actions (annuler, envoyer un
 message de rappel).
 
+### Prolongements de séjour
+
+Quand un voyageur **prolonge son séjour**, la plateforme crée une deuxième réservation qui enchaîne directement la première (même logement, même voyageur, départ de la 1ʳᵉ = arrivée de la 2ᵉ). Ces prolongements sont détectés automatiquement et **exclus** des listes arrivées/départs normales pour éviter les doublons.
+
+Les outils `get_arrivals` et `get_departures` renvoient un champ optionnel `prolongements` (liste) quand des prolongements sont détectés. Chaque entrée contient : `guestName`, `propertyName`, `newDeparture`.
+
+**Règle de formulation :** quand `prolongements` est présent, le mentionner explicitement. Exemple : "Jean Dupont a prolongé son séjour à l'Appartement Centre jusqu'au 30 juin." Ne jamais dire "aucune arrivée" ou "aucun départ" si le voyageur est simplement en prolongement.
+
 ## Logements (Properties)
 
 Page de gestion de chaque logement :

@@ -227,30 +227,92 @@ public class ChatbotToolService {
         if (date == null) date = LocalDate.now();
         Beds24Account account = requireBeds24Account(userId);
         String token = beds24.tokenFor(account);
-        List<Map<String, Object>> bookings = beds24.getBookings(token,
-                Map.of("arrivalFrom", date.toString(), "arrivalTo", date.toString()));
+        String d = date.toString();
+        List<Map<String, Object>> arrivals  = beds24.getBookings(token, Map.of("arrivalFrom",   d, "arrivalTo",   d));
+        List<Map<String, Object>> departures = beds24.getBookings(token, Map.of("departureFrom", d, "departureTo", d));
         Map<String, String> propNames = propertyNames(userId, token);
 
-        List<Map<String, Object>> result = bookings.stream()
+        List<Map<String, Object>> extensions = arrivals.stream()
                 .filter(this::isActiveStatus)
+                .filter(b -> isChatbotProlongation(b, "arrival", departures, "departure"))
+                .map(b -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("guestName",     simplifyBooking(b, propNames).get("guestName"));
+                    m.put("propertyName",  simplifyBooking(b, propNames).get("propertyName"));
+                    m.put("newDeparture",  truncateDate(b.get("departure")));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> result = arrivals.stream()
+                .filter(this::isActiveStatus)
+                .filter(b -> !isChatbotProlongation(b, "arrival", departures, "departure"))
                 .map(b -> simplifyBooking(b, propNames))
                 .collect(Collectors.toList());
-        return Map.of("date", date.toString(), "arrivals", result);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("date", d);
+        response.put("arrivals", result);
+        if (!extensions.isEmpty()) response.put("prolongements", extensions);
+        return response;
     }
 
     private Map<String, Object> getDepartures(Long userId, LocalDate date) throws Exception {
         if (date == null) date = LocalDate.now();
         Beds24Account account = requireBeds24Account(userId);
         String token = beds24.tokenFor(account);
-        List<Map<String, Object>> bookings = beds24.getBookings(token,
-                Map.of("departureFrom", date.toString(), "departureTo", date.toString()));
+        String d = date.toString();
+        List<Map<String, Object>> departures = beds24.getBookings(token, Map.of("departureFrom", d, "departureTo", d));
+        List<Map<String, Object>> arrivals   = beds24.getBookings(token, Map.of("arrivalFrom",   d, "arrivalTo",   d));
         Map<String, String> propNames = propertyNames(userId, token);
 
-        List<Map<String, Object>> result = bookings.stream()
+        List<Map<String, Object>> extensions = departures.stream()
                 .filter(this::isActiveStatus)
+                .filter(b -> isChatbotProlongation(b, "departure", arrivals, "arrival"))
+                .map(b -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("guestName",     simplifyBooking(b, propNames).get("guestName"));
+                    m.put("propertyName",  simplifyBooking(b, propNames).get("propertyName"));
+                    // the new departure comes from the matching arrival booking
+                    arrivals.stream()
+                            .filter(a -> chatbotSameProlongation(b, "departure", a, "arrival"))
+                            .findFirst()
+                            .ifPresent(a -> m.put("newDeparture", truncateDate(a.get("departure"))));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> result = departures.stream()
+                .filter(this::isActiveStatus)
+                .filter(b -> !isChatbotProlongation(b, "departure", arrivals, "arrival"))
                 .map(b -> simplifyBooking(b, propNames))
                 .collect(Collectors.toList());
-        return Map.of("date", date.toString(), "departures", result);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("date", d);
+        response.put("departures", result);
+        if (!extensions.isEmpty()) response.put("prolongements", extensions);
+        return response;
+    }
+
+    private boolean isChatbotProlongation(Map<String, Object> booking, String dateField,
+                                           List<Map<String, Object>> cross, String crossDateField) {
+        return cross.stream().anyMatch(c -> chatbotSameProlongation(booking, dateField, c, crossDateField));
+    }
+
+    private boolean chatbotSameProlongation(Map<String, Object> b, String dateField,
+                                             Map<String, Object> c, String crossDateField) {
+        String date   = truncateDate(b.get(dateField));
+        String cDate  = truncateDate(c.get(crossDateField));
+        if (date.isEmpty() || !date.equals(cDate)) return false;
+        String propId  = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
+        String cPropId = idStr(c.get("propId") != null ? c.get("propId") : c.get("propertyId"));
+        if (propId == null || !propId.equals(cPropId)) return false;
+        String first  = Objects.toString(b.get("guestFirstName") != null ? b.get("guestFirstName") : b.get("firstName"), "").trim();
+        String last   = Objects.toString(b.get("guestLastName")  != null ? b.get("guestLastName")  : b.get("lastName"),  "").trim();
+        String cFirst = Objects.toString(c.get("guestFirstName") != null ? c.get("guestFirstName") : c.get("firstName"), "").trim();
+        String cLast  = Objects.toString(c.get("guestLastName")  != null ? c.get("guestLastName")  : c.get("lastName"),  "").trim();
+        return first.equalsIgnoreCase(cFirst) && last.equalsIgnoreCase(cLast);
     }
 
     private Map<String, Object> getOngoingStays(Long userId, LocalDate date) throws Exception {
