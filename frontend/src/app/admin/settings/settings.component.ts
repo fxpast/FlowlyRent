@@ -355,12 +355,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <span class="webhook-hint">{{ 'settings.beds24_booking_pages_hint' | translate }}</span>
           </div>
           <div class="form-row">
-            <mat-form-field>
+            <mat-form-field subscriptSizing="dynamic">
               <mat-label>{{ 'settings.beds24_owner_id' | translate }}</mat-label>
               <input matInput [(ngModel)]="profileEdit.beds24OwnerId" placeholder="73803" />
               <mat-hint>{{ 'settings.beds24_owner_id_hint' | translate }}</mat-hint>
             </mat-form-field>
-            <mat-form-field>
+            <mat-form-field subscriptSizing="dynamic">
               <mat-label>{{ 'settings.listings_slug' | translate }}</mat-label>
               <input matInput [(ngModel)]="profileEdit.listingsSlug" placeholder="annonces" />
               <mat-hint>{{ 'settings.listings_slug_hint' | translate }}</mat-hint>
@@ -489,8 +489,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     h2 { margin: 0 0 24px; font-size: 24px; font-weight: 500; }
     .section-card { margin-bottom: 24px; max-width: 700px; }
     mat-card-content { padding-top: 16px; }
-    .form-row { display: flex; gap: 16px; }
-    .form-row mat-form-field { flex: 1; }
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .form-row mat-form-field { flex: 1; min-width: 200px; }
+    @media (max-width: 500px) { .form-row mat-form-field { min-width: 100%; } }
     .full-width { width: 100%; }
     .plan-info { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #666; font-size: 14px; }
     .connect-steps { margin: 12px 0 20px; display: flex; flex-direction: column; gap: 12px; }
