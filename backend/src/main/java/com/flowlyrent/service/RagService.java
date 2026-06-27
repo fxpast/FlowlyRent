@@ -36,7 +36,7 @@ import java.util.Map;
 public class RagService {
 
     private static final String EMBED_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=%s";
+            "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=%s";
     private static final int TOP_KB  = 4;
     private static final int TOP_FAQ = 6;
     private static final int MAX_EMBED_CHARS = 2000;
@@ -138,7 +138,6 @@ public class RagService {
 
     private float[] embed(String text) throws Exception {
         Map<String, Object> body = Map.of(
-                "model", "models/text-embedding-004",
                 "content", Map.of("parts", List.of(Map.of("text", text)))
         );
         HttpRequest request = HttpRequest.newBuilder()
