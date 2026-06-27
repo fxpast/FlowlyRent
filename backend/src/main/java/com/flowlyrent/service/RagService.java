@@ -36,7 +36,7 @@ public class RagService {
             "le", "la", "les", "de", "du", "des", "un", "une", "et", "en", "à", "au", "aux",
             "est", "sont", "par", "pour", "sur", "dans", "ou", "qui", "que", "ce", "se",
             "il", "elle", "ils", "elles", "je", "tu", "nous", "vous", "on",
-            "the", "a", "an", "of", "to", "in", "is", "are", "for", "and", "or", "on", "at",
+            "the", "a", "an", "of", "to", "in", "is", "are", "for", "and", "or", "at",
             "this", "that", "it", "be", "with", "as", "by", "from", "not", "but"
     );
 
