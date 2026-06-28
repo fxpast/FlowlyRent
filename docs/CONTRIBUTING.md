@@ -104,6 +104,11 @@ CORS_ALLOWED_ORIGINS=https://flowlyrent.com,https://www.flowlyrent.com,https://f
 ADMIN_USERNAME=admin@flowlyrent.com
 ADMIN_PASSWORD=<mot de passe sécurisé>
 ANALYTICS_INTERNAL_EMAILS=<emails internes séparés par virgule>
+
+# Chatbot IA
+GEMINI_API_KEY=<clé Google AI Studio>
+GROQ_API_KEY=<clé Groq>
+CEREBRAS_API_KEY=<clé Cerebras — https://cloud.cerebras.ai>
 ```
 
 Les variables `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD` sont injectées automatiquement par Railway depuis le plugin MySQL.

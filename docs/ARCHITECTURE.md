@@ -90,9 +90,11 @@ FlowlyRent/
 │       │   ├── LinenService.java         # Déduction stock linge (idempotent via linenDeducted)
 │       │   ├── LinenTemplateService.java # CRUD modèles de dotation linge
 │       │   ├── MinStayStrategyService.java # Calcul durée minimum séjour par période
-│       │   ├── ChatbotPromptService.java # System instruction partagé (knowledge-base + FAQ + date)
+│       │   ├── RagService.java           # RAG keyword BM25 — indexe KB + FAQ, retrieve top-N chunks sans API externe
+│       │   ├── ChatbotPromptService.java # System instruction partagé (contexte RAG ou full-context + date)
 │       │   ├── GeminiChatbotService.java # Chatbot Gemini 2.5 Flash (principal, function calling)
-│       │   ├── GroqChatbotService.java   # Chatbot Groq llama-3.3 (fallback quota Gemini)
+│       │   ├── GroqChatbotService.java   # Chatbot Groq llama-3.3 (2ème repli)
+│       │   ├── CerebrasChatbotService.java # Chatbot Cerebras llama-3.3 (3ème repli, API OpenAI-compatible)
 │       │   ├── ChatbotToolService.java   # Exécution des tools chatbot (scopé userId)
 │       │   ├── AutoResponderService.java # Répondeur auto — webhook Beds24 + IA Groq
 │       │   ├── FaqTranslationService.java # Traduction FAQ via MyMemory API (async)
@@ -263,6 +265,8 @@ FlowlyRent/
 │           ├── housekeeper/
 │           │   ├── layout/housekeeper-layout.component.ts
 │           │   ├── tasks/housekeeper-tasks.component.ts
+│           │   ├── arrivals/housekeeper-arrivals.component.ts   # Filtre prolongements (même logique admin)
+│           │   ├── departures/housekeeper-departures.component.ts
 │           │   └── reports/housekeeper-reports.component.ts
 │           └── public/
 │               ├── home/home.component.ts

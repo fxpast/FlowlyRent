@@ -16,7 +16,7 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 - Toutes les valeurs sensibles passent **uniquement par des variables d'environnement**
 - Dans `application.yml` : syntaxe `${MA_VAR}` sans défaut obligatoire pour les secrets
 - Secrets qui **ne doivent jamais apparaître** dans le code :
-  `CLOUDINARY_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `DB_PASSWORD`, `GROQ_API_KEY`, `GEMINI_API_KEY`
+  `CLOUDINARY_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_PASSWORD`, `DB_PASSWORD`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `CEREBRAS_API_KEY`
 
 ---
 
@@ -51,7 +51,7 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 | App mobile | Flutter WebView (`flowlyrent_app/`) → `flowlyrent.com` — package `com.flowlyrent.flowlyrent_app` |
 | Infrastructure dev | Docker Compose / XAMPP local |
 | Infrastructure prod | Netlify (frontend) + Railway (backend + MySQL) |
-| Chatbot IA | Gemini 2.5 Flash (principal) + Groq `llama-3.3-70b-versatile` (fallback) — function calling |
+| Chatbot IA | Gemini 2.5 Flash (principal) + Groq `llama-3.3-70b-versatile` (fallback) + Cerebras `llama-3.3-70b` (3ème repli) — function calling + RAG keyword BM25 |
 | Intégration comptable | Qonto API v2 — transactions + catégorisation + KPI marge |
 | Push notifications | Web Push (VAPID) + Firebase Cloud Messaging (FCM) |
 
@@ -121,6 +121,8 @@ flutter build appbundle --release  # AAB Play Store (keystore dans android/key.p
 - **Hibernate 6 + MySQL / MariaDB — ENUM natif** : Hibernate 6 mappe `@Enumerated(EnumType.STRING)` en type ENUM natif MySQL par défaut. Le `ddl-auto: update` **ne redimensionne jamais** un ENUM existant quand on ajoute une constante Java → erreur d'insertion silencieuse. Toujours forcer `columnDefinition = "VARCHAR(N)"` sur les champs enum susceptibles d'évoluer (voir `LocalEvent.impactLevel`). En cas d'ajout de valeur sur une colonne existante : `ALTER TABLE … MODIFY … VARCHAR(N) NOT NULL;` sur chaque base (dev + Railway prod).
 - **Beds24TokenService** : `getValidToken()` ne doit **pas** être `@Transactional` — la méthode fait un appel réseau externe AVANT tout accès DB, donc une transaction ouvrirait une connexion HikariCP qui resterait bloquée jusqu'à 25s pendant l'appel Beds24, épuisant le pool sous charge concurrente.
 - **`mat-form-field` dans un flex container** : `mat-form-field` peut utiliser `display: contents` sur son hôte en Angular Material 17 → `width`/`flex` appliqués sur l'hôte ont no effet. Envelopper dans un `<div class="ma-classe">` et mettre `style="width:100%"` sur le `mat-form-field`. Voir `dynamic-pricing.component.ts` `.period-month`.
+- **`mat-select` avec contrainte de largeur fixe** : Angular Material MDC ignore toutes les règles CSS de largeur externe sur `mat-form-field`+`mat-select` (résistant aux 6 approches classiques). Solution définitive : remplacer par un `<select>` natif avec `width`, `height`, `border`, `border-radius` CSS standard — obéit immédiatement. Voir `.period-month` dans `dynamic-pricing.component.ts`.
+- **`mat-hint` sur mobile** : le texte d'aide peut déborder et chevaucher le composant suivant. Corriger avec `subscriptSizing="dynamic"` sur le `mat-form-field` + `flex-wrap: wrap` sur le conteneur `.form-row`. Voir `settings.component.ts`.
 - **Entretien — coûts pour la marge** : `HousekeepingReportService.costSummary()` doit rester **aligné** sur l'onglet Charges frontend (`housekeeperCharges` computed). Règles : `status == DONE` + `housekeeper != null` (prestataire externe, pas `HousekeepingStaff`) + `extraHours > 0` + taux disponible. Ne modifier l'un sans vérifier l'autre.
 - **Pas de commentaires inutiles** — le code se lit tout seul
 - **Git** : travailler sur `dev`, ne jamais toucher à `master`
@@ -185,16 +187,25 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 
 > **⚠️ RÈGLE : mettre à jour `backend/src/main/resources/chatbot/knowledge-base.md` à chaque fois qu'une nouvelle fonctionnalité est implémentée ou qu'une fonctionnalité existante change de comportement.** Le chatbot répond en se basant sur ce fichier — une base obsolète produit de mauvaises réponses. La mise à jour doit être incluse dans le même commit que la fonctionnalité.
 
-### Chatbot — Function calling (Gemini + Groq)
-- **`ChatbotPromptService`** : construit le `systemInstruction` partagé (base de connaissance + FAQ + date du jour) et charge `chatbot/tool-declarations.json` au démarrage (`@PostConstruct`) — fournit les déclarations Gemini ET OpenAI
+### Chatbot — RAG keyword BM25
+- **`RagService`** : indexe au démarrage la KB (sections `##`) + toutes les entrées FAQ en mémoire JVM — **aucun appel API externe**
+- À chaque question : tokenise + supprime mots vides (FR+EN) + score overlap pour chaque chunk → retourne top-4 sections KB + top-6 entrées FAQ (~2 000 tokens vs ~9 300 en full-context)
+- Si `retrieve()` retourne `null` (KB introuvable) : fallback automatique mode full-context
+- `refreshFaq()` : appelé après chaque ajout/modif FAQ pour reindexer sans redémarrer
+- **Piège** : `Set.of()` lève `IllegalArgumentException` sur doublons → vérifier qu'aucun mot n'est dupliqué dans `STOP_WORDS`
+
+### Chatbot — Function calling (Gemini + Groq + Cerebras)
+- **`ChatbotPromptService`** : construit le `systemInstruction` partagé (contexte RAG ou full-context + date du jour) et charge `chatbot/tool-declarations.json` au démarrage (`@PostConstruct`) — fournit les déclarations Gemini ET OpenAI
 - **`GeminiChatbotService`** : fournisseur principal, boucle de function calling max 3 itérations
-- **`GroqChatbotService`** : fallback si Gemini indisponible (quota), format OpenAI-compatible
+- **`GroqChatbotService`** : 2ème repli si Gemini indisponible (quota), format OpenAI-compatible
+- **`CerebrasChatbotService`** : 3ème repli, API OpenAI-compatible (`https://api.cerebras.ai/v1/chat/completions`), modèle `llama-3.3-70b`
+- **Chaîne de fallback** : Gemini → Groq → Cerebras → 503 (dans `AdminChatbotController`)
 - **`ChatbotToolService.execute(toolName, args, lang)`** : toujours scopé sur `securityUtils.getCurrentUserId()` — jamais de userId dans les args Gemini
 - **Outils lecture seule** : `get_properties`, `get_revenue` (CA + marge Qonto), `get_arrivals`, `get_departures`, `get_ongoing_stays`, `get_reservations` (liste résumée), `search_booking` (détails complets : email, téléphone, enfants, notes…), `get_free_properties` (logements libres/occupés sur une période), `get_expenses_summary`, `get_transactions`, `get_housekeeping_tasks`, `get_housekeeping_costs`, `get_linen_stock`
 - **Outils écriture** : `block_dates` / `unblock_dates` (via `Beds24ApiClient.updateCalendar()`) — la description du tool impose une confirmation explicite de l'hôte avant appel
 - **`suggest_faq`** : enregistre dans `FaqSuggestion` les questions sans réponse dans la base de connaissance — visibles par le superadmin pour enrichir la FAQ
 - **`report_unhandled_action`** : quand le chatbot ne peut pas exécuter une action demandée (ex: envoyer un SMS, modifier un prix), enregistre un `Feedback` avec `category = "chatbot"` — visible dans la page Feedbacks superadmin avec un badge violet / icône `smart_toy`
-- Variables d'env : `GEMINI_API_KEY`, `GEMINI_MODEL` (défaut `gemini-2.5-flash`), `GROQ_API_KEY`, `GROQ_MODEL` (défaut `llama-3.3-70b-versatile`)
+- Variables d'env : `GEMINI_API_KEY`, `GEMINI_MODEL` (défaut `gemini-2.5-flash`), `GROQ_API_KEY`, `GROQ_MODEL` (défaut `llama-3.3-70b-versatile`), `CEREBRAS_API_KEY`, `CEREBRAS_MODEL` (défaut `llama-3.3-70b`)
 
 ### Mode iCal — Export feed + réservations directes + sources multiples
 - **`LocalProperty.icalFeedToken`** : UUID opaque auto-généré (`@PrePersist`) — migration `@PostConstruct` dans `AdminLocalPropertyController` pour les lignes avec token null ou vide
@@ -248,10 +259,11 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 ### Arrivées/Départs — Filtre de prolongation
 - **Règle** : si deux réservations partagent le même logement (`propId`), le même prénom ET nom, et que `departure` de l'une = `arrival` de l'autre → c'est une prolongation
 - La réservation sortante est **masquée des départs** ; la réservation entrante est **masquée des arrivées**
-- Filtrage appliqué côté backend dans `AdminBookingController` : `getToday`, `getArrivals`, `getDepartures`
+- Filtrage appliqué côté backend dans `AdminBookingController` ET `HousekeeperPortalController` : `getToday`, `getArrivals`, `getDepartures`
 - Pour `getArrivals` et `getDepartures`, un second appel Beds24 (ou requête iCal) est fait pour obtenir la liste croisée nécessaire au filtre
 - La liste `ongoing` n'est **pas** filtrée : le nouveau séjour prolongé doit bien apparaître en cours
 - Méthodes : `filterProlongations()`, `isProlongation()`, `bookingName()` — comparaison insensible à la casse
+- **Chatbot** : `ChatbotToolService.getArrivals()` et `getDepartures()` détectent aussi les prolongements et les retournent dans `prolongements: [{guestName, propertyName, newDeparture}]` — le chatbot formule "Jean Dupont a prolongé son séjour à l'Appart Centre jusqu'au 30 juin"
 
 ### Navigation — Modifier réservation directe depuis dashboard/today/arrivées/départs
 - Le dialog `BookingDetailDialogComponent` retourne `{ editDirect: true }` via `afterClosed()`
