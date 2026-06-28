@@ -96,7 +96,8 @@ public class PublicBookingController {
             Beds24Account account = accountForSlug(slug);
             return ResponseEntity.ok(beds24.getPropertyPhotos(beds24.tokenFor(account), propertyId));
         } catch (Exception e) {
-            return error(e);
+            log.warn("[photos] Beds24 error propId={} : {}", propertyId, e.getMessage());
+            return ResponseEntity.ok(List.of()); // Toujours retourner un tableau vide, jamais 400
         }
     }
 

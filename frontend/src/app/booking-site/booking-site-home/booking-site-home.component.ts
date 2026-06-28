@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { BookingSiteService } from '../booking-site.service';
-import { catchError, forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-booking-site-home',
@@ -137,7 +136,6 @@ export class BookingSiteHomeComponent implements OnInit {
   slug = '';
   siteInfo = signal<any>(null);
   properties = signal<any[]>([]);
-  photosMap = signal<Record<string, string>>({});
   loading = signal(true);
   error = signal('');
 
@@ -157,7 +155,6 @@ export class BookingSiteHomeComponent implements OnInit {
       next: props => {
         this.properties.set(props);
         this.loading.set(false);
-        this.loadPhotos(props);
       },
       error: () => {
         this.loading.set(false);
@@ -166,28 +163,14 @@ export class BookingSiteHomeComponent implements OnInit {
     });
   }
 
-  loadPhotos(props: any[]) {
-    if (!props.length) return;
-    const calls = props.map(p =>
-      this.svc.getPropertyPhotos(this.slug, String(p.propId ?? p.id)).pipe(catchError(() => of([])))
-    );
-    forkJoin(calls).subscribe(results => {
-      const map: Record<string, string> = {};
-      results.forEach((photos: any[], i) => {
-        const id = String(props[i].propId ?? props[i].id);
-        const first = photos?.[0];
-        if (first) map[id] = first.url ?? first.src ?? first.fileName ?? '';
-      });
-      this.photosMap.set(map);
-    });
-  }
-
+  // Extrait la photo de couverture depuis l'objet property Beds24 (pas d'appel API supplémentaire)
   getCoverPhoto(prop: any): string {
-    const id = String(prop.propId ?? prop.id);
-    return this.photosMap()[id]
-      ?? prop.mainPhotoUrl
-      ?? prop.photos?.[0]?.url
-      ?? '';
+    const pics = prop.pictures ?? prop.photos ?? prop.images ?? prop.imagesList ?? [];
+    if (pics.length > 0) {
+      const first = pics[0];
+      return first.url ?? first.src ?? first.fileName ?? first.picture ?? '';
+    }
+    return prop.mainPhotoUrl ?? prop.thumbnail ?? prop.coverPhoto ?? '';
   }
 
   goToProperty(prop: any) {
