@@ -45,6 +45,19 @@ export const routes: Routes = [
     loadComponent: () => import('./public/payment-redirect/payment-redirect.component').then(m => m.PaymentRedirectComponent)
   },
   {
+    path: ':slug',
+    pathMatch: 'full',
+    loadComponent: () => import('./booking-site/booking-site-home/booking-site-home.component').then(m => m.BookingSiteHomeComponent)
+  },
+  {
+    path: ':slug/property/:propId',
+    loadComponent: () => import('./booking-site/booking-site-property/booking-site-property.component').then(m => m.BookingSitePropertyComponent)
+  },
+  {
+    path: ':slug/booking/:bookingId',
+    loadComponent: () => import('./booking-site/booking-site-confirmation/booking-site-confirmation.component').then(m => m.BookingSiteConfirmationComponent)
+  },
+  {
     path: ':userSlug/:pageSlug',
     loadComponent: () => import('./public/page-resolver/page-resolver.component').then(m => m.PageResolverComponent)
   },

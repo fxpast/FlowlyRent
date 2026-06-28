@@ -1,0 +1,57 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env/environment';
+
+@Injectable({ providedIn: 'root' })
+export class BookingSiteService {
+  private base = `${environment.apiUrl}/public`;
+
+  constructor(private http: HttpClient) {}
+
+  getSiteInfo(slug: string): Observable<any> {
+    return this.http.get(`${this.base}/${slug}/info`);
+  }
+
+  getProperties(slug: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${slug}/properties`);
+  }
+
+  getProperty(slug: string, propId: string): Observable<any> {
+    return this.http.get(`${this.base}/${slug}/properties/${propId}`);
+  }
+
+  getPropertyPhotos(slug: string, propId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${slug}/properties/${propId}/photos`);
+  }
+
+  getOffers(slug: string, propId: string, checkIn: string, checkOut: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${slug}/properties/${propId}/offers`, {
+      params: { checkIn, checkOut }
+    });
+  }
+
+  getAvailability(slug: string, propId: string, checkIn: string, checkOut: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${slug}/properties/${propId}/availability`, {
+      params: { checkIn, checkOut }
+    });
+  }
+
+  createBooking(slug: string, payload: any[]): Observable<any> {
+    return this.http.post(`${this.base}/${slug}/bookings`, payload);
+  }
+
+  getBooking(slug: string, bookingId: string): Observable<any> {
+    return this.http.get(`${this.base}/${slug}/bookings/${bookingId}`);
+  }
+
+  createCheckout(slug: string, bookingId: string, data: any): Observable<{ sessionUrl: string }> {
+    return this.http.post<{ sessionUrl: string }>(
+      `${this.base}/${slug}/bookings/${bookingId}/checkout`, data
+    );
+  }
+
+  sendMessage(slug: string, bookingId: string, content: string): Observable<any> {
+    return this.http.post(`${this.base}/${slug}/bookings/${bookingId}/messages`, { content });
+  }
+}
