@@ -171,10 +171,18 @@ public class Beds24ApiClient {
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) throws Exception {
-        List<Map<String, Object>> content = fetchAll("/content/properties", token, Map.of("propId", propertyId));
-        if (content == null || content.isEmpty()) return List.of();
-        Object pictures = content.get(0).get("pictures");
-        if (pictures instanceof List<?> list) return (List<Map<String, Object>>) list;
+        List<Map<String, Object>> props = getProperties(token, Map.of("propertyId", propertyId));
+        if (props == null || props.isEmpty()) return List.of();
+        Map<String, Object> prop = props.get(0);
+        log.info("[photos] clés disponibles pour propId={} : {}", propertyId, prop.keySet());
+        for (String key : List.of("pictures", "photos", "images", "imagesList", "propPictures")) {
+            Object val = prop.get(key);
+            if (val instanceof List<?> list && !list.isEmpty()) {
+                log.info("[photos] trouvé {} photos sous la clé '{}'", list.size(), key);
+                return (List<Map<String, Object>>) list;
+            }
+        }
+        log.info("[photos] aucune photo trouvée dans l'objet propriété pour propId={}", propertyId);
         return List.of();
     }
 
