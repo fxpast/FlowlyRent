@@ -3,6 +3,7 @@ package com.flowlyrent.controller;
 import com.flowlyrent.service.SubscriptionService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
+import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,18 @@ public class StripeWebhookController {
             }
             Event event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
 
-            subscriptionService.handleSubscriptionEvent(event);
+            if ("checkout.session.completed".equals(event.getType())) {
+                Session session = (Session) event.getDataObjectDeserializer()
+                        .getObject().orElse(null);
+                if (session != null && "booking".equals(session.getMetadata().get("type"))) {
+                    handleBookingPayment(session);
+                } else {
+                    subscriptionService.handleSubscriptionEvent(event);
+                }
+            } else {
+                subscriptionService.handleSubscriptionEvent(event);
+            }
+
             return ResponseEntity.ok("OK");
         } catch (SignatureVerificationException e) {
             log.warn("Signature Stripe invalide: {}", e.getMessage());
@@ -41,5 +53,15 @@ public class StripeWebhookController {
             log.error("Erreur webhook Stripe: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().body("Erreur");
         }
+    }
+
+    private void handleBookingPayment(Session session) {
+        String bookingId = session.getMetadata().get("bookingId");
+        String slug      = session.getMetadata().get("slug");
+        long   amount    = session.getAmountTotal() != null ? session.getAmountTotal() : 0L;
+        String currency  = session.getCurrency() != null ? session.getCurrency().toUpperCase() : "EUR";
+
+        log.info("[booking-payment] Paiement confirmé — bookingId={} slug={} amount={}{} session={}",
+                bookingId, slug, amount / 100.0, currency, session.getId());
     }
 }
