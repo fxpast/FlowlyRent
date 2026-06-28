@@ -88,6 +88,18 @@ public class PublicBookingController {
         }
     }
 
+    @GetMapping("/{slug}/properties/{propertyId}/photos")
+    public ResponseEntity<?> getPropertyPhotos(
+            @PathVariable String slug,
+            @PathVariable String propertyId) {
+        try {
+            Beds24Account account = accountForSlug(slug);
+            return ResponseEntity.ok(beds24.getPropertyPhotos(beds24.tokenFor(account), propertyId));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
     @GetMapping("/{slug}/properties/{propertyId}/availability")
     public ResponseEntity<?> getAvailability(
             @PathVariable String slug,

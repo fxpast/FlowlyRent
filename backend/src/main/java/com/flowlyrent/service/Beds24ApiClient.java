@@ -169,6 +169,10 @@ public class Beds24ApiClient {
         return fetchAll("/inventory/rooms/offers", token, params);
     }
 
+    public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) throws Exception {
+        return fetchAll("/inventory/items", token, Map.of("propId", propertyId, "type", "photo"));
+    }
+
     // -------------------------------------------------------------------------
     // Pagination automatique
     // -------------------------------------------------------------------------
