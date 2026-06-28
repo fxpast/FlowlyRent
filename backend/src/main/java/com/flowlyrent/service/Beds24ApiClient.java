@@ -171,19 +171,17 @@ public class Beds24ApiClient {
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) throws Exception {
-        List<Map<String, Object>> props = getProperties(token, Map.of("propertyId", propertyId));
-        if (props == null || props.isEmpty()) return List.of();
-        Map<String, Object> prop = props.get(0);
-        log.info("[photos] clés disponibles pour propId={} : {}", propertyId, prop.keySet());
-        for (String key : List.of("pictures", "photos", "images", "imagesList", "propPictures")) {
-            Object val = prop.get(key);
-            if (val instanceof List<?> list && !list.isEmpty()) {
-                log.info("[photos] trouvé {} photos sous la clé '{}'", list.size(), key);
-                return (List<Map<String, Object>>) list;
-            }
-        }
-        log.info("[photos] aucune photo trouvée dans l'objet propriété pour propId={}", propertyId);
-        return List.of();
+        // GET /properties/rooms?propertyId=X&includePictures=true
+        List<Map<String, Object>> rooms = fetchAll("/properties/rooms", token,
+                Map.of("propertyId", propertyId, "includePictures", "true"));
+        if (rooms == null || rooms.isEmpty()) return List.of();
+        return rooms.stream()
+                .flatMap(room -> {
+                    Object pics = room.get("pictures");
+                    if (pics instanceof List<?> list) return ((List<Map<String, Object>>) list).stream();
+                    return java.util.stream.Stream.empty();
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // -------------------------------------------------------------------------
