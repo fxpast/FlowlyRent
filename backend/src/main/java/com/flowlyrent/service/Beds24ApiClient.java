@@ -169,8 +169,13 @@ public class Beds24ApiClient {
         return fetchAll("/inventory/rooms/offers", token, params);
     }
 
+    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) throws Exception {
-        return fetchAll("/inventory/items", token, Map.of("propId", propertyId, "type", "photo"));
+        List<Map<String, Object>> content = fetchAll("/content/properties", token, Map.of("propId", propertyId));
+        if (content == null || content.isEmpty()) return List.of();
+        Object pictures = content.get(0).get("pictures");
+        if (pictures instanceof List<?> list) return (List<Map<String, Object>>) list;
+        return List.of();
     }
 
     // -------------------------------------------------------------------------
