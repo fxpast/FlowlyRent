@@ -1,5 +1,7 @@
 package com.flowlyrent.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.KeyBox;
@@ -31,6 +33,7 @@ public class AdminPropertyConfigController {
     private final KeyBoxRepository keyBoxRepo;
     private final SecurityUtils securityUtils;
     private final Beds24ScraperService scraperService;
+    private final ObjectMapper objectMapper;
     private final Random random = new Random();
 
     @GetMapping
@@ -121,8 +124,15 @@ public class AdminPropertyConfigController {
 
     @PostMapping("/{beds24PropertyId}/scrape-photos")
     public ResponseEntity<?> scrapePhotos(@PathVariable String beds24PropertyId) {
-        securityUtils.getCurrentUser(); // vérifie l'authentification
+        AppUser user = securityUtils.getCurrentUser();
         List<String> photos = scraperService.scrapePropertyPhotos(beds24PropertyId);
+        if (!photos.isEmpty()) {
+            PropertyConfig cfg = repo.findByUserIdAndBeds24PropertyId(user.getId(), beds24PropertyId)
+                    .orElseGet(() -> { PropertyConfig c = new PropertyConfig(); c.setUser(user); c.setBeds24PropertyId(beds24PropertyId); return c; });
+            cfg.setCoverPhotoUrl(photos.get(0));
+            try { cfg.setPhotoUrlsJson(objectMapper.writeValueAsString(photos)); } catch (Exception ignored) {}
+            repo.save(cfg);
+        }
         return ResponseEntity.ok(Map.of("photos", photos));
     }
 
@@ -168,6 +178,11 @@ public class AdminPropertyConfigController {
         m.put("discount7Nights", cfg.getDiscount7Nights());
         m.put("discount28Nights", cfg.getDiscount28Nights());
         m.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
+        List<String> photoUrls = List.of();
+        if (cfg.getPhotoUrlsJson() != null && !cfg.getPhotoUrlsJson().isBlank()) {
+            try { photoUrls = objectMapper.readValue(cfg.getPhotoUrlsJson(), new TypeReference<>() {}); } catch (Exception ignored) {}
+        }
+        m.put("photoUrls", photoUrls);
         return m;
     }
 }

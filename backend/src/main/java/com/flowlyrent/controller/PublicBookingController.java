@@ -1,5 +1,7 @@
 package com.flowlyrent.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.PropertyConfig;
@@ -32,6 +34,7 @@ public class PublicBookingController {
     private final AppUserRepository userRepo;
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
+    private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -327,6 +330,12 @@ public class PublicBookingController {
         propConfigRepo.findByUserIdAndBeds24PropertyId(userId, propId).ifPresent(cfg -> {
             if (cfg.getCoverPhotoUrl() != null && !cfg.getCoverPhotoUrl().isBlank()) {
                 prop.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
+            }
+            if (cfg.getPhotoUrlsJson() != null && !cfg.getPhotoUrlsJson().isBlank()) {
+                try {
+                    List<String> urls = objectMapper.readValue(cfg.getPhotoUrlsJson(), new TypeReference<>() {});
+                    if (!urls.isEmpty()) prop.put("photoUrls", urls);
+                } catch (Exception ignored) {}
             }
         });
     }

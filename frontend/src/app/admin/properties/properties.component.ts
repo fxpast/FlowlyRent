@@ -1203,6 +1203,7 @@ export class PropertiesComponent implements OnInit {
           const url = c.coverPhotoUrl ?? '';
           this.coverPhotoSaved[c.beds24PropertyId] = url;
           this.coverPhotoDraft[c.beds24PropertyId] = url;
+          if (c.photoUrls?.length) this.scrapedPhotos[c.beds24PropertyId] = c.photoUrls;
         }
         for (const p of props ?? []) {
           const id = String(p['id']);

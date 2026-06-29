@@ -18,6 +18,7 @@ export interface PropertyConfig {
   discount7Nights?: number | null;
   discount28Nights?: number | null;
   coverPhotoUrl?: string | null;
+  photoUrls?: string[];
   updatedAt?: string;
 }
 

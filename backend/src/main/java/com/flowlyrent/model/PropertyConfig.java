@@ -56,6 +56,9 @@ public class PropertyConfig {
     @Column(name = "cover_photo_url", length = 500)
     private String coverPhotoUrl;
 
+    @Column(name = "photo_urls_json", columnDefinition = "TEXT")
+    private String photoUrlsJson;
+
     /** Non null → ce PropertyConfig est le pendant iCal d'un LocalProperty (mode iCal).
      *  Null  → PropertyConfig Beds24 classique (mode channel manager). */
     @Column(name = "local_property_id")

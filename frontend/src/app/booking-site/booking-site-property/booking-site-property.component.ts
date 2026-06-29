@@ -307,16 +307,16 @@ export class BookingSitePropertyComponent implements OnInit {
     this.svc.getProperty(this.slug, this.propId).subscribe({
       next: prop => {
         this.property.set(prop);
+        const urls: string[] = prop.photoUrls ?? [];
+        if (urls.length > 0) {
+          this.photos.set(urls.map((url: string) => ({ url })));
+        }
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
         this.error.set('Logement introuvable');
       }
-    });
-    this.svc.getPropertyPhotos(this.slug, this.propId).subscribe({
-      next: photos => this.photos.set(photos ?? []),
-      error: () => {}
     });
   }
 
