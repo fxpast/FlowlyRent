@@ -64,8 +64,13 @@ public class PublicBookingController {
     @GetMapping("/{slug}/properties")
     public ResponseEntity<?> getProperties(@PathVariable String slug, @RequestParam Map<String, String> params) {
         try {
-            Beds24Account account = accountForSlug(slug);
-            return ResponseEntity.ok(beds24.getProperties(beds24.tokenFor(account), params));
+            AppUser user = userForSlug(slug);
+            Beds24Account account = accountRepo.findByAppUserId(user.getId())
+                    .filter(Beds24Account::isConnected)
+                    .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
+            List<Map<String, Object>> props = beds24.getProperties(beds24.tokenFor(account), params);
+            props.forEach(prop -> enrichWithCoverPhoto(prop, user.getId()));
+            return ResponseEntity.ok(props);
         } catch (Exception e) {
             return error(e);
         }
@@ -76,13 +81,18 @@ public class PublicBookingController {
             @PathVariable String slug,
             @PathVariable String propertyId) {
         try {
-            Beds24Account account = accountForSlug(slug);
+            AppUser user = userForSlug(slug);
+            Beds24Account account = accountRepo.findByAppUserId(user.getId())
+                    .filter(Beds24Account::isConnected)
+                    .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
             List<Map<String, Object>> props = beds24.getProperties(
                     beds24.tokenFor(account), Map.of("propertyId", propertyId));
             if (props == null || props.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            return ResponseEntity.ok(props.get(0));
+            Map<String, Object> prop = props.get(0);
+            enrichWithCoverPhoto(prop, user.getId());
+            return ResponseEntity.ok(prop);
         } catch (Exception e) {
             return error(e);
         }
@@ -303,6 +313,22 @@ public class PublicBookingController {
                 .flatMap(user -> accountRepo.findByAppUserId(user.getId()))
                 .filter(Beds24Account::isConnected)
                 .orElseThrow(() -> new IllegalArgumentException("Site non trouvé ou non connecté : " + slug));
+    }
+
+    private AppUser userForSlug(String slug) {
+        return userRepo.findByPublicSiteSlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("Site non trouvé : " + slug));
+    }
+
+    private void enrichWithCoverPhoto(Map<String, Object> prop, Long userId) {
+        Object rawId = prop.get("id");
+        if (rawId == null) return;
+        String propId = rawId instanceof Number n ? String.valueOf(n.longValue()) : rawId.toString();
+        propConfigRepo.findByUserIdAndBeds24PropertyId(userId, propId).ifPresent(cfg -> {
+            if (cfg.getCoverPhotoUrl() != null && !cfg.getCoverPhotoUrl().isBlank()) {
+                prop.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
+            }
+        });
     }
 
     private static String slugify(String input) {

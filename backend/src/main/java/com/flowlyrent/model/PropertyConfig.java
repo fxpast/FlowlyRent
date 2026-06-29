@@ -53,6 +53,9 @@ public class PropertyConfig {
 
     private Float discount28Nights;
 
+    @Column(name = "cover_photo_url", length = 500)
+    private String coverPhotoUrl;
+
     /** Non null → ce PropertyConfig est le pendant iCal d'un LocalProperty (mode iCal).
      *  Null  → PropertyConfig Beds24 classique (mode channel manager). */
     @Column(name = "local_property_id")

@@ -110,6 +110,10 @@ public class AdminPropertyConfigController {
             String v = body.get("discount28Nights");
             cfg.setDiscount28Nights(v != null && !v.isBlank() ? Float.parseFloat(v) : null);
         }
+        if (body.containsKey("coverPhotoUrl")) {
+            String v = body.get("coverPhotoUrl");
+            cfg.setCoverPhotoUrl(v != null && !v.isBlank() ? v.trim() : null);
+        }
         return ResponseEntity.ok(toDto(repo.save(cfg)));
     }
 
@@ -154,6 +158,7 @@ public class AdminPropertyConfigController {
         m.put("extraPersonFee", cfg.getExtraPersonFee());
         m.put("discount7Nights", cfg.getDiscount7Nights());
         m.put("discount28Nights", cfg.getDiscount28Nights());
+        m.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
         return m;
     }
 }

@@ -17,6 +17,7 @@ export interface PropertyConfig {
   extraPersonFee?: number | null;
   discount7Nights?: number | null;
   discount28Nights?: number | null;
+  coverPhotoUrl?: string | null;
   updatedAt?: string;
 }
 
@@ -57,6 +58,10 @@ export class PropertyConfigService {
     discount28Nights?: string;
   }): Observable<PropertyConfig> {
     return this.http.put<PropertyConfig>(`${this.base}/${propId}`, pricing);
+  }
+
+  updateCoverPhoto(propId: string, url: string): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { coverPhotoUrl: url });
   }
 
   regenerate(propId: string): Observable<PropertyConfig> {

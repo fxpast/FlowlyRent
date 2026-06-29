@@ -611,6 +611,37 @@ interface OccupancyStatus {
                 <mat-divider class="divider"></mat-divider>
               }
 
+              <!-- Photo de couverture (site de réservation public) — masqué en mode iCal -->
+              @if (!isIcalMode()) {
+                <div class="code-section">
+                  <div class="code-label">
+                    <mat-icon>photo_camera</mat-icon>
+                    <strong>Photo de couverture</strong>
+                    @if (isCoverPhotoDirty(p['id'])) {
+                      <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
+                    }
+                  </div>
+                  <div class="booking-url-row">
+                    <mat-form-field appearance="outline" style="flex:1">
+                      <mat-label>URL de la photo</mat-label>
+                      <input matInput type="url" placeholder="https://..."
+                             [(ngModel)]="coverPhotoDraft[p['id']]">
+                    </mat-form-field>
+                    <button mat-icon-button color="primary"
+                            (click)="saveCoverPhoto(p['id'])"
+                            [matTooltip]="'common.save' | translate"
+                            [disabled]="!isCoverPhotoDirty(p['id'])">
+                      <mat-icon>save</mat-icon>
+                    </button>
+                  </div>
+                  @if (coverPhotoSaved[p['id']]) {
+                    <img [src]="coverPhotoSaved[p['id']]" alt="Aperçu"
+                         style="max-height:120px;border-radius:8px;margin-top:4px;object-fit:cover;">
+                  }
+                </div>
+                <mat-divider class="divider"></mat-divider>
+              }
+
               <!-- Inventaire & Équipements (masqué en mode iCal) -->
               @if (!isIcalMode()) {
               <div class="inventory-section">
@@ -962,6 +993,8 @@ export class PropertiesComponent implements OnInit {
   cleaningSaved: Record<string, string> = {};
   pricingDraft: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
   pricingSaved: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
+  coverPhotoDraft: Record<string, string> = {};
+  coverPhotoSaved: Record<string, string> = {};
 
   // ── Bundles de logements ────────────────────────────────────────────
   bundles          = signal<PropertyBundle[]>([]);
@@ -1135,6 +1168,9 @@ export class PropertiesComponent implements OnInit {
           };
           this.pricingSaved[c.beds24PropertyId] = { ...pricing };
           this.pricingDraft[c.beds24PropertyId] = { ...pricing };
+          const url = c.coverPhotoUrl ?? '';
+          this.coverPhotoSaved[c.beds24PropertyId] = url;
+          this.coverPhotoDraft[c.beds24PropertyId] = url;
         }
         for (const p of props ?? []) {
           const id = String(p['id']);
@@ -1708,6 +1744,21 @@ export class PropertiesComponent implements OnInit {
         this.pricingSaved[propId] = { ...pricing };
         this.pricingDraft[propId] = { ...pricing };
         this.snackBar.open(this.t.instant('properties.pricing_saved'), this.t.instant('common.ok'), { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  isCoverPhotoDirty(propId: string): boolean {
+    return (this.coverPhotoDraft[propId] ?? '') !== (this.coverPhotoSaved[propId] ?? '');
+  }
+
+  saveCoverPhoto(propId: string): void {
+    const url = this.coverPhotoDraft[propId] ?? '';
+    this.propConfigService.updateCoverPhoto(String(propId), url).subscribe({
+      next: () => {
+        this.coverPhotoSaved[propId] = url;
+        this.snackBar.open(this.t.instant('common.saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });

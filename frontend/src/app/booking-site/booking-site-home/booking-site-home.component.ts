@@ -163,8 +163,8 @@ export class BookingSiteHomeComponent implements OnInit {
     });
   }
 
-  // Extrait la photo de couverture depuis l'objet property Beds24 (pas d'appel API supplémentaire)
   getCoverPhoto(prop: any): string {
+    if (prop.coverPhotoUrl) return prop.coverPhotoUrl;
     const pics = prop.pictures ?? prop.photos ?? prop.images ?? prop.imagesList ?? [];
     if (pics.length > 0) {
       const first = pics[0];

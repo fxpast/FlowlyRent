@@ -56,6 +56,10 @@ import { BookingSiteService } from '../booking-site.service';
                 }
               </div>
             }
+          } @else if (property()?.coverPhotoUrl) {
+            <div class="main-photo">
+              <img [src]="property().coverPhotoUrl" [alt]="property().name">
+            </div>
           } @else {
             <div class="photo-placeholder-lg">
               <span class="material-icons">home</span>
