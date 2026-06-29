@@ -169,38 +169,11 @@ public class Beds24ApiClient {
         return fetchAll("/inventory/rooms/offers", token, params);
     }
 
-    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) {
-        try {
-            // Timeout court (8s) : les photos ne doivent jamais bloquer la page
-            String url = buildUrl(BASE + "/properties/rooms",
-                    Map.of("propertyId", propertyId, "includePictures", "true"));
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Accept", "application/json")
-                    .header("token", token)
-                    .timeout(Duration.ofSeconds(8))
-                    .GET()
-                    .build();
-            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("[photos] Beds24 HTTP {} pour propId={}", response.statusCode(), propertyId);
-                return List.of();
-            }
-            Map<String, Object> wrapper = objectMapper.readValue(response.body(), new TypeReference<>() {});
-            Object data = wrapper.get("data");
-            if (!(data instanceof List<?> rooms)) return List.of();
-            return ((List<Map<String, Object>>) rooms).stream()
-                    .flatMap(room -> {
-                        Object pics = room.get("pictures");
-                        if (pics instanceof List<?> list) return ((List<Map<String, Object>>) list).stream();
-                        return java.util.stream.Stream.empty();
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-        } catch (Exception e) {
-            log.warn("[photos] Erreur ou timeout pour propId={} : {}", propertyId, e.getMessage());
-            return List.of();
-        }
+        // Beds24 API v2 ne fournit pas encore les photos (endpoint /properties/rooms "coming soon")
+        // Les clés retournées par /properties ne contiennent aucun champ photo
+        // Retourne immédiatement sans consommer de crédits Beds24
+        return List.of();
     }
 
     // -------------------------------------------------------------------------
