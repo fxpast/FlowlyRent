@@ -31,7 +31,7 @@ import { BookingSiteService } from '../booking-site.service';
         } @else {
           <h2 class="section-title">Nos logements</h2>
           <div class="grid">
-            @for (prop of properties(); track prop.propId ?? prop.id) {
+            @for (prop of properties(); track prop.id) {
               <article class="card" (click)="goToProperty(prop)" role="button" tabindex="0"
                        (keyup.enter)="goToProperty(prop)">
                 <div class="card-photo">
