@@ -37,7 +37,7 @@ import { BookingSiteService } from '../booking-site.service';
         } @else {
           <h2 class="section-title">{{ 'bs.our_properties' | translate }}</h2>
           <div class="grid">
-            @for (prop of properties(); track prop.id) {
+            @for (prop of properties(); track propId(prop)) {
               <article class="card" (click)="goToProperty(prop)" role="button" tabindex="0"
                        (keyup.enter)="goToProperty(prop)">
                 <div class="card-photo">
@@ -207,7 +207,14 @@ export class BookingSiteHomeComponent implements OnInit {
     return prop.mainPhotoUrl ?? prop.thumbnail ?? prop.coverPhoto ?? '';
   }
 
+  propId(prop: any): string {
+    // Beds24 peut retourner "id", "propId" ou "propertyId" selon la version de l'API
+    const v = prop.id ?? prop.propId ?? prop.propertyId;
+    return v != null ? String(v) : '';
+  }
+
   goToProperty(prop: any) {
-    this.router.navigate(['/', this.slug, 'property', prop.id]);
+    const id = this.propId(prop);
+    if (id) this.router.navigate(['/', this.slug, 'property', id]);
   }
 }

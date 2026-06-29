@@ -91,12 +91,16 @@ public class PublicBookingController {
             Beds24Account account = accountRepo.findByAppUserId(user.getId())
                     .filter(Beds24Account::isConnected)
                     .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
-            List<Map<String, Object>> props = beds24.getProperties(
-                    beds24.tokenFor(account), Map.of("propertyId", propertyId));
-            if (props == null || props.isEmpty()) {
+            // L'API Beds24 /properties ignore parfois le filtre propertyId → on filtre côté client
+            List<Map<String, Object>> allProps = beds24.getProperties(
+                    beds24.tokenFor(account), Map.of());
+            Map<String, Object> prop = allProps == null ? null : allProps.stream()
+                    .filter(p -> propertyId.equals(extractPropertyId(p)))
+                    .findFirst()
+                    .orElse(null);
+            if (prop == null) {
                 return ResponseEntity.notFound().build();
             }
-            Map<String, Object> prop = props.get(0);
             enrichWithCoverPhoto(prop, user.getId());
             return ResponseEntity.ok(prop);
         } catch (Exception e) {
@@ -327,9 +331,8 @@ public class PublicBookingController {
     }
 
     private void enrichWithCoverPhoto(Map<String, Object> prop, Long userId) {
-        Object rawId = prop.get("id");
-        if (rawId == null) return;
-        String propId = rawId instanceof Number n ? String.valueOf(n.longValue()) : rawId.toString();
+        String propId = extractPropertyId(prop);
+        if (propId == null) return;
         propConfigRepo.findByUserIdAndBeds24PropertyId(userId, propId).ifPresent(cfg -> {
             // 1. Photo de couverture manuelle (priorité Cloudinary → scraping)
             if (cfg.getCoverPhotoUrl() != null && !cfg.getCoverPhotoUrl().isBlank()) {
@@ -357,6 +360,18 @@ public class PublicBookingController {
                 }
             }
         });
+    }
+
+    private static String extractPropertyId(Map<String, Object> prop) {
+        // Beds24 peut utiliser "id" ou "propId" selon l'endpoint/version
+        for (String key : new String[]{"id", "propId", "propertyId"}) {
+            Object v = prop.get(key);
+            if (v != null) {
+                String s = v instanceof Number n ? String.valueOf(n.longValue()) : v.toString().trim();
+                if (!s.isEmpty() && !s.equals("0")) return s;
+            }
+        }
+        return null;
     }
 
     private static String slugify(String input) {
