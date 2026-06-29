@@ -31,8 +31,8 @@ export class BookingSiteService {
     });
   }
 
-  getBlockedDates(slug: string, propId: string, from: string, to: string): Observable<{ blockedDates: string[] }> {
-    return this.http.get<{ blockedDates: string[] }>(`${this.base}/${slug}/properties/${propId}/blocked-dates`, {
+  getBlockedDates(slug: string, propId: string, from: string, to: string): Observable<{ blockedDates: string[], prices: Record<string, number> }> {
+    return this.http.get<{ blockedDates: string[], prices: Record<string, number> }>(`${this.base}/${slug}/properties/${propId}/blocked-dates`, {
       params: { from, to }
     });
   }

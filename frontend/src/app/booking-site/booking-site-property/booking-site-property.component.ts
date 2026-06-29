@@ -171,6 +171,9 @@ interface CalMonth {
                              (click)="onDayClick(d)"
                              (mouseenter)="onDayHover(d)">
                           <span class="day-num">{{ d.day }}</span>
+                          @if (!d.blocked && !d.past && calPrices()[d.date]) {
+                            <span class="day-price">{{ calPrices()[d.date] }}€</span>
+                          }
                         </div>
                       }
                     </div>
@@ -391,12 +394,13 @@ interface CalMonth {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
     }
     .day-cell {
-      aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; cursor: default; position: relative;
+      aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; cursor: default; position: relative;
       transition: background .12s, color .12s;
     }
     .day-cell.empty {}
     .day-num { font-size: .82rem; line-height: 1; }
+    .day-price { font-size: .55rem; color: #2e7d32; line-height: 1; margin-top: 1px; font-weight: 600; }
 
     /* États */
     .day-cell.past { opacity: .35; }
@@ -519,6 +523,7 @@ export class BookingSitePropertyComponent implements OnInit {
   // Calendrier
   loadingCalendar = signal(false);
   blockedDates = signal<Set<string>>(new Set());
+  calPrices = signal<Record<string, number>>({});
   calStart = signal({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
   hoverDate = '';
 
@@ -629,10 +634,11 @@ export class BookingSitePropertyComponent implements OnInit {
     const end = this.toDateStr(new Date(Date.now() + 90 * 86400000));
     this.loadingCalendar.set(true);
     this.svc.getBlockedDates(this.slug, this.propId, start, end)
-      .pipe(catchError(() => of({ blockedDates: [] as string[] })))
+      .pipe(catchError(() => of({ blockedDates: [] as string[], prices: {} as Record<string, number> })))
       .subscribe(res => {
         this.loadingCalendar.set(false);
         this.blockedDates.set(new Set(res.blockedDates ?? []));
+        this.calPrices.set(res.prices ?? {});
       });
   }
 

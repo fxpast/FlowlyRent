@@ -158,13 +158,15 @@ public class PublicBookingController {
                 }
             }
 
-            // 2. Blackouts calendrier (override = "blackout")
+            // 2. Calendrier Beds24 : blackouts + prix par jour
+            Map<String, Integer> prices = new java.util.LinkedHashMap<>();
             try {
                 Map<String, String> calParams = new java.util.HashMap<>();
                 calParams.put("propertyId",    propertyId);
                 calParams.put("startDate",      from);
                 calParams.put("endDate",        to);
                 calParams.put("includeOverride","1");
+                calParams.put("includePrices",  "1");
                 List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
                 for (Map<String, Object> room : rooms) {
                     if (!propertyId.equals(extractPropertyId(room))) continue;
@@ -174,15 +176,22 @@ public class PublicBookingController {
                         if (!(o instanceof Map<?, ?> rawRange)) continue;
                         @SuppressWarnings("unchecked")
                         Map<String, Object> range = (Map<String, Object>) rawRange;
-                        if (!"blackout".equalsIgnoreCase(Objects.toString(range.get("override"), ""))) continue;
-                        String f = truncateDate(Objects.toString(range.get("from"), ""));
-                        String t2 = truncateDate(Objects.toString(range.get("to"), ""));
+                        String f  = truncateDate(Objects.toString(range.get("from"), ""));
+                        String t2 = truncateDate(Objects.toString(range.get("to"),   ""));
                         if (f.isEmpty() || t2.isEmpty()) continue;
                         java.time.LocalDate cur = java.time.LocalDate.parse(f);
                         java.time.LocalDate end = java.time.LocalDate.parse(t2);
+                        // Prix (price1 ou price)
+                        Object priceRaw = range.get("price1") != null ? range.get("price1") : range.get("price");
+                        Integer price = null;
+                        if (priceRaw != null) {
+                            try { price = (int) Math.round(Double.parseDouble(priceRaw.toString())); } catch (Exception ignore) {}
+                        }
+                        boolean isBlackout = "blackout".equalsIgnoreCase(Objects.toString(range.get("override"), ""));
                         while (!cur.isAfter(end)) {
                             if (!cur.isBefore(fromDate) && !cur.isAfter(toDate)) {
-                                blocked.add(cur.toString());
+                                if (isBlackout) blocked.add(cur.toString());
+                                if (price != null && price > 0) prices.put(cur.toString(), price);
                             }
                             cur = cur.plusDays(1);
                         }
@@ -192,7 +201,7 @@ public class PublicBookingController {
                 log.warn("[blocked-dates] Calendrier inaccessible : {}", e.getMessage());
             }
 
-            return ResponseEntity.ok(Map.of("blockedDates", blocked));
+            return ResponseEntity.ok(Map.of("blockedDates", blocked, "prices", prices));
         } catch (Exception e) {
             return error(e);
         }
