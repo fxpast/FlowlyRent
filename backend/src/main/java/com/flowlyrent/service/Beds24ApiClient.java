@@ -170,18 +170,37 @@ public class Beds24ApiClient {
     }
 
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) throws Exception {
-        // GET /properties/rooms?propertyId=X&includePictures=true
-        List<Map<String, Object>> rooms = fetchAll("/properties/rooms", token,
-                Map.of("propertyId", propertyId, "includePictures", "true"));
-        if (rooms == null || rooms.isEmpty()) return List.of();
-        return rooms.stream()
-                .flatMap(room -> {
-                    Object pics = room.get("pictures");
-                    if (pics instanceof List<?> list) return ((List<Map<String, Object>>) list).stream();
-                    return java.util.stream.Stream.empty();
-                })
-                .collect(java.util.stream.Collectors.toList());
+    public List<Map<String, Object>> getPropertyPhotos(String token, String propertyId) {
+        try {
+            // Timeout court (8s) : les photos ne doivent jamais bloquer la page
+            String url = buildUrl(BASE + "/properties/rooms",
+                    Map.of("propertyId", propertyId, "includePictures", "true"));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Accept", "application/json")
+                    .header("token", token)
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn("[photos] Beds24 HTTP {} pour propId={}", response.statusCode(), propertyId);
+                return List.of();
+            }
+            Map<String, Object> wrapper = objectMapper.readValue(response.body(), new TypeReference<>() {});
+            Object data = wrapper.get("data");
+            if (!(data instanceof List<?> rooms)) return List.of();
+            return ((List<Map<String, Object>>) rooms).stream()
+                    .flatMap(room -> {
+                        Object pics = room.get("pictures");
+                        if (pics instanceof List<?> list) return ((List<Map<String, Object>>) list).stream();
+                        return java.util.stream.Stream.empty();
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+        } catch (Exception e) {
+            log.warn("[photos] Erreur ou timeout pour propId={} : {}", propertyId, e.getMessage());
+            return List.of();
+        }
     }
 
     // -------------------------------------------------------------------------
