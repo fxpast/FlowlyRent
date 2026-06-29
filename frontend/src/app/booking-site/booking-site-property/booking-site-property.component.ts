@@ -782,7 +782,7 @@ export class BookingSitePropertyComponent implements OnInit {
     if (!this.checkInStr || !this.checkOutStr) return;
     this.submitting.set(true);
     this.bookingError.set('');
-    const payload = [{
+    const p: any = {
       propId:         this.propId,
       arrival:        this.checkInStr + 'T16:00',
       departure:      this.checkOutStr + 'T11:00',
@@ -792,9 +792,10 @@ export class BookingSitePropertyComponent implements OnInit {
       guestName:      this.guest.lastName,
       guestEmail:     this.guest.email,
       guestPhone:     this.guest.phone,
-      status:         'new',
-      price:          [{ price: this.totalPrice() }]
-    }];
+      status:         'new'
+    };
+    if (this.totalPrice() > 0) p.price = [{ price: this.totalPrice() }];
+    const payload = [p];
     this.svc.createBooking(this.slug, payload).subscribe({
       next: result => {
         this.submitting.set(false);

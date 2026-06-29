@@ -277,9 +277,10 @@ public class PublicBookingController {
             for (Map<String, Object> booking : payload) {
                 Map<String, Object> b = new HashMap<>(booking);
 
-                // Mapping noms de champs Angular → Beds24 (même logique que AdminBookingController)
+                // Mapping noms de champs Angular → Beds24
                 mapField(b, "guestFirstName", "firstName");
                 mapField(b, "guestLastName",  "lastName");
+                mapField(b, "guestName",      "lastName");  // site public envoie guestName pour le nom de famille
                 mapField(b, "guestEmail",     "email");
                 mapField(b, "guestPhone",     "phone");
                 mapField(b, "guestCountry",   "country");
