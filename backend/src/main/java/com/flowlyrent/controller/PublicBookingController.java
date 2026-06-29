@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.text.Normalizer;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 
 @RestController
@@ -103,6 +104,94 @@ public class PublicBookingController {
             }
             enrichWithCoverPhoto(prop, user.getId());
             return ResponseEntity.ok(prop);
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    /**
+     * Retourne uniquement les dates bloquées (réservations + blackouts) pour le calendrier public.
+     * Ne divulgue aucune donnée voyageur.
+     */
+    @GetMapping("/{slug}/properties/{propertyId}/blocked-dates")
+    public ResponseEntity<?> getBlockedDates(
+            @PathVariable String slug,
+            @PathVariable String propertyId,
+            @RequestParam String from,
+            @RequestParam String to) {
+        try {
+            AppUser user = userForSlug(slug);
+            Beds24Account account = accountRepo.findByAppUserId(user.getId())
+                    .filter(Beds24Account::isConnected)
+                    .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
+            String token = beds24.tokenFor(account);
+
+            java.time.LocalDate fromDate = java.time.LocalDate.parse(from);
+            java.time.LocalDate toDate   = java.time.LocalDate.parse(to);
+            java.util.Set<String> blocked = new java.util.TreeSet<>();
+
+            // 1. Réservations confirmées/new → bloquer arrival..departure-1
+            Map<String, String> bParams = new java.util.HashMap<>();
+            bParams.put("propertyId",   propertyId);
+            bParams.put("arrivalFrom",  fromDate.minusDays(60).toString());
+            bParams.put("arrivalTo",    to);
+            List<Map<String, Object>> bookings = beds24.getBookings(token, bParams);
+            for (Map<String, Object> b : bookings) {
+                // Pour les réservations Beds24, le champ property est "propId" ou "propertyId" (pas "id")
+                Object rawPid = b.get("propId") != null ? b.get("propId") : b.get("propertyId");
+                if (rawPid == null) continue;
+                String pid = rawPid instanceof Number n ? String.valueOf(n.longValue()) : rawPid.toString().trim();
+                if (!propertyId.equals(pid)) continue;
+                String status = Objects.toString(b.get("status"), "").toLowerCase();
+                if (!status.equals("new") && !status.equals("confirmed")) continue;
+                String arrival   = truncateDate(Objects.toString(b.get("arrival"), ""));
+                String departure = truncateDate(Objects.toString(b.get("departure"), ""));
+                if (arrival.isEmpty() || departure.isEmpty()) continue;
+                java.time.LocalDate cur = java.time.LocalDate.parse(arrival);
+                java.time.LocalDate dep = java.time.LocalDate.parse(departure);
+                while (cur.isBefore(dep)) {
+                    if (!cur.isBefore(fromDate) && !cur.isAfter(toDate)) {
+                        blocked.add(cur.toString());
+                    }
+                    cur = cur.plusDays(1);
+                }
+            }
+
+            // 2. Blackouts calendrier (override = "blackout")
+            try {
+                Map<String, String> calParams = new java.util.HashMap<>();
+                calParams.put("propertyId",    propertyId);
+                calParams.put("startDate",      from);
+                calParams.put("endDate",        to);
+                calParams.put("includeOverride","1");
+                List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+                for (Map<String, Object> room : rooms) {
+                    if (!propertyId.equals(extractPropertyId(room))) continue;
+                    Object calObj = room.get("calendar");
+                    if (!(calObj instanceof List<?> cal)) continue;
+                    for (Object o : cal) {
+                        if (!(o instanceof Map<?, ?> rawRange)) continue;
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> range = (Map<String, Object>) rawRange;
+                        if (!"blackout".equalsIgnoreCase(Objects.toString(range.get("override"), ""))) continue;
+                        String f = truncateDate(Objects.toString(range.get("from"), ""));
+                        String t2 = truncateDate(Objects.toString(range.get("to"), ""));
+                        if (f.isEmpty() || t2.isEmpty()) continue;
+                        java.time.LocalDate cur = java.time.LocalDate.parse(f);
+                        java.time.LocalDate end = java.time.LocalDate.parse(t2);
+                        while (!cur.isAfter(end)) {
+                            if (!cur.isBefore(fromDate) && !cur.isAfter(toDate)) {
+                                blocked.add(cur.toString());
+                            }
+                            cur = cur.plusDays(1);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[blocked-dates] Calendrier inaccessible : {}", e.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of("blockedDates", blocked));
         } catch (Exception e) {
             return error(e);
         }
@@ -360,6 +449,11 @@ public class PublicBookingController {
                 }
             }
         });
+    }
+
+    private static String truncateDate(String s) {
+        if (s == null || s.length() < 10) return "";
+        return s.substring(0, 10);
     }
 
     private static String extractPropertyId(Map<String, Object> prop) {

@@ -619,31 +619,12 @@ export class BookingSitePropertyComponent implements OnInit {
     const start = this.todayStr;
     const end = this.toDateStr(new Date(Date.now() + 90 * 86400000));
     this.loadingCalendar.set(true);
-    this.svc.getAvailabilityRange(this.slug, this.propId, start, end)
-      .pipe(catchError(() => of([])))
-      .subscribe(data => {
+    this.svc.getBlockedDates(this.slug, this.propId, start, end)
+      .pipe(catchError(() => of({ blockedDates: [] as string[] })))
+      .subscribe(res => {
         this.loadingCalendar.set(false);
-        this.parseAvailability(data);
+        this.blockedDates.set(new Set(res.blockedDates ?? []));
       });
-  }
-
-  private parseAvailability(data: any[]) {
-    const blocked = new Set<string>();
-    for (const item of data) {
-      // Beds24 v2 returns flat list: { date, availability, ... }
-      if (item.date && (item.availability === 0 || item.availability === '0')) {
-        blocked.add(item.date);
-      }
-      // Nested format (calendar array)
-      if (Array.isArray(item.calendar)) {
-        for (const c of item.calendar) {
-          if (c.date && (c.availability === 0 || c.availability === '0')) {
-            blocked.add(c.date);
-          }
-        }
-      }
-    }
-    this.blockedDates.set(blocked);
   }
 
   // ── Navigation calendrier ──────────────────────────────────────────

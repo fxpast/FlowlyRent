@@ -31,9 +31,9 @@ export class BookingSiteService {
     });
   }
 
-  getAvailabilityRange(slug: string, propId: string, startDate: string, endDate: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.base}/${slug}/properties/${propId}/availability`, {
-      params: { startDate, endDate }
+  getBlockedDates(slug: string, propId: string, from: string, to: string): Observable<{ blockedDates: string[] }> {
+    return this.http.get<{ blockedDates: string[] }>(`${this.base}/${slug}/properties/${propId}/blocked-dates`, {
+      params: { from, to }
     });
   }
 
