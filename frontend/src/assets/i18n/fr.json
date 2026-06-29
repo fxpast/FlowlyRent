@@ -1396,6 +1396,14 @@
                "error_not_found":  "Site introuvable",
                "adult":  "adulte",
                "home":  "Accueil",
-               "powered_by":  "Propulsé par"
+               "powered_by":  "Propulsé par",
+               "availability":  "Disponibilités",
+               "select_checkin":  "Cliquez sur une date d'arrivée",
+               "select_checkout":  "Cliquez sur une date de départ",
+               "leg_available":  "Disponible",
+               "leg_unavailable":  "Non disponible",
+               "leg_selected":  "Sélectionné",
+               "select_dates_first":  "Veuillez sélectionner vos dates dans le calendrier ci-dessus.",
+               "change_dates":  "Modifier les dates"
            }
 }

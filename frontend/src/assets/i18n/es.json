@@ -1387,6 +1387,14 @@
                "error_not_found":  "Sitio no encontrado",
                "adult":  "adulto",
                "home":  "Inicio",
-               "powered_by":  "Con tecnología de"
+               "powered_by":  "Con tecnología de",
+               "availability":  "Disponibilidad",
+               "select_checkin":  "Haga clic en una fecha de llegada",
+               "select_checkout":  "Haga clic en una fecha de salida",
+               "leg_available":  "Disponible",
+               "leg_unavailable":  "No disponible",
+               "leg_selected":  "Seleccionado",
+               "select_dates_first":  "Seleccione sus fechas en el calendario de arriba.",
+               "change_dates":  "Cambiar fechas"
            }
 }

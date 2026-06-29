@@ -1,25 +1,39 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingSiteService } from '../booking-site.service';
+import { catchError, of } from 'rxjs';
+
+interface CalDay {
+  day: number;
+  date: string;
+  past: boolean;
+  isToday: boolean;
+  blocked: boolean;
+  available: boolean;
+}
+
+interface CalMonth {
+  year: number;
+  month: number;
+  key: string;
+  label: string;
+  emptyBefore: number[];
+  days: CalDay[];
+}
 
 @Component({
   selector: 'app-booking-site-property',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    MatFormFieldModule, MatInputModule,
-    MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatProgressSpinnerModule, MatDividerModule,
+    MatButtonModule, MatProgressSpinnerModule, MatDividerModule, MatIconModule,
     TranslateModule
   ],
   template: `
@@ -96,45 +110,134 @@ import { BookingSiteService } from '../booking-site.service';
 
           <mat-divider></mat-divider>
 
-          <!-- Formulaire de réservation -->
+          <!-- ── Calendrier de disponibilité ─────────────────────────── -->
+          <div class="avail-section">
+            <h2>{{ 'bs.availability' | translate }}</h2>
+
+            @if (loadingCalendar()) {
+              <div class="cal-loading"><mat-spinner diameter="32"></mat-spinner></div>
+            } @else {
+              <!-- Instruction contextuelle -->
+              <div class="cal-hint">
+                @if (!checkInStr) {
+                  <span class="material-icons hint-icon">touch_app</span>
+                  {{ 'bs.select_checkin' | translate }}
+                } @else if (!checkOutStr) {
+                  <span class="material-icons hint-icon">touch_app</span>
+                  {{ 'bs.select_checkout' | translate }}
+                } @else {
+                  <span class="material-icons hint-icon" style="color:#388e3c">check_circle</span>
+                  {{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }} —
+                  {{ formatDate(checkInStr) }} → {{ formatDate(checkOutStr) }}
+                  <button mat-button (click)="resetDates()" style="font-size:.8rem;margin-left:4px">
+                    <span class="material-icons" style="font-size:15px">close</span>
+                  </button>
+                }
+              </div>
+
+              <!-- Navigation mois -->
+              <div class="cal-nav">
+                <button mat-icon-button (click)="prevMonth()" [disabled]="!canGoPrev()">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <div class="spacer"></div>
+                <button mat-icon-button (click)="nextMonth()">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+
+              <!-- Grilles des mois -->
+              <div class="months-wrap">
+                @for (m of calMonths(); track m.key) {
+                  <div class="month-block">
+                    <div class="month-title">{{ m.label }}</div>
+                    <div class="wdays">
+                      @for (w of weekdays; track w) { <div class="wday">{{ w }}</div> }
+                    </div>
+                    <div class="days-grid">
+                      @for (e of m.emptyBefore; track $index) {
+                        <div class="day-cell empty"></div>
+                      }
+                      @for (d of m.days; track d.date) {
+                        <div class="day-cell"
+                             [class.past]="d.past"
+                             [class.blocked]="d.blocked"
+                             [class.available]="d.available"
+                             [class.is-checkin]="d.date === checkInStr"
+                             [class.is-checkout]="d.date === checkOutStr"
+                             [class.in-range]="isInRange(d.date)"
+                             [class.today]="d.isToday"
+                             [class.hover-end]="hoverDate === d.date && !!checkInStr && !checkOutStr"
+                             (click)="onDayClick(d)"
+                             (mouseenter)="onDayHover(d)">
+                          <span class="day-num">{{ d.day }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Légende -->
+              <div class="cal-legend">
+                <span class="leg-item"><span class="leg-sq available"></span> {{ 'bs.leg_available' | translate }}</span>
+                <span class="leg-item"><span class="leg-sq blocked"></span> {{ 'bs.leg_unavailable' | translate }}</span>
+                <span class="leg-item"><span class="leg-sq selected"></span> {{ 'bs.leg_selected' | translate }}</span>
+              </div>
+            }
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- ── Formulaire de réservation ───────────────────────────── -->
           <div class="booking-form">
             <h2>{{ 'bs.book_property' | translate }}</h2>
 
-            <!-- Dates -->
-            <div class="dates-row">
-              <mat-form-field>
-                <mat-label>{{ 'bs.check_in' | translate }}</mat-label>
-                <input matInput [matDatepicker]="checkInPicker" [(ngModel)]="checkInDate"
-                       (ngModelChange)="onCheckInChange($event)" [min]="today"
-                       [placeholder]="'bs.date_placeholder' | translate">
-                <mat-datepicker-toggle matIconSuffix [for]="checkInPicker"></mat-datepicker-toggle>
-                <mat-datepicker #checkInPicker></mat-datepicker>
-              </mat-form-field>
-
-              <mat-form-field>
-                <mat-label>{{ 'bs.check_out' | translate }}</mat-label>
-                <input matInput [matDatepicker]="checkOutPicker" [(ngModel)]="checkOutDate"
-                       (ngModelChange)="onCheckOutChange($event)" [min]="minCheckOut"
-                       [placeholder]="'bs.date_placeholder' | translate">
-                <mat-datepicker-toggle matIconSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
-                <mat-datepicker #checkOutPicker></mat-datepicker>
-              </mat-form-field>
-
-              <div class="field-wrap">
-                <label class="select-label">{{ 'bs.guests' | translate }}</label>
-                <select [(ngModel)]="guestCount" class="native-select">
-                  @for (n of guestOptions(); track n) {
-                    <option [value]="n">{{ n }} {{ (n > 1 ? 'bs.travelers' : 'bs.traveler') | translate }}</option>
-                  }
-                </select>
+            <!-- Récap dates sélectionnées dans le calendrier -->
+            @if (checkInStr && checkOutStr) {
+              <div class="dates-recap">
+                <div class="date-chip">
+                  <span class="material-icons">login</span>
+                  <div>
+                    <div class="dc-label">{{ 'bs.check_in' | translate }}</div>
+                    <div class="dc-value">{{ formatDate(checkInStr) }}</div>
+                  </div>
+                </div>
+                <div class="date-arrow">→</div>
+                <div class="date-chip">
+                  <span class="material-icons">logout</span>
+                  <div>
+                    <div class="dc-label">{{ 'bs.check_out' | translate }}</div>
+                    <div class="dc-value">{{ formatDate(checkOutStr) }}</div>
+                  </div>
+                </div>
+                <button mat-button (click)="resetDates()" class="change-btn">
+                  {{ 'bs.change_dates' | translate }}
+                </button>
               </div>
-            </div>
+            } @else {
+              <p class="no-dates-hint">{{ 'bs.select_dates_first' | translate }}</p>
+            }
 
-            <button mat-flat-button color="primary" (click)="checkAvailability()"
-                    [disabled]="!checkInDate || !checkOutDate || checking()">
-              @if (checking()) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { {{ 'bs.check_availability' | translate }} }
-            </button>
+            <!-- Voyageurs -->
+            @if (checkInStr && checkOutStr) {
+              <div class="guests-row">
+                <div class="field-wrap">
+                  <label class="select-label">{{ 'bs.guests' | translate }}</label>
+                  <select [(ngModel)]="guestCount" class="native-select">
+                    @for (n of guestOptions(); track n) {
+                      <option [value]="n">{{ n }} {{ (n > 1 ? 'bs.travelers' : 'bs.traveler') | translate }}</option>
+                    }
+                  </select>
+                </div>
+
+                <button mat-flat-button color="primary" (click)="checkAvailability()"
+                        [disabled]="checking()">
+                  @if (checking()) { <mat-spinner diameter="20"></mat-spinner> }
+                  @else { {{ 'bs.check_availability' | translate }} }
+                </button>
+              </div>
+            }
 
             <!-- Résultat disponibilité -->
             @if (availabilityChecked()) {
@@ -167,23 +270,23 @@ import { BookingSiteService } from '../booking-site.service';
                 <h3>{{ 'bs.your_info' | translate }}</h3>
                 <div class="guest-form">
                   <div class="name-row">
-                    <mat-form-field style="width:100%">
-                      <mat-label>{{ 'bs.first_name' | translate }}</mat-label>
-                      <input matInput [(ngModel)]="guest.firstName" required>
-                    </mat-form-field>
-                    <mat-form-field style="width:100%">
-                      <mat-label>{{ 'bs.last_name' | translate }}</mat-label>
-                      <input matInput [(ngModel)]="guest.lastName" required>
-                    </mat-form-field>
+                    <div class="field-wrap" style="flex:1">
+                      <label class="select-label">{{ 'bs.first_name' | translate }}</label>
+                      <input class="text-input" [(ngModel)]="guest.firstName" required>
+                    </div>
+                    <div class="field-wrap" style="flex:1">
+                      <label class="select-label">{{ 'bs.last_name' | translate }}</label>
+                      <input class="text-input" [(ngModel)]="guest.lastName" required>
+                    </div>
                   </div>
-                  <mat-form-field style="width:100%">
-                    <mat-label>{{ 'bs.email' | translate }}</mat-label>
-                    <input matInput type="email" [(ngModel)]="guest.email" required>
-                  </mat-form-field>
-                  <mat-form-field style="width:100%">
-                    <mat-label>{{ 'bs.phone' | translate }}</mat-label>
-                    <input matInput type="tel" [(ngModel)]="guest.phone">
-                  </mat-form-field>
+                  <div class="field-wrap">
+                    <label class="select-label">{{ 'bs.email' | translate }}</label>
+                    <input class="text-input" type="email" [(ngModel)]="guest.email" required>
+                  </div>
+                  <div class="field-wrap">
+                    <label class="select-label">{{ 'bs.phone' | translate }}</label>
+                    <input class="text-input" type="tel" [(ngModel)]="guest.phone">
+                  </div>
                 </div>
 
                 @if (bookingError()) {
@@ -235,28 +338,139 @@ import { BookingSiteService } from '../booking-site.service';
     }
     .photo-placeholder-lg .material-icons { font-size: 96px; color: #90caf9; }
 
-    .content { max-width: 800px; margin: 0 auto; padding: 32px 16px; }
+    .content { max-width: 860px; margin: 0 auto; padding: 32px 16px; }
 
     .property-info h1 { font-size: 1.8rem; font-weight: 700; margin: 0 0 12px; color: #1a1a2e; }
     .location, .feat { display: flex; align-items: center; gap: 6px; color: #555; font-size: .95rem; margin: 6px 0; }
     .location .material-icons, .feat .material-icons { font-size: 18px; color: #0288d1; }
     .description { color: #444; line-height: 1.7; margin-top: 16px; white-space: pre-wrap; }
 
-    mat-divider { margin: 24px 0 !important; }
+    mat-divider { margin: 28px 0 !important; }
 
+    /* ─── Calendrier ─────────────────────────────────────────────────── */
+    .avail-section h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 16px; }
+    .cal-loading { display: flex; justify-content: center; padding: 40px; }
+
+    .cal-hint {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .9rem; color: #555; margin-bottom: 8px; min-height: 28px;
+    }
+    .hint-icon { font-size: 18px; color: #0288d1; }
+
+    .cal-nav {
+      display: flex; align-items: center; margin-bottom: 8px;
+    }
+
+    .months-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+
+    .month-block {}
+    .month-title {
+      text-align: center; font-weight: 700; font-size: .95rem; color: #1a1a2e;
+      padding: 4px 0 10px; text-transform: capitalize;
+    }
+    .wdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      margin-bottom: 4px;
+    }
+    .wday {
+      text-align: center; font-size: .72rem; font-weight: 700;
+      color: #aaa; text-transform: uppercase; padding: 2px 0;
+    }
+    .days-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+    }
+    .day-cell {
+      aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; cursor: default; position: relative;
+      transition: background .12s, color .12s;
+    }
+    .day-cell.empty {}
+    .day-num { font-size: .82rem; line-height: 1; }
+
+    /* États */
+    .day-cell.past { opacity: .35; }
+    .day-cell.today .day-num::after {
+      content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+      width: 4px; height: 4px; border-radius: 50%; background: #0288d1;
+    }
+    .day-cell.blocked {
+      background: repeating-linear-gradient(
+        45deg, #f0f0f0, #f0f0f0 3px, #e0e0e0 3px, #e0e0e0 6px
+      );
+      color: #bbb;
+    }
+    .day-cell.available {
+      cursor: pointer; background: white;
+      box-shadow: 0 0 0 1px #e8e8e8 inset;
+    }
+    .day-cell.available:hover {
+      background: #e3f2fd; color: #0288d1;
+    }
+    .day-cell.in-range {
+      background: #e3f2fd; border-radius: 0; color: #0277bd;
+    }
+    .day-cell.is-checkin, .day-cell.is-checkout {
+      background: #0288d1 !important; color: white !important;
+      border-radius: 50% !important; font-weight: 700;
+    }
+    .day-cell.hover-end {
+      background: #bbdefb; color: #0277bd;
+    }
+
+    /* Légende */
+    .cal-legend {
+      display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: .8rem; color: #555;
+    }
+    .leg-item { display: flex; align-items: center; gap: 5px; }
+    .leg-sq {
+      width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid #ddd;
+    }
+    .leg-sq.available { background: white; }
+    .leg-sq.blocked {
+      background: repeating-linear-gradient(
+        45deg, #f0f0f0, #f0f0f0 3px, #e0e0e0 3px, #e0e0e0 6px
+      );
+    }
+    .leg-sq.selected { background: #0288d1; border-color: #0288d1; }
+
+    /* ─── Formulaire ─────────────────────────────────────────────────── */
     .booking-form h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 20px; }
     .booking-form h3 { font-size: 1.1rem; font-weight: 600; margin: 24px 0 12px; }
 
-    .dates-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: flex-end; }
-    .dates-row mat-form-field { flex: 1; min-width: 160px; }
+    .dates-recap {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: #f0f9ff; border: 1px solid #b3e5fc; border-radius: 10px; padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .date-chip {
+      display: flex; align-items: center; gap: 8px; color: #0277bd;
+    }
+    .date-chip .material-icons { font-size: 20px; }
+    .dc-label { font-size: .7rem; color: #888; line-height: 1; }
+    .dc-value { font-weight: 700; font-size: .95rem; }
+    .date-arrow { font-size: 1.2rem; color: #90caf9; }
+    .change-btn { font-size: .8rem; margin-left: auto; }
+
+    .no-dates-hint { color: #888; font-size: .9rem; margin: 0 0 16px; }
+
+    .guests-row {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+    }
 
     .field-wrap { display: flex; flex-direction: column; gap: 4px; }
     .select-label { font-size: .85rem; color: rgba(0,0,0,.6); margin-bottom: 2px; }
     .native-select {
-      height: 56px; padding: 0 12px; border: 1px solid rgba(0,0,0,.38); border-radius: 4px;
+      height: 48px; padding: 0 12px; border: 1px solid rgba(0,0,0,.38); border-radius: 4px;
       font-size: 1rem; background: white; min-width: 140px; cursor: pointer;
     }
     .native-select:focus { outline: 2px solid #0288d1; }
+    .text-input {
+      height: 48px; padding: 0 12px; border: 1px solid rgba(0,0,0,.38); border-radius: 4px;
+      font-size: 1rem; background: white; width: 100%; box-sizing: border-box;
+    }
+    .text-input:focus { outline: 2px solid #0288d1; border-color: transparent; }
 
     .unavailable-box {
       display: flex; align-items: center; gap: 8px;
@@ -268,25 +482,23 @@ import { BookingSiteService } from '../booking-site.service';
     .price-row { display: flex; justify-content: space-between; padding: 6px 0; color: #333; }
     .price-row.total { font-weight: 700; font-size: 1.1rem; padding-top: 12px; }
 
-    .guest-form { display: flex; flex-direction: column; gap: 4px; }
+    .guest-form { display: flex; flex-direction: column; gap: 12px; }
     .name-row { display: flex; gap: 12px; }
-    .name-row mat-form-field { flex: 1; }
 
     .submit-btn { width: 100%; margin-top: 16px; height: 48px; font-size: 1rem; }
 
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
+      .months-wrap { grid-template-columns: 1fr; }
       .property-info h1 { font-size: 1.4rem; }
-      .dates-row { flex-direction: column; }
-      .dates-row mat-form-field { width: 100%; }
       .name-row { flex-direction: column; }
       .lang-bar { display: none; }
+      .dates-recap { gap: 8px; }
     }
   `]
 })
 export class BookingSitePropertyComponent implements OnInit {
   slug = '';
   propId = '';
-  today = new Date();
 
   siteInfo = signal<any>(null);
   property = signal<any>({});
@@ -295,15 +507,23 @@ export class BookingSitePropertyComponent implements OnInit {
   loading = signal(true);
   error = signal('');
 
-  checkInDate: Date | null = null;
-  checkOutDate: Date | null = null;
-  guestCount = 2;
-  minCheckOut: Date | null = null;
+  // Calendrier
+  loadingCalendar = signal(false);
+  blockedDates = signal<Set<string>>(new Set());
+  calStart = signal({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
+  hoverDate = '';
 
+  weekdays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  // Sélection de dates
+  checkInStr = '';
+  checkOutStr = '';
+
+  // Disponibilité / prix
+  guestCount = 2;
   checking = signal(false);
   availabilityChecked = signal(false);
   available = signal(false);
-
   nights = signal(0);
   basePrice = signal(0);
   cleaningFee = signal(0);
@@ -311,12 +531,13 @@ export class BookingSitePropertyComponent implements OnInit {
   currency = signal('EUR');
 
   guest = { firstName: '', lastName: '', email: '', phone: '' };
-
   submitting = signal(false);
   bookingError = signal('');
 
   langs = ['fr', 'en', 'es', 'de', 'it'];
   currentLang = 'fr';
+
+  private todayStr = this.toDateStr(new Date());
 
   constructor(
     private route: ActivatedRoute,
@@ -328,6 +549,48 @@ export class BookingSitePropertyComponent implements OnInit {
   get locale(): string {
     const map: Record<string, string> = { fr: 'fr-FR', en: 'en-US', es: 'es-ES', de: 'de-DE', it: 'it-IT' };
     return map[this.currentLang] ?? 'fr-FR';
+  }
+
+  // ── Mois calculés ──────────────────────────────────────────────────
+
+  calMonths(): CalMonth[] {
+    const months: CalMonth[] = [];
+    let { year, month } = this.calStart();
+    for (let i = 0; i < 2; i++) {
+      let y = year, m = month + i;
+      if (m > 12) { m -= 12; y += 1; }
+      months.push(this.buildMonth(y, m));
+    }
+    return months;
+  }
+
+  private buildMonth(year: number, month: number): CalMonth {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDow = new Date(year, month - 1, 1).getDay();
+    const emptyBefore = (firstDow + 6) % 7; // 0=Lun
+
+    const dateObj = new Date(year, month - 1, 1);
+    const label = dateObj.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+
+    const days: CalDay[] = Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const past = date < this.todayStr;
+      return {
+        day, date, past,
+        isToday: date === this.todayStr,
+        blocked: !past && this.blockedDates().has(date),
+        available: !past && !this.blockedDates().has(date)
+      };
+    });
+
+    return {
+      year, month,
+      key: `${year}-${month}`,
+      label,
+      emptyBefore: Array(emptyBefore).fill(0),
+      days
+    };
   }
 
   ngOnInit() {
@@ -343,6 +606,7 @@ export class BookingSitePropertyComponent implements OnInit {
           this.photos.set(urls.map((url: string) => ({ url })));
         }
         this.loading.set(false);
+        this.loadCalendar();
       },
       error: () => {
         this.loading.set(false);
@@ -351,58 +615,118 @@ export class BookingSitePropertyComponent implements OnInit {
     });
   }
 
-  initLang() {
-    const saved = localStorage.getItem('bs_lang');
-    const browser = navigator.language.slice(0, 2);
-    const lang = this.langs.includes(saved ?? '') ? saved! : this.langs.includes(browser) ? browser : 'fr';
-    this.currentLang = lang;
-    this.translate.use(lang);
+  private loadCalendar() {
+    const start = this.todayStr;
+    const end = this.toDateStr(new Date(Date.now() + 90 * 86400000));
+    this.loadingCalendar.set(true);
+    this.svc.getAvailabilityRange(this.slug, this.propId, start, end)
+      .pipe(catchError(() => of([])))
+      .subscribe(data => {
+        this.loadingCalendar.set(false);
+        this.parseAvailability(data);
+      });
   }
 
-  switchLang(lang: string) {
-    this.currentLang = lang;
-    this.translate.use(lang);
-    localStorage.setItem('bs_lang', lang);
+  private parseAvailability(data: any[]) {
+    const blocked = new Set<string>();
+    for (const item of data) {
+      // Beds24 v2 returns flat list: { date, availability, ... }
+      if (item.date && (item.availability === 0 || item.availability === '0')) {
+        blocked.add(item.date);
+      }
+      // Nested format (calendar array)
+      if (Array.isArray(item.calendar)) {
+        for (const c of item.calendar) {
+          if (c.date && (c.availability === 0 || c.availability === '0')) {
+            blocked.add(c.date);
+          }
+        }
+      }
+    }
+    this.blockedDates.set(blocked);
   }
+
+  // ── Navigation calendrier ──────────────────────────────────────────
+
+  canGoPrev(): boolean {
+    const { year, month } = this.calStart();
+    const now = new Date();
+    return year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1);
+  }
+
+  prevMonth() {
+    if (!this.canGoPrev()) return;
+    const { year, month } = this.calStart();
+    if (month === 1) this.calStart.set({ year: year - 1, month: 12 });
+    else this.calStart.set({ year, month: month - 1 });
+  }
+
+  nextMonth() {
+    const { year, month } = this.calStart();
+    if (month === 12) this.calStart.set({ year: year + 1, month: 1 });
+    else this.calStart.set({ year, month: month + 1 });
+  }
+
+  // ── Sélection de dates ─────────────────────────────────────────────
+
+  onDayClick(d: CalDay) {
+    if (d.past || d.blocked) return;
+    if (!this.checkInStr || (this.checkInStr && this.checkOutStr)) {
+      // Premier clic ou reset : sélectionner check-in
+      this.checkInStr = d.date;
+      this.checkOutStr = '';
+      this.availabilityChecked.set(false);
+      this.available.set(false);
+    } else {
+      // Deuxième clic : check-out
+      if (d.date <= this.checkInStr) {
+        this.checkInStr = d.date;
+        this.checkOutStr = '';
+      } else {
+        this.checkOutStr = d.date;
+        this.hoverDate = '';
+        this.checkAvailability();
+      }
+    }
+  }
+
+  onDayHover(d: CalDay) {
+    if (this.checkInStr && !this.checkOutStr) {
+      this.hoverDate = d.date;
+    }
+  }
+
+  isInRange(date: string): boolean {
+    const end = this.checkOutStr || this.hoverDate;
+    if (!this.checkInStr || !end) return false;
+    return date > this.checkInStr && date < end;
+  }
+
+  resetDates() {
+    this.checkInStr = '';
+    this.checkOutStr = '';
+    this.availabilityChecked.set(false);
+    this.available.set(false);
+  }
+
+  // ── Disponibilité & réservation ────────────────────────────────────
 
   guestOptions(): number[] {
     const max = this.property().maxGuestNumber ?? this.property().maxGuests ?? 10;
     return Array.from({ length: Number(max) }, (_, i) => i + 1);
   }
 
-  onCheckInChange(date: Date) {
-    if (!date) return;
-    this.checkInDate = date;
-    const next = new Date(date);
-    next.setDate(next.getDate() + 1);
-    this.minCheckOut = next;
-    if (this.checkOutDate && this.checkOutDate <= date) {
-      this.checkOutDate = null;
-    }
-    this.availabilityChecked.set(false);
-  }
-
-  onCheckOutChange(date: Date) {
-    this.checkOutDate = date;
-    this.availabilityChecked.set(false);
-  }
-
   checkAvailability() {
-    if (!this.checkInDate || !this.checkOutDate) return;
+    if (!this.checkInStr || !this.checkOutStr) return;
     this.checking.set(true);
     this.availabilityChecked.set(false);
-    const ci = this.localDate(this.checkInDate);
-    const co = this.localDate(this.checkOutDate);
-    this.svc.getOffers(this.slug, this.propId, ci, co).subscribe({
+    this.svc.getOffers(this.slug, this.propId, this.checkInStr, this.checkOutStr).subscribe({
       next: offers => {
         this.checking.set(false);
         this.availabilityChecked.set(true);
-        if (!offers || offers.length === 0) {
-          this.available.set(false);
-          return;
-        }
+        if (!offers || offers.length === 0) { this.available.set(false); return; }
         this.available.set(true);
-        this.buildPriceSummary(offers, ci, co);
+        this.buildPriceSummary(offers, this.checkInStr, this.checkOutStr);
       },
       error: () => {
         this.checking.set(false);
@@ -416,11 +740,9 @@ export class BookingSitePropertyComponent implements OnInit {
     const offer = offers[0];
     const nightCount = this.daysBetween(checkIn, checkOut);
     this.nights.set(nightCount);
-
     const price = offer.price ?? offer.totalPrice ?? offer.total ?? 0;
     const cleaning = offer.cleaningFee ?? offer.extraFee ?? 0;
     const currency = offer.currency ?? 'EUR';
-
     this.basePrice.set(Number(price));
     this.cleaningFee.set(Number(cleaning));
     this.totalPrice.set(Number(price) + Number(cleaning));
@@ -428,13 +750,13 @@ export class BookingSitePropertyComponent implements OnInit {
   }
 
   submitBooking() {
-    if (!this.checkInDate || !this.checkOutDate) return;
+    if (!this.checkInStr || !this.checkOutStr) return;
     this.submitting.set(true);
     this.bookingError.set('');
     const payload = [{
       propertyId: this.propId,
-      checkIn: this.localDate(this.checkInDate),
-      checkOut: this.localDate(this.checkOutDate),
+      checkIn: this.checkInStr,
+      checkOut: this.checkOutStr,
       numAdult: this.guestCount,
       numChild: 0,
       guestFirstName: this.guest.firstName,
@@ -462,19 +784,37 @@ export class BookingSitePropertyComponent implements OnInit {
     });
   }
 
+  // ── Utilitaires ───────────────────────────────────────────────────
+
   formatPrice(amount: number): string {
     return new Intl.NumberFormat(this.locale, { style: 'currency', currency: this.currency() }).format(amount);
+  }
+
+  formatDate(d: string): string {
+    if (!d) return '';
+    return new Date(d + 'T00:00:00').toLocaleDateString(this.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   goBack() {
     this.router.navigate(['/', this.slug]);
   }
 
-  private localDate(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+  initLang() {
+    const saved = localStorage.getItem('bs_lang');
+    const browser = navigator.language.slice(0, 2);
+    const lang = this.langs.includes(saved ?? '') ? saved! : this.langs.includes(browser) ? browser : 'fr';
+    this.currentLang = lang;
+    this.translate.use(lang);
+  }
+
+  switchLang(lang: string) {
+    this.currentLang = lang;
+    this.translate.use(lang);
+    localStorage.setItem('bs_lang', lang);
+  }
+
+  private toDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private daysBetween(from: string, to: string): number {

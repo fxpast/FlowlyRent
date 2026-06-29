@@ -1387,6 +1387,14 @@
                "error_not_found":  "Sito non trovato",
                "adult":  "adulto",
                "home":  "Home",
-               "powered_by":  "Powered by"
+               "powered_by":  "Powered by",
+               "availability":  "Disponibilità",
+               "select_checkin":  "Clicca su una data di arrivo",
+               "select_checkout":  "Clicca su una data di partenza",
+               "leg_available":  "Disponibile",
+               "leg_unavailable":  "Non disponibile",
+               "leg_selected":  "Selezionato",
+               "select_dates_first":  "Seleziona le tue date nel calendario sopra.",
+               "change_dates":  "Cambia date"
            }
 }

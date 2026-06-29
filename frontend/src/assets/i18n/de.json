@@ -1387,6 +1387,14 @@
                "error_not_found":  "Website nicht gefunden",
                "adult":  "Erwachsener",
                "home":  "Startseite",
-               "powered_by":  "Angetrieben von"
+               "powered_by":  "Angetrieben von",
+               "availability":  "Verfügbarkeit",
+               "select_checkin":  "Klicken Sie auf ein Anreisedatum",
+               "select_checkout":  "Klicken Sie auf ein Abreisedatum",
+               "leg_available":  "Verfügbar",
+               "leg_unavailable":  "Nicht verfügbar",
+               "leg_selected":  "Ausgewählt",
+               "select_dates_first":  "Bitte wählen Sie Ihre Daten im Kalender oben aus.",
+               "change_dates":  "Daten ändern"
            }
 }
