@@ -64,6 +64,10 @@ export class PropertyConfigService {
     return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { coverPhotoUrl: url });
   }
 
+  scrapePhotos(propId: string): Observable<{ photos: string[] }> {
+    return this.http.post<{ photos: string[] }>(`${this.base}/${propId}/scrape-photos`, {});
+  }
+
   regenerate(propId: string): Observable<PropertyConfig> {
     return this.http.post<PropertyConfig>(`${this.base}/${propId}/regenerate`, {});
   }

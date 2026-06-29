@@ -621,6 +621,36 @@ interface OccupancyStatus {
                       <span class="unsaved-dot" [matTooltip]="'common.unsaved_changes' | translate"></span>
                     }
                   </div>
+
+                  <!-- Bouton scraping automatique -->
+                  <div style="margin-bottom:8px">
+                    <button mat-stroked-button color="primary"
+                            (click)="scrapePhotos(p['id'])"
+                            [disabled]="scrapingPhotos[p['id']]"
+                            style="font-size:.85rem">
+                      @if (scrapingPhotos[p['id']]) {
+                        <mat-spinner diameter="16" style="display:inline-block;margin-right:6px"></mat-spinner>
+                        Récupération en cours…
+                      } @else {
+                        <mat-icon style="font-size:18px;vertical-align:middle;margin-right:4px">auto_awesome</mat-icon>
+                        Récupérer depuis Beds24
+                      }
+                    </button>
+                  </div>
+
+                  <!-- Mini-galerie des photos trouvées par le scraper -->
+                  @if (scrapedPhotos[p['id']]?.length > 0) {
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+                      @for (url of scrapedPhotos[p['id']]; track url) {
+                        <img [src]="url" alt="Photo"
+                             (click)="selectScrapedPhoto(p['id'], url)"
+                             style="height:72px;width:96px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent"
+                             [style.border-color]="coverPhotoDraft[p['id']] === url ? '#0288d1' : 'transparent'">
+                      }
+                    </div>
+                  }
+
+                  <!-- Champ URL manuel -->
                   <div class="booking-url-row">
                     <mat-form-field appearance="outline" style="flex:1">
                       <mat-label>URL de la photo</mat-label>
@@ -635,7 +665,7 @@ interface OccupancyStatus {
                     </button>
                   </div>
                   @if (coverPhotoSaved[p['id']]) {
-                    <img [src]="coverPhotoSaved[p['id']]" alt="Aperçu"
+                    <img [src]="coverPhotoSaved[p['id']]" alt="Aperçu actuel"
                          style="max-height:120px;border-radius:8px;margin-top:4px;object-fit:cover;">
                   }
                 </div>
@@ -995,6 +1025,8 @@ export class PropertiesComponent implements OnInit {
   pricingSaved: Record<string, { cleaningFee: string; extraPersonThreshold: string; extraPersonFee: string; discount7Nights: string; discount28Nights: string }> = {};
   coverPhotoDraft: Record<string, string> = {};
   coverPhotoSaved: Record<string, string> = {};
+  scrapingPhotos: Record<string, boolean> = {};
+  scrapedPhotos: Record<string, string[]> = {};
 
   // ── Bundles de logements ────────────────────────────────────────────
   bundles          = signal<PropertyBundle[]>([]);
@@ -1751,6 +1783,32 @@ export class PropertiesComponent implements OnInit {
 
   isCoverPhotoDirty(propId: string): boolean {
     return (this.coverPhotoDraft[propId] ?? '') !== (this.coverPhotoSaved[propId] ?? '');
+  }
+
+  scrapePhotos(propId: string): void {
+    this.scrapingPhotos[propId] = true;
+    this.scrapedPhotos[propId] = [];
+    this.propConfigService.scrapePhotos(String(propId)).subscribe({
+      next: res => {
+        this.scrapingPhotos[propId] = false;
+        const photos = res.photos ?? [];
+        this.scrapedPhotos[propId] = photos;
+        if (photos.length > 0) {
+          this.coverPhotoDraft[propId] = photos[0];
+          this.snackBar.open(`${photos.length} photo(s) trouvée(s) — sélectionnez-en une et sauvegardez`, 'OK', { duration: 4000 });
+        } else {
+          this.snackBar.open('Aucune photo trouvée automatiquement — ajoutez l\'URL manuellement', 'OK', { duration: 4000 });
+        }
+      },
+      error: () => {
+        this.scrapingPhotos[propId] = false;
+        this.snackBar.open('Erreur lors de la récupération des photos', this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  selectScrapedPhoto(propId: string, url: string): void {
+    this.coverPhotoDraft[propId] = url;
   }
 
   saveCoverPhoto(propId: string): void {

@@ -146,6 +146,13 @@
             <version>9.4.1</version>
         </dependency>
 
+        <!-- Jsoup (scraping HTML — récupération photos Beds24) -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <!-- Cloudinary (stockage photos tâches ménage) -->
         <dependency>
             <groupId>com.cloudinary</groupId>

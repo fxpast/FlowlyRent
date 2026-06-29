@@ -7,6 +7,7 @@ import com.flowlyrent.model.PropertyConfig;
 import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.KeyBoxRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
+import com.flowlyrent.service.Beds24ScraperService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class AdminPropertyConfigController {
     private final PropertyConfigRepository repo;
     private final KeyBoxRepository keyBoxRepo;
     private final SecurityUtils securityUtils;
+    private final Beds24ScraperService scraperService;
     private final Random random = new Random();
 
     @GetMapping
@@ -115,6 +117,13 @@ public class AdminPropertyConfigController {
             cfg.setCoverPhotoUrl(v != null && !v.isBlank() ? v.trim() : null);
         }
         return ResponseEntity.ok(toDto(repo.save(cfg)));
+    }
+
+    @PostMapping("/{beds24PropertyId}/scrape-photos")
+    public ResponseEntity<?> scrapePhotos(@PathVariable String beds24PropertyId) {
+        securityUtils.getCurrentUser(); // vérifie l'authentification
+        List<String> photos = scraperService.scrapePropertyPhotos(beds24PropertyId);
+        return ResponseEntity.ok(Map.of("photos", photos));
     }
 
     @PostMapping("/{beds24PropertyId}/regenerate")
