@@ -237,10 +237,13 @@ public class PublicBookingController {
             b24Params.put("propId",    propertyId);
             b24Params.put("arrival",   params.getOrDefault("arrival",   params.getOrDefault("checkIn",  "")));
             b24Params.put("departure", params.getOrDefault("departure", params.getOrDefault("checkOut", "")));
-            if (params.containsKey("numAdult"))  b24Params.put("numAdult",  params.get("numAdult"));
+            b24Params.put("numAdult",  params.getOrDefault("numAdult", "1"));
             if (params.containsKey("numChild"))  b24Params.put("numChild",  params.get("numChild"));
             Beds24Account account = accountForSlug(slug);
-            return ResponseEntity.ok(beds24.getOffers(beds24.tokenFor(account), b24Params));
+            log.info("[Public] getOffers params vers Beds24: {}", b24Params);
+            List<Map<String, Object>> offers = beds24.getOffers(beds24.tokenFor(account), b24Params);
+            log.info("[Public] getOffers Beds24 retourne {} offres", offers.size());
+            return ResponseEntity.ok(offers);
         } catch (Exception e) {
             return error(e);
         }
