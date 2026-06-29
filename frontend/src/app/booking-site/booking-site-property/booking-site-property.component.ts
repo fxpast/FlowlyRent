@@ -797,7 +797,7 @@ export class BookingSitePropertyComponent implements OnInit {
       guestPhone:     this.guest.phone,
       status:         'new'
     };
-    if (this.totalPrice() > 0) p.price = [{ price: this.totalPrice() }];
+    if (this.totalPrice() > 0) p.totalPrice = this.totalPrice();
     const payload = [p];
     this.svc.createBooking(this.slug, payload).subscribe({
       next: result => {

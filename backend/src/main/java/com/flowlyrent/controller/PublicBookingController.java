@@ -131,12 +131,30 @@ public class PublicBookingController {
             java.time.LocalDate toDate   = java.time.LocalDate.parse(to);
             java.util.Set<String> blocked = new java.util.TreeSet<>();
 
-            // 1. Réservations confirmées/new → bloquer arrival..departure-1
+            // Appels Beds24 en parallèle pour réduire la latence
             Map<String, String> bParams = new java.util.HashMap<>();
             bParams.put("propertyId",   propertyId);
             bParams.put("arrivalFrom",  fromDate.minusDays(60).toString());
             bParams.put("arrivalTo",    to);
-            List<Map<String, Object>> bookings = beds24.getBookings(token, bParams);
+
+            Map<String, String> calParams = new java.util.HashMap<>();
+            calParams.put("propertyId",    propertyId);
+            calParams.put("startDate",      from);
+            calParams.put("endDate",        to);
+            calParams.put("includeOverride","1");
+            calParams.put("includePrices",  "1");
+
+            java.util.concurrent.CompletableFuture<List<Map<String, Object>>> futureBookings =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                    try { return beds24.getBookings(token, bParams); } catch (Exception e) { return List.of(); }
+                });
+            java.util.concurrent.CompletableFuture<List<Map<String, Object>>> futureCalendar =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                    try { return beds24.getCalendar(token, calParams); } catch (Exception e) { return List.of(); }
+                });
+
+            // 1. Réservations confirmées/new → bloquer arrival..departure-1
+            List<Map<String, Object>> bookings = futureBookings.join();
             for (Map<String, Object> b : bookings) {
                 // Pour les réservations Beds24, le champ property est "propId" ou "propertyId" (pas "id")
                 Object rawPid = b.get("propId") != null ? b.get("propId") : b.get("propertyId");
@@ -158,16 +176,10 @@ public class PublicBookingController {
                 }
             }
 
-            // 2. Calendrier Beds24 : blackouts + prix par jour
+            // 2. Calendrier Beds24 : blackouts + prix par jour (déjà lancé en parallèle)
             Map<String, Integer> prices = new java.util.LinkedHashMap<>();
             try {
-                Map<String, String> calParams = new java.util.HashMap<>();
-                calParams.put("propertyId",    propertyId);
-                calParams.put("startDate",      from);
-                calParams.put("endDate",        to);
-                calParams.put("includeOverride","1");
-                calParams.put("includePrices",  "1");
-                List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+                List<Map<String, Object>> rooms = futureCalendar.join();
                 for (Map<String, Object> room : rooms) {
                     if (!propertyId.equals(extractPropertyId(room))) continue;
                     Object calObj = room.get("calendar");
@@ -375,6 +387,7 @@ public class PublicBookingController {
                 mapField(b, "guestEmail",     "email");
                 mapField(b, "guestPhone",     "phone");
                 mapField(b, "guestCountry",   "country");
+                mapField(b, "totalPrice",     "price");     // même convention que l'admin
 
                 // Valeurs par défaut pour nouvelle réservation publique
                 b.putIfAbsent("status",   "new");
@@ -396,13 +409,48 @@ public class PublicBookingController {
                 // Suppression des champs Angular non reconnus par Beds24
                 for (String f : List.of("propId", "propertyId", "propName",
                                          "guestName", "guestFirstName", "guestLastName",
-                                         "guestEmail", "guestPhone", "guestCountry")) {
+                                         "guestEmail", "guestPhone", "guestCountry", "totalPrice")) {
                     b.remove(f);
                 }
                 processed.add(b);
             }
 
-            return ResponseEntity.ok(beds24.saveBookings(token, processed));
+            List<Map<String, Object>> saved = beds24.saveBookings(token, processed);
+
+            // Si Beds24 ne retourne pas l'id dans la réponse, on le cherche par email+arrival
+            if (!saved.isEmpty()) {
+                Map<String, Object> first = saved.get(0);
+                Object idVal = first.get("id");
+                boolean hasId = idVal != null && !idVal.toString().equals("0");
+                if (!hasId && !processed.isEmpty()) {
+                    Map<String, Object> orig = processed.get(0);
+                    String email   = Objects.toString(orig.get("email"), "");
+                    String propId  = idStr(orig.get("propId") != null ? orig.get("propId") : orig.get("propertyId"));
+                    String arrival = Objects.toString(orig.get("arrival"), "").substring(0, 10);
+                    if (!email.isBlank() || propId != null) {
+                        Map<String, String> fp = new HashMap<>();
+                        if (propId != null) fp.put("propertyId", propId);
+                        if (!email.isBlank()) fp.put("email", email);
+                        fp.put("arrivalFrom", arrival);
+                        fp.put("arrivalTo",   arrival);
+                        try {
+                            List<Map<String, Object>> found = beds24.getBookings(token, fp);
+                            if (!found.isEmpty()) {
+                                Object foundId = found.get(found.size() - 1).get("id");
+                                if (foundId != null) {
+                                    Map<String, Object> enriched = new HashMap<>(first);
+                                    enriched.put("id", foundId);
+                                    saved = List.of(enriched);
+                                }
+                            }
+                        } catch (Exception ex) {
+                            log.warn("[createBooking] fallback getBookings échoué : {}", ex.getMessage());
+                        }
+                    }
+                }
+            }
+
+            return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return error(e);
         }
