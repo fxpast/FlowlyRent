@@ -376,6 +376,17 @@ public class PublicBookingController {
             String token  = beds24.tokenFor(account);
             Long   userId = account.getAppUser().getId();
 
+            // Sauvegarder propId et arrival AVANT traitement (ils sont supprimés du payload Beds24)
+            String fallbackPropId = null;
+            String fallbackArrival = null;
+            if (!payload.isEmpty()) {
+                Map<String, Object> raw = payload.get(0);
+                Object rawPid = raw.get("propId") != null ? raw.get("propId") : raw.get("propertyId");
+                if (rawPid != null) fallbackPropId = rawPid.toString().trim();
+                String rawArr = Objects.toString(raw.get("arrival"), "");
+                if (!rawArr.isEmpty()) fallbackArrival = rawArr.substring(0, 10);
+            }
+
             List<Map<String, Object>> processed = new ArrayList<>();
             for (Map<String, Object> booking : payload) {
                 Map<String, Object> b = new HashMap<>(booking);
@@ -453,38 +464,32 @@ public class PublicBookingController {
                     log.info("[createBooking] ID extrait depuis réponse Beds24 : {}", idVal);
                 }
                 boolean hasId = idVal != null && !idVal.toString().equals("0");
-                if (!hasId && !processed.isEmpty()) {
-                    Map<String, Object> orig = processed.get(0);
-                    String propId  = idStr(orig.get("propId") != null ? orig.get("propId") : orig.get("propertyId"));
-                    String arrival = Objects.toString(orig.get("arrival"), "").substring(0, 10);
-                    if (propId != null) {
-                        Map<String, String> fp = new HashMap<>();
-                        fp.put("propertyId",  propId);
-                        fp.put("arrivalFrom", arrival);
-                        fp.put("arrivalTo",   arrival);
-                        for (int attempt = 1; attempt <= 4; attempt++) {
-                            try {
-                                Thread.sleep(attempt * 500L); // 0.5s, 1s, 1.5s, 2s
-                                List<Map<String, Object>> found = beds24.getBookings(token, fp);
-                                if (!found.isEmpty()) {
-                                    Object foundId = found.get(found.size() - 1).get("id");
-                                    if (foundId != null && !foundId.toString().equals("0")) {
-                                        Map<String, Object> enriched = new HashMap<>(first);
-                                        enriched.put("id", foundId);
-                                        saved = List.of(enriched);
-                                        log.info("[createBooking] ID trouvé en {} tentative(s) : {}", attempt, foundId);
-                                        break;
-                                    }
+                if (!hasId && fallbackPropId != null && fallbackArrival != null) {
+                    Map<String, String> fp = new HashMap<>();
+                    fp.put("propertyId",  fallbackPropId);
+                    fp.put("arrivalFrom", fallbackArrival);
+                    fp.put("arrivalTo",   fallbackArrival);
+                    for (int attempt = 1; attempt <= 4; attempt++) {
+                        try {
+                            Thread.sleep(attempt * 500L);
+                            List<Map<String, Object>> found = beds24.getBookings(token, fp);
+                            if (!found.isEmpty()) {
+                                Object foundId = found.get(found.size() - 1).get("id");
+                                if (foundId != null && !foundId.toString().equals("0")) {
+                                    Map<String, Object> enriched = new HashMap<>(first);
+                                    enriched.put("id", foundId);
+                                    saved = List.of(enriched);
+                                    log.info("[createBooking] ID trouvé en {} tentative(s) : {}", attempt, foundId);
+                                    break;
                                 }
-                                log.warn("[createBooking] tentative {}/4 — ID pas encore disponible", attempt);
-                            } catch (Exception ex) {
-                                log.warn("[createBooking] tentative {}/4 échouée : {}", attempt, ex.getMessage());
                             }
+                            log.warn("[createBooking] tentative {}/4 — ID pas encore disponible", attempt);
+                        } catch (Exception ex) {
+                            log.warn("[createBooking] tentative {}/4 échouée : {}", attempt, ex.getMessage());
                         }
                     }
                 }
             }
-
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return error(e);
