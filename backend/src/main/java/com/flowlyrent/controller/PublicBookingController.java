@@ -390,7 +390,7 @@ public class PublicBookingController {
                 mapField(b, "totalPrice",     "price");     // même convention que l'admin
 
                 // Valeurs par défaut pour nouvelle réservation publique
-                b.putIfAbsent("status",   "new");
+                b.putIfAbsent("status",   "confirmed");
                 b.putIfAbsent("lang",     "fr");
                 b.putIfAbsent("country",  "France");
                 b.putIfAbsent("numChild", 0);

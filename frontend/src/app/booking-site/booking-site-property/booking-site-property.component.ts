@@ -795,7 +795,7 @@ export class BookingSitePropertyComponent implements OnInit {
       guestName:      this.guest.lastName,
       guestEmail:     this.guest.email,
       guestPhone:     this.guest.phone,
-      status:         'new'
+      status:         'confirmed'
     };
     if (this.totalPrice() > 0) p.totalPrice = this.totalPrice();
     const payload = [p];
