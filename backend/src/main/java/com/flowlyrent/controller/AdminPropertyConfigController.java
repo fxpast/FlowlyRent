@@ -6,12 +6,16 @@ import com.flowlyrent.config.SecurityUtils;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.KeyBox;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.PropertyPhoto;
 import com.flowlyrent.model.enums.ChannelType;
 import com.flowlyrent.repository.KeyBoxRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
+import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ScraperService;
+import com.flowlyrent.service.CloudinaryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,12 +31,15 @@ import java.util.stream.Collectors;
 @RequestMapping("/admin/property-configs")
 @RequiredArgsConstructor
 @Tag(name = "Configuration des propriétés")
+@Slf4j
 public class AdminPropertyConfigController {
 
     private final PropertyConfigRepository repo;
     private final KeyBoxRepository keyBoxRepo;
     private final SecurityUtils securityUtils;
     private final Beds24ScraperService scraperService;
+    private final PropertyPhotoRepository photoRepo;
+    private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
     private final Random random = new Random();
 
@@ -153,6 +160,61 @@ public class AdminPropertyConfigController {
             repo.save(cfg);
         }
         return ResponseEntity.ok(toDto(cfg));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Photos manuelles du logement
+    // ─────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{beds24PropertyId}/photos")
+    public ResponseEntity<List<PropertyPhoto>> getPhotos(@PathVariable String beds24PropertyId) {
+        PropertyConfig cfg = findCfgForCurrentUser(beds24PropertyId);
+        return ResponseEntity.ok(photoRepo.findByPropertyConfigIdOrderByUploadedAtAsc(cfg.getId()));
+    }
+
+    @PostMapping("/{beds24PropertyId}/photos")
+    public ResponseEntity<PropertyPhoto> addPhoto(
+            @PathVariable String beds24PropertyId,
+            @RequestBody Map<String, String> body) {
+        PropertyConfig cfg = findCfgForCurrentUser(beds24PropertyId);
+        String base64Data = body.getOrDefault("data", "");
+        String caption    = body.getOrDefault("caption", "");
+
+        PropertyPhoto photo = new PropertyPhoto();
+        photo.setPropertyConfig(cfg);
+        photo.setCaption(caption.isBlank() ? null : caption);
+
+        try {
+            Map<?, ?> result = cloudinaryService.uploadBase64(base64Data, "flowlyrent/properties/" + beds24PropertyId);
+            photo.setUrl(result.get("secure_url").toString());
+            photo.setPublicId(result.get("public_id").toString());
+        } catch (Exception e) {
+            log.warn("[property-photo] Cloudinary indisponible, stockage base64 — propId={}", beds24PropertyId);
+            photo.setData(base64Data);
+        }
+
+        return ResponseEntity.ok(photoRepo.save(photo));
+    }
+
+    @DeleteMapping("/{beds24PropertyId}/photos/{photoId}")
+    public ResponseEntity<Void> deletePhoto(
+            @PathVariable String beds24PropertyId,
+            @PathVariable Long photoId) {
+        PropertyConfig cfg = findCfgForCurrentUser(beds24PropertyId);
+        PropertyPhoto photo = photoRepo.findById(photoId)
+                .filter(p -> p.getPropertyConfig().getId().equals(cfg.getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (photo.getPublicId() != null) {
+            try { cloudinaryService.delete(photo.getPublicId()); } catch (Exception ignored) {}
+        }
+        photoRepo.delete(photo);
+        return ResponseEntity.noContent().build();
+    }
+
+    private PropertyConfig findCfgForCurrentUser(String beds24PropertyId) {
+        AppUser user = securityUtils.getCurrentUser();
+        return repo.findByUserIdAndBeds24PropertyId(user.getId(), beds24PropertyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private Map<String, Object> toDto(PropertyConfig cfg) {

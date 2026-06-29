@@ -3,6 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 
+export interface PropertyPhoto {
+  id: number;
+  url?: string;
+  data?: string;
+  caption?: string;
+  uploadedAt?: string;
+}
+
 export interface PropertyConfig {
   id?: number;
   beds24PropertyId: string;
@@ -67,6 +75,18 @@ export class PropertyConfigService {
 
   scrapePhotos(propId: string): Observable<{ photos: string[] }> {
     return this.http.post<{ photos: string[] }>(`${this.base}/${propId}/scrape-photos`, {});
+  }
+
+  getPropertyPhotos(propId: string): Observable<PropertyPhoto[]> {
+    return this.http.get<PropertyPhoto[]>(`${this.base}/${propId}/photos`);
+  }
+
+  addPropertyPhoto(propId: string, data: string, caption: string): Observable<PropertyPhoto> {
+    return this.http.post<PropertyPhoto>(`${this.base}/${propId}/photos`, { data, caption });
+  }
+
+  deletePropertyPhoto(propId: string, photoId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${propId}/photos/${photoId}`);
   }
 
   regenerate(propId: string): Observable<PropertyConfig> {

@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.PropertyPhoto;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
+import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.stripe.Stripe;
 import com.stripe.model.checkout.Session;
@@ -34,6 +36,7 @@ public class PublicBookingController {
     private final AppUserRepository userRepo;
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
+    private final PropertyPhotoRepository propertyPhotoRepo;
     private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
@@ -328,14 +331,30 @@ public class PublicBookingController {
         if (rawId == null) return;
         String propId = rawId instanceof Number n ? String.valueOf(n.longValue()) : rawId.toString();
         propConfigRepo.findByUserIdAndBeds24PropertyId(userId, propId).ifPresent(cfg -> {
+            // 1. Photo de couverture manuelle (priorité Cloudinary → scraping)
             if (cfg.getCoverPhotoUrl() != null && !cfg.getCoverPhotoUrl().isBlank()) {
                 prop.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
             }
+
+            // 2. Construire la liste complète : photos scrappées + photos manuelles uploadées
+            List<String> allPhotos = new java.util.ArrayList<>();
             if (cfg.getPhotoUrlsJson() != null && !cfg.getPhotoUrlsJson().isBlank()) {
                 try {
-                    List<String> urls = objectMapper.readValue(cfg.getPhotoUrlsJson(), new TypeReference<>() {});
-                    if (!urls.isEmpty()) prop.put("photoUrls", urls);
+                    List<String> scraped = objectMapper.readValue(cfg.getPhotoUrlsJson(), new TypeReference<>() {});
+                    allPhotos.addAll(scraped);
                 } catch (Exception ignored) {}
+            }
+            propertyPhotoRepo.findByPropertyConfigIdOrderByUploadedAtAsc(cfg.getId()).forEach(p -> {
+                String photoUrl = p.getUrl() != null ? p.getUrl() : p.getData();
+                if (photoUrl != null) allPhotos.add(photoUrl);
+            });
+
+            if (!allPhotos.isEmpty()) {
+                prop.put("photoUrls", allPhotos);
+                // Si pas encore de coverPhotoUrl, prendre la première photo disponible
+                if (prop.get("coverPhotoUrl") == null) {
+                    prop.put("coverPhotoUrl", allPhotos.get(0));
+                }
             }
         });
     }

@@ -17,7 +17,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { forkJoin } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
-import { PropertyConfigService, PropertyConfig, KeyBox } from '../../core/services/property-config.service';
+import { PropertyConfigService, PropertyConfig, PropertyPhoto, KeyBox } from '../../core/services/property-config.service';
 import { BookingService } from '../../core/services/booking.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
@@ -672,6 +672,63 @@ interface OccupancyStatus {
                 <mat-divider class="divider"></mat-divider>
               }
 
+              <!-- Photos manuelles du logement (masqué en mode iCal) -->
+              @if (!isIcalMode()) {
+                <div class="code-section">
+                  <div class="photo-upload-header" (click)="togglePropPhotos(p['id'])">
+                    <mat-icon>photo_library</mat-icon>
+                    <strong>Photos du logement</strong>
+                    @if (propPhotos[p['id']]?.length) {
+                      <span class="inv-count">{{ propPhotos[p['id']].length }} photo{{ propPhotos[p['id']].length > 1 ? 's' : '' }}</span>
+                    }
+                    <mat-icon class="inv-toggle">{{ propPhotosOpen[p['id']] ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </div>
+
+                  @if (propPhotosOpen[p['id']]) {
+                    <!-- Input fichier caché -->
+                    <input #photoInput type="file" accept="image/*,image/heic,image/heif" multiple
+                           style="display:none" (change)="onPropPhotoSelected($event, p['id'])">
+
+                    <!-- Grille des photos existantes -->
+                    @if (propPhotosLoaded[p['id']] && propPhotos[p['id']]?.length) {
+                      <div class="prop-photo-grid">
+                        @for (photo of propPhotos[p['id']]; track photo.id) {
+                          <div class="prop-photo-item">
+                            <img [src]="photo.url ?? photo.data" alt="Photo logement"
+                                 class="prop-photo-thumb">
+                            <button mat-icon-button class="prop-photo-del"
+                                    (click)="deletePropPhoto(p['id'], photo)"
+                                    [matTooltip]="'common.delete' | translate">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    }
+                    @if (!propPhotosLoaded[p['id']]) {
+                      <div style="padding:12px"><mat-spinner diameter="24"></mat-spinner></div>
+                    }
+
+                    <!-- Bouton ajouter -->
+                    <div style="margin-top:10px">
+                      <button mat-stroked-button color="primary"
+                              (click)="triggerPropPhotoInput(photoInput)"
+                              [disabled]="uploadingPhoto[p['id']]"
+                              style="font-size:.85rem">
+                        @if (uploadingPhoto[p['id']]) {
+                          <mat-spinner diameter="16" style="display:inline-block;margin-right:6px"></mat-spinner>
+                          Upload en cours…
+                        } @else {
+                          <mat-icon style="font-size:18px;vertical-align:middle;margin-right:4px">add_photo_alternate</mat-icon>
+                          Ajouter des photos
+                        }
+                      </button>
+                    </div>
+                  }
+                </div>
+                <mat-divider class="divider"></mat-divider>
+              }
+
               <!-- Inventaire & Équipements (masqué en mode iCal) -->
               @if (!isIcalMode()) {
               <div class="inventory-section">
@@ -871,6 +928,19 @@ interface OccupancyStatus {
     .tip-row { display: flex; align-items: flex-start; gap: 4px; font-size: 12px; color: #444; }
     .tip-bullet { font-size: 14px; width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: #888; }
 
+    /* Photos manuelles */
+    .photo-upload-header { display: flex; align-items: center; gap: 6px; cursor: pointer;
+      padding: 4px 0; user-select: none; }
+    .photo-upload-header mat-icon:first-child { font-size: 16px; width: 16px; height: 16px; color: #546e7a; }
+    .photo-upload-header strong { font-size: 13px; flex: 1; }
+    .prop-photo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .prop-photo-item { position: relative; width: 96px; }
+    .prop-photo-thumb { width: 96px; height: 72px; object-fit: cover; border-radius: 6px;
+      border: 1px solid #e0e0e0; display: block; }
+    .prop-photo-del { position: absolute; top: -8px; right: -8px; background: white !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2); width: 24px; height: 24px; line-height: 24px; }
+    .prop-photo-del mat-icon { font-size: 14px; width: 14px; height: 14px; color: #e53935; }
+
     /* Inventaire */
     .inventory-section { margin-top: 12px; }
     .inventory-header { display: flex; align-items: center; gap: 6px; cursor: pointer;
@@ -1027,6 +1097,11 @@ export class PropertiesComponent implements OnInit {
   coverPhotoSaved: Record<string, string> = {};
   scrapingPhotos: Record<string, boolean> = {};
   scrapedPhotos: Record<string, string[]> = {};
+
+  propPhotos: Record<string, PropertyPhoto[]> = {};
+  propPhotosOpen: Record<string, boolean> = {};
+  propPhotosLoaded: Record<string, boolean> = {};
+  uploadingPhoto: Record<string, boolean> = {};
 
   // ── Bundles de logements ────────────────────────────────────────────
   bundles          = signal<PropertyBundle[]>([]);
@@ -1935,5 +2010,82 @@ export class PropertiesComponent implements OnInit {
   openCreateKeyBox(propId: string): void {
     this.newKeyBoxNameDraft[propId] = '';
     this.showKeyBoxCreate[propId] = true;
+  }
+
+  // ── Photos manuelles du logement ────────────────────────────────────
+
+  togglePropPhotos(propId: string): void {
+    this.propPhotosOpen[propId] = !this.propPhotosOpen[propId];
+    if (this.propPhotosOpen[propId] && !this.propPhotosLoaded[propId]) {
+      this.propConfigService.getPropertyPhotos(propId).subscribe({
+        next: photos => {
+          this.propPhotos[propId] = photos;
+          this.propPhotosLoaded[propId] = true;
+        },
+        error: () => { this.propPhotosLoaded[propId] = true; }
+      });
+    }
+  }
+
+  triggerPropPhotoInput(input: HTMLInputElement): void {
+    input.value = '';
+    input.click();
+  }
+
+  onPropPhotoSelected(event: Event, propId: string): void {
+    const files = (event.target as HTMLInputElement).files;
+    if (!files?.length) return;
+    this.uploadPropPhotosSequentially(Array.from(files), propId, 0);
+  }
+
+  private uploadPropPhotosSequentially(files: File[], propId: string, idx: number): void {
+    if (idx >= files.length) return;
+    this.uploadingPhoto[propId] = true;
+    this.compressPropImage(files[idx]).then(base64 => {
+      this.propConfigService.addPropertyPhoto(propId, base64, '').subscribe({
+        next: photo => {
+          if (!this.propPhotos[propId]) this.propPhotos[propId] = [];
+          this.propPhotos[propId] = [...this.propPhotos[propId], photo];
+          this.uploadingPhoto[propId] = idx < files.length - 1;
+          this.uploadPropPhotosSequentially(files, propId, idx + 1);
+        },
+        error: () => {
+          this.uploadingPhoto[propId] = false;
+          this.snackBar.open('Erreur lors de l\'upload', '', { duration: 3000 });
+        }
+      });
+    });
+  }
+
+  deletePropPhoto(propId: string, photo: PropertyPhoto): void {
+    this.propConfigService.deletePropertyPhoto(propId, photo.id).subscribe({
+      next: () => {
+        this.propPhotos[propId] = (this.propPhotos[propId] ?? []).filter(p => p.id !== photo.id);
+      },
+      error: () => this.snackBar.open('Erreur lors de la suppression', '', { duration: 3000 })
+    });
+  }
+
+  private compressPropImage(file: File): Promise<string> {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+            else { width = Math.round(width * MAX / height); height = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = e.target!.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 }
