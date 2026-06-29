@@ -11,6 +11,7 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.RoomIdResolverService;
 import com.stripe.Stripe;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -22,9 +23,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.Normalizer;
-import java.util.List;
-import java.util.Objects;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;;
 
 @RestController
 @RequestMapping("/public")
@@ -34,6 +34,7 @@ import java.util.Map;
 public class PublicBookingController {
 
     private final Beds24ApiClient beds24;
+    private final RoomIdResolverService roomIdResolver;
     private final AppUserRepository userRepo;
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
@@ -230,9 +231,16 @@ public class PublicBookingController {
             @PathVariable String propertyId,
             @RequestParam Map<String, String> params) {
         try {
-            params.put("propertyId", propertyId);
+            // Beds24 /inventory/rooms/offers utilise "propId", "arrival", "departure"
+            // Le frontend peut envoyer "checkIn"/"checkOut" — on normalise ici
+            Map<String, String> b24Params = new java.util.HashMap<>();
+            b24Params.put("propId",    propertyId);
+            b24Params.put("arrival",   params.getOrDefault("arrival",   params.getOrDefault("checkIn",  "")));
+            b24Params.put("departure", params.getOrDefault("departure", params.getOrDefault("checkOut", "")));
+            if (params.containsKey("numAdult"))  b24Params.put("numAdult",  params.get("numAdult"));
+            if (params.containsKey("numChild"))  b24Params.put("numChild",  params.get("numChild"));
             Beds24Account account = accountForSlug(slug);
-            return ResponseEntity.ok(beds24.getOffers(beds24.tokenFor(account), params));
+            return ResponseEntity.ok(beds24.getOffers(beds24.tokenFor(account), b24Params));
         } catch (Exception e) {
             return error(e);
         }
@@ -248,10 +256,62 @@ public class PublicBookingController {
             @RequestBody List<Map<String, Object>> payload) {
         try {
             Beds24Account account = accountForSlug(slug);
-            return ResponseEntity.ok(beds24.saveBookings(beds24.tokenFor(account), payload));
+            String token  = beds24.tokenFor(account);
+            Long   userId = account.getAppUserId();
+
+            List<Map<String, Object>> processed = new ArrayList<>();
+            for (Map<String, Object> booking : payload) {
+                Map<String, Object> b = new HashMap<>(booking);
+
+                // Mapping noms de champs Angular → Beds24 (même logique que AdminBookingController)
+                mapField(b, "guestFirstName", "firstName");
+                mapField(b, "guestLastName",  "lastName");
+                mapField(b, "guestEmail",     "email");
+                mapField(b, "guestPhone",     "phone");
+                mapField(b, "guestCountry",   "country");
+
+                // Valeurs par défaut pour nouvelle réservation publique
+                b.putIfAbsent("status",   "new");
+                b.putIfAbsent("lang",     "fr");
+                b.putIfAbsent("country",  "France");
+                b.putIfAbsent("numChild", 0);
+                b.putIfAbsent("mobile",   0);
+                b.putIfAbsent("lastName", "");
+                b.putIfAbsent("email",    "");
+
+                // Résolution roomId
+                if (b.get("roomId") == null) {
+                    String propId  = idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId"));
+                    if (propId == null) throw new IllegalArgumentException("propId manquant");
+                    String arrival = Objects.toString(b.get("arrival"), LocalDate.now().toString()).substring(0, 10);
+                    b.put("roomId", roomIdResolver.resolveRoomId(userId, token, propId, arrival, arrival));
+                }
+
+                // Suppression des champs Angular non reconnus par Beds24
+                for (String f : List.of("propId", "propertyId", "propName",
+                                         "guestName", "guestFirstName", "guestLastName",
+                                         "guestEmail", "guestPhone", "guestCountry")) {
+                    b.remove(f);
+                }
+                processed.add(b);
+            }
+
+            return ResponseEntity.ok(beds24.saveBookings(token, processed));
         } catch (Exception e) {
             return error(e);
         }
+    }
+
+    private void mapField(Map<String, Object> b, String from, String to) {
+        if (b.containsKey(from)) {
+            b.put(to, b.get(from));
+        }
+    }
+
+    private String idStr(Object v) {
+        if (v == null) return null;
+        String s = v instanceof Number n ? String.valueOf(n.longValue()) : v.toString().trim();
+        return s.isEmpty() ? null : s;
     }
 
     @GetMapping("/{slug}/bookings/{bookingId}")

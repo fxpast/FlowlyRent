@@ -735,17 +735,17 @@ export class BookingSitePropertyComponent implements OnInit {
     this.submitting.set(true);
     this.bookingError.set('');
     const payload = [{
-      propertyId: this.propId,
-      checkIn: this.checkInStr,
-      checkOut: this.checkOutStr,
-      numAdult: this.guestCount,
-      numChild: 0,
+      propId:         this.propId,
+      arrival:        this.checkInStr + 'T16:00',
+      departure:      this.checkOutStr + 'T11:00',
+      numAdult:       this.guestCount,
+      numChild:       0,
       guestFirstName: this.guest.firstName,
-      guestName: this.guest.lastName,
-      guestEmail: this.guest.email,
-      guestPhone: this.guest.phone,
-      status: 'new',
-      price: [{ price: this.totalPrice() }]
+      guestName:      this.guest.lastName,
+      guestEmail:     this.guest.email,
+      guestPhone:     this.guest.phone,
+      status:         'new',
+      price:          [{ price: this.totalPrice() }]
     }];
     this.svc.createBooking(this.slug, payload).subscribe({
       next: result => {
