@@ -417,34 +417,38 @@ public class PublicBookingController {
 
             List<Map<String, Object>> saved = beds24.saveBookings(token, processed);
 
-            // Si Beds24 ne retourne pas l'id dans la réponse, on le cherche par email+arrival
+            // Si Beds24 ne retourne pas l'id, on cherche la réservation par propId+arrival (jusqu'à 4 tentatives)
             if (!saved.isEmpty()) {
                 Map<String, Object> first = saved.get(0);
                 Object idVal = first.get("id");
                 boolean hasId = idVal != null && !idVal.toString().equals("0");
                 if (!hasId && !processed.isEmpty()) {
                     Map<String, Object> orig = processed.get(0);
-                    String email   = Objects.toString(orig.get("email"), "");
                     String propId  = idStr(orig.get("propId") != null ? orig.get("propId") : orig.get("propertyId"));
                     String arrival = Objects.toString(orig.get("arrival"), "").substring(0, 10);
-                    if (!email.isBlank() || propId != null) {
+                    if (propId != null) {
                         Map<String, String> fp = new HashMap<>();
-                        if (propId != null) fp.put("propertyId", propId);
-                        if (!email.isBlank()) fp.put("email", email);
+                        fp.put("propertyId",  propId);
                         fp.put("arrivalFrom", arrival);
                         fp.put("arrivalTo",   arrival);
-                        try {
-                            List<Map<String, Object>> found = beds24.getBookings(token, fp);
-                            if (!found.isEmpty()) {
-                                Object foundId = found.get(found.size() - 1).get("id");
-                                if (foundId != null) {
-                                    Map<String, Object> enriched = new HashMap<>(first);
-                                    enriched.put("id", foundId);
-                                    saved = List.of(enriched);
+                        for (int attempt = 1; attempt <= 4; attempt++) {
+                            try {
+                                Thread.sleep(attempt * 500L); // 0.5s, 1s, 1.5s, 2s
+                                List<Map<String, Object>> found = beds24.getBookings(token, fp);
+                                if (!found.isEmpty()) {
+                                    Object foundId = found.get(found.size() - 1).get("id");
+                                    if (foundId != null && !foundId.toString().equals("0")) {
+                                        Map<String, Object> enriched = new HashMap<>(first);
+                                        enriched.put("id", foundId);
+                                        saved = List.of(enriched);
+                                        log.info("[createBooking] ID trouvé en {} tentative(s) : {}", attempt, foundId);
+                                        break;
+                                    }
                                 }
+                                log.warn("[createBooking] tentative {}/4 — ID pas encore disponible", attempt);
+                            } catch (Exception ex) {
+                                log.warn("[createBooking] tentative {}/4 échouée : {}", attempt, ex.getMessage());
                             }
-                        } catch (Exception ex) {
-                            log.warn("[createBooking] fallback getBookings échoué : {}", ex.getMessage());
                         }
                     }
                 }
