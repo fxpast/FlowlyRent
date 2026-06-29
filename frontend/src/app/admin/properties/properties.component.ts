@@ -639,9 +639,9 @@ interface OccupancyStatus {
                   </div>
 
                   <!-- Mini-galerie des photos trouvées par le scraper -->
-                  @if (scrapedPhotos[p['id']]?.length > 0) {
+                  @if (scrapedPhotos[p['id']]?.length) {
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-                      @for (url of scrapedPhotos[p['id']]; track url) {
+                      @for (url of (scrapedPhotos[p['id']] ?? []); track url) {
                         <img [src]="url" alt="Photo"
                              (click)="selectScrapedPhoto(p['id'], url)"
                              style="height:72px;width:96px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent"
