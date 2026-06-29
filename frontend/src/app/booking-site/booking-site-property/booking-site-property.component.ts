@@ -247,24 +247,33 @@ interface CalMonth {
                   {{ 'bs.unavailable' | translate }}
                 </div>
               } @else {
-                <!-- Prix -->
-                <div class="price-summary">
-                  <div class="price-row">
-                    <span>{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }}</span>
-                    <span>{{ formatPrice(basePrice()) }}</span>
-                  </div>
-                  @if (cleaningFee() > 0) {
+                <!-- Prix (masqué si Beds24 n'a pas de tarif configuré) -->
+                @if (totalPrice() > 0) {
+                  <div class="price-summary">
                     <div class="price-row">
-                      <span>{{ 'bs.cleaning_fee' | translate }}</span>
-                      <span>{{ formatPrice(cleaningFee()) }}</span>
+                      <span>{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }}</span>
+                      <span>{{ formatPrice(basePrice()) }}</span>
                     </div>
-                  }
-                  <mat-divider></mat-divider>
-                  <div class="price-row total">
-                    <span>{{ 'bs.total' | translate }}</span>
-                    <span>{{ formatPrice(totalPrice()) }}</span>
+                    @if (cleaningFee() > 0) {
+                      <div class="price-row">
+                        <span>{{ 'bs.cleaning_fee' | translate }}</span>
+                        <span>{{ formatPrice(cleaningFee()) }}</span>
+                      </div>
+                    }
+                    <mat-divider></mat-divider>
+                    <div class="price-row total">
+                      <span>{{ 'bs.total' | translate }}</span>
+                      <span>{{ formatPrice(totalPrice()) }}</span>
+                    </div>
                   </div>
-                </div>
+                } @else {
+                  <div class="price-summary">
+                    <div class="price-row">
+                      <span class="material-icons" style="color:#43a047;font-size:18px;vertical-align:middle">check_circle</span>
+                      &nbsp;{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }} — {{ 'bs.leg_available' | translate }}
+                    </div>
+                  </div>
+                }
 
                 <!-- Coordonnées voyageur -->
                 <h3>{{ 'bs.your_info' | translate }}</h3>
@@ -701,18 +710,51 @@ export class BookingSitePropertyComponent implements OnInit {
     if (!this.checkInStr || !this.checkOutStr) return;
     this.checking.set(true);
     this.availabilityChecked.set(false);
+
+    // Vérification locale : y a-t-il une date bloquée dans la plage [checkIn, checkOut) ?
+    const blocked = this.blockedDates();
+    let cur = this.checkInStr;
+    while (cur < this.checkOutStr) {
+      if (blocked.has(cur)) {
+        this.checking.set(false);
+        this.availabilityChecked.set(true);
+        this.available.set(false);
+        return;
+      }
+      const d = new Date(cur + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      cur = this.toDateStr(d);
+    }
+
+    // Dates libres localement — tenter d'obtenir le tarif via Beds24
     this.svc.getOffers(this.slug, this.propId, this.checkInStr, this.checkOutStr).subscribe({
       next: offers => {
         this.checking.set(false);
         this.availabilityChecked.set(true);
-        if (!offers || offers.length === 0) { this.available.set(false); return; }
         this.available.set(true);
-        this.buildPriceSummary(offers, this.checkInStr, this.checkOutStr);
+        if (offers && offers.length > 0) {
+          this.buildPriceSummary(offers, this.checkInStr, this.checkOutStr);
+        } else {
+          // Beds24 n'a pas de tarif configuré — on montre disponible sans détail prix
+          const nights = this.daysBetween(this.checkInStr, this.checkOutStr);
+          this.nights.set(nights);
+          this.basePrice.set(0);
+          this.cleaningFee.set(0);
+          this.totalPrice.set(0);
+          this.currency.set('EUR');
+        }
       },
       error: () => {
+        // Erreur Beds24 : les dates locales sont libres, on confirme disponible sans prix
         this.checking.set(false);
         this.availabilityChecked.set(true);
-        this.available.set(false);
+        this.available.set(true);
+        const nights = this.daysBetween(this.checkInStr, this.checkOutStr);
+        this.nights.set(nights);
+        this.basePrice.set(0);
+        this.cleaningFee.set(0);
+        this.totalPrice.set(0);
+        this.currency.set('EUR');
       }
     });
   }

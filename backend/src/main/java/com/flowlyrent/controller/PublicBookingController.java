@@ -245,7 +245,9 @@ public class PublicBookingController {
             log.info("[Public] getOffers Beds24 retourne {} offres", offers.size());
             return ResponseEntity.ok(offers);
         } catch (Exception e) {
-            return error(e);
+            // Log complet pour diagnostic (Beds24 peut retourner 400 si le logement n'a pas d'offres configurées)
+            log.warn("[Public] getOffers erreur Beds24 — réponse vide retournée. Détail: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
         }
     }
 
