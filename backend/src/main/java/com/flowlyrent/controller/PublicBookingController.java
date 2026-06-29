@@ -389,8 +389,19 @@ public class PublicBookingController {
                 mapField(b, "guestCountry",   "country");
                 mapField(b, "totalPrice",     "price");     // même convention que l'admin
 
-                // Valeurs par défaut pour nouvelle réservation publique
-                b.putIfAbsent("status",   "confirmed");
+                // Normalisation du prix : si price arrive comme [{price: x}] (ancien format), extraire x
+                Object rawPrice = b.get("price");
+                if (rawPrice instanceof List<?> priceList && !((List<?>) priceList).isEmpty()) {
+                    Object first = ((List<?>) priceList).get(0);
+                    if (first instanceof Map<?,?> priceMap && priceMap.get("price") != null) {
+                        b.put("price", priceMap.get("price"));
+                    } else {
+                        b.remove("price"); // format illisible, ne pas envoyer
+                    }
+                }
+
+                // Toujours forcer confirmed — putIfAbsent ne suffit pas si le frontend envoie "new"
+                b.put("status",   "confirmed");
                 b.putIfAbsent("lang",     "fr");
                 b.putIfAbsent("country",  "France");
                 b.putIfAbsent("numChild", 0);
@@ -417,10 +428,30 @@ public class PublicBookingController {
 
             List<Map<String, Object>> saved = beds24.saveBookings(token, processed);
 
-            // Si Beds24 ne retourne pas l'id, on cherche la réservation par propId+arrival (jusqu'à 4 tentatives)
+            // Extraction de l'ID depuis la réponse Beds24
+            // Format réel : [{"success":true,"new":{"id":89038054,...},"info":[{"id":89038054,...}]}]
             if (!saved.isEmpty()) {
                 Map<String, Object> first = saved.get(0);
                 Object idVal = first.get("id");
+                // Tenter new.id
+                if (idVal == null || idVal.toString().equals("0")) {
+                    Object newObj = first.get("new");
+                    if (newObj instanceof Map<?,?> newMap) idVal = newMap.get("id");
+                }
+                // Tenter info[0].id
+                if (idVal == null || idVal.toString().equals("0")) {
+                    Object infoObj = first.get("info");
+                    if (infoObj instanceof List<?> infoList && !((List<?>) infoList).isEmpty()) {
+                        Object item = ((List<?>) infoList).get(0);
+                        if (item instanceof Map<?,?> infoMap) idVal = infoMap.get("id");
+                    }
+                }
+                if (idVal != null && !idVal.toString().equals("0")) {
+                    Map<String, Object> enriched = new HashMap<>(first);
+                    enriched.put("id", idVal);
+                    saved = List.of(enriched);
+                    log.info("[createBooking] ID extrait depuis réponse Beds24 : {}", idVal);
+                }
                 boolean hasId = idVal != null && !idVal.toString().equals("0");
                 if (!hasId && !processed.isEmpty()) {
                     Map<String, Object> orig = processed.get(0);
