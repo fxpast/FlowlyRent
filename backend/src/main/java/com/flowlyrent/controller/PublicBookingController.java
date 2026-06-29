@@ -257,7 +257,7 @@ public class PublicBookingController {
         try {
             Beds24Account account = accountForSlug(slug);
             String token  = beds24.tokenFor(account);
-            Long   userId = account.getAppUserId();
+            Long   userId = account.getAppUser().getId();
 
             List<Map<String, Object>> processed = new ArrayList<>();
             for (Map<String, Object> booking : payload) {
