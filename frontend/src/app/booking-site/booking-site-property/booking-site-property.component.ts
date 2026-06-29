@@ -9,6 +9,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingSiteService } from '../booking-site.service';
 
 @Component({
@@ -18,18 +19,25 @@ import { BookingSiteService } from '../booking-site.service';
     CommonModule, FormsModule,
     MatFormFieldModule, MatInputModule,
     MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatProgressSpinnerModule, MatDividerModule
+    MatButtonModule, MatProgressSpinnerModule, MatDividerModule,
+    TranslateModule
   ],
   template: `
     <div class="page">
       <!-- Barre de navigation -->
       <nav class="top-nav">
         <button mat-button (click)="goBack()">
-          <span class="material-icons">arrow_back</span> Retour
+          <span class="material-icons">arrow_back</span> {{ 'bs.back' | translate }}
         </button>
         @if (siteInfo()) {
           <span class="brand">{{ siteInfo().companyName || siteInfo().firstName }}</span>
         }
+        <div class="spacer"></div>
+        <div class="lang-bar">
+          @for (l of langs; track l) {
+            <button class="lang-btn" [class.active]="currentLang === l" (click)="switchLang(l)">{{ l.toUpperCase() }}</button>
+          }
+        </div>
       </nav>
 
       @if (loading()) {
@@ -78,7 +86,7 @@ import { BookingSiteService } from '../booking-site.service';
             @if (property().maxGuestNumber || property().maxGuests) {
               <p class="feat">
                 <span class="material-icons">people</span>
-                Jusqu'à {{ property().maxGuestNumber || property().maxGuests }} voyageurs
+                {{ 'bs.guests_up_to' | translate: { n: property().maxGuestNumber || property().maxGuests } }}
               </p>
             }
             @if (property().description) {
@@ -90,31 +98,33 @@ import { BookingSiteService } from '../booking-site.service';
 
           <!-- Formulaire de réservation -->
           <div class="booking-form">
-            <h2>Réserver ce logement</h2>
+            <h2>{{ 'bs.book_property' | translate }}</h2>
 
             <!-- Dates -->
             <div class="dates-row">
               <mat-form-field>
-                <mat-label>Arrivée</mat-label>
+                <mat-label>{{ 'bs.check_in' | translate }}</mat-label>
                 <input matInput [matDatepicker]="checkInPicker" [(ngModel)]="checkInDate"
-                       (ngModelChange)="onCheckInChange($event)" [min]="today" placeholder="jj/mm/aaaa">
+                       (ngModelChange)="onCheckInChange($event)" [min]="today"
+                       [placeholder]="'bs.date_placeholder' | translate">
                 <mat-datepicker-toggle matIconSuffix [for]="checkInPicker"></mat-datepicker-toggle>
                 <mat-datepicker #checkInPicker></mat-datepicker>
               </mat-form-field>
 
               <mat-form-field>
-                <mat-label>Départ</mat-label>
+                <mat-label>{{ 'bs.check_out' | translate }}</mat-label>
                 <input matInput [matDatepicker]="checkOutPicker" [(ngModel)]="checkOutDate"
-                       (ngModelChange)="onCheckOutChange($event)" [min]="minCheckOut" placeholder="jj/mm/aaaa">
+                       (ngModelChange)="onCheckOutChange($event)" [min]="minCheckOut"
+                       [placeholder]="'bs.date_placeholder' | translate">
                 <mat-datepicker-toggle matIconSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
                 <mat-datepicker #checkOutPicker></mat-datepicker>
               </mat-form-field>
 
               <div class="field-wrap">
-                <label class="select-label">Voyageurs</label>
+                <label class="select-label">{{ 'bs.guests' | translate }}</label>
                 <select [(ngModel)]="guestCount" class="native-select">
                   @for (n of guestOptions(); track n) {
-                    <option [value]="n">{{ n }} voyageur{{ n > 1 ? 's' : '' }}</option>
+                    <option [value]="n">{{ n }} {{ (n > 1 ? 'bs.travelers' : 'bs.traveler') | translate }}</option>
                   }
                 </select>
               </div>
@@ -123,7 +133,7 @@ import { BookingSiteService } from '../booking-site.service';
             <button mat-flat-button color="primary" (click)="checkAvailability()"
                     [disabled]="!checkInDate || !checkOutDate || checking()">
               @if (checking()) { <mat-spinner diameter="20"></mat-spinner> }
-              @else { Vérifier la disponibilité }
+              @else { {{ 'bs.check_availability' | translate }} }
             </button>
 
             <!-- Résultat disponibilité -->
@@ -131,47 +141,47 @@ import { BookingSiteService } from '../booking-site.service';
               @if (!available()) {
                 <div class="unavailable-box">
                   <span class="material-icons">event_busy</span>
-                  Ce logement n'est pas disponible sur ces dates. Veuillez choisir d'autres dates.
+                  {{ 'bs.unavailable' | translate }}
                 </div>
               } @else {
                 <!-- Prix -->
                 <div class="price-summary">
                   <div class="price-row">
-                    <span>{{ nights() }} nuit{{ nights() > 1 ? 's' : '' }}</span>
+                    <span>{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }}</span>
                     <span>{{ formatPrice(basePrice()) }}</span>
                   </div>
                   @if (cleaningFee() > 0) {
                     <div class="price-row">
-                      <span>Frais de ménage</span>
+                      <span>{{ 'bs.cleaning_fee' | translate }}</span>
                       <span>{{ formatPrice(cleaningFee()) }}</span>
                     </div>
                   }
                   <mat-divider></mat-divider>
                   <div class="price-row total">
-                    <span>Total</span>
+                    <span>{{ 'bs.total' | translate }}</span>
                     <span>{{ formatPrice(totalPrice()) }}</span>
                   </div>
                 </div>
 
                 <!-- Coordonnées voyageur -->
-                <h3>Vos coordonnées</h3>
+                <h3>{{ 'bs.your_info' | translate }}</h3>
                 <div class="guest-form">
                   <div class="name-row">
                     <mat-form-field style="width:100%">
-                      <mat-label>Prénom</mat-label>
+                      <mat-label>{{ 'bs.first_name' | translate }}</mat-label>
                       <input matInput [(ngModel)]="guest.firstName" required>
                     </mat-form-field>
                     <mat-form-field style="width:100%">
-                      <mat-label>Nom</mat-label>
+                      <mat-label>{{ 'bs.last_name' | translate }}</mat-label>
                       <input matInput [(ngModel)]="guest.lastName" required>
                     </mat-form-field>
                   </div>
                   <mat-form-field style="width:100%">
-                    <mat-label>Email</mat-label>
+                    <mat-label>{{ 'bs.email' | translate }}</mat-label>
                     <input matInput type="email" [(ngModel)]="guest.email" required>
                   </mat-form-field>
                   <mat-form-field style="width:100%">
-                    <mat-label>Téléphone</mat-label>
+                    <mat-label>{{ 'bs.phone' | translate }}</mat-label>
                     <input matInput type="tel" [(ngModel)]="guest.phone">
                   </mat-form-field>
                 </div>
@@ -184,7 +194,7 @@ import { BookingSiteService } from '../booking-site.service';
                         (click)="submitBooking()"
                         [disabled]="submitting() || !guest.firstName || !guest.lastName || !guest.email">
                   @if (submitting()) { <mat-spinner diameter="20"></mat-spinner> }
-                  @else { Confirmer la réservation }
+                  @else { {{ 'bs.confirm_booking' | translate }} }
                 </button>
               }
             }
@@ -201,6 +211,16 @@ import { BookingSiteService } from '../booking-site.service';
       background: white; box-shadow: 0 1px 4px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 10;
     }
     .brand { font-weight: 600; color: #0288d1; font-size: 1rem; }
+    .spacer { flex: 1; }
+    .lang-bar { display: flex; gap: 4px; }
+    .lang-btn {
+      background: #f5f7fa; color: #555; border: 1px solid #ddd;
+      border-radius: 4px; padding: 3px 8px; font-size: .75rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .lang-btn:hover { background: #e3f2fd; color: #0288d1; }
+    .lang-btn.active { background: #0288d1; color: white; border-color: #0288d1; }
+
     .center { display: flex; justify-content: center; padding: 80px; }
     .error-box { background: #fce4ec; color: #c62828; border-radius: 8px; padding: 20px; margin: 24px; }
 
@@ -259,6 +279,7 @@ import { BookingSiteService } from '../booking-site.service';
       .dates-row { flex-direction: column; }
       .dates-row mat-form-field { width: 100%; }
       .name-row { flex-direction: column; }
+      .lang-bar { display: none; }
     }
   `]
 })
@@ -294,13 +315,23 @@ export class BookingSitePropertyComponent implements OnInit {
   submitting = signal(false);
   bookingError = signal('');
 
+  langs = ['fr', 'en', 'es', 'de', 'it'];
+  currentLang = 'fr';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private svc: BookingSiteService
+    private svc: BookingSiteService,
+    private translate: TranslateService
   ) {}
 
+  get locale(): string {
+    const map: Record<string, string> = { fr: 'fr-FR', en: 'en-US', es: 'es-ES', de: 'de-DE', it: 'it-IT' };
+    return map[this.currentLang] ?? 'fr-FR';
+  }
+
   ngOnInit() {
+    this.initLang();
     this.slug = this.route.snapshot.params['slug'];
     this.propId = this.route.snapshot.params['propId'];
     this.svc.getSiteInfo(this.slug).subscribe({ next: v => this.siteInfo.set(v) });
@@ -315,9 +346,23 @@ export class BookingSitePropertyComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.error.set('Logement introuvable');
+        this.error.set(this.translate.instant('bs.error_property'));
       }
     });
+  }
+
+  initLang() {
+    const saved = localStorage.getItem('bs_lang');
+    const browser = navigator.language.slice(0, 2);
+    const lang = this.langs.includes(saved ?? '') ? saved! : this.langs.includes(browser) ? browser : 'fr';
+    this.currentLang = lang;
+    this.translate.use(lang);
+  }
+
+  switchLang(lang: string) {
+    this.currentLang = lang;
+    this.translate.use(lang);
+    localStorage.setItem('bs_lang', lang);
   }
 
   guestOptions(): number[] {
@@ -407,18 +452,18 @@ export class BookingSitePropertyComponent implements OnInit {
         if (bookingId) {
           this.router.navigate(['/', this.slug, 'booking', bookingId]);
         } else {
-          this.bookingError.set('Réservation créée mais identifiant manquant. Contactez l\'hôte.');
+          this.bookingError.set(this.translate.instant('bs.error_booking_id'));
         }
       },
       error: (err) => {
         this.submitting.set(false);
-        this.bookingError.set(err?.error?.error ?? 'Une erreur est survenue. Veuillez réessayer.');
+        this.bookingError.set(err?.error?.error ?? this.translate.instant('bs.error_booking'));
       }
     });
   }
 
   formatPrice(amount: number): string {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: this.currency() }).format(amount);
+    return new Intl.NumberFormat(this.locale, { style: 'currency', currency: this.currency() }).format(amount);
   }
 
   goBack() {

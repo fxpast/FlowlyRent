@@ -3,21 +3,27 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingSiteService } from '../booking-site.service';
 
 @Component({
   selector: 'app-booking-site-home',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule, MatButtonModule],
+  imports: [CommonModule, MatProgressSpinnerModule, MatButtonModule, TranslateModule],
   template: `
     <div class="site">
       <!-- Header -->
       <header class="site-header">
+        <div class="lang-bar">
+          @for (l of langs; track l) {
+            <button class="lang-btn" [class.active]="currentLang === l" (click)="switchLang(l)">{{ l.toUpperCase() }}</button>
+          }
+        </div>
         @if (siteInfo()?.companyLogoUrl) {
           <img class="logo" [src]="siteInfo().companyLogoUrl" [alt]="siteInfo().companyName">
         }
         <h1>{{ siteInfo()?.companyName || (siteInfo()?.firstName + ' ' + siteInfo()?.lastName) }}</h1>
-        <p class="subtitle">Réservez directement et bénéficiez des meilleurs tarifs</p>
+        <p class="subtitle">{{ 'bs.subtitle' | translate }}</p>
       </header>
 
       <!-- Contenu -->
@@ -27,9 +33,9 @@ import { BookingSiteService } from '../booking-site.service';
         } @else if (error()) {
           <div class="error-box">{{ error() }}</div>
         } @else if (properties().length === 0) {
-          <div class="empty">Aucun logement disponible pour le moment.</div>
+          <div class="empty">{{ 'bs.no_properties' | translate }}</div>
         } @else {
-          <h2 class="section-title">Nos logements</h2>
+          <h2 class="section-title">{{ 'bs.our_properties' | translate }}</h2>
           <div class="grid">
             @for (prop of properties(); track prop.id) {
               <article class="card" (click)="goToProperty(prop)" role="button" tabindex="0"
@@ -52,13 +58,13 @@ import { BookingSiteService } from '../booking-site.service';
                   @if (prop.maxGuestNumber || prop.maxGuests) {
                     <p class="guests">
                       <span class="material-icons">people</span>
-                      {{ prop.maxGuestNumber || prop.maxGuests }} voyageurs max
+                      {{ prop.maxGuestNumber || prop.maxGuests }} {{ 'bs.guests_max' | translate }}
                     </p>
                   }
                 </div>
                 <div class="card-footer">
                   <button mat-flat-button color="primary" (click)="goToProperty(prop); $event.stopPropagation()">
-                    Voir le logement
+                    {{ 'bs.see_property' | translate }}
                   </button>
                 </div>
               </article>
@@ -68,7 +74,7 @@ import { BookingSiteService } from '../booking-site.service';
       </main>
 
       <footer class="site-footer">
-        <span>Propulsé par</span>
+        <span>{{ 'bs.powered_by' | translate }}</span>
         <strong>FlowlyRent</strong>
       </footer>
     </div>
@@ -78,8 +84,17 @@ import { BookingSiteService } from '../booking-site.service';
 
     .site-header {
       background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
-      color: white; text-align: center; padding: 48px 24px;
+      color: white; text-align: center; padding: 40px 24px 48px;
     }
+    .lang-bar { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 16px; }
+    .lang-btn {
+      background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.3);
+      border-radius: 4px; padding: 3px 8px; font-size: .75rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,.25); }
+    .lang-btn.active { background: white; color: #0288d1; border-color: white; }
+
     .logo { height: 64px; border-radius: 8px; margin-bottom: 16px; }
     .site-header h1 { margin: 0 0 8px; font-size: 2rem; font-weight: 700; }
     .subtitle { margin: 0; opacity: .85; font-size: 1.05rem; }
@@ -139,17 +154,22 @@ export class BookingSiteHomeComponent implements OnInit {
   loading = signal(true);
   error = signal('');
 
+  langs = ['fr', 'en', 'es', 'de', 'it'];
+  currentLang = 'fr';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private svc: BookingSiteService
+    private svc: BookingSiteService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
+    this.initLang();
     this.slug = this.route.snapshot.params['slug'];
     this.svc.getSiteInfo(this.slug).subscribe({
       next: info => this.siteInfo.set(info),
-      error: () => this.error.set('Site introuvable')
+      error: () => this.error.set(this.translate.instant('bs.error_not_found'))
     });
     this.svc.getProperties(this.slug).subscribe({
       next: props => {
@@ -158,9 +178,23 @@ export class BookingSiteHomeComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.error.set('Impossible de charger les logements');
+        this.error.set(this.translate.instant('bs.error_load'));
       }
     });
+  }
+
+  initLang() {
+    const saved = localStorage.getItem('bs_lang');
+    const browser = navigator.language.slice(0, 2);
+    const lang = this.langs.includes(saved ?? '') ? saved! : this.langs.includes(browser) ? browser : 'fr';
+    this.currentLang = lang;
+    this.translate.use(lang);
+  }
+
+  switchLang(lang: string) {
+    this.currentLang = lang;
+    this.translate.use(lang);
+    localStorage.setItem('bs_lang', lang);
   }
 
   getCoverPhoto(prop: any): string {
@@ -174,6 +208,6 @@ export class BookingSiteHomeComponent implements OnInit {
   }
 
   goToProperty(prop: any) {
-    this.router.navigate(['/', this.slug, 'property', prop.propId ?? prop.id]);
+    this.router.navigate(['/', this.slug, 'property', prop.id]);
   }
 }

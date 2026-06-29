@@ -4,21 +4,28 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingSiteService } from '../booking-site.service';
 
 @Component({
   selector: 'app-booking-site-confirmation',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule, MatDividerModule],
+  imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule, MatDividerModule, TranslateModule],
   template: `
     <div class="page">
       <nav class="top-nav">
         <button mat-button (click)="goHome()">
-          <span class="material-icons">home</span> Accueil
+          <span class="material-icons">home</span> {{ 'bs.home' | translate }}
         </button>
         @if (siteInfo()) {
           <span class="brand">{{ siteInfo().companyName || siteInfo().firstName }}</span>
         }
+        <div class="spacer"></div>
+        <div class="lang-bar">
+          @for (l of langs; track l) {
+            <button class="lang-btn" [class.active]="currentLang === l" (click)="switchLang(l)">{{ l.toUpperCase() }}</button>
+          }
+        </div>
       </nav>
 
       @if (loading()) {
@@ -30,37 +37,37 @@ import { BookingSiteService } from '../booking-site.service';
           <div class="success-icon">
             <span class="material-icons">check_circle</span>
           </div>
-          <h1>Réservation confirmée !</h1>
-          <p class="sub">Merci pour votre réservation. Vous allez recevoir une confirmation par email.</p>
+          <h1>{{ 'bs.booking_confirmed' | translate }}</h1>
+          <p class="sub">{{ 'bs.booking_thanks' | translate }}</p>
 
           <div class="summary-card">
-            <h2>Récapitulatif</h2>
+            <h2>{{ 'bs.summary' | translate }}</h2>
             <div class="summary-row">
-              <span class="label">Numéro de réservation</span>
+              <span class="label">{{ 'bs.booking_number' | translate }}</span>
               <span class="value">#{{ bookingId }}</span>
             </div>
             @if (booking()?.firstNight || booking()?.checkIn) {
               <div class="summary-row">
-                <span class="label">Arrivée</span>
+                <span class="label">{{ 'bs.arrival' | translate }}</span>
                 <span class="value">{{ formatDate(booking().firstNight ?? booking().checkIn) }}</span>
               </div>
             }
             @if (booking()?.lastNight || booking()?.checkOut) {
               <div class="summary-row">
-                <span class="label">Départ</span>
+                <span class="label">{{ 'bs.departure' | translate }}</span>
                 <span class="value">{{ formatDate(booking().lastNight ?? booking().checkOut) }}</span>
               </div>
             }
             @if (booking()?.numAdult) {
               <div class="summary-row">
-                <span class="label">Voyageurs</span>
-                <span class="value">{{ booking().numAdult }} adulte{{ booking().numAdult > 1 ? 's' : '' }}</span>
+                <span class="label">{{ 'bs.guests' | translate }}</span>
+                <span class="value">{{ booking().numAdult }} {{ (booking().numAdult > 1 ? 'bs.adults' : 'bs.adult') | translate }}</span>
               </div>
             }
             @if (totalAmount() > 0) {
               <mat-divider></mat-divider>
               <div class="summary-row total">
-                <span class="label">Total à payer</span>
+                <span class="label">{{ 'bs.total_to_pay' | translate }}</span>
                 <span class="value">{{ formatPrice(totalAmount()) }}</span>
               </div>
             }
@@ -71,7 +78,7 @@ import { BookingSiteService } from '../booking-site.service';
             <div class="payment-section">
               <p class="payment-info">
                 <span class="material-icons">lock</span>
-                Paiement sécurisé par Stripe
+                {{ 'bs.secure_payment' | translate }}
               </p>
               @if (paymentError()) {
                 <div class="error-box">{{ paymentError() }}</div>
@@ -81,7 +88,7 @@ import { BookingSiteService } from '../booking-site.service';
                 @if (paying()) { <mat-spinner diameter="20"></mat-spinner> }
                 @else {
                   <span class="material-icons">credit_card</span>
-                  Payer {{ formatPrice(totalAmount()) }} en ligne
+                  {{ 'bs.pay_online' | translate }} — {{ formatPrice(totalAmount()) }}
                 }
               </button>
             </div>
@@ -90,12 +97,12 @@ import { BookingSiteService } from '../booking-site.service';
           @if (paymentDone()) {
             <div class="paid-badge">
               <span class="material-icons">verified</span>
-              Paiement reçu — merci !
+              {{ 'bs.payment_done' | translate }}
             </div>
           }
 
           <button mat-button (click)="goHome()" class="back-btn">
-            Retour aux logements
+            {{ 'bs.back_to_properties' | translate }}
           </button>
         </div>
       }
@@ -109,6 +116,16 @@ import { BookingSiteService } from '../booking-site.service';
       background: white; box-shadow: 0 1px 4px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 10;
     }
     .brand { font-weight: 600; color: #0288d1; font-size: 1rem; }
+    .spacer { flex: 1; }
+    .lang-bar { display: flex; gap: 4px; }
+    .lang-btn {
+      background: #f5f7fa; color: #555; border: 1px solid #ddd;
+      border-radius: 4px; padding: 3px 8px; font-size: .75rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .lang-btn:hover { background: #e3f2fd; color: #0288d1; }
+    .lang-btn.active { background: #0288d1; color: white; border-color: #0288d1; }
+
     .center { display: flex; justify-content: center; padding: 80px; }
     .error-box { background: #fce4ec; color: #c62828; border-radius: 8px; padding: 20px; margin: 16px 0; }
 
@@ -150,6 +167,10 @@ import { BookingSiteService } from '../booking-site.service';
     .paid-badge .material-icons { color: #43a047; }
 
     .back-btn { color: #0288d1; margin-top: 8px; }
+
+    @media (max-width: 600px) {
+      .lang-bar { display: none; }
+    }
   `]
 })
 export class BookingSiteConfirmationComponent implements OnInit {
@@ -164,13 +185,23 @@ export class BookingSiteConfirmationComponent implements OnInit {
   paymentError = signal('');
   paymentDone = signal(false);
 
+  langs = ['fr', 'en', 'es', 'de', 'it'];
+  currentLang = 'fr';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private svc: BookingSiteService
+    private svc: BookingSiteService,
+    private translate: TranslateService
   ) {}
 
+  get locale(): string {
+    const map: Record<string, string> = { fr: 'fr-FR', en: 'en-US', es: 'es-ES', de: 'de-DE', it: 'it-IT' };
+    return map[this.currentLang] ?? 'fr-FR';
+  }
+
   ngOnInit() {
+    this.initLang();
     this.slug = this.route.snapshot.params['slug'];
     this.bookingId = this.route.snapshot.params['bookingId'];
 
@@ -185,9 +216,23 @@ export class BookingSiteConfirmationComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.error.set('Réservation introuvable');
+        this.error.set(this.translate.instant('bs.error_reservation'));
       }
     });
+  }
+
+  initLang() {
+    const saved = localStorage.getItem('bs_lang');
+    const browser = navigator.language.slice(0, 2);
+    const lang = this.langs.includes(saved ?? '') ? saved! : this.langs.includes(browser) ? browser : 'fr';
+    this.currentLang = lang;
+    this.translate.use(lang);
+  }
+
+  switchLang(lang: string) {
+    this.currentLang = lang;
+    this.translate.use(lang);
+    localStorage.setItem('bs_lang', lang);
   }
 
   totalAmount(): number {
@@ -205,7 +250,7 @@ export class BookingSiteConfirmationComponent implements OnInit {
     const cancelUrl  = `${origin}/${this.slug}/booking/${this.bookingId}`;
     const b = this.booking();
     const email = b?.guestEmail ?? '';
-    const desc = `Réservation #${this.bookingId}`;
+    const desc = `${this.translate.instant('bs.booking_number')} #${this.bookingId}`;
 
     this.svc.createCheckout(this.slug, this.bookingId, {
       amountCents: Math.round(this.totalAmount() * 100),
@@ -223,18 +268,18 @@ export class BookingSiteConfirmationComponent implements OnInit {
       },
       error: (err) => {
         this.paying.set(false);
-        this.paymentError.set(err?.error?.error ?? 'Erreur lors de la création du paiement');
+        this.paymentError.set(err?.error?.error ?? this.translate.instant('bs.error_payment'));
       }
     });
   }
 
   formatDate(d: string): string {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(d).toLocaleDateString(this.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   formatPrice(amount: number): string {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+    return new Intl.NumberFormat(this.locale, { style: 'currency', currency: 'EUR' }).format(amount);
   }
 
   goHome() {
