@@ -1404,6 +1404,7 @@
                "leg_unavailable":  "Non disponible",
                "leg_selected":  "Sélectionné",
                "select_dates_first":  "Veuillez sélectionner vos dates dans le calendrier ci-dessus.",
-               "change_dates":  "Modifier les dates"
+               "change_dates":  "Modifier les dates",
+               "taxe_sejour":  "Taxe de séjour"
            }
 }

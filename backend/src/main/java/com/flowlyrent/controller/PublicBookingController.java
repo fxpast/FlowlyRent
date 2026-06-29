@@ -261,6 +261,97 @@ public class PublicBookingController {
     }
 
     // -------------------------------------------------------------------------
+    // Estimation de prix (même logique que AdminBookingController.estimate)
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/{slug}/properties/{propertyId}/estimate")
+    public ResponseEntity<?> estimate(
+            @PathVariable String slug,
+            @PathVariable String propertyId,
+            @RequestParam String arrival,
+            @RequestParam String departure,
+            @RequestParam(defaultValue = "1") int numAdult) {
+        try {
+            Beds24Account account = accountForSlug(slug);
+            AppUser user = account.getAppUser();
+            String token = beds24.tokenFor(account);
+
+            LocalDate arrDate = LocalDate.parse(arrival.substring(0, 10));
+            LocalDate depDate = LocalDate.parse(departure.substring(0, 10));
+            long nights = java.time.temporal.ChronoUnit.DAYS.between(arrDate, depDate);
+            if (nights <= 0) return ResponseEntity.badRequest().body(Map.of("error", "Dates invalides"));
+
+            PropertyConfig cfg = propConfigRepo
+                    .findByUserIdAndBeds24PropertyId(user.getId(), propertyId)
+                    .orElse(null);
+
+            Map<String, String> calParams = new HashMap<>();
+            calParams.put("propertyId",     propertyId);
+            calParams.put("startDate",      arrDate.toString());
+            calParams.put("endDate",        depDate.toString());
+            calParams.put("includePrices",  "1");
+            List<Map<String, Object>> rooms = beds24.getCalendar(token, calParams);
+
+            List<Map<String, Object>> cal = new java.util.ArrayList<>();
+            for (Map<String, Object> room : rooms) {
+                if (!propertyId.equals(extractPropertyId(room))) continue;
+                Object calObj = room.get("calendar");
+                if (calObj instanceof List<?> entries) {
+                    for (Object e : entries) {
+                        if (e instanceof Map<?, ?> m) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> entry = (Map<String, Object>) m;
+                            cal.add(entry);
+                        }
+                    }
+                }
+            }
+
+            double nightsPrice = 0.0;
+            for (LocalDate night = arrDate; night.isBefore(depDate); night = night.plusDays(1)) {
+                for (Map<String, Object> entry : cal) {
+                    Object p = entry.get("price1");
+                    if (p == null) p = entry.get("price");
+                    if (p == null) continue;
+                    double price;
+                    try { price = Double.parseDouble(p.toString()); } catch (Exception ignored) { continue; }
+                    try {
+                        LocalDate from = LocalDate.parse(truncateDate(Objects.toString(entry.get("from"), "")));
+                        LocalDate to   = LocalDate.parse(truncateDate(Objects.toString(entry.get("to"),   "")));
+                        if (!night.isBefore(from) && !night.isAfter(to)) {
+                            nightsPrice += price;
+                            if (cfg != null && cfg.getExtraPersonThreshold() != null && cfg.getExtraPersonFee() != null) {
+                                int extra = numAdult - cfg.getExtraPersonThreshold();
+                                if (extra > 0) nightsPrice += extra * cfg.getExtraPersonFee();
+                            }
+                            break;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            // Réductions long séjour
+            if (nights >= 28 && cfg != null && cfg.getDiscount28Nights() != null && cfg.getDiscount28Nights() > 0) {
+                nightsPrice = nightsPrice * (100.0 - cfg.getDiscount28Nights()) / 100.0;
+            } else if (nights >= 7 && cfg != null && cfg.getDiscount7Nights() != null && cfg.getDiscount7Nights() > 0) {
+                nightsPrice = nightsPrice * (100.0 - cfg.getDiscount7Nights()) / 100.0;
+            }
+
+            double taxeSejour  = Math.round(nightsPrice * 0.0275 * 100.0) / 100.0;
+            double cleaningFee = cfg != null && cfg.getCleaningFee() != null ? cfg.getCleaningFee() : 0.0;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("nights",      nights);
+            result.put("nightsPrice", Math.round(nightsPrice * 100.0) / 100.0);
+            result.put("taxeSejour",  taxeSejour);
+            result.put("cleaningFee", Math.round(cleaningFee * 100.0) / 100.0);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Réservation
     // -------------------------------------------------------------------------
 

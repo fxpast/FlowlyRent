@@ -1395,6 +1395,7 @@
                "leg_unavailable":  "No disponible",
                "leg_selected":  "Seleccionado",
                "select_dates_first":  "Seleccione sus fechas en el calendario de arriba.",
-               "change_dates":  "Cambiar fechas"
+               "change_dates":  "Cambiar fechas",
+               "taxe_sejour":  "Tasa turística"
            }
 }

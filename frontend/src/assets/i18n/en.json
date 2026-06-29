@@ -1397,6 +1397,7 @@
                "leg_unavailable":  "Unavailable",
                "leg_selected":  "Selected",
                "select_dates_first":  "Please select your dates in the calendar above.",
-               "change_dates":  "Change dates"
+               "change_dates":  "Change dates",
+               "taxe_sejour":  "Tourist tax"
            }
 }

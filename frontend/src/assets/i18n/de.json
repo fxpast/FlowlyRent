@@ -1395,6 +1395,7 @@
                "leg_unavailable":  "Nicht verfügbar",
                "leg_selected":  "Ausgewählt",
                "select_dates_first":  "Bitte wählen Sie Ihre Daten im Kalender oben aus.",
-               "change_dates":  "Daten ändern"
+               "change_dates":  "Daten ändern",
+               "taxe_sejour":  "Kurtaxe"
            }
 }

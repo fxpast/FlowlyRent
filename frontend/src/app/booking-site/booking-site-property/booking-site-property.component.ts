@@ -257,6 +257,12 @@ interface CalMonth {
                       <span>{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }}</span>
                       <span>{{ formatPrice(basePrice()) }}</span>
                     </div>
+                    @if (taxeSejour() > 0) {
+                      <div class="price-row">
+                        <span>{{ 'bs.taxe_sejour' | translate }}</span>
+                        <span>{{ formatPrice(taxeSejour()) }}</span>
+                      </div>
+                    }
                     @if (cleaningFee() > 0) {
                       <div class="price-row">
                         <span>{{ 'bs.cleaning_fee' | translate }}</span>
@@ -541,6 +547,7 @@ export class BookingSitePropertyComponent implements OnInit {
   nights = signal(0);
   basePrice = signal(0);
   cleaningFee = signal(0);
+  taxeSejour = signal(0);
   totalPrice = signal(0);
   currency = signal('EUR');
 
@@ -732,26 +739,21 @@ export class BookingSitePropertyComponent implements OnInit {
       cur = this.toDateStr(d);
     }
 
-    // Dates libres localement — tenter d'obtenir le tarif via Beds24
-    this.svc.getOffers(this.slug, this.propId, this.checkInStr, this.checkOutStr).subscribe({
-      next: offers => {
+    // Dates libres localement — calculer l'estimation de prix
+    this.svc.getEstimate(this.slug, this.propId, this.checkInStr, this.checkOutStr, this.guestCount).subscribe({
+      next: est => {
         this.checking.set(false);
         this.availabilityChecked.set(true);
         this.available.set(true);
-        if (offers && offers.length > 0) {
-          this.buildPriceSummary(offers, this.checkInStr, this.checkOutStr);
-        } else {
-          // Beds24 n'a pas de tarif configuré — on montre disponible sans détail prix
-          const nights = this.daysBetween(this.checkInStr, this.checkOutStr);
-          this.nights.set(nights);
-          this.basePrice.set(0);
-          this.cleaningFee.set(0);
-          this.totalPrice.set(0);
-          this.currency.set('EUR');
-        }
+        this.nights.set(est.nights);
+        this.basePrice.set(est.nightsPrice);
+        this.cleaningFee.set(est.cleaningFee);
+        this.taxeSejour.set(est.taxeSejour);
+        this.totalPrice.set(Math.round((est.nightsPrice + est.cleaningFee + est.taxeSejour) * 100) / 100);
+        this.currency.set('EUR');
       },
       error: () => {
-        // Erreur Beds24 : les dates locales sont libres, on confirme disponible sans prix
+        // Pas de tarif disponible — on confirme disponible sans prix
         this.checking.set(false);
         this.availabilityChecked.set(true);
         this.available.set(true);
@@ -759,6 +761,7 @@ export class BookingSitePropertyComponent implements OnInit {
         this.nights.set(nights);
         this.basePrice.set(0);
         this.cleaningFee.set(0);
+        this.taxeSejour.set(0);
         this.totalPrice.set(0);
         this.currency.set('EUR');
       }

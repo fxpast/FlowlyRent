@@ -31,6 +31,13 @@ export class BookingSiteService {
     });
   }
 
+  getEstimate(slug: string, propId: string, arrival: string, departure: string, numAdult = 1):
+      Observable<{ nights: number, nightsPrice: number, taxeSejour: number, cleaningFee: number }> {
+    return this.http.get<any>(`${this.base}/${slug}/properties/${propId}/estimate`, {
+      params: { arrival, departure, numAdult: String(numAdult) }
+    });
+  }
+
   getBlockedDates(slug: string, propId: string, from: string, to: string): Observable<{ blockedDates: string[], prices: Record<string, number> }> {
     return this.http.get<{ blockedDates: string[], prices: Record<string, number> }>(`${this.base}/${slug}/properties/${propId}/blocked-dates`, {
       params: { from, to }
