@@ -73,23 +73,16 @@ import { BookingSiteService } from '../booking-site.service';
             }
           </div>
 
-          <!-- Paiement en ligne si montant > 0 -->
+          <!-- Paiement en ligne via Beds24 si montant > 0 -->
           @if (totalAmount() > 0 && !paymentDone()) {
             <div class="payment-section">
               <p class="payment-info">
                 <span class="material-icons">lock</span>
                 {{ 'bs.secure_payment' | translate }}
               </p>
-              @if (paymentError()) {
-                <div class="error-box">{{ paymentError() }}</div>
-              }
-              <button mat-flat-button color="primary" class="pay-btn"
-                      (click)="payOnline()" [disabled]="paying()">
-                @if (paying()) { <mat-spinner diameter="20"></mat-spinner> }
-                @else {
-                  <span class="material-icons">credit_card</span>
-                  {{ 'bs.pay_online' | translate }} — {{ formatPrice(totalAmount()) }}
-                }
+              <button mat-flat-button color="primary" class="pay-btn" (click)="payOnline()">
+                <span class="material-icons">credit_card</span>
+                {{ 'bs.pay_online' | translate }} — {{ formatPrice(totalAmount()) }}
               </button>
             </div>
           }
@@ -243,34 +236,10 @@ export class BookingSiteConfirmationComponent implements OnInit {
   }
 
   payOnline() {
-    this.paying.set(true);
-    this.paymentError.set('');
-    const origin = window.location.origin;
-    const successUrl = `${origin}/${this.slug}/booking/${this.bookingId}?paid=true`;
-    const cancelUrl  = `${origin}/${this.slug}/booking/${this.bookingId}`;
-    const b = this.booking();
-    const email = b?.guestEmail ?? '';
-    const desc = `${this.translate.instant('bs.booking_number')} #${this.bookingId}`;
-
-    this.svc.createCheckout(this.slug, this.bookingId, {
-      amountCents: Math.round(this.totalAmount() * 100),
-      currency: 'eur',
-      description: desc,
-      guestEmail: email,
-      successUrl,
-      cancelUrl
-    }).subscribe({
-      next: res => {
-        this.paying.set(false);
-        if (res.sessionUrl) {
-          window.location.href = res.sessionUrl;
-        }
-      },
-      error: (err) => {
-        this.paying.set(false);
-        this.paymentError.set(err?.error?.error ?? this.translate.instant('bs.error_payment'));
-      }
-    });
+    // Redirection vers la page de paiement Beds24 (Stripe intégré)
+    const price = Math.round(this.totalAmount() * 100) / 100;
+    const url = `https://beds24.com/bookpay.php?bookid=${encodeURIComponent(this.bookingId)}&g=st&capture=1&pay=${encodeURIComponent(price)}`;
+    window.location.href = url;
   }
 
   formatDate(d: string): string {
