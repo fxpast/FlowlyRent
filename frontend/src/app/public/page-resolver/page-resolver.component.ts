@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -29,22 +29,15 @@ export class PageResolverComponent implements OnInit {
     const userSlug = this.route.snapshot.paramMap.get('userSlug')!;
     const pageSlug = this.route.snapshot.paramMap.get('pageSlug')!;
 
-    // Résoudre /{slug}/{shortNameSlug} → /{slug}/property/{propId}
-    this.http.get<any[]>(`${environment.apiUrl}/public/${userSlug}/properties`)
-      .pipe(catchError(() => of([])))
-      .subscribe(props => {
-        const match = (props ?? []).find(p => this.slugify(p.shortName || '') === pageSlug);
-        if (match) {
-          this.router.navigate(['/', userSlug, 'property', match.id], { replaceUrl: true });
+    // Résoudre /{slug}/{shortNameSlug} → /{slug}/property/{propId} via endpoint dédié
+    this.http.get<{ propId: string }>(`${environment.apiUrl}/public/${userSlug}/resolve/${pageSlug}`)
+      .pipe(catchError(() => of(null)))
+      .subscribe(res => {
+        if (res?.propId) {
+          this.router.navigate(['/', userSlug, 'property', res.propId], { replaceUrl: true });
         } else {
-          // Slug inconnu → accueil du site de réservation
           this.router.navigate(['/', userSlug], { replaceUrl: true });
         }
       });
-  }
-
-  private slugify(text: string): string {
-    return text.normalize('NFD').replace(/\p{M}/gu, '')
-      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
 }

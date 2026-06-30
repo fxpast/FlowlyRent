@@ -95,6 +95,35 @@ public class PublicBookingController {
         }
     }
 
+    @GetMapping("/{slug}/resolve/{propertySlug}")
+    public ResponseEntity<?> resolvePropertySlug(
+            @PathVariable String slug,
+            @PathVariable String propertySlug) {
+        try {
+            AppUser user = userForSlug(slug);
+            List<PropertyConfig> cfgs = propConfigRepo.findByUserIdAndLocalPropertyIdIsNull(user.getId());
+            String target = slugify(propertySlug);
+            for (PropertyConfig cfg : cfgs) {
+                String sn = cfg.getShortName();
+                if (sn != null && !sn.isBlank() && slugify(sn).equals(target) && cfg.getBeds24PropertyId() != null) {
+                    return ResponseEntity.ok(Map.of("propId", cfg.getBeds24PropertyId()));
+                }
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    private static String slugify(String text) {
+        if (text == null) return "";
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+    }
+
     @GetMapping("/{slug}/properties/{propertyId}")
     public ResponseEntity<?> getProperty(
             @PathVariable String slug,
