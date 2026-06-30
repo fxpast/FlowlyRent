@@ -429,6 +429,49 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
       </mat-card-actions>
     </mat-card>
 
+    <!-- Paiement Stripe -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>credit_card</mat-icon>
+        <mat-card-title>{{ 'settings.stripe_title' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'settings.stripe_subtitle' | translate }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (profile()) {
+          @if (profile()!.stripeConfigured) {
+            <div class="stripe-badge">
+              <span class="material-icons" style="color:#43a047">check_circle</span>
+              {{ 'settings.stripe_configured' | translate }}
+            </div>
+          }
+          <mat-form-field class="full-width">
+            <mat-label>{{ 'settings.stripe_pub_key' | translate }}</mat-label>
+            <input matInput [(ngModel)]="stripeForm.publishableKey"
+                   placeholder="pk_live_... (depuis le Dashboard Stripe)" />
+            <mat-hint>{{ 'settings.stripe_pub_hint' | translate }}</mat-hint>
+          </mat-form-field>
+          <mat-form-field class="full-width" style="margin-top:12px">
+            <mat-label>{{ 'settings.stripe_secret_key' | translate }}</mat-label>
+            <input matInput [type]="showStripeSecret() ? 'text' : 'password'"
+                   [(ngModel)]="stripeForm.secretKey"
+                   [placeholder]="profile()!.stripeConfigured ? '••••••••••••••••••••••••••' : 'sk_live_... (depuis le Dashboard Stripe)'" />
+            <button mat-icon-button matSuffix (click)="showStripeSecret.set(!showStripeSecret())">
+              <mat-icon>{{ showStripeSecret() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-hint>{{ 'settings.stripe_secret_hint' | translate }}</mat-hint>
+          </mat-form-field>
+          @if (stripeMsg()) {
+            <p class="msg" [class.error]="stripeError()">{{ stripeMsg() }}</p>
+          }
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="saveStripe()" [disabled]="savingStripe()">
+          @if (savingStripe()) { <mat-spinner diameter="18" /> } @else { {{ 'common.save' | translate }} }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
     <!-- Mode de gestion -->
     <mat-card class="section-card">
       <mat-card-header>
@@ -495,6 +538,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .msg.error { color: #d32f2f; }
     .msg.success { color: #2e7d32; }
     .error { color: #d32f2f; }
+    .stripe-badge { display: flex; align-items: center; gap: 8px; background: #e8f5e9; color: #2e7d32; border-radius: 8px; padding: 10px 14px; font-size: .9rem; font-weight: 500; margin-bottom: 16px; }
     mat-card-actions { padding: 16px; display: flex; align-items: center; }
     mat-spinner { display: inline-block; }
     .msg.success { color: #2e7d32; }
@@ -552,6 +596,12 @@ export class SettingsComponent implements OnInit {
   qontoConnecting = signal(false);
   qontoConnectMsg = signal('');
   showQontoKey = signal(false);
+
+  stripeForm = { publishableKey: '', secretKey: '' };
+  savingStripe = signal(false);
+  stripeMsg = signal('');
+  stripeError = signal(false);
+  showStripeSecret = signal(false);
 
   pwd = { current: '', new: '', confirm: '' };
   savingPwd = signal(false);
@@ -654,6 +704,7 @@ export class SettingsComponent implements OnInit {
         invoiceFooter: p.invoiceFooter ?? ''
       };
       this.webhookUrl.set(`${window.location.origin}/api/webhooks/beds24/${p.userId}`);
+      this.stripeForm.publishableKey = p.stripePublishableKey ?? '';
     });
     this.loadBeds24Status();
     this.loadQontoStatus();
@@ -704,6 +755,31 @@ export class SettingsComponent implements OnInit {
         this.savingBilling.set(false);
         this.billingMsg.set(this.t.instant('settings.billing_error'));
         this.billingError.set(true);
+      }
+    });
+  }
+
+  saveStripe(): void {
+    const payload: Record<string, string> = {
+      stripePublishableKey: this.stripeForm.publishableKey
+    };
+    if (this.stripeForm.secretKey) {
+      payload['stripeSecretKey'] = this.stripeForm.secretKey;
+    }
+    this.savingStripe.set(true);
+    this.stripeMsg.set('');
+    this.userService.updateProfile(payload).subscribe({
+      next: p => {
+        this.profile.set(p);
+        this.stripeForm.secretKey = '';
+        this.savingStripe.set(false);
+        this.stripeMsg.set(this.t.instant('settings.stripe_saved'));
+        this.stripeError.set(false);
+      },
+      error: () => {
+        this.savingStripe.set(false);
+        this.stripeMsg.set(this.t.instant('settings.stripe_error'));
+        this.stripeError.set(true);
       }
     });
   }

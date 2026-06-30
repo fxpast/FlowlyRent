@@ -64,8 +64,8 @@ export class BookingSiteService {
     );
   }
 
-  getStripePublishableKey(): Observable<{ publishableKey: string }> {
-    return this.http.get<{ publishableKey: string }>(`${this.base}/stripe-key`);
+  getStripePublishableKey(slug: string): Observable<{ publishableKey: string }> {
+    return this.http.get<{ publishableKey: string }>(`${this.base}/${slug}/stripe-key`);
   }
 
   createPaymentIntent(slug: string, data: {

@@ -212,7 +212,7 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
 
   private async initStripe() {
     try {
-      const { publishableKey } = await this.svc.getStripePublishableKey().toPromise() as any;
+      const { publishableKey } = await this.svc.getStripePublishableKey(this.slug).toPromise() as any;
 
       const { clientSecret } = await this.svc.createPaymentIntent(this.slug, {
         bookingId:   this.state.bookingId,

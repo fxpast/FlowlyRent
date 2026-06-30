@@ -31,6 +31,8 @@ export interface UserProfile {
   companyAddress?: string;
   companyLogoUrl?: string;
   invoiceFooter?: string;
+  stripePublishableKey?: string;
+  stripeConfigured?: boolean;
 }
 
 export interface SubscriptionInfo {
@@ -50,7 +52,7 @@ export class UserService {
     return this.http.get<UserProfile>(`${this.base}/user/profile`);
   }
 
-  updateProfile(data: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'publicSiteSlug' | 'phone' | 'listingsSlug' | 'beds24OwnerId' | 'siret' | 'companyName' | 'companyAddress' | 'companyLogoUrl' | 'invoiceFooter'>>): Observable<UserProfile> {
+  updateProfile(data: Record<string, string>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.base}/user/profile`, data);
   }
 

@@ -49,6 +49,9 @@ public class UserSettingsController {
         if (body.containsKey("companyAddress")) user.setCompanyAddress(body.get("companyAddress"));
         if (body.containsKey("companyLogoUrl")) user.setCompanyLogoUrl(body.get("companyLogoUrl"));
         if (body.containsKey("invoiceFooter")) user.setInvoiceFooter(body.get("invoiceFooter"));
+        if (body.containsKey("stripePublishableKey")) user.setStripePublishableKey(body.get("stripePublishableKey"));
+        if (body.containsKey("stripeSecretKey") && !body.get("stripeSecretKey").isBlank())
+            user.setStripeSecretKey(body.get("stripeSecretKey"));
         if (body.containsKey("listingsSlug"))  user.setListingsSlug(body.get("listingsSlug"));
         if (body.containsKey("beds24OwnerId")) user.setBeds24OwnerId(body.get("beds24OwnerId"));
         if (body.containsKey("publicSiteSlug")) {
@@ -202,6 +205,8 @@ public class UserSettingsController {
         r.setCompanyLogoUrl(user.getCompanyLogoUrl());
         r.setInvoiceFooter(user.getInvoiceFooter());
         r.setChannelType(user.getChannelType());
+        r.setStripePublishableKey(user.getStripePublishableKey());
+        r.setStripeConfigured(user.getStripeSecretKey() != null && !user.getStripeSecretKey().isBlank());
         return r;
     }
 }

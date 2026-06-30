@@ -46,8 +46,9 @@ public class PublicBookingController {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
 
+    // Clé de fallback platform (non utilisée si l'hôte a configuré ses propres clés)
     @Value("${stripe.publishable-key:}")
-    private String stripePublishableKey;
+    private String platformPublishableKey;
 
     // -------------------------------------------------------------------------
     // Informations du site de l'hôte
@@ -633,13 +634,16 @@ public class PublicBookingController {
     // Paiement Stripe — réservation directe
     // -------------------------------------------------------------------------
 
-    /** Retourne la clé publique Stripe (non secrète — peut être exposée au frontend). */
-    @GetMapping("/stripe-key")
-    public ResponseEntity<?> getStripePublishableKey() {
-        if (stripePublishableKey == null || stripePublishableKey.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré"));
+    /** Retourne la clé publique Stripe de l'hôte identifié par son slug. */
+    @GetMapping("/{slug}/stripe-key")
+    public ResponseEntity<?> getStripePublishableKey(@PathVariable String slug) {
+        AppUser user = userRepo.findByPublicSiteSlug(slug).orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
+        String key = user.getStripePublishableKey();
+        if (key == null || key.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré par cet hôte"));
         }
-        return ResponseEntity.ok(Map.of("publishableKey", stripePublishableKey));
+        return ResponseEntity.ok(Map.of("publishableKey", key));
     }
 
     /**
@@ -652,10 +656,14 @@ public class PublicBookingController {
             @PathVariable String slug,
             @RequestBody Map<String, Object> body) {
         try {
-            userRepo.findByPublicSiteSlug(slug)
+            AppUser user = userRepo.findByPublicSiteSlug(slug)
                     .orElseThrow(() -> new IllegalArgumentException("Site non trouvé : " + slug));
 
-            Stripe.apiKey = stripeSecretKey;
+            String secretKey = user.getStripeSecretKey();
+            if (secretKey == null || secretKey.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré par cet hôte"));
+            }
+            Stripe.apiKey = secretKey;
 
             long amountCents   = toLong(body.get("amountCents"));
             String currency    = body.getOrDefault("currency",    "eur").toString().toLowerCase();

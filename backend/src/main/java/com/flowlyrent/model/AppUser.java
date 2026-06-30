@@ -51,6 +51,12 @@ public class AppUser implements UserDetails {
     private String stripeSubscriptionId;
     private java.time.LocalDateTime planExpiresAt;
 
+    // Clés Stripe propres à chaque hôte (pour encaisser sur leur propre compte)
+    private String stripePublishableKey;
+
+    @JsonIgnore
+    private String stripeSecretKey;
+
     private String phone;
     private String listingsSlug;
     private String beds24OwnerId;
