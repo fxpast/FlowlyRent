@@ -190,15 +190,15 @@ public class PublicBookingController {
                 }
             }
 
-            // maxPeople par propriété
-            Map<String, Integer> maxPeopleMap = new java.util.HashMap<>();
+            // maxPeople par room Beds24
+            Map<String, Integer> maxPeopleFromRooms = new java.util.HashMap<>();
             try {
                 List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of());
                 for (Map<String, Object> r : rooms) {
                     Object pid = r.get("propertyId");
                     Object mp = r.get("maxPeople");
                     if (pid != null && mp != null)
-                        maxPeopleMap.put(pid.toString(), ((Number) mp).intValue());
+                        maxPeopleFromRooms.put(pid.toString(), (int) toLong(mp));
                 }
             } catch (Exception ignored) {}
 
@@ -206,8 +206,21 @@ public class PublicBookingController {
             for (Map<String, Object> prop : allProps) {
                 String pid = extractPropertyId(prop);
                 if (pid == null || blockedPropIds.contains(pid)) continue;
-                int max = maxPeopleMap.getOrDefault(pid, 99);
-                if (guests <= max) available.add(pid);
+
+                // Résolution maxPeople : rooms Beds24 > champs directs de /properties
+                int max;
+                if (maxPeopleFromRooms.containsKey(pid)) {
+                    max = maxPeopleFromRooms.get(pid);
+                } else {
+                    Object mp = prop.get("maxPeople") != null ? prop.get("maxPeople")
+                            : prop.get("maxGuestNumber") != null ? prop.get("maxGuestNumber")
+                            : prop.get("maxGuests");
+                    max = mp != null ? (int) toLong(mp) : 0;
+                }
+
+                log.info("[search] propId={} maxPeople={} guests={} blocked={}", pid, max, guests, blockedPropIds.contains(pid));
+                // max == 0 → limite inconnue → inclure
+                if (max == 0 || guests <= max) available.add(pid);
             }
 
             return ResponseEntity.ok(Map.of("availablePropertyIds", available));
