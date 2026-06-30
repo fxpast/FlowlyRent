@@ -231,8 +231,11 @@ export class BookingSiteConfirmationComponent implements OnInit {
   totalAmount(): number {
     const b = this.booking();
     if (!b) return 0;
-    const price = b.price?.[0]?.price ?? b.totalPrice ?? b.total ?? b.amount ?? 0;
-    return Number(price);
+    const raw = b.price;
+    // Beds24 retourne price comme nombre ou comme array [{price:x}]
+    if (Array.isArray(raw) && raw.length > 0) return Number(raw[0]?.price ?? 0);
+    if (raw !== null && raw !== undefined && !Array.isArray(raw)) return Number(raw);
+    return Number(b.totalPrice ?? b.total ?? b.amount ?? 0);
   }
 
   payOnline() {
