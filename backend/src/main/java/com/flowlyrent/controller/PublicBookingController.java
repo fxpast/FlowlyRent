@@ -77,7 +77,18 @@ public class PublicBookingController {
                     .filter(Beds24Account::isConnected)
                     .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
             List<Map<String, Object>> props = beds24.getProperties(beds24.tokenFor(account), params);
-            props.forEach(prop -> enrichWithCoverPhoto(prop, user.getId()));
+            props.forEach(prop -> {
+                enrichWithCoverPhoto(prop, user.getId());
+                // Ajouter shortName depuis PropertyConfig pour les URLs de logement
+                String pid = extractPropertyId(prop);
+                if (pid != null) {
+                    propConfigRepo.findByUserIdAndBeds24PropertyId(user.getId(), pid)
+                            .ifPresent(cfg -> {
+                                if (cfg.getShortName() != null && !cfg.getShortName().isBlank())
+                                    prop.put("shortName", cfg.getShortName());
+                            });
+                }
+            });
             return ResponseEntity.ok(props);
         } catch (Exception e) {
             return error(e);
