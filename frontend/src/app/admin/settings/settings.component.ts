@@ -341,7 +341,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
           <mat-form-field class="full-width">
             <mat-label>{{ 'settings.slug' | translate }}</mat-label>
             <input matInput [(ngModel)]="profileEdit.publicSiteSlug" />
-            <mat-hint>URL : /public/{{ profileEdit.publicSiteSlug }}/properties</mat-hint>
+            <mat-hint>URL site public : {{ publicSiteUrl() }}</mat-hint>
           </mat-form-field>
           <mat-form-field class="full-width">
             <mat-label>{{ 'settings.phone' | translate }}</mat-label>
@@ -349,34 +349,20 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <mat-hint>{{ 'settings.phone_hint' | translate }}</mat-hint>
           </mat-form-field>
           <mat-divider style="margin:16px 0"></mat-divider>
-          <div class="webhook-label" style="margin-bottom:10px">
-            <mat-icon>event_seat</mat-icon>
-            <strong>{{ 'settings.beds24_booking_pages' | translate }}</strong>
-            <span class="webhook-hint">{{ 'settings.beds24_booking_pages_hint' | translate }}</span>
-          </div>
-          <div class="form-row">
-            <mat-form-field subscriptSizing="dynamic">
-              <mat-label>{{ 'settings.beds24_owner_id' | translate }}</mat-label>
-              <input matInput [(ngModel)]="profileEdit.beds24OwnerId" placeholder="73803" />
-              <mat-hint>{{ 'settings.beds24_owner_id_hint' | translate }}</mat-hint>
-            </mat-form-field>
-            <mat-form-field subscriptSizing="dynamic">
-              <mat-label>{{ 'settings.listings_slug' | translate }}</mat-label>
-              <input matInput [(ngModel)]="profileEdit.listingsSlug" placeholder="annonces" />
-              <mat-hint>{{ 'settings.listings_slug_hint' | translate }}</mat-hint>
-            </mat-form-field>
-          </div>
-          @if (listingsUrl()) {
-            <div class="webhook-box">
+          @if (publicSiteUrl()) {
+            <div class="webhook-box" style="margin-top:12px">
               <div class="webhook-label">
-                <mat-icon>link</mat-icon>
-                <strong>{{ 'settings.listings_url' | translate }}</strong>
+                <mat-icon>language</mat-icon>
+                <strong>Site de réservation public</strong>
               </div>
               <div class="webhook-url-row">
-                <code class="webhook-url">{{ listingsUrl() }}</code>
-                <button mat-icon-button (click)="copyListingsUrl()" matTooltip="Copier">
+                <code class="webhook-url">{{ publicSiteUrl() }}</code>
+                <button mat-icon-button (click)="copyPublicSiteUrl()" matTooltip="Copier">
                   <mat-icon>content_copy</mat-icon>
                 </button>
+                <a mat-icon-button [href]="publicSiteUrl()" target="_blank" matTooltip="Ouvrir">
+                  <mat-icon>open_in_new</mat-icon>
+                </a>
               </div>
             </div>
           }
@@ -630,6 +616,20 @@ export class SettingsComponent implements OnInit {
 
   copyListingsUrl(): void {
     const url = this.listingsUrl();
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() =>
+      this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })
+    );
+  }
+
+  publicSiteUrl(): string {
+    const slug = this.profileEdit.publicSiteSlug;
+    if (!slug) return '';
+    return `${window.location.origin}/${slug}`;
+  }
+
+  copyPublicSiteUrl(): void {
+    const url = this.publicSiteUrl();
     if (!url) return;
     navigator.clipboard.writeText(url).then(() =>
       this.snackBar.open(this.t.instant('settings.url_copied'), '', { duration: 2000 })

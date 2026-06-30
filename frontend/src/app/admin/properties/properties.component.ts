@@ -1904,9 +1904,8 @@ export class PropertiesComponent implements OnInit {
   }
 
   bookingUrl(propId: string): string {
-    const sn = this.shortNameSaved[propId];
-    if (!sn || !this.publicSiteSlug()) return '';
-    return `${window.location.origin}/${this.publicSiteSlug()}/${this.slugify(sn)}`;
+    if (!this.publicSiteSlug()) return '';
+    return `${window.location.origin}/${this.publicSiteSlug()}/property/${propId}`;
   }
 
   copyBookingUrl(propId: string): void {
