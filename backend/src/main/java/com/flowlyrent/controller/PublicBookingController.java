@@ -752,11 +752,6 @@ public class PublicBookingController {
         return null;
     }
 
-    private static String slugify(String input) {
-        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return normalized.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
-    }
-
     private static long toLong(Object val) {
         if (val == null) return 0L;
         if (val instanceof Number n) return n.longValue();
