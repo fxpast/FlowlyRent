@@ -1396,6 +1396,14 @@
                "leg_selected":  "Seleccionado",
                "select_dates_first":  "Seleccione sus fechas en el calendario de arriba.",
                "change_dates":  "Cambiar fechas",
-               "taxe_sejour":  "Tasa turística"
+               "taxe_sejour":  "Tasa turística",
+               "search_checkin":  "Llegada",
+               "search_checkout":  "Salida",
+               "search_guests":  "Viajeros",
+               "search":  "Buscar",
+               "properties_available":  "alojamiento(s) disponible(s)",
+               "clear_search":  "Borrar",
+               "available_properties":  "Alojamientos disponibles",
+               "no_available":  "No hay alojamientos disponibles para estos criterios."
            }
 }

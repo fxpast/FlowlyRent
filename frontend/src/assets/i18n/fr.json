@@ -1405,6 +1405,14 @@
                "leg_selected":  "Sélectionné",
                "select_dates_first":  "Veuillez sélectionner vos dates dans le calendrier ci-dessus.",
                "change_dates":  "Modifier les dates",
-               "taxe_sejour":  "Taxe de séjour"
+               "taxe_sejour":  "Taxe de séjour",
+               "search_checkin":  "Arrivée",
+               "search_checkout":  "Départ",
+               "search_guests":  "Voyageurs",
+               "search":  "Rechercher",
+               "properties_available":  "logement(s) disponible(s)",
+               "clear_search":  "Effacer",
+               "available_properties":  "Logements disponibles",
+               "no_available":  "Aucun logement disponible pour ces critères."
            }
 }

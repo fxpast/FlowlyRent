@@ -1396,6 +1396,14 @@
                "leg_selected":  "Ausgewählt",
                "select_dates_first":  "Bitte wählen Sie Ihre Daten im Kalender oben aus.",
                "change_dates":  "Daten ändern",
-               "taxe_sejour":  "Kurtaxe"
+               "taxe_sejour":  "Kurtaxe",
+               "search_checkin":  "Ankunft",
+               "search_checkout":  "Abreise",
+               "search_guests":  "Reisende",
+               "search":  "Suchen",
+               "properties_available":  "Unterkunft/Unterkünfte verfügbar",
+               "clear_search":  "Löschen",
+               "available_properties":  "Verfügbare Unterkünfte",
+               "no_available":  "Keine Unterkunft für diese Kriterien verfügbar."
            }
 }

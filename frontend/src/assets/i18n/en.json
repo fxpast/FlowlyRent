@@ -1398,6 +1398,14 @@
                "leg_selected":  "Selected",
                "select_dates_first":  "Please select your dates in the calendar above.",
                "change_dates":  "Change dates",
-               "taxe_sejour":  "Tourist tax"
+               "taxe_sejour":  "Tourist tax",
+               "search_checkin":  "Check-in",
+               "search_checkout":  "Check-out",
+               "search_guests":  "Guests",
+               "search":  "Search",
+               "properties_available":  "property/ies available",
+               "clear_search":  "Clear",
+               "available_properties":  "Available properties",
+               "no_available":  "No properties available for these criteria."
            }
 }

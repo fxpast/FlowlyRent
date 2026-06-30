@@ -618,6 +618,14 @@ export class BookingSitePropertyComponent implements OnInit {
     this.initLang();
     this.slug = this.route.snapshot.params['slug'];
     this.propId = this.route.snapshot.params['propId'];
+    // Pré-remplir les dates depuis la recherche homepage
+    const qp = this.route.snapshot.queryParamMap;
+    const qFrom = qp.get('from');
+    const qTo = qp.get('to');
+    const qGuests = qp.get('guests');
+    if (qFrom) this.checkInStr = qFrom;
+    if (qTo) this.checkOutStr = qTo;
+    if (qGuests) this.guestCount = Number(qGuests);
     this.svc.getSiteInfo(this.slug).subscribe({ next: v => this.siteInfo.set(v) });
     this.svc.getProperty(this.slug, this.propId).subscribe({
       next: prop => {

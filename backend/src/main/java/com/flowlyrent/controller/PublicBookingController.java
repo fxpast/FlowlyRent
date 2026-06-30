@@ -158,6 +158,64 @@ public class PublicBookingController {
         }
     }
 
+    @GetMapping("/{slug}/search")
+    public ResponseEntity<?> searchAvailability(
+            @PathVariable String slug,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "1") int guests) {
+        try {
+            AppUser user = userForSlug(slug);
+            Beds24Account account = accountRepo.findByAppUserId(user.getId())
+                    .filter(Beds24Account::isConnected)
+                    .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
+            String token = beds24.tokenFor(account);
+
+            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of());
+
+            // Réservations qui peuvent chevaucher [from, to]
+            Map<String, String> bParams = new java.util.HashMap<>();
+            bParams.put("arrivalFrom", LocalDate.parse(from).minusDays(60).toString());
+            bParams.put("arrivalTo", to);
+            List<Map<String, Object>> bookings = beds24.getBookings(token, bParams);
+
+            Set<String> blockedPropIds = new java.util.HashSet<>();
+            for (Map<String, Object> b : bookings) {
+                String status = Objects.toString(b.get("status"), "");
+                if (status.equals("cancelled")) continue;
+                String dep = Objects.toString(b.get("departure"), "");
+                if (dep.compareTo(from) > 0) {
+                    Object pid = b.get("propertyId");
+                    if (pid != null) blockedPropIds.add(pid.toString());
+                }
+            }
+
+            // maxPeople par propriété
+            Map<String, Integer> maxPeopleMap = new java.util.HashMap<>();
+            try {
+                List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of());
+                for (Map<String, Object> r : rooms) {
+                    Object pid = r.get("propertyId");
+                    Object mp = r.get("maxPeople");
+                    if (pid != null && mp != null)
+                        maxPeopleMap.put(pid.toString(), ((Number) mp).intValue());
+                }
+            } catch (Exception ignored) {}
+
+            List<String> available = new java.util.ArrayList<>();
+            for (Map<String, Object> prop : allProps) {
+                String pid = extractPropertyId(prop);
+                if (pid == null || blockedPropIds.contains(pid)) continue;
+                int max = maxPeopleMap.getOrDefault(pid, 99);
+                if (guests <= max) available.add(pid);
+            }
+
+            return ResponseEntity.ok(Map.of("availablePropertyIds", available));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
     /**
      * Retourne uniquement les dates bloquées (réservations + blackouts) pour le calendrier public.
      * Ne divulgue aucune donnée voyageur.

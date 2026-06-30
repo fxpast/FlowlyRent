@@ -1396,6 +1396,14 @@
                "leg_selected":  "Selezionato",
                "select_dates_first":  "Seleziona le tue date nel calendario sopra.",
                "change_dates":  "Cambia date",
-               "taxe_sejour":  "Tassa di soggiorno"
+               "taxe_sejour":  "Tassa di soggiorno",
+               "search_checkin":  "Arrivo",
+               "search_checkout":  "Partenza",
+               "search_guests":  "Viaggiatori",
+               "search":  "Cerca",
+               "properties_available":  "struttura/e disponibile/i",
+               "clear_search":  "Cancella",
+               "available_properties":  "Strutture disponibili",
+               "no_available":  "Nessuna struttura disponibile per questi criteri."
            }
 }

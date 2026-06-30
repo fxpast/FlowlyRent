@@ -38,6 +38,12 @@ export class BookingSiteService {
     });
   }
 
+  searchAvailability(slug: string, from: string, to: string, guests: number): Observable<{ availablePropertyIds: string[] }> {
+    return this.http.get<{ availablePropertyIds: string[] }>(`${this.base}/${slug}/search`, {
+      params: { from, to, guests: String(guests) }
+    });
+  }
+
   getBlockedDates(slug: string, propId: string, from: string, to: string): Observable<{ blockedDates: string[], prices: Record<string, number> }> {
     return this.http.get<{ blockedDates: string[], prices: Record<string, number> }>(`${this.base}/${slug}/properties/${propId}/blocked-dates`, {
       params: { from, to }
