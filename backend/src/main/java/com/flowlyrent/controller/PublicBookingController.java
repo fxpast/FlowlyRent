@@ -190,27 +190,9 @@ public class PublicBookingController {
                 }
             }
 
-            // Log des clés retournées par /properties pour identifier le bon champ maxPeople
+            // Log des clés du 1er logement pour identifier le bon champ maxPeople
             if (!allProps.isEmpty()) {
-                log.info("[search] property keys: {}", allProps.get(0).keySet());
-                log.info("[search] property sample: {}", allProps.get(0));
-            }
-
-            // maxPeople par room Beds24 (appel par propriété pour fiabilité)
-            Map<String, Integer> maxPeopleFromRooms = new java.util.HashMap<>();
-            for (Map<String, Object> prop : allProps) {
-                String pid = extractPropertyId(prop);
-                if (pid == null) continue;
-                try {
-                    List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of("propertyId", pid));
-                    if (!rooms.isEmpty()) {
-                        log.info("[search] rooms for propId={}: {}", pid, rooms.get(0));
-                        Object mp = rooms.get(0).get("maxPeople");
-                        if (mp != null) maxPeopleFromRooms.put(pid, (int) toLong(mp));
-                    }
-                } catch (Exception e) {
-                    log.warn("[search] getRooms failed for propId={}: {}", pid, e.getMessage());
-                }
+                log.info("[search] property keys available: {}", allProps.get(0).keySet());
             }
 
             List<String> available = new java.util.ArrayList<>();
@@ -218,22 +200,16 @@ public class PublicBookingController {
                 String pid = extractPropertyId(prop);
                 if (pid == null || blockedPropIds.contains(pid)) continue;
 
-                // Résolution maxPeople : rooms > champs directs /properties
-                int max;
-                if (maxPeopleFromRooms.containsKey(pid)) {
-                    max = maxPeopleFromRooms.get(pid);
-                } else {
-                    // Chercher dans tous les champs candidats
-                    Object mp = null;
-                    for (String key : new String[]{"maxPeople","maxGuestNumber","maxGuests","maxPersons","maxOccupancy","numGuestsMax"}) {
-                        mp = prop.get(key);
-                        if (mp != null) { log.info("[search] found maxPeople via key='{}' = {}", key, mp); break; }
+                // Chercher maxPeople dans les champs de la réponse /properties (aucun appel Beds24 supplémentaire)
+                int max = 0;
+                for (String key : new String[]{"maxGuestNumber","maxGuests","maxPeople","maxPersons","maxGuestNum","numGuestsMax","maxOccupancy","maxPersonNumber","guestCapacity"}) {
+                    Object mp = prop.get(key);
+                    if (mp != null) {
+                        int v = (int) toLong(mp);
+                        if (v > 0) { max = v; log.info("[search] propId={} key='{}' maxPeople={}", pid, key, v); break; }
                     }
-                    max = mp != null ? (int) toLong(mp) : 0;
                 }
-
                 log.info("[search] propId={} maxResolved={} guests={} → {}", pid, max, guests, (max == 0 || guests <= max) ? "OK" : "EXCLU");
-                // max == 0 → limite inconnue → inclure
                 if (max == 0 || guests <= max) available.add(pid);
             }
 
