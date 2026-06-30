@@ -1407,5 +1407,13 @@
                "clear_search":  "Clear",
                "available_properties":  "Available properties",
                "no_available":  "No properties available for these criteria."
-           }
+           },
+    "payment": {
+        "title": "Secure payment",
+        "summary": "Summary",
+        "property": "Property",
+        "guest": "Guest",
+        "pay_now": "Pay now",
+        "secure_stripe": "Secure payment by Stripe — your card details are encrypted"
+    }
 }

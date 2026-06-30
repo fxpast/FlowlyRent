@@ -239,10 +239,20 @@ export class BookingSiteConfirmationComponent implements OnInit {
   }
 
   payOnline() {
-    // Redirection vers la page de paiement Beds24 (Stripe intégré)
-    const price = Math.round(this.totalAmount() * 100) / 100;
-    const url = `https://beds24.com/bookpay.php?bookid=${encodeURIComponent(this.bookingId)}&g=st&capture=1&pay=${encodeURIComponent(price)}`;
-    window.location.href = url;
+    const b = this.booking();
+    this.router.navigate(['/', this.slug, 'payment'], {
+      state: {
+        bookingId:    this.bookingId,
+        amountCents:  Math.round(this.totalAmount() * 100),
+        currency:     'eur',
+        description:  `Réservation #${this.bookingId}`,
+        guestEmail:   b?.guestEmail ?? b?.email ?? '',
+        guestName:    `${b?.guestFirstName ?? ''} ${b?.guestName ?? ''}`.trim(),
+        propertyName: b?.propName ?? b?.propertyName ?? '',
+        checkIn:      b?.firstNight ?? b?.checkIn ?? '',
+        checkOut:     b?.lastNight ?? b?.checkOut ?? ''
+      }
+    });
   }
 
   formatDate(d: string): string {

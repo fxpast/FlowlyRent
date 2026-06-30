@@ -1405,5 +1405,13 @@
                "clear_search":  "Cancella",
                "available_properties":  "Strutture disponibili",
                "no_available":  "Nessuna struttura disponibile per questi criteri."
-           }
+           },
+    "payment": {
+        "title": "Pagamento sicuro",
+        "summary": "Riepilogo",
+        "property": "Struttura",
+        "guest": "Ospite",
+        "pay_now": "Paga ora",
+        "secure_stripe": "Pagamento sicuro tramite Stripe — i tuoi dati bancari sono crittografati"
+    }
 }

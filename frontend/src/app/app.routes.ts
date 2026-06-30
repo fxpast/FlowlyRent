@@ -54,6 +54,10 @@ export const routes: Routes = [
     loadComponent: () => import('./booking-site/booking-site-property/booking-site-property.component').then(m => m.BookingSitePropertyComponent)
   },
   {
+    path: ':slug/payment',
+    loadComponent: () => import('./booking-site/booking-site-payment/booking-site-payment.component').then(m => m.BookingSitePaymentComponent)
+  },
+  {
     path: ':slug/booking/:bookingId',
     loadComponent: () => import('./booking-site/booking-site-confirmation/booking-site-confirmation.component').then(m => m.BookingSiteConfirmationComponent)
   },

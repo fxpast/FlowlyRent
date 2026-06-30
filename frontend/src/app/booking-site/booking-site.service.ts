@@ -64,6 +64,16 @@ export class BookingSiteService {
     );
   }
 
+  getStripePublishableKey(): Observable<{ publishableKey: string }> {
+    return this.http.get<{ publishableKey: string }>(`${this.base}/stripe-key`);
+  }
+
+  createPaymentIntent(slug: string, data: {
+    bookingId: string; amountCents: number; currency: string; description: string; guestEmail: string;
+  }): Observable<{ clientSecret: string }> {
+    return this.http.post<{ clientSecret: string }>(`${this.base}/${slug}/create-payment-intent`, data);
+  }
+
   sendMessage(slug: string, bookingId: string, content: string): Observable<any> {
     return this.http.post(`${this.base}/${slug}/bookings/${bookingId}/messages`, { content });
   }

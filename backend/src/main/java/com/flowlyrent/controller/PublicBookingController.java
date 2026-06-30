@@ -13,7 +13,9 @@ import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.RoomIdResolverService;
 import com.stripe.Stripe;
+import com.stripe.model.PaymentIntent;
 import com.stripe.model.checkout.Session;
+import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,9 @@ public class PublicBookingController {
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
+
+    @Value("${stripe.publishable-key:}")
+    private String stripePublishableKey;
 
     // -------------------------------------------------------------------------
     // Informations du site de l'hôte
@@ -627,6 +632,64 @@ public class PublicBookingController {
     // -------------------------------------------------------------------------
     // Paiement Stripe — réservation directe
     // -------------------------------------------------------------------------
+
+    /** Retourne la clé publique Stripe (non secrète — peut être exposée au frontend). */
+    @GetMapping("/stripe-key")
+    public ResponseEntity<?> getStripePublishableKey() {
+        if (stripePublishableKey == null || stripePublishableKey.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré"));
+        }
+        return ResponseEntity.ok(Map.of("publishableKey", stripePublishableKey));
+    }
+
+    /**
+     * Crée un Stripe PaymentIntent pour le paiement d'une réservation sur le site public.
+     * Body attendu : { bookingId, amountCents, currency, description, guestEmail }
+     * Retourne : { clientSecret }
+     */
+    @PostMapping("/{slug}/create-payment-intent")
+    public ResponseEntity<?> createPaymentIntent(
+            @PathVariable String slug,
+            @RequestBody Map<String, Object> body) {
+        try {
+            userRepo.findByPublicSiteSlug(slug)
+                    .orElseThrow(() -> new IllegalArgumentException("Site non trouvé : " + slug));
+
+            Stripe.apiKey = stripeSecretKey;
+
+            long amountCents   = toLong(body.get("amountCents"));
+            String currency    = body.getOrDefault("currency",    "eur").toString().toLowerCase();
+            String description = body.getOrDefault("description", "Réservation").toString();
+            String guestEmail  = body.getOrDefault("guestEmail",  "").toString();
+            String bookingId   = body.getOrDefault("bookingId",   "").toString();
+
+            if (amountCents <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Montant invalide"));
+            }
+
+            PaymentIntentCreateParams.Builder builder = PaymentIntentCreateParams.builder()
+                    .setAmount(amountCents)
+                    .setCurrency(currency)
+                    .setDescription(description)
+                    .addPaymentMethodType("card")
+                    .putMetadata("type",      "booking")
+                    .putMetadata("bookingId", bookingId)
+                    .putMetadata("slug",      slug);
+
+            if (!guestEmail.isBlank()) {
+                builder.setReceiptEmail(guestEmail);
+            }
+
+            PaymentIntent intent = PaymentIntent.create(builder.build());
+            log.info("[payment-intent] Créé — bookingId={} slug={} amount={}{} intent={}",
+                    bookingId, slug, amountCents, currency.toUpperCase(), intent.getId());
+
+            return ResponseEntity.ok(Map.of("clientSecret", intent.getClientSecret()));
+        } catch (Exception e) {
+            log.error("[payment-intent] Erreur : {}", e.getMessage(), e);
+            return error(e);
+        }
+    }
 
     /**
      * Crée une Stripe Checkout Session pour le paiement d'une réservation directe.

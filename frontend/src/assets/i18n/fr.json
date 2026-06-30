@@ -1414,5 +1414,13 @@
                "clear_search":  "Effacer",
                "available_properties":  "Logements disponibles",
                "no_available":  "Aucun logement disponible pour ces critères."
-           }
+           },
+    "payment": {
+        "title": "Paiement sécurisé",
+        "summary": "Récapitulatif",
+        "property": "Logement",
+        "guest": "Voyageur",
+        "pay_now": "Payer maintenant",
+        "secure_stripe": "Paiement sécurisé par Stripe — vos données bancaires sont chiffrées"
+    }
 }

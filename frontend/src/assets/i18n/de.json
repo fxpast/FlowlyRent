@@ -1405,5 +1405,13 @@
                "clear_search":  "Löschen",
                "available_properties":  "Verfügbare Unterkünfte",
                "no_available":  "Keine Unterkunft für diese Kriterien verfügbar."
-           }
+           },
+    "payment": {
+        "title": "Sichere Zahlung",
+        "summary": "Zusammenfassung",
+        "property": "Unterkunft",
+        "guest": "Gast",
+        "pay_now": "Jetzt bezahlen",
+        "secure_stripe": "Sichere Zahlung über Stripe — Ihre Bankdaten sind verschlüsselt"
+    }
 }

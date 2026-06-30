@@ -1405,5 +1405,13 @@
                "clear_search":  "Borrar",
                "available_properties":  "Alojamientos disponibles",
                "no_available":  "No hay alojamientos disponibles para estos criterios."
-           }
+           },
+    "payment": {
+        "title": "Pago seguro",
+        "summary": "Resumen",
+        "property": "Alojamiento",
+        "guest": "Viajero",
+        "pay_now": "Pagar ahora",
+        "secure_stripe": "Pago seguro por Stripe — sus datos bancarios están cifrados"
+    }
 }
