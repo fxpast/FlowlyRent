@@ -212,7 +212,7 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
 
   private async initStripe() {
     try {
-      const { publishableKey } = await this.svc.getStripePublishableKey(this.slug).toPromise() as any;
+      const { publishableKey, stripeAccountId } = await this.svc.getStripePublishableKey(this.slug).toPromise() as any;
 
       const { clientSecret } = await this.svc.createPaymentIntent(this.slug, {
         bookingId:   this.state.bookingId,
@@ -222,7 +222,7 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
         guestEmail:  this.state.guestEmail ?? ''
       }).toPromise() as any;
 
-      this.stripe = await loadStripe(publishableKey);
+      this.stripe = await loadStripe(publishableKey, { stripeAccount: stripeAccountId });
       if (!this.stripe) throw new Error('Stripe non chargé');
 
       const locale = this.currentLang as any;

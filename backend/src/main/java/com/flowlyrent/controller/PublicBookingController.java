@@ -15,6 +15,7 @@ import com.flowlyrent.service.RoomIdResolverService;
 import com.stripe.Stripe;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.checkout.Session;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,9 +47,8 @@ public class PublicBookingController {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
 
-    // Clé de fallback platform (non utilisée si l'hôte a configuré ses propres clés)
     @Value("${stripe.publishable-key:}")
-    private String platformPublishableKey;
+    private String stripePublishableKey;
 
     // -------------------------------------------------------------------------
     // Informations du site de l'hôte
@@ -634,16 +634,24 @@ public class PublicBookingController {
     // Paiement Stripe — réservation directe
     // -------------------------------------------------------------------------
 
-    /** Retourne la clé publique Stripe de l'hôte identifié par son slug. */
+    /**
+     * Retourne la clé publique Stripe (plateforme) et le stripeAccountId de l'hôte.
+     * Le frontend en a besoin pour initialiser loadStripe() avec { stripeAccount }.
+     */
     @GetMapping("/{slug}/stripe-key")
     public ResponseEntity<?> getStripePublishableKey(@PathVariable String slug) {
         AppUser user = userRepo.findByPublicSiteSlug(slug).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
-        String key = user.getStripePublishableKey();
-        if (key == null || key.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré par cet hôte"));
+        if (stripePublishableKey.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré sur la plateforme"));
         }
-        return ResponseEntity.ok(Map.of("publishableKey", key));
+        if (user.getStripeAccountId() == null || user.getStripeAccountId().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Stripe non connecté par cet hôte"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "publishableKey", stripePublishableKey,
+                "stripeAccountId", user.getStripeAccountId()
+        ));
     }
 
     /**
@@ -659,11 +667,10 @@ public class PublicBookingController {
             AppUser user = userRepo.findByPublicSiteSlug(slug)
                     .orElseThrow(() -> new IllegalArgumentException("Site non trouvé : " + slug));
 
-            String secretKey = user.getStripeSecretKey();
-            if (secretKey == null || secretKey.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Stripe non configuré par cet hôte"));
+            if (user.getStripeAccountId() == null || user.getStripeAccountId().isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Stripe non connecté par cet hôte"));
             }
-            Stripe.apiKey = secretKey;
+            Stripe.apiKey = stripeSecretKey;
 
             long amountCents   = toLong(body.get("amountCents"));
             String currency    = body.getOrDefault("currency",    "eur").toString().toLowerCase();
@@ -688,9 +695,13 @@ public class PublicBookingController {
                 builder.setReceiptEmail(guestEmail);
             }
 
-            PaymentIntent intent = PaymentIntent.create(builder.build());
-            log.info("[payment-intent] Créé — bookingId={} slug={} amount={}{} intent={}",
-                    bookingId, slug, amountCents, currency.toUpperCase(), intent.getId());
+            RequestOptions requestOptions = RequestOptions.builder()
+                    .setStripeAccount(user.getStripeAccountId())
+                    .build();
+
+            PaymentIntent intent = PaymentIntent.create(builder.build(), requestOptions);
+            log.info("[payment-intent] Créé — bookingId={} slug={} amount={}{} account={} intent={}",
+                    bookingId, slug, amountCents, currency.toUpperCase(), user.getStripeAccountId(), intent.getId());
 
             return ResponseEntity.ok(Map.of("clientSecret", intent.getClientSecret()));
         } catch (Exception e) {

@@ -43,10 +43,14 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
+  client-id: ${STRIPE_CLIENT_ID:}
   price:
     starter: ${STRIPE_PRICE_STARTER:}
     pro: ${STRIPE_PRICE_PRO:}
     agence: ${STRIPE_PRICE_AGENCE:}
+
+app:
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:4200}
 
 jwt:
   # Obligatoire en production : variable d'environnement JWT_SECRET (base64, minimum 32 octets)

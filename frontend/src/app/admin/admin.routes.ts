@@ -70,6 +70,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent)
       },
       {
+        path: 'stripe-callback',
+        loadComponent: () => import('./stripe-callback/stripe-callback.component').then(m => m.StripeCallbackComponent)
+      },
+      {
         path: 'stats',
         loadComponent: () => import('./stats/stats.component').then(m => m.StatsComponent)
       },

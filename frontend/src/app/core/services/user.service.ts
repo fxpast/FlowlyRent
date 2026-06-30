@@ -31,8 +31,8 @@ export interface UserProfile {
   companyAddress?: string;
   companyLogoUrl?: string;
   invoiceFooter?: string;
-  stripePublishableKey?: string;
-  stripeConfigured?: boolean;
+  stripeAccountId?: string;
+  stripeConnected?: boolean;
 }
 
 export interface SubscriptionInfo {
@@ -54,6 +54,18 @@ export class UserService {
 
   updateProfile(data: Record<string, string>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.base}/user/profile`, data);
+  }
+
+  getStripeConnectUrl(): Observable<{ url: string }> {
+    return this.http.get<{ url: string }>(`${this.base}/user/stripe-connect/url`);
+  }
+
+  stripeConnectCallback(code: string): Observable<UserProfile> {
+    return this.http.post<UserProfile>(`${this.base}/user/stripe-connect/callback`, { code });
+  }
+
+  stripeConnectDisconnect(): Observable<UserProfile> {
+    return this.http.delete<UserProfile>(`${this.base}/user/stripe-connect/disconnect`);
   }
 
   getBeds24Status(): Observable<Beds24Status> {

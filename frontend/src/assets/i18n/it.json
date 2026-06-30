@@ -706,14 +706,13 @@
         "mode_switched": "Modalità cambiata, reindirizzamento…",
         "mode_switch_error": "Errore durante il cambio di modalità",
         "stripe_title": "Pagamento online (Stripe)",
-        "stripe_subtitle": "I tuoi ospiti pagano direttamente sul tuo account Stripe",
-        "stripe_pub_key": "Chiave pubblica",
-        "stripe_pub_hint": "Inizia con pk_live_ o pk_test_",
-        "stripe_secret_key": "Chiave segreta",
-        "stripe_secret_hint": "Memorizzata in modo sicuro - inizia con sk_live_ o sk_test_",
-        "stripe_configured": "Stripe configurato - i pagamenti sono attivi",
-        "stripe_saved": "Chiavi Stripe salvate",
-        "stripe_error": "Errore durante il salvataggio delle chiavi Stripe"
+        "stripe_subtitle": "Collega il tuo account Stripe per incassare i pagamenti dei tuoi ospiti",
+        "stripe_error": "Errore Stripe",
+        "stripe_connect_btn": "Collega il mio account Stripe",
+        "stripe_connect_hint": "Sarai reindirizzato a Stripe per autorizzare la connessione. I pagamenti vanno direttamente sul tuo account.",
+        "stripe_connected": "Account Stripe collegato",
+        "stripe_disconnect": "Scollega Stripe",
+        "stripe_disconnected": "Stripe scollegato"
     },
     "stats": {
         "title": "Ricavi",

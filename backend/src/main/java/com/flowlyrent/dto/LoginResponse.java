@@ -24,6 +24,6 @@ public class LoginResponse {
     private String companyLogoUrl;
     private String invoiceFooter;
     private ChannelType channelType;
-    private String stripePublishableKey;
-    private boolean stripeConfigured;
+    private String stripeAccountId;
+    private boolean stripeConnected;
 }

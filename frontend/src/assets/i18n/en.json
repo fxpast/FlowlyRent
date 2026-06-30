@@ -706,14 +706,13 @@
         "mode_switched": "Mode changed, redirecting…",
         "mode_switch_error": "Error while changing mode",
         "stripe_title": "Online payment (Stripe)",
-        "stripe_subtitle": "Your guests pay directly on your Stripe account",
-        "stripe_pub_key": "Publishable key",
-        "stripe_pub_hint": "Starts with pk_live_ or pk_test_",
-        "stripe_secret_key": "Secret key",
-        "stripe_secret_hint": "Stored securely - starts with sk_live_ or sk_test_",
-        "stripe_configured": "Stripe configured - payments are active",
-        "stripe_saved": "Stripe keys saved",
-        "stripe_error": "Error saving Stripe keys"
+        "stripe_subtitle": "Connect your Stripe account to collect payments from your guests",
+        "stripe_error": "Stripe error",
+        "stripe_connect_btn": "Connect my Stripe account",
+        "stripe_connect_hint": "You will be redirected to Stripe to authorize the connection. Payments go directly to your account.",
+        "stripe_connected": "Stripe account connected",
+        "stripe_disconnect": "Disconnect Stripe",
+        "stripe_disconnected": "Stripe disconnected"
     },
     "stats": {
         "title": "Revenue",

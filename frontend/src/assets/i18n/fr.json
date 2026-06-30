@@ -706,14 +706,13 @@
         "mode_switched": "Mode modifié, redirection en cours…",
         "mode_switch_error": "Erreur lors du changement de mode",
         "stripe_title": "Paiement en ligne (Stripe)",
-        "stripe_subtitle": "Vos voyageurs paient directement sur votre compte Stripe",
-        "stripe_pub_key": "Cle publique",
-        "stripe_pub_hint": "Commence par pk_live_ ou pk_test_",
-        "stripe_secret_key": "Cle secrete",
-        "stripe_secret_hint": "Stockee de facon securisee - commence par sk_live_ ou sk_test_",
-        "stripe_configured": "Stripe configure - les paiements sont actifs",
-        "stripe_saved": "Cles Stripe enregistrees",
-        "stripe_error": "Erreur lors de l enregistrement des cles Stripe"
+        "stripe_subtitle": "Connectez votre compte Stripe pour encaisser les paiements de vos voyageurs",
+        "stripe_error": "Erreur Stripe",
+        "stripe_connect_btn": "Connecter mon compte Stripe",
+        "stripe_connect_hint": "Vous serez redirige vers Stripe pour autoriser la connexion. Les paiements iront directement sur votre compte.",
+        "stripe_connected": "Compte Stripe connecte",
+        "stripe_disconnect": "Deconnecter Stripe",
+        "stripe_disconnected": "Stripe deconnecte"
     },
     "stats": {
         "title": "Revenus",

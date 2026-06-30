@@ -10,17 +10,23 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.QontoAccountRepository;
 import com.flowlyrent.service.Beds24TokenService;
 import com.flowlyrent.service.QontoService;
+import com.stripe.Stripe;
+import com.stripe.net.OAuth;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Paramètres utilisateur")
 public class UserSettingsController {
 
@@ -31,6 +37,15 @@ public class UserSettingsController {
     private final PasswordEncoder passwordEncoder;
     private final QontoAccountRepository qontoAccountRepository;
     private final QontoService qontoService;
+
+    @Value("${stripe.secret-key}")
+    private String stripeSecretKey;
+
+    @Value("${stripe.client-id:}")
+    private String stripeClientId;
+
+    @Value("${app.frontend-url:http://localhost:4200}")
+    private String frontendUrl;
 
     @GetMapping("/profile")
     public ResponseEntity<LoginResponse> getProfile() {
@@ -49,9 +64,6 @@ public class UserSettingsController {
         if (body.containsKey("companyAddress")) user.setCompanyAddress(body.get("companyAddress"));
         if (body.containsKey("companyLogoUrl")) user.setCompanyLogoUrl(body.get("companyLogoUrl"));
         if (body.containsKey("invoiceFooter")) user.setInvoiceFooter(body.get("invoiceFooter"));
-        if (body.containsKey("stripePublishableKey")) user.setStripePublishableKey(body.get("stripePublishableKey"));
-        if (body.containsKey("stripeSecretKey") && !body.get("stripeSecretKey").isBlank())
-            user.setStripeSecretKey(body.get("stripeSecretKey"));
         if (body.containsKey("listingsSlug"))  user.setListingsSlug(body.get("listingsSlug"));
         if (body.containsKey("beds24OwnerId")) user.setBeds24OwnerId(body.get("beds24OwnerId"));
         if (body.containsKey("publicSiteSlug")) {
@@ -188,6 +200,73 @@ public class UserSettingsController {
         return ResponseEntity.ok(Map.of("status", "Déconnecté"));
     }
 
+    // -------------------------------------------------------------------------
+    // Stripe Connect
+    // -------------------------------------------------------------------------
+
+    /** Retourne l'URL OAuth Stripe pour que l'hôte autorise la connexion. */
+    @GetMapping("/stripe-connect/url")
+    public ResponseEntity<?> stripeConnectUrl() {
+        if (stripeClientId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "STRIPE_CLIENT_ID non configuré"));
+        }
+        String redirectUri = frontendUrl + "/admin/stripe-callback";
+        String url = "https://connect.stripe.com/oauth/authorize"
+                + "?response_type=code"
+                + "&client_id=" + stripeClientId
+                + "&scope=read_write"
+                + "&redirect_uri=" + java.net.URLEncoder.encode(redirectUri, java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    /** Échange le code OAuth Stripe contre un account_id et le persiste. */
+    @PostMapping("/stripe-connect/callback")
+    public ResponseEntity<?> stripeConnectCallback(@RequestBody Map<String, String> body) {
+        String code = body.get("code");
+        if (code == null || code.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Code manquant"));
+        }
+        try {
+            Stripe.apiKey = stripeSecretKey;
+            Map<String, Object> params = new HashMap<>();
+            params.put("code", code);
+            params.put("grant_type", "authorization_code");
+            var token = OAuth.token(params, null);
+            String accountId = token.getStripeUserId();
+
+            AppUser user = securityUtils.getCurrentUser();
+            user.setStripeAccountId(accountId);
+            userRepository.save(user);
+
+            log.info("[stripe-connect] Compte connecté userId={} accountId={}", user.getId(), accountId);
+            return ResponseEntity.ok(toProfileResponse(user));
+        } catch (Exception e) {
+            log.error("[stripe-connect] Erreur callback : {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** Déconnecte le compte Stripe de l'hôte. */
+    @DeleteMapping("/stripe-connect/disconnect")
+    public ResponseEntity<?> stripeConnectDisconnect() {
+        AppUser user = securityUtils.getCurrentUser();
+        String accountId = user.getStripeAccountId();
+        if (accountId != null && !accountId.isBlank()) {
+            try {
+                Stripe.apiKey = stripeSecretKey;
+                Map<String, Object> params = new HashMap<>();
+                params.put("client_id", stripeClientId);
+                params.put("stripe_user_id", accountId);
+                OAuth.deauthorize(params, null);
+            } catch (Exception e) {
+                log.warn("[stripe-connect] Déconnexion Stripe échouée : {}", e.getMessage());
+            }
+        }
+        user.setStripeAccountId(null);
+        userRepository.save(user);
+        return ResponseEntity.ok(toProfileResponse(user));
+    }
+
     private LoginResponse toProfileResponse(AppUser user) {
         LoginResponse r = new LoginResponse();
         r.setUserId(user.getId());
@@ -205,8 +284,8 @@ public class UserSettingsController {
         r.setCompanyLogoUrl(user.getCompanyLogoUrl());
         r.setInvoiceFooter(user.getInvoiceFooter());
         r.setChannelType(user.getChannelType());
-        r.setStripePublishableKey(user.getStripePublishableKey());
-        r.setStripeConfigured(user.getStripeSecretKey() != null && !user.getStripeSecretKey().isBlank());
+        r.setStripeAccountId(user.getStripeAccountId());
+        r.setStripeConnected(user.getStripeAccountId() != null && !user.getStripeAccountId().isBlank());
         return r;
     }
 }

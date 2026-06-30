@@ -706,14 +706,13 @@
         "mode_switched": "Modus geändert, Weiterleitung…",
         "mode_switch_error": "Fehler beim Moduswechsel",
         "stripe_title": "Online-Zahlung (Stripe)",
-        "stripe_subtitle": "Ihre Gaste zahlen direkt auf Ihr Stripe-Konto",
-        "stripe_pub_key": "Offentlicher Schlussel",
-        "stripe_pub_hint": "Beginnt mit pk_live_ oder pk_test_",
-        "stripe_secret_key": "Geheimer Schlussel",
-        "stripe_secret_hint": "Sicher gespeichert - beginnt mit sk_live_ oder sk_test_",
-        "stripe_configured": "Stripe konfiguriert - Zahlungen sind aktiv",
-        "stripe_saved": "Stripe-Schlussel gespeichert",
-        "stripe_error": "Fehler beim Speichern der Stripe-Schlussel"
+        "stripe_subtitle": "Verbinden Sie Ihr Stripe-Konto, um Zahlungen von Ihren Gasten zu erhalten",
+        "stripe_error": "Stripe-Fehler",
+        "stripe_connect_btn": "Mein Stripe-Konto verbinden",
+        "stripe_connect_hint": "Sie werden zu Stripe weitergeleitet, um die Verbindung zu autorisieren. Zahlungen gehen direkt auf Ihr Konto.",
+        "stripe_connected": "Stripe-Konto verbunden",
+        "stripe_disconnect": "Stripe trennen",
+        "stripe_disconnected": "Stripe getrennt"
     },
     "stats": {
         "title": "Einnahmen",
