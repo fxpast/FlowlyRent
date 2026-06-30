@@ -120,6 +120,10 @@ public class Beds24ApiClient {
     // Inventory — disponibilités et calendrier
     // -------------------------------------------------------------------------
 
+    public List<Map<String, Object>> getRooms(String token, Map<String, String> params) throws Exception {
+        return fetchAll("/inventory/rooms", token, params);
+    }
+
     public List<Map<String, Object>> getAvailability(String token, Map<String, String> params) throws Exception {
         return fetchAll("/inventory/rooms/availability", token, params);
     }

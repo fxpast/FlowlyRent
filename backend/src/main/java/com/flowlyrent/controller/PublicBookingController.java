@@ -133,9 +133,9 @@ public class PublicBookingController {
             Beds24Account account = accountRepo.findByAppUserId(user.getId())
                     .filter(Beds24Account::isConnected)
                     .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
+            String token = beds24.tokenFor(account);
             // L'API Beds24 /properties ignore parfois le filtre propertyId → on filtre côté client
-            List<Map<String, Object>> allProps = beds24.getProperties(
-                    beds24.tokenFor(account), Map.of());
+            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of());
             Map<String, Object> prop = allProps == null ? null : allProps.stream()
                     .filter(p -> propertyId.equals(extractPropertyId(p)))
                     .findFirst()
@@ -144,6 +144,14 @@ public class PublicBookingController {
                 return ResponseEntity.notFound().build();
             }
             enrichWithCoverPhoto(prop, user.getId());
+            // Enrichir avec maxPeople depuis /inventory/rooms
+            try {
+                List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of("propertyId", propertyId));
+                if (rooms != null && !rooms.isEmpty()) {
+                    Object maxPeople = rooms.get(0).get("maxPeople");
+                    if (maxPeople != null) prop.put("maxPeople", maxPeople);
+                }
+            } catch (Exception ignored) {}
             return ResponseEntity.ok(prop);
         } catch (Exception e) {
             return error(e);

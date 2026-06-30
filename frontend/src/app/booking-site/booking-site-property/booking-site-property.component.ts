@@ -715,8 +715,9 @@ export class BookingSitePropertyComponent implements OnInit {
   // ── Disponibilité & réservation ────────────────────────────────────
 
   guestOptions(): number[] {
-    const max = this.property().maxGuestNumber ?? this.property().maxGuests ?? 10;
-    return Array.from({ length: Number(max) }, (_, i) => i + 1);
+    const p = this.property();
+    const max = p?.maxPeople ?? p?.maxGuestNumber ?? p?.maxGuests ?? 10;
+    return Array.from({ length: Math.max(1, Number(max)) }, (_, i) => i + 1);
   }
 
   checkAvailability() {
