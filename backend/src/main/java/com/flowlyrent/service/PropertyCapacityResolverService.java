@@ -40,23 +40,24 @@ public class PropertyCapacityResolverService {
         }
         if (missing.isEmpty()) return result;
 
-        List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of());
-        log.info("[capacity] /inventory/rooms → {} chambre(s) reçue(s), {} propertyId manquant(s) : {}",
-                rooms == null ? 0 : rooms.size(), missing.size(), missing);
-        if (rooms != null && !rooms.isEmpty()) {
-            log.info("[capacity] clés du 1er objet room : {}", rooms.get(0).keySet());
-            log.info("[capacity] contenu du 1er objet room : {}", rooms.get(0));
-        }
-
+        // /inventory/rooms exige un propertyId (HTTP 500 "Could not process request" sans filtre) —
+        // contrairement à /properties ou /bookings. Un appel par logement manquant est nécessaire,
+        // mais n'a lieu qu'une seule fois par logement grâce au cache PropertyConfig ci-dessous.
         Map<String, Integer> fetched = new HashMap<>();
-        for (Map<String, Object> room : rooms) {
-            Object rawPropId = room.get("propertyId");
-            String roomPropId = rawPropId instanceof Number n ? String.valueOf(n.longValue())
-                    : rawPropId == null ? null : rawPropId.toString().trim();
-            Object mp = room.get("maxPeople");
-            if (roomPropId != null && missing.contains(roomPropId) && mp instanceof Number n) {
-                int v = n.intValue();
-                if (v > 0) fetched.merge(roomPropId, v, Math::max);
+        for (String pid : missing) {
+            try {
+                List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of("propertyId", pid));
+                if (rooms == null || rooms.isEmpty()) continue;
+                if (fetched.isEmpty() && result.isEmpty()) {
+                    log.info("[capacity] clés du 1er objet room (propId={}) : {}", pid, rooms.get(0).keySet());
+                }
+                Object mp = rooms.get(0).get("maxPeople");
+                if (mp instanceof Number n) {
+                    int v = n.intValue();
+                    if (v > 0) fetched.put(pid, v);
+                }
+            } catch (Exception e) {
+                log.warn("[capacity] Échec résolution maxPeople propId={} : {}", pid, e.getMessage());
             }
         }
         log.info("[capacity] maxPeople résolu pour {}/{} propertyId manquants : {}", fetched.size(), missing.size(), fetched);
