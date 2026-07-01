@@ -31,6 +31,9 @@ Contexte path : `/api` — toutes les routes sont préfixées.
 | DELETE | `/user/push/unsubscribe` | Supprimer une subscription Web Push |
 | POST | `/user/push/subscribe-fcm` | Enregistrer un token FCM (mobile) |
 | DELETE | `/user/push/unsubscribe-fcm` | Supprimer un token FCM |
+| GET | `/user/stripe-connect/url` | URL d'autorisation OAuth Stripe Connect |
+| POST | `/user/stripe-connect/callback` | Échanger le code OAuth → enregistre `stripeAccountId` |
+| DELETE | `/user/stripe-connect/disconnect` | Déconnecter le compte Stripe Connect |
 
 ---
 
@@ -335,10 +338,12 @@ Contexte path : `/api` — toutes les routes sont préfixées.
 | GET | `/public/{slug}/properties` | Logements actifs d'un hôte (par slug) |
 | GET | `/public/{slug}/properties/{id}` | Détail d'un logement |
 | GET | `/public/{slug}/properties/{id}/availability` | Vérifier la disponibilité |
+| GET | `/public/{slug}/search?from=&to=&guests=` | Recherche disponibilité avec filtre capacité voyageurs |
 | POST | `/public/{slug}/bookings` | Créer une réservation (client) |
-| GET | `/public/bookings/{id}` | Voir sa réservation |
-| POST | `/public/messages/{bookingId}` | Envoyer un message (voyageur) |
-| POST | `/public/payments/{bookingId}/checkout` | Démarrer le paiement Stripe |
+| GET | `/public/{slug}/bookings/{bookingId}` | Voir sa réservation |
+| POST | `/public/{slug}/bookings/{bookingId}/messages` | Envoyer un message (voyageur) |
+| GET | `/public/{slug}/stripe-key` | Clé publique Stripe + stripeAccountId de l'hôte |
+| POST | `/public/{slug}/create-payment-intent` | Créer un Payment Intent (Stripe Connect) |
 | GET | `/public/ical/{token}.ics` | Flux iCal public (bloquer dates sur Airbnb/Booking) |
 | GET | `/public/faq?lang=fr` | FAQ publique (fallback FR) |
 | GET | `/public/privacy` | Politique de confidentialité (Play Store) |

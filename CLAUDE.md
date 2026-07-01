@@ -43,7 +43,7 @@ Chaque hôte connecte son compte Beds24 (channel manager) pour centraliser propr
 | Base de données | MySQL/MariaDB (XAMPP dev, MariaDB 11 prod) |
 | ORM | Spring Data JPA / Hibernate (`ddl-auto: update`) |
 | Authentification | JWT (jjwt 0.12.5) — sujet = email, durée **365 jours** + `POST /auth/refresh` |
-| Paiement | Stripe (Checkout Session + Payment Intent + Webhooks) |
+| Paiement | Stripe Connect OAuth + Payment Element (carte, Apple Pay, Google Pay, SEPA) — chaque hôte connecte son propre compte Stripe |
 | Messagerie | WebSocket (STOMP via SockJS) + répondeur auto (webhook Beds24 + Groq) |
 | Mode Channel | Beds24 API v2 — propriétés et réservations consommées via API (pas d'entités JPA) |
 | Mode iCal | `LocalProperty` + `IcalBooking` + `PropertyIcalSource` — logements créés manuellement |
@@ -114,6 +114,7 @@ flutter build appbundle --release  # AAB Play Store (keystore dans android/key.p
 - **Affichage notes multi-lignes** : `white-space: pre-wrap` + `cdkTextareaAutosize cdkAutosizeMinRows="5"`
 - **Validation formulaires** : aligner les contraintes Angular (`minlength`, `required`, `#ref="ngModel"`) sur les annotations Spring (`@Size`, `@NotBlank`) — évite de gérer le format `ProblemDetail` des erreurs de validation `@Valid`
 - **Erreurs HTTP silencieuses** : utiliser `catchError(() => of(null))` pour les endpoints optionnels (ex: booking-time-overrides, Qonto) — toujours ajouter un guard `if (!result) return;` après
+- **`application.yml` — clés top-level uniques** : YAML interdit les clés dupliquées au même niveau — `DuplicateKeyException` au démarrage Spring Boot. Si on ajoute une propriété sous `app:`, la mettre dans le bloc `app:` **existant**, jamais créer un second `app:` séparé.
 - **Beds24 API timeouts** : `connectTimeout(10s)` + `requestTimeout(25s)` configurés dans `Beds24ApiClient` — ne pas modifier sans raison
 - **Beds24 API — HttpClient partagé** : `Beds24ApiClient`, `GeminiChatbotService`, `GroqChatbotService`, `QontoService` et `Beds24TokenService` utilisent chacun un `HttpClient` **statique partagé** (`private static final HttpClient HTTP_CLIENT = …`). Ne jamais recréer un `HttpClient` par appel — c'est la cause #1 d'épuisement de ressources sous charge (threads, file descriptors).
 - **Beds24 API — quota de crédits** : l'API Beds24 v2 impose un système de "crédits" par fenêtre de temps. Chaque appel `getBookings` / `getCalendar` / `updateCalendar` coûte des crédits. Les erreurs 429 "Credit limit exceeded" sont attrapées par `Beds24ApiClient.send()` et renvoient un message lisible via `Beds24ApiClient.friendlyMessage()`. Toujours éviter les appels redondants : ex. `resolveRoomId()` ne fait UN appel `getCalendar` QUE la première fois par logement (cache mémoire + DB `PropertyConfig.roomId`).
@@ -269,6 +270,24 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - Le dialog `BookingDetailDialogComponent` retourne `{ editDirect: true }` via `afterClosed()`
 - Les composants `dashboard`, `today`, `arrivals`, `departures` redirigent vers `/admin/bookings` avec `history.state = { editDirectBooking: booking }`
 - `BookingsComponent` lit `history.state` dans `ngOnInit()` et ouvre le formulaire d'édition après chargement de la liste
+
+### Stripe Connect — Paiements par hôte
+
+- **Architecture** : chaque hôte connecte son propre compte Stripe via OAuth (bouton dans Paramètres). `AppUser.stripeAccountId` (`acct_xxx`) est persisté en DB.
+- **OAuth flow** : `GET /user/stripe-connect/url` → URL Stripe avec `client_id=STRIPE_CLIENT_ID` + `redirect_uri=/admin/stripe-callback` → `POST /user/stripe-connect/callback` échange le code → `OAuth.token()` → sauvegarde `stripeAccountId`
+- **Déconnexion** : `DELETE /user/stripe-connect/disconnect` → `OAuth.deauthorize()` + efface `stripeAccountId`
+- **Page de paiement public** : `/{slug}/payment` — composant `BookingSitePaymentComponent` — `loadStripe(publishableKey, { stripeAccount: acct_xxx })` + Payment Element monté sur `#payment-element`
+- **Création Payment Intent** : `POST /public/{slug}/create-payment-intent` — utilise `RequestOptions.builder().setStripeAccount(user.getStripeAccountId()).build()` — paiement créédirectement sur le compte de l'hôte
+- **Variables d'env** : `STRIPE_CLIENT_ID` (`ca_xxx`) + `APP_FRONTEND_URL` (`https://flowlyrent.com`) requis en prod + enregistrer `https://flowlyrent.com/admin/stripe-callback` comme redirect URI dans Stripe Dashboard → Connect
+- **Webhook** : `StripeWebhookController` gère `payment_intent.succeeded` (en plus de `checkout.session.completed`)
+- **GitHub Push Protection** : les patterns `sk_live_xxx` / `pk_live_xxx` déclenchent un blocage — ne jamais mettre de vraies clés dans le code, même en placeholder ressemblant à une vraie clé
+
+### Recherche disponibilité — Filtre capacité voyageurs
+
+- `GET /public/{slug}/search?from=&to=&guests=N` filtre les propriétés par `maxPeople >= N`
+- Le champ capacité est lu directement depuis la réponse Beds24 `/properties` (déjà chargée) — 9 noms de champ candidats testés (`maxPeople`, `maxGuestNumber`, `maxGuests`, etc.) car Beds24 peut varier
+- Log ajouté : `[search] property keys available: [...]` pour diagnostiquer quel champ Beds24 utilise réellement en prod
+- **Ne pas appeler `getRooms` par propriété** : provoque N appels Beds24 séquentiels → timeout 504
 
 ### Répondeur automatique — Messages voyageurs
 - **Webhook** : `POST /webhooks/beds24` reçoit les messages voyageurs Beds24 en temps réel

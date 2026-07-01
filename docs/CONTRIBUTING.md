@@ -19,6 +19,8 @@ JWT_EXPIRATION=604800000
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+# Stripe Connect OAuth (mode multi-compte hôtes)
+STRIPE_CLIENT_ID=ca_...   # Dashboard Stripe → Connect → Paramètres → ID client
 
 # Cloudinary (stockage photos ménage)
 CLOUDINARY_SECRET=<api_secret Cloudinary>
@@ -98,7 +100,10 @@ Variables d'environnement Railway à configurer :
 SPRING_PROFILES_ACTIVE=prod
 JWT_SECRET=<clé base64 32+ octets>
 STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_CLIENT_ID=ca_...           # Stripe Connect OAuth
+APP_FRONTEND_URL=https://flowlyrent.com  # URL de redirection OAuth Stripe Connect
 CLOUDINARY_SECRET=<api_secret Cloudinary — régénérer si compromis>
 CORS_ALLOWED_ORIGINS=https://flowlyrent.com,https://www.flowlyrent.com,https://flowlyrent.netlify.app
 ADMIN_USERNAME=admin@flowlyrent.com
@@ -116,6 +121,8 @@ Les variables `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASS
 **Profil Spring Boot prod** : `application-prod.yml` (se charge via `SPRING_PROFILES_ACTIVE=prod`)
 
 **CORS** : `WebConfig.java` lit `app.cors.allowed-origins` — défaut localhost:4200 en dev, variable `CORS_ALLOWED_ORIGINS` en prod.
+
+**Stripe Connect** : enregistrer `https://flowlyrent.com/admin/stripe-callback` comme URI de redirection dans Dashboard Stripe → Connect → Paramètres → URI de redirection OAuth.
 
 **WebSocket Railway** : `application-prod.yml` contient `server.forward-headers-strategy: native` pour que Tomcat fasse confiance aux headers `X-Forwarded-*` du proxy Railway. Sans ça, les WebSockets échouent avec 400.
 

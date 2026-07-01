@@ -281,6 +281,7 @@ demande pour que l'équipe FlowlyRent puisse en tenir compte.
 
 - **Beds24** : code d'invitation, configuration du webhook, synchronisation manuelle.
 - **Qonto** : connexion du compte bancaire pour le suivi des dépenses et la marge.
+- **Stripe** : connexion du compte Stripe de l'hôte via OAuth (bouton "Connecter mon compte Stripe"). Une fois connecté, les paiements en ligne des voyageurs (site public) sont encaissés directement sur le compte Stripe de l'hôte. Le compte peut être déconnecté depuis les mêmes paramètres.
 - **Stratégie de séjour minimum** : règles de nuitées minimum selon la proximité de la
   date (ex. 2 nuits à court terme, 1 nuit à long terme).
 - **Langues** : interface disponible en français, anglais, espagnol, allemand, italien.
@@ -292,6 +293,15 @@ demande pour que l'équipe FlowlyRent puisse en tenir compte.
 Chaque hôte dispose d'une page publique personnalisée (`votre-nom.flowlyrent.com/nom-court-du-logement`)
 où les voyageurs peuvent voir les photos, équipements, avis, disponibilités en calendrier,
 et réserver directement (réservation directe, hors plateformes type Airbnb).
+
+La **recherche de disponibilité** sur la page d'accueil du site public filtre automatiquement
+les logements selon leur capacité maximale : seuls les logements pouvant accueillir le nombre
+de voyageurs demandé apparaissent dans les résultats.
+
+Après confirmation de la réservation, le voyageur peut **payer en ligne** via une page de
+paiement Stripe intégrée (`/{slug}/payment`) : carte bancaire, Apple Pay, Google Pay ou
+virement SEPA sont acceptés. Le paiement est sécurisé et traité directement sur le compte
+Stripe de l'hôte (via Stripe Connect).
 
 ## Portail Prestataire (rôle HOUSEKEEPER)
 

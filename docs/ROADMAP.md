@@ -57,3 +57,6 @@
 - [x] Sets de linge par défaut par logement — pré-remplissage à la création de tâche, déduction auto du stock à la fin (idempotent)
 - [x] Notifications superadmin → utilisateurs — envoi ciblé ou global, suivi lectures, badge non-lu dans le menu admin
 - [x] Internationalisation (i18n) — 5 langues : FR, EN, ES, DE, IT (`@ngx-translate/core`)
+- [x] Site de réservation public — filtre capacité voyageurs dans la recherche de disponibilité
+- [x] Site de réservation public — page de paiement Stripe intégrée (`/{slug}/payment`) avec Payment Element (carte, Apple Pay, Google Pay, SEPA)
+- [x] Stripe Connect OAuth — chaque hôte connecte son propre compte Stripe depuis Paramètres (bouton "Connecter mon compte Stripe") ; les paiements transitent directement sur son compte via `Stripe-Account`
