@@ -30,6 +30,11 @@ public class PropertyConfig {
     @Column(name = "room_id")
     private Long roomId;
 
+    /** Capacité max voyageurs Beds24 (/inventory/rooms.maxPeople) — quasi-statique,
+     *  mise en cache ici pour éviter d'interroger Beds24 à chaque recherche publique. */
+    @Column(name = "max_people")
+    private Integer maxPeople;
+
     private String shortName;
 
     private String accessCode;

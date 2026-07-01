@@ -11,6 +11,7 @@ import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.PropertyCapacityResolverService;
 import com.flowlyrent.service.RoomIdResolverService;
 import com.stripe.Stripe;
 import com.stripe.model.PaymentIntent;
@@ -38,6 +39,7 @@ public class PublicBookingController {
 
     private final Beds24ApiClient beds24;
     private final RoomIdResolverService roomIdResolver;
+    private final PropertyCapacityResolverService capacityResolver;
     private final AppUserRepository userRepo;
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
@@ -150,13 +152,10 @@ public class PublicBookingController {
                 return ResponseEntity.notFound().build();
             }
             enrichWithCoverPhoto(prop, user.getId());
-            // Enrichir avec maxPeople depuis /inventory/rooms
+            // Enrichir avec maxPeople (cache PropertyConfig, sinon résolu via /inventory/rooms)
             try {
-                List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of("propertyId", propertyId));
-                if (rooms != null && !rooms.isEmpty()) {
-                    Object maxPeople = rooms.get(0).get("maxPeople");
-                    if (maxPeople != null) prop.put("maxPeople", maxPeople);
-                }
+                Integer maxPeople = capacityResolver.resolveMaxPeople(user, token, Set.of(propertyId)).get(propertyId);
+                if (maxPeople != null) prop.put("maxPeople", maxPeople);
             } catch (Exception ignored) {}
             return ResponseEntity.ok(prop);
         } catch (Exception e) {
@@ -196,9 +195,19 @@ public class PublicBookingController {
                 }
             }
 
-            // Log des clés du 1er logement pour identifier le bon champ maxPeople
-            if (!allProps.isEmpty()) {
-                log.info("[search] property keys available: {}", allProps.get(0).keySet());
+            // maxPeople n'existe pas dans /properties — résolu via PropertyConfig (cache DB) puis
+            // /inventory/rooms uniquement pour les logements manquants (pas d'appel Beds24 redondant)
+            Set<String> allPropIds = new java.util.HashSet<>();
+            for (Map<String, Object> prop : allProps) {
+                String pid = extractPropertyId(prop);
+                if (pid != null) allPropIds.add(pid);
+            }
+            Map<String, Integer> maxPeopleByProp;
+            try {
+                maxPeopleByProp = capacityResolver.resolveMaxPeople(user, token, allPropIds);
+            } catch (Exception e) {
+                log.warn("[search] Impossible de résoudre maxPeople : {}", e.getMessage());
+                maxPeopleByProp = Map.of();
             }
 
             List<String> available = new java.util.ArrayList<>();
@@ -206,15 +215,7 @@ public class PublicBookingController {
                 String pid = extractPropertyId(prop);
                 if (pid == null || blockedPropIds.contains(pid)) continue;
 
-                // Chercher maxPeople dans les champs de la réponse /properties (aucun appel Beds24 supplémentaire)
-                int max = 0;
-                for (String key : new String[]{"maxGuestNumber","maxGuests","maxPeople","maxPersons","maxGuestNum","numGuestsMax","maxOccupancy","maxPersonNumber","guestCapacity"}) {
-                    Object mp = prop.get(key);
-                    if (mp != null) {
-                        int v = (int) toLong(mp);
-                        if (v > 0) { max = v; log.info("[search] propId={} key='{}' maxPeople={}", pid, key, v); break; }
-                    }
-                }
+                int max = maxPeopleByProp.getOrDefault(pid, 0);
                 log.info("[search] propId={} maxResolved={} guests={} → {}", pid, max, guests, (max == 0 || guests <= max) ? "OK" : "EXCLU");
                 if (max == 0 || guests <= max) available.add(pid);
             }
