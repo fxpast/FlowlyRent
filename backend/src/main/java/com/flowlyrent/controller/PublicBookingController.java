@@ -143,7 +143,8 @@ public class PublicBookingController {
                     .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
             String token = beds24.tokenFor(account);
             // L'API Beds24 /properties ignore parfois le filtre propertyId → on filtre côté client
-            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of());
+            // includeAllRooms=true embarque roomTypes[].maxPeople dans la réponse (un seul appel)
+            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of("includeAllRooms", "true"));
             Map<String, Object> prop = allProps == null ? null : allProps.stream()
                     .filter(p -> propertyId.equals(extractPropertyId(p)))
                     .findFirst()
@@ -152,9 +153,8 @@ public class PublicBookingController {
                 return ResponseEntity.notFound().build();
             }
             enrichWithCoverPhoto(prop, user.getId());
-            // Enrichir avec maxPeople (cache PropertyConfig, sinon résolu via /inventory/rooms)
             try {
-                Integer maxPeople = capacityResolver.resolveMaxPeople(user, token, Set.of(propertyId)).get(propertyId);
+                Integer maxPeople = capacityResolver.resolveMaxPeople(user, List.of(prop), PublicBookingController::extractPropertyId).get(propertyId);
                 if (maxPeople != null) prop.put("maxPeople", maxPeople);
             } catch (Exception ignored) {}
             return ResponseEntity.ok(prop);
@@ -176,7 +176,8 @@ public class PublicBookingController {
                     .orElseThrow(() -> new IllegalArgumentException("Beds24 non connecté : " + slug));
             String token = beds24.tokenFor(account);
 
-            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of());
+            // includeAllRooms=true embarque roomTypes[].maxPeople dans la réponse (un seul appel)
+            List<Map<String, Object>> allProps = beds24.getProperties(token, Map.of("includeAllRooms", "true"));
 
             // Réservations qui peuvent chevaucher [from, to]
             Map<String, String> bParams = new java.util.HashMap<>();
@@ -195,16 +196,9 @@ public class PublicBookingController {
                 }
             }
 
-            // maxPeople n'existe pas dans /properties — résolu via PropertyConfig (cache DB) puis
-            // /inventory/rooms uniquement pour les logements manquants (pas d'appel Beds24 redondant)
-            Set<String> allPropIds = new java.util.HashSet<>();
-            for (Map<String, Object> prop : allProps) {
-                String pid = extractPropertyId(prop);
-                if (pid != null) allPropIds.add(pid);
-            }
             Map<String, Integer> maxPeopleByProp;
             try {
-                maxPeopleByProp = capacityResolver.resolveMaxPeople(user, token, allPropIds);
+                maxPeopleByProp = capacityResolver.resolveMaxPeople(user, allProps, PublicBookingController::extractPropertyId);
             } catch (Exception e) {
                 log.warn("[search] Impossible de résoudre maxPeople : {}", e.getMessage());
                 maxPeopleByProp = Map.of();

@@ -8,15 +8,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Résout maxPeople (capacité voyageurs) par logement en le persistant dans PropertyConfig —
- * la capacité ne change quasiment jamais, inutile de la redemander à Beds24 (donc de
- * consommer des crédits d'API) à chaque recherche sur le site public.
+ * Résout maxPeople (capacité voyageurs) par logement à partir du champ "roomTypes" présent
+ * dans la réponse Beds24 GET /properties?includeAllRooms=true (pas de "maxPeople" au niveau
+ * racine de la propriété, et /inventory/rooms n'est pas utilisable en filtrage libre — il
+ * répond HTTP 500 "Could not process request" hors contexte calendrier). Le résultat est mis
+ * en cache dans PropertyConfig.maxPeople pour éviter de reparser à chaque appel.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,56 +24,56 @@ import java.util.Set;
 public class PropertyCapacityResolverService {
 
     private final PropertyConfigRepository propertyConfigRepo;
-    private final Beds24ApiClient beds24;
 
-    public Map<String, Integer> resolveMaxPeople(AppUser user, String token, Set<String> propertyIds) throws Exception {
+    /**
+     * @param propsWithRoomTypes réponse de beds24.getProperties(token, Map.of("includeAllRooms", "true"))
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Integer> resolveMaxPeople(AppUser user, List<Map<String, Object>> propsWithRoomTypes, java.util.function.Function<Map<String, Object>, String> extractPropertyId) {
         Map<String, Integer> result = new HashMap<>();
-        Set<String> missing = new HashSet<>();
+        boolean logged = false;
 
-        for (String pid : propertyIds) {
+        for (Map<String, Object> prop : propsWithRoomTypes) {
+            String pid = extractPropertyId.apply(prop);
+            if (pid == null) continue;
+
             PropertyConfig cfg = propertyConfigRepo.findByUserIdAndBeds24PropertyId(user.getId(), pid).orElse(null);
             if (cfg != null && cfg.getMaxPeople() != null) {
                 result.put(pid, cfg.getMaxPeople());
-            } else {
-                missing.add(pid);
+                continue;
             }
-        }
-        if (missing.isEmpty()) return result;
 
-        // /inventory/rooms exige un propertyId (HTTP 500 "Could not process request" sans filtre) —
-        // contrairement à /properties ou /bookings. Un appel par logement manquant est nécessaire,
-        // mais n'a lieu qu'une seule fois par logement grâce au cache PropertyConfig ci-dessous.
-        Map<String, Integer> fetched = new HashMap<>();
-        for (String pid : missing) {
-            try {
-                List<Map<String, Object>> rooms = beds24.getRooms(token, Map.of("propertyId", pid));
-                if (rooms == null || rooms.isEmpty()) continue;
-                if (fetched.isEmpty() && result.isEmpty()) {
-                    log.info("[capacity] clés du 1er objet room (propId={}) : {}", pid, rooms.get(0).keySet());
-                }
-                Object mp = rooms.get(0).get("maxPeople");
-                if (mp instanceof Number n) {
-                    int v = n.intValue();
-                    if (v > 0) fetched.put(pid, v);
-                }
-            } catch (Exception e) {
-                log.warn("[capacity] Échec résolution maxPeople propId={} : {}", pid, e.getMessage());
+            int max = 0;
+            Object roomTypesObj = prop.get("roomTypes");
+            if (!logged) {
+                log.info("[capacity] propId={} roomTypes présent={} contenu={}", pid, roomTypesObj != null, roomTypesObj);
+                logged = true;
             }
-        }
-        log.info("[capacity] maxPeople résolu pour {}/{} propertyId manquants : {}", fetched.size(), missing.size(), fetched);
+            if (roomTypesObj instanceof List<?> roomTypes) {
+                for (Object rt : roomTypes) {
+                    if (!(rt instanceof Map)) continue;
+                    Object mp = ((Map<String, Object>) rt).get("maxPeople");
+                    int v = parseInt(mp);
+                    if (v > max) max = v;
+                }
+            }
+            if (max <= 0) continue;
 
-        for (Map.Entry<String, Integer> e : fetched.entrySet()) {
-            result.put(e.getKey(), e.getValue());
-            PropertyConfig cfg = propertyConfigRepo.findByUserIdAndBeds24PropertyId(user.getId(), e.getKey())
-                    .orElseGet(() -> {
-                        PropertyConfig c = new PropertyConfig();
-                        c.setUser(user);
-                        c.setBeds24PropertyId(e.getKey());
-                        return c;
-                    });
-            cfg.setMaxPeople(e.getValue());
-            propertyConfigRepo.save(cfg);
+            result.put(pid, max);
+            PropertyConfig toSave = cfg != null ? cfg : new PropertyConfig();
+            if (cfg == null) {
+                toSave.setUser(user);
+                toSave.setBeds24PropertyId(pid);
+            }
+            toSave.setMaxPeople(max);
+            propertyConfigRepo.save(toSave);
         }
         return result;
+    }
+
+    private static int parseInt(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Number n) return n.intValue();
+        try { return Integer.parseInt(val.toString().trim()); } catch (Exception e) { return 0; }
     }
 }

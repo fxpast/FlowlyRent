@@ -289,10 +289,10 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 ### Recherche disponibilité — Filtre capacité voyageurs
 
 - `GET /public/{slug}/search?from=&to=&guests=N` filtre les propriétés par `maxPeople >= N`
-- **`maxPeople` n'existe pas dans la réponse `/properties`** (contrairement à ce qu'on pensait initialement) — il vient uniquement de `/inventory/rooms`, qui **exige un `propertyId`** (HTTP 500 "Could not process request" si appelé sans filtre, pas d'appel groupé possible pour tous les logements comme `/properties` ou `/bookings`).
-- **`PropertyCapacityResolverService.resolveMaxPeople(user, token, propertyIds)`** : résout `maxPeople` avec cache DB (`PropertyConfig.maxPeople`, même pattern que `roomId`/`RoomIdResolverService`) — un appel `getRooms(propertyId=X)` par logement, mais **une seule fois par logement pour toujours** grâce au cache ; les recherches suivantes ne consomment plus aucun crédit Beds24. La ligne `PropertyConfig` est créée automatiquement si elle n'existait pas encore (l'hôte n'a pas forcément configuré ce logement dans `/admin/property-configs`).
-- Utilisé à la fois par `GET /{slug}/search` et `GET /{slug}/properties/{propertyId}`
-- Si `maxPeople` reste introuvable pour un logement (erreur Beds24, champ absent) : `max=0` → le logement est inclus par défaut (`max == 0 || guests <= max`), jamais exclu par erreur
+- **`maxPeople` n'existe ni à la racine de `/properties`, ni via `/inventory/rooms`** (cet endpoint exige des paramètres de contexte calendrier et répond HTTP 500 "Could not process request" en filtrage libre — confirmé par test d'extraction en local). La bonne source : `GET /properties?includeAllRooms=true` embarque un tableau `roomTypes[]` par logement, chaque élément ayant un champ `maxPeople` (string ou number selon le logement) — **un seul appel groupé**, comme `/properties` classique.
+- **`PropertyCapacityResolverService.resolveMaxPeople(user, propsWithRoomTypes, extractPropertyId)`** : parse `roomTypes[].maxPeople` (max si plusieurs types de chambre) depuis la réponse déjà chargée — aucun appel Beds24 supplémentaire. Résultat mis en cache dans `PropertyConfig.maxPeople` (même pattern que `roomId`/`RoomIdResolverService`), avec création automatique de la ligne `PropertyConfig` si elle n'existait pas (l'hôte n'a pas forcément configuré ce logement dans `/admin/property-configs`).
+- Utilisé à la fois par `GET /{slug}/search` et `GET /{slug}/properties/{propertyId}` — les deux appellent `beds24.getProperties(token, Map.of("includeAllRooms", "true"))` au lieu de `Map.of()`
+- Si `maxPeople` reste introuvable pour un logement (champ absent du logement Beds24) : `max=0` → le logement est inclus par défaut (`max == 0 || guests <= max`), jamais exclu par erreur
 
 ### Répondeur automatique — Messages voyageurs
 - **Webhook** : `POST /webhooks/beds24` reçoit les messages voyageurs Beds24 en temps réel
