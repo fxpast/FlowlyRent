@@ -1000,7 +1000,8 @@
         "you": "Vous",
         "home_title_short": "Accueil",
         "booking_your": "Votre réservation",
-        "payment_redirect": "Redirection vers la page de paiement…"
+        "payment_redirect": "Redirection vers la page de paiement…",
+        "payment_link_invalid": "Ce lien de paiement est invalide ou a expiré. Contactez votre hôte pour un nouveau lien."
     },
     "superadmin": {
         "dashboard_title": "Dashboard Admin",
@@ -1111,6 +1112,7 @@
         "pay_immediate_tooltip": "Encaissement immédiat",
         "deposit_tooltip": "Pré-autorisation sans débit (caution)",
         "no_public_site": "Aucun site de réservation configuré — active-le dans Paramètres",
+        "pay_link_error": "Impossible de créer le lien de paiement",
         "open_link": "Ouvrir",
         "create_invoice": "Créer une facture",
         "via_beds24": "messages transmis via Beds24",

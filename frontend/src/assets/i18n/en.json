@@ -1000,7 +1000,8 @@
         "you": "You",
         "home_title_short": "Home",
         "booking_your": "Your booking",
-        "payment_redirect": "Redirecting to payment page…"
+        "payment_redirect": "Redirecting to payment page…",
+        "payment_link_invalid": "This payment link is invalid or has expired. Contact your host for a new link."
     },
     "superadmin": {
         "dashboard_title": "Admin Dashboard",
@@ -1111,6 +1112,7 @@
         "pay_immediate_tooltip": "Immediate charge",
         "deposit_tooltip": "Pre-authorization without charge (deposit)",
         "no_public_site": "No booking site configured — enable it in Settings",
+        "pay_link_error": "Unable to create the payment link",
         "open_link": "Open",
         "create_invoice": "Create invoice",
         "via_beds24": "messages forwarded via Beds24",

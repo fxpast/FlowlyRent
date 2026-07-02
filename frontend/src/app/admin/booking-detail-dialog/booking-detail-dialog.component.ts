@@ -976,26 +976,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     // Lien Stripe Connect FlowlyRent (site public de l'hôte) — pour la caution, le PaymentIntent
     // est créé en captureMethod=manual : les fonds sont bloqués sans débit, et l'hôte capture ou
     // annule ensuite directement depuis son propre Dashboard Stripe (Paiements)
-    const slug = this.auth.getCurrentUser()?.publicSiteSlug;
-    if (!slug) {
+    if (!this.auth.getCurrentUser()?.publicSiteSlug) {
       this.snackBar.open(this.t.instant('booking_dialog.no_public_site'), this.t.instant('common.close'), { duration: 3000 });
       return;
     }
     const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
     const fallback = this.draft['propName'] || this.draft['propertyName'] || '';
     this.bookingService.getPropertyNames().subscribe({
-      next: names => this.buildStripePayLink(type, slug, id, names[pid] || fallback),
-      error: () => this.buildStripePayLink(type, slug, id, fallback)
+      next: names => this.createPayLink(type, id, names[pid] || fallback),
+      error: () => this.createPayLink(type, id, fallback)
     });
   }
 
-  private buildStripePayLink(type: 'payment' | 'deposit', slug: string, bookingId: string, propertyName: string): void {
+  private createPayLink(type: 'payment' | 'deposit', bookingId: string, propertyName: string): void {
     const amountCents = Math.round(Number(this.payAmount) * 100);
     const guestName = `${this.draft['guestFirstName'] || ''} ${this.draft['guestLastName'] || ''}`.trim();
     const label = type === 'deposit' ? this.t.instant('booking_dialog.deposit_btn') : this.t.instant('booking_dialog.pay_btn');
-    const params = new URLSearchParams({
+
+    const payload = {
       bookingId,
-      amountCents: String(amountCents),
+      amountCents,
       currency: 'eur',
       description: `${label} #${bookingId}`,
       guestEmail: this.draft['guestEmail'] || '',
@@ -1004,9 +1004,15 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
       checkIn: (this.draft['arrival'] || '').toString().substring(0, 10),
       checkOut: (this.draft['departure'] || '').toString().substring(0, 10),
       captureMethod: type === 'deposit' ? 'manual' : 'automatic'
+    };
+
+    this.http.post<{ token: string }>(`${this.apiBase}/admin/payment-links`, payload).subscribe({
+      next: res => {
+        this.payLink.set(`${window.location.origin}/pay/${res.token}`);
+        this.payLinkCopied.set(false);
+      },
+      error: () => this.snackBar.open(this.t.instant('booking_dialog.pay_link_error'), this.t.instant('common.close'), { duration: 3000 })
     });
-    this.payLink.set(`${window.location.origin}/${slug}/payment?${params.toString()}`);
-    this.payLinkCopied.set(false);
   }
 
   copyPayLink(): void {

@@ -68,6 +68,10 @@ export class BookingSiteService {
     return this.http.get<{ publishableKey: string }>(`${this.base}/${slug}/stripe-key`);
   }
 
+  getPaymentLink(token: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/payment-links/${token}`);
+  }
+
   createPaymentIntent(slug: string, data: {
     bookingId: string; amountCents: number; currency: string; description: string; guestEmail: string; captureMethod?: string;
   }): Observable<{ clientSecret: string }> {

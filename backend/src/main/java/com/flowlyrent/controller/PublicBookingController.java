@@ -44,6 +44,7 @@ public class PublicBookingController {
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
     private final PropertyPhotoRepository propertyPhotoRepo;
+    private final com.flowlyrent.repository.PaymentLinkRepository paymentLinkRepo;
     private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
@@ -67,6 +68,34 @@ public class PublicBookingController {
                     "companyLogoUrl", user.getCompanyLogoUrl() != null ? user.getCompanyLogoUrl() : "",
                     "firstName",      user.getFirstName()     != null ? user.getFirstName()     : "",
                     "lastName",       user.getLastName()      != null ? user.getLastName()      : ""
+            ));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Liens de paiement courts (créés par l'hôte depuis le dialog réservation)
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/payment-links/{token}")
+    public ResponseEntity<?> getPaymentLink(@PathVariable String token) {
+        try {
+            com.flowlyrent.model.PaymentLink link = paymentLinkRepo.findByToken(token)
+                    .orElseThrow(() -> new IllegalArgumentException("Lien de paiement introuvable"));
+            AppUser user = link.getUser();
+            return ResponseEntity.ok(Map.ofEntries(
+                    Map.entry("slug",          user.getPublicSiteSlug() != null ? user.getPublicSiteSlug() : ""),
+                    Map.entry("bookingId",     link.getBookingId()),
+                    Map.entry("amountCents",   link.getAmountCents()),
+                    Map.entry("currency",      link.getCurrency()      != null ? link.getCurrency()      : "eur"),
+                    Map.entry("description",   link.getDescription()   != null ? link.getDescription()   : ""),
+                    Map.entry("guestEmail",    link.getGuestEmail()    != null ? link.getGuestEmail()    : ""),
+                    Map.entry("guestName",     link.getGuestName()     != null ? link.getGuestName()     : ""),
+                    Map.entry("propertyName",  link.getPropertyName()  != null ? link.getPropertyName()  : ""),
+                    Map.entry("checkIn",       link.getCheckIn()       != null ? link.getCheckIn()       : ""),
+                    Map.entry("checkOut",      link.getCheckOut()      != null ? link.getCheckOut()      : ""),
+                    Map.entry("captureMethod", link.getCaptureMethod())
             ));
         } catch (Exception e) {
             return error(e);

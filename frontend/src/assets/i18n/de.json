@@ -1000,7 +1000,8 @@
         "you": "Sie",
         "home_title_short": "Startseite",
         "booking_your": "Ihre Buchung",
-        "payment_redirect": "Weiterleitung zur Zahlungsseite…"
+        "payment_redirect": "Weiterleitung zur Zahlungsseite…",
+        "payment_link_invalid": "Dieser Zahlungslink ist ungültig oder abgelaufen. Bitte kontaktieren Sie Ihren Gastgeber für einen neuen Link."
     },
     "superadmin": {
         "dashboard_title": "Admin-Dashboard",
@@ -1109,6 +1110,7 @@
         "pay_immediate_tooltip": "Sofortige Abbuchung",
         "deposit_tooltip": "Vorautorisierung ohne Abbuchung (Kaution)",
         "no_public_site": "Keine Buchungsseite konfiguriert — in den Einstellungen aktivieren",
+        "pay_link_error": "Zahlungslink konnte nicht erstellt werden",
         "open_link": "Öffnen",
         "create_invoice": "Rechnung erstellen",
         "via_beds24": "Nachrichten über Beds24 übermittelt",

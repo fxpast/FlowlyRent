@@ -1000,7 +1000,8 @@
         "you": "Tú",
         "home_title_short": "Inicio",
         "booking_your": "Tu reserva",
-        "payment_redirect": "Redirigiendo a la página de pago…"
+        "payment_redirect": "Redirigiendo a la página de pago…",
+        "payment_link_invalid": "Este enlace de pago no es válido o ha caducado. Contacta con tu anfitrión para obtener uno nuevo."
     },
     "superadmin": {
         "dashboard_title": "Panel Admin",
@@ -1109,6 +1110,7 @@
         "pay_immediate_tooltip": "Cobro inmediato",
         "deposit_tooltip": "Preautorización sin cargo (depósito)",
         "no_public_site": "Ningún sitio de reserva configurado — actívalo en Ajustes",
+        "pay_link_error": "No se pudo crear el enlace de pago",
         "open_link": "Abrir",
         "create_invoice": "Crear factura",
         "via_beds24": "mensajes transmitidos vía Beds24",

@@ -45,6 +45,10 @@ export const routes: Routes = [
     loadComponent: () => import('./public/payment-redirect/payment-redirect.component').then(m => m.PaymentRedirectComponent)
   },
   {
+    path: 'pay/:token',
+    loadComponent: () => import('./public/pay-short-link/pay-short-link.component').then(m => m.PayShortLinkComponent)
+  },
+  {
     path: ':slug',
     pathMatch: 'full',
     loadComponent: () => import('./booking-site/booking-site-home/booking-site-home.component').then(m => m.BookingSiteHomeComponent)
