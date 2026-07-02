@@ -31,11 +31,12 @@ export class BookingSiteService {
     });
   }
 
-  getEstimate(slug: string, propId: string, arrival: string, departure: string, numAdult = 1):
-      Observable<{ nights: number, nightsPrice: number, taxeSejour: number, cleaningFee: number }> {
-    return this.http.get<any>(`${this.base}/${slug}/properties/${propId}/estimate`, {
-      params: { arrival, departure, numAdult: String(numAdult) }
-    });
+  getEstimate(slug: string, propId: string, arrival: string, departure: string, numAdult = 1, promoCode = ''):
+      Observable<{ nights: number, nightsPrice: number, taxeSejour: number, cleaningFee: number,
+                   promoCodeValid?: boolean, promoCodeDiscountPercent?: number }> {
+    const params: Record<string, string> = { arrival, departure, numAdult: String(numAdult) };
+    if (promoCode.trim()) params['promoCode'] = promoCode.trim();
+    return this.http.get<any>(`${this.base}/${slug}/properties/${propId}/estimate`, { params });
   }
 
   searchAvailability(slug: string, from: string, to: string, guests: number): Observable<{ availablePropertyIds: string[] }> {

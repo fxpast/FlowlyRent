@@ -301,6 +301,18 @@ La **recherche de disponibilité** sur la page d'accueil du site public filtre a
 les logements selon leur capacité maximale : seuls les logements pouvant accueillir le nombre
 de voyageurs demandé apparaissent dans les résultats.
 
+### Codes promo
+
+Dans **Logements → Paramètres du logement**, section "Codes promo", l'hôte peut créer un ou
+plusieurs codes de réduction pour un logement précis (ex. `REDUC10` = 10% de réduction). Chaque
+code est propre à un seul logement, avec un pourcentage de remise (1 à 100%) et peut être
+activé/désactivé sans être supprimé. Le nombre d'utilisations est affiché à côté de chaque code.
+
+Sur le site public, le voyageur saisit le code dans un champ dédié lors de la réservation (après
+avoir choisi ses dates) et clique sur "Appliquer" : la réduction s'applique immédiatement sur le
+prix des nuits (après les éventuelles réductions long séjour déjà configurées) et un message
+confirme si le code est valide ou non.
+
 Après confirmation de la réservation, le voyageur peut **payer en ligne** via une page de
 paiement Stripe intégrée (`/{slug}/payment`) : carte bancaire, Apple Pay, Google Pay ou
 virement SEPA sont acceptés. Le paiement est sécurisé et traité directement sur le compte

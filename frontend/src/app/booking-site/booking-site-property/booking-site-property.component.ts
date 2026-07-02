@@ -250,6 +250,30 @@ interface CalMonth {
                   {{ 'bs.unavailable' | translate }}
                 </div>
               } @else {
+                <!-- Code promo -->
+                <div class="promo-code-box">
+                  <div class="field-wrap" style="flex:1">
+                    <label class="select-label">{{ 'bs.promo_code' | translate }}</label>
+                    <input class="text-input" [(ngModel)]="promoCode" (keydown.enter)="applyPromoCode()"
+                           [placeholder]="'bs.promo_code_placeholder' | translate">
+                  </div>
+                  <button mat-stroked-button (click)="applyPromoCode()" [disabled]="!promoCode.trim() || applyingPromoCode()">
+                    @if (applyingPromoCode()) { <mat-spinner diameter="18"></mat-spinner> }
+                    @else { {{ 'bs.promo_apply' | translate }} }
+                  </button>
+                </div>
+                @if (promoCodeApplied()) {
+                  <div class="promo-feedback valid">
+                    <span class="material-icons">check_circle</span>
+                    {{ 'bs.promo_valid' | translate: { percent: promoDiscountPercent() } }}
+                  </div>
+                } @else if (promoCodeInvalid()) {
+                  <div class="promo-feedback invalid">
+                    <span class="material-icons">error</span>
+                    {{ 'bs.promo_invalid' | translate }}
+                  </div>
+                }
+
                 <!-- Prix (masqué si Beds24 n'a pas de tarif configuré) -->
                 @if (totalPrice() > 0) {
                   <div class="price-summary">
@@ -257,6 +281,12 @@ interface CalMonth {
                       <span>{{ nights() }} {{ (nights() > 1 ? 'bs.nights' : 'bs.night') | translate }}</span>
                       <span>{{ formatPrice(basePrice()) }}</span>
                     </div>
+                    @if (promoCodeApplied()) {
+                      <div class="price-row discount">
+                        <span>{{ 'bs.promo_discount' | translate: { percent: promoDiscountPercent() } }}</span>
+                        <span>−{{ promoDiscountPercent() }}%</span>
+                      </div>
+                    }
                     @if (taxeSejour() > 0) {
                       <div class="price-row">
                         <span>{{ 'bs.taxe_sejour' | translate }}</span>
@@ -500,6 +530,16 @@ interface CalMonth {
     .price-summary { background: #f5f7fa; border-radius: 8px; padding: 20px; margin: 20px 0; }
     .price-row { display: flex; justify-content: space-between; padding: 6px 0; color: #333; }
     .price-row.total { font-weight: 700; font-size: 1.1rem; padding-top: 12px; }
+    .price-row.discount { color: #2e7d32; font-weight: 600; }
+
+    .promo-code-box { display: flex; align-items: flex-end; gap: 8px; margin-top: 16px; }
+    .promo-feedback {
+      display: flex; align-items: center; gap: 6px; font-size: .85rem;
+      margin-top: 6px; padding: 6px 0;
+    }
+    .promo-feedback .material-icons { font-size: 18px; }
+    .promo-feedback.valid { color: #2e7d32; }
+    .promo-feedback.invalid { color: #c62828; }
 
     .guest-form { display: flex; flex-direction: column; gap: 12px; }
     .name-row { display: flex; gap: 12px; }
@@ -550,6 +590,11 @@ export class BookingSitePropertyComponent implements OnInit {
   taxeSejour = signal(0);
   totalPrice = signal(0);
   currency = signal('EUR');
+  promoCode = '';
+  promoCodeApplied = signal(false);
+  promoCodeInvalid = signal(false);
+  promoDiscountPercent = signal(0);
+  applyingPromoCode = signal(false);
 
   guest = { firstName: '', lastName: '', email: '', phone: '' };
   submitting = signal(false);
@@ -749,7 +794,7 @@ export class BookingSitePropertyComponent implements OnInit {
     }
 
     // Dates libres localement — calculer l'estimation de prix
-    this.svc.getEstimate(this.slug, this.propId, this.checkInStr, this.checkOutStr, this.guestCount).subscribe({
+    this.svc.getEstimate(this.slug, this.propId, this.checkInStr, this.checkOutStr, this.guestCount, this.promoCode).subscribe({
       next: est => {
         this.checking.set(false);
         this.availabilityChecked.set(true);
@@ -760,12 +805,23 @@ export class BookingSitePropertyComponent implements OnInit {
         this.taxeSejour.set(est.taxeSejour);
         this.totalPrice.set(Math.round((est.nightsPrice + est.cleaningFee + est.taxeSejour) * 100) / 100);
         this.currency.set('EUR');
+        this.applyingPromoCode.set(false);
+        if (this.promoCode.trim()) {
+          this.promoCodeApplied.set(est.promoCodeValid === true);
+          this.promoCodeInvalid.set(est.promoCodeValid === false);
+          this.promoDiscountPercent.set(est.promoCodeDiscountPercent ?? 0);
+        } else {
+          this.promoCodeApplied.set(false);
+          this.promoCodeInvalid.set(false);
+          this.promoDiscountPercent.set(0);
+        }
       },
       error: () => {
         // Pas de tarif disponible — on confirme disponible sans prix
         this.checking.set(false);
         this.availabilityChecked.set(true);
         this.available.set(true);
+        this.applyingPromoCode.set(false);
         const nights = this.daysBetween(this.checkInStr, this.checkOutStr);
         this.nights.set(nights);
         this.basePrice.set(0);
@@ -773,8 +829,17 @@ export class BookingSitePropertyComponent implements OnInit {
         this.taxeSejour.set(0);
         this.totalPrice.set(0);
         this.currency.set('EUR');
+        this.promoCodeApplied.set(false);
+        this.promoCodeInvalid.set(false);
+        this.promoDiscountPercent.set(0);
       }
     });
+  }
+
+  applyPromoCode(): void {
+    if (!this.promoCode.trim() || this.applyingPromoCode()) return;
+    this.applyingPromoCode.set(true);
+    this.checkAvailability();
   }
 
   buildPriceSummary(offers: any[], checkIn: string, checkOut: string) {
@@ -807,6 +872,7 @@ export class BookingSitePropertyComponent implements OnInit {
       status:         'confirmed'
     };
     if (this.totalPrice() > 0) p.totalPrice = this.totalPrice();
+    if (this.promoCodeApplied() && this.promoCode.trim()) p.promoCode = this.promoCode.trim();
     const payload = [p];
     this.svc.createBooking(this.slug, payload).subscribe({
       next: result => {

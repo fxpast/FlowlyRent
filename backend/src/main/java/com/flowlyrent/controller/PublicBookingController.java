@@ -45,6 +45,7 @@ public class PublicBookingController {
     private final PropertyConfigRepository propConfigRepo;
     private final PropertyPhotoRepository propertyPhotoRepo;
     private final com.flowlyrent.repository.PaymentLinkRepository paymentLinkRepo;
+    private final com.flowlyrent.repository.PromoCodeRepository promoCodeRepo;
     private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
@@ -447,7 +448,8 @@ public class PublicBookingController {
             @PathVariable String propertyId,
             @RequestParam String arrival,
             @RequestParam String departure,
-            @RequestParam(defaultValue = "1") int numAdult) {
+            @RequestParam(defaultValue = "1") int numAdult,
+            @RequestParam(required = false) String promoCode) {
         try {
             Beds24Account account = accountForSlug(slug);
             AppUser user = account.getAppUser();
@@ -514,6 +516,21 @@ public class PublicBookingController {
                 nightsPrice = nightsPrice * (100.0 - cfg.getDiscount7Nights()) / 100.0;
             }
 
+            // Code promo — appliqué après les réductions long séjour, sur le prix déjà réduit
+            Boolean promoCodeValid = null;
+            Integer promoDiscountPercent = null;
+            if (promoCode != null && !promoCode.isBlank()) {
+                var pc = promoCodeRepo.findByUserIdAndBeds24PropertyIdAndCodeIgnoreCaseAndActiveTrue(
+                        user.getId(), propertyId, promoCode.trim()).orElse(null);
+                if (pc != null) {
+                    promoCodeValid = true;
+                    promoDiscountPercent = pc.getDiscountPercent();
+                    nightsPrice = nightsPrice * (100.0 - promoDiscountPercent) / 100.0;
+                } else {
+                    promoCodeValid = false;
+                }
+            }
+
             double taxeSejour  = Math.round(nightsPrice * 0.0275 * 100.0) / 100.0;
             double cleaningFee = cfg != null && cfg.getCleaningFee() != null ? cfg.getCleaningFee() : 0.0;
 
@@ -522,6 +539,8 @@ public class PublicBookingController {
             result.put("nightsPrice", Math.round(nightsPrice * 100.0) / 100.0);
             result.put("taxeSejour",  taxeSejour);
             result.put("cleaningFee", Math.round(cleaningFee * 100.0) / 100.0);
+            if (promoCodeValid != null) result.put("promoCodeValid", promoCodeValid);
+            if (promoDiscountPercent != null) result.put("promoCodeDiscountPercent", promoDiscountPercent);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return error(e);
@@ -541,15 +560,18 @@ public class PublicBookingController {
             String token  = beds24.tokenFor(account);
             Long   userId = account.getAppUser().getId();
 
-            // Sauvegarder propId et arrival AVANT traitement (ils sont supprimés du payload Beds24)
+            // Sauvegarder propId, arrival et promoCode AVANT traitement (ils sont supprimés du payload Beds24)
             String fallbackPropId = null;
             String fallbackArrival = null;
+            String usedPromoCode = null;
             if (!payload.isEmpty()) {
                 Map<String, Object> raw = payload.get(0);
                 Object rawPid = raw.get("propId") != null ? raw.get("propId") : raw.get("propertyId");
                 if (rawPid != null) fallbackPropId = rawPid.toString().trim();
                 String rawArr = Objects.toString(raw.get("arrival"), "");
                 if (!rawArr.isEmpty()) fallbackArrival = rawArr.substring(0, 10);
+                String rawPromo = Objects.toString(raw.get("promoCode"), "");
+                if (!rawPromo.isBlank()) usedPromoCode = rawPromo.trim();
             }
 
             List<Map<String, Object>> processed = new ArrayList<>();
@@ -596,7 +618,7 @@ public class PublicBookingController {
                 // Suppression des champs Angular non reconnus par Beds24
                 for (String f : List.of("propId", "propertyId", "propName",
                                          "guestName", "guestFirstName", "guestLastName",
-                                         "guestEmail", "guestPhone", "guestCountry", "totalPrice")) {
+                                         "guestEmail", "guestPhone", "guestCountry", "totalPrice", "promoCode")) {
                     b.remove(f);
                 }
                 processed.add(b);
@@ -655,6 +677,15 @@ public class PublicBookingController {
                     }
                 }
             }
+
+            if (usedPromoCode != null && fallbackPropId != null) {
+                promoCodeRepo.findByUserIdAndBeds24PropertyIdAndCodeIgnoreCaseAndActiveTrue(userId, fallbackPropId, usedPromoCode)
+                        .ifPresent(pc -> {
+                            pc.setUsageCount(pc.getUsageCount() + 1);
+                            promoCodeRepo.save(pc);
+                        });
+            }
+
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return error(e);

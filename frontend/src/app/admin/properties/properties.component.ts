@@ -23,6 +23,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { PropertyInventoryService, InventoryItem, INVENTORY_CATEGORIES, QUICK_ITEMS } from '../../core/services/property-inventory.service';
 import { PropertyBundleService, PropertyBundle } from '../../core/services/property-bundle.service';
+import { PromoCodeService, PromoCode } from '../../core/services/promo-code.service';
 import { localDateStr } from '../../core/utils/date.utils';
 
 interface OccupancyStatus {
@@ -593,6 +594,49 @@ interface OccupancyStatus {
               </div>
               <mat-divider class="divider"></mat-divider>
 
+              <!-- Codes promo -->
+              <div class="cleaning-section">
+                <div class="cleaning-label">
+                  <mat-icon>local_offer</mat-icon>
+                  <strong>{{ 'properties.promo_codes' | translate }}</strong>
+                </div>
+                @for (pc of promoCodes()[p['id']] ?? []; track pc.id) {
+                  <div class="promo-row">
+                    <span class="promo-code-badge" [class.inactive]="!pc.active">{{ pc.code }}</span>
+                    <span class="promo-discount">-{{ pc.discountPercent }}%</span>
+                    <span class="promo-usage">{{ pc.usageCount }} {{ 'properties.promo_used' | translate }}</span>
+                    <button type="button" mat-icon-button (click)="togglePromoActive(p['id'], pc)"
+                            [matTooltip]="(pc.active ? 'properties.promo_deactivate' : 'properties.promo_activate') | translate">
+                      <mat-icon>{{ pc.active ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                    </button>
+                    <button type="button" mat-icon-button color="warn" (click)="deletePromoCode(p['id'], pc)"
+                            [matTooltip]="'common.delete' | translate">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                }
+                <div class="promo-add-row">
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.promo_code_label' | translate }}</mat-label>
+                    <input matInput [ngModel]="promoDraftFor(p['id']).code"
+                           (ngModelChange)="promoDraftFor(p['id']).code = $event"
+                           placeholder="REDUC10">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cleaning-input">
+                    <mat-label>{{ 'properties.promo_discount_label' | translate }}</mat-label>
+                    <input matInput type="number" min="1" max="100"
+                           [ngModel]="promoDraftFor(p['id']).discountPercent"
+                           (ngModelChange)="promoDraftFor(p['id']).discountPercent = $event">
+                    <span matTextSuffix>%</span>
+                  </mat-form-field>
+                  <button type="button" mat-icon-button color="primary" (click)="addPromoCode(p['id'])"
+                          [matTooltip]="'properties.add_promo_code' | translate">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <mat-divider class="divider"></mat-divider>
+
               <!-- Lien réservation Beds24 (masqué en mode iCal) -->
               @if (!isIcalMode() && shortNameSaved[p['id']]) {
                 <div class="code-section">
@@ -905,6 +949,16 @@ interface OccupancyStatus {
     .cleaning-input { width: 130px; }
     .pricing-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
+    .promo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .promo-code-badge {
+      font-family: monospace; font-weight: 600; font-size: 13px;
+      background: #e8f5e9; color: #2e7d32; border-radius: 4px; padding: 2px 8px;
+    }
+    .promo-code-badge.inactive { background: #eee; color: #999; text-decoration: line-through; }
+    .promo-discount { font-size: 13px; font-weight: 600; color: #546e7a; }
+    .promo-usage { font-size: 12px; color: #888; }
+    .promo-add-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+
     .occ-banner {
       display: flex; align-items: center; gap: 6px;
       font-size: 12px; font-weight: 600;
@@ -1098,6 +1152,9 @@ export class PropertiesComponent implements OnInit {
   scrapingPhotos: Record<string, boolean> = {};
   scrapedPhotos: Record<string, string[]> = {};
 
+  promoCodes = signal<Record<string, PromoCode[]>>({});
+  newPromoDraft: Record<string, { code: string; discountPercent: string }> = {};
+
   propPhotos: Record<string, PropertyPhoto[]> = {};
   propPhotosOpen: Record<string, boolean> = {};
   propPhotosLoaded: Record<string, boolean> = {};
@@ -1233,6 +1290,7 @@ export class PropertiesComponent implements OnInit {
     private inventoryService: PropertyInventoryService,
     private userService: UserService,
     private bundleService: PropertyBundleService,
+    private promoCodeService: PromoCodeService,
     private snackBar: MatSnackBar,
     private t: TranslateService
   ) {}
@@ -1240,6 +1298,7 @@ export class PropertiesComponent implements OnInit {
   ngOnInit(): void {
     this.isIcalMode.set(this.auth.isIcal());
     this.userService.getProfile().subscribe({ next: p => this.publicSiteSlug.set(p.publicSiteSlug ?? ''), error: () => {} });
+    this.loadPromoCodes();
     if (!this.isIcalMode()) {
       this.propConfigService.getKeyBoxes().subscribe({ next: kbs => this.keyBoxes.set(kbs), error: () => {} });
     }
@@ -1852,6 +1911,60 @@ export class PropertiesComponent implements OnInit {
         this.pricingSaved[propId] = { ...pricing };
         this.pricingDraft[propId] = { ...pricing };
         this.snackBar.open(this.t.instant('properties.pricing_saved'), this.t.instant('common.ok'), { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  loadPromoCodes(): void {
+    this.promoCodeService.getAll().subscribe({
+      next: codes => {
+        const grouped: Record<string, PromoCode[]> = {};
+        for (const c of codes) {
+          (grouped[c.beds24PropertyId] ??= []).push(c);
+        }
+        this.promoCodes.set(grouped);
+      },
+      error: () => {}
+    });
+  }
+
+  promoDraftFor(propId: string): { code: string; discountPercent: string } {
+    if (!this.newPromoDraft[propId]) this.newPromoDraft[propId] = { code: '', discountPercent: '' };
+    return this.newPromoDraft[propId];
+  }
+
+  addPromoCode(propId: string): void {
+    const draft = this.promoDraftFor(propId);
+    const code = draft.code.trim().toUpperCase();
+    const discountPercent = Number(draft.discountPercent);
+    if (!code || !discountPercent || discountPercent < 1 || discountPercent > 100) return;
+    this.promoCodeService.create({ beds24PropertyId: propId, code, discountPercent }).subscribe({
+      next: pc => {
+        this.promoCodes.update(m => ({ ...m, [propId]: [...(m[propId] ?? []), pc] }));
+        this.newPromoDraft[propId] = { code: '', discountPercent: '' };
+      },
+      error: e => this.snackBar.open(e?.error?.error ?? this.t.instant('properties.promo_error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  togglePromoActive(propId: string, pc: PromoCode): void {
+    this.promoCodeService.update(pc.id, { active: !pc.active }).subscribe({
+      next: updated => {
+        this.promoCodes.update(m => ({
+          ...m,
+          [propId]: (m[propId] ?? []).map(x => x.id === updated.id ? updated : x)
+        }));
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  deletePromoCode(propId: string, pc: PromoCode): void {
+    if (!confirm(this.t.instant('properties.promo_delete_confirm'))) return;
+    this.promoCodeService.delete(pc.id).subscribe({
+      next: () => {
+        this.promoCodes.update(m => ({ ...m, [propId]: (m[propId] ?? []).filter(x => x.id !== pc.id) }));
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });
