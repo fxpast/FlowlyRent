@@ -1110,6 +1110,7 @@
         "deposit_btn": "Deposit",
         "pay_immediate_tooltip": "Immediate charge",
         "deposit_tooltip": "Pre-authorization without charge (deposit)",
+        "no_public_site": "No booking site configured — enable it in Settings",
         "open_link": "Open",
         "create_invoice": "Create invoice",
         "via_beds24": "messages forwarded via Beds24",

@@ -195,9 +195,26 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
     this.slug = this.route.snapshot.params['slug'];
     this.state = history.state ?? {};
 
+    // Lien externe (WhatsApp/SMS/email) : pas de history.state, on lit les query params
     if (!this.state.bookingId || !this.state.amountCents) {
-      this.router.navigate(['/', this.slug]);
-      return;
+      const qp = this.route.snapshot.queryParamMap;
+      const amountCents = Number(qp.get('amountCents'));
+      if (qp.get('bookingId') && amountCents > 0) {
+        this.state = {
+          bookingId:    qp.get('bookingId'),
+          amountCents,
+          currency:     qp.get('currency') ?? 'eur',
+          description:  qp.get('description') ?? '',
+          guestEmail:   qp.get('guestEmail') ?? '',
+          guestName:    qp.get('guestName') ?? '',
+          propertyName: qp.get('propertyName') ?? '',
+          checkIn:      qp.get('checkIn') ?? '',
+          checkOut:     qp.get('checkOut') ?? ''
+        };
+      } else {
+        this.router.navigate(['/', this.slug]);
+        return;
+      }
     }
 
     this.svc.getSiteInfo(this.slug).subscribe({ next: v => this.siteInfo.set(v) });

@@ -1108,6 +1108,7 @@
         "deposit_btn": "Depósito",
         "pay_immediate_tooltip": "Cobro inmediato",
         "deposit_tooltip": "Preautorización sin cargo (depósito)",
+        "no_public_site": "Ningún sitio de reserva configurado — actívalo en Ajustes",
         "open_link": "Abrir",
         "create_invoice": "Crear factura",
         "via_beds24": "mensajes transmitidos vía Beds24",

@@ -1110,6 +1110,7 @@
         "deposit_btn": "Caution",
         "pay_immediate_tooltip": "Encaissement immédiat",
         "deposit_tooltip": "Pré-autorisation sans débit (caution)",
+        "no_public_site": "Aucun site de réservation configuré — active-le dans Paramètres",
         "open_link": "Ouvrir",
         "create_invoice": "Créer une facture",
         "via_beds24": "messages transmis via Beds24",

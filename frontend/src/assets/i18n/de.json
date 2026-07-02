@@ -1108,6 +1108,7 @@
         "deposit_btn": "Kaution",
         "pay_immediate_tooltip": "Sofortige Abbuchung",
         "deposit_tooltip": "Vorautorisierung ohne Abbuchung (Kaution)",
+        "no_public_site": "Keine Buchungsseite konfiguriert — in den Einstellungen aktivieren",
         "open_link": "Öffnen",
         "create_invoice": "Rechnung erstellen",
         "via_beds24": "Nachrichten über Beds24 übermittelt",

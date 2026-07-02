@@ -1108,6 +1108,7 @@
         "deposit_btn": "Deposito",
         "pay_immediate_tooltip": "Addebito immediato",
         "deposit_tooltip": "Pre-autorizzazione senza addebito (deposito)",
+        "no_public_site": "Nessun sito di prenotazione configurato — attivalo in Impostazioni",
         "open_link": "Apri",
         "create_invoice": "Crea fattura",
         "via_beds24": "messaggi trasmessi via Beds24",

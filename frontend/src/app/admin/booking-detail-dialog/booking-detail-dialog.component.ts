@@ -972,9 +972,44 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   generatePayLink(type: 'payment' | 'deposit'): void {
     const id = this.beds24Id;
     if (!id || !this.payAmount) return;
-    const token = btoa(`${id}:${this.payAmount}`);
-    const path  = type === 'payment' ? 'paiement' : 'caution';
-    this.payLink.set(`${window.location.origin}/${path}/${token}`);
+
+    if (type === 'deposit') {
+      // Pré-autorisation Beds24 (blocage de fonds sans débit) — pas encore possible via Stripe Connect
+      const token = btoa(`${id}:${this.payAmount}`);
+      this.payLink.set(`${window.location.origin}/caution/${token}`);
+      this.payLinkCopied.set(false);
+      return;
+    }
+
+    // Paiement immédiat → lien Stripe Connect FlowlyRent (site public de l'hôte)
+    const slug = this.auth.getCurrentUser()?.publicSiteSlug;
+    if (!slug) {
+      this.snackBar.open(this.t.instant('booking_dialog.no_public_site'), this.t.instant('common.close'), { duration: 3000 });
+      return;
+    }
+    const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    const fallback = this.draft['propName'] || this.draft['propertyName'] || '';
+    this.bookingService.getPropertyNames().subscribe({
+      next: names => this.buildStripePayLink(slug, id, names[pid] || fallback),
+      error: () => this.buildStripePayLink(slug, id, fallback)
+    });
+  }
+
+  private buildStripePayLink(slug: string, bookingId: string, propertyName: string): void {
+    const amountCents = Math.round(Number(this.payAmount) * 100);
+    const guestName = `${this.draft['guestFirstName'] || ''} ${this.draft['guestLastName'] || ''}`.trim();
+    const params = new URLSearchParams({
+      bookingId,
+      amountCents: String(amountCents),
+      currency: 'eur',
+      description: `${this.t.instant('booking_dialog.pay_btn')} #${bookingId}`,
+      guestEmail: this.draft['guestEmail'] || '',
+      guestName,
+      propertyName,
+      checkIn: (this.draft['arrival'] || '').toString().substring(0, 10),
+      checkOut: (this.draft['departure'] || '').toString().substring(0, 10)
+    });
+    this.payLink.set(`${window.location.origin}/${slug}/payment?${params.toString()}`);
     this.payLinkCopied.set(false);
   }
 
