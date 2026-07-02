@@ -1377,7 +1377,7 @@
         "error_booking": "Une erreur est survenue. Veuillez réessayer.",
         "total_to_pay": "Total à payer",
         "promo_code": "Code promo",
-        "promo_code_placeholder": "Ex : REDUC10",
+        "promo_code_placeholder": "Ex : PROMO10",
         "promo_apply": "Appliquer",
         "promo_valid": "Code promo appliqué : -{{percent}}%",
         "promo_invalid": "Code promo invalide ou expiré",

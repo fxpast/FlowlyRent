@@ -1368,7 +1368,7 @@
         "error_booking": "Se produjo un error. Por favor, inténtelo de nuevo.",
         "total_to_pay": "Total a pagar",
         "promo_code": "Código promocional",
-        "promo_code_placeholder": "Ej: REDUC10",
+        "promo_code_placeholder": "Ej: PROMO10",
         "promo_apply": "Aplicar",
         "promo_valid": "Código promocional aplicado: -{{percent}}%",
         "promo_invalid": "Código promocional no válido o caducado",

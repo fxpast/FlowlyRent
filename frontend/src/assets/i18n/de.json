@@ -1368,7 +1368,7 @@
         "error_booking": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
         "total_to_pay": "Zu zahlender Betrag",
         "promo_code": "Rabattcode",
-        "promo_code_placeholder": "Z. B. REDUC10",
+        "promo_code_placeholder": "Z. B. PROMO10",
         "promo_apply": "Anwenden",
         "promo_valid": "Rabattcode angewendet: -{{percent}}%",
         "promo_invalid": "Ungültiger oder abgelaufener Rabattcode",
