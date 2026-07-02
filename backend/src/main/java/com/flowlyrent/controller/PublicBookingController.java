@@ -225,6 +225,42 @@ public class PublicBookingController {
                 }
             }
 
+            // Blackouts posés manuellement par l'hôte (même logique que le bouton "Vérifier
+            // disponibilité" sur la fiche logement / getBlockedDates) — un seul appel groupé
+            // pour tous les logements, sans filtre propertyId (cf. RoomIdResolverService.resolveRoomId)
+            try {
+                Map<String, String> calParams = new java.util.HashMap<>();
+                calParams.put("startDate", from);
+                calParams.put("endDate", to);
+                calParams.put("includeOverride", "1");
+                LocalDate fromDate = LocalDate.parse(from);
+                LocalDate toDate   = LocalDate.parse(to);
+
+                for (Map<String, Object> room : beds24.getCalendar(token, calParams)) {
+                    String pid = extractPropertyId(room);
+                    if (pid == null || blockedPropIds.contains(pid)) continue;
+                    Object calObj = room.get("calendar");
+                    if (!(calObj instanceof List<?> cal)) continue;
+                    for (Object o : cal) {
+                        if (!(o instanceof Map<?, ?> rawRange)) continue;
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> range = (Map<String, Object>) rawRange;
+                        if (!"blackout".equalsIgnoreCase(Objects.toString(range.get("override"), ""))) continue;
+                        String f  = truncateDate(Objects.toString(range.get("from"), ""));
+                        String t2 = truncateDate(Objects.toString(range.get("to"),   ""));
+                        if (f.isEmpty() || t2.isEmpty()) continue;
+                        LocalDate blackoutFrom = LocalDate.parse(f);
+                        LocalDate blackoutTo   = LocalDate.parse(t2);
+                        if (!blackoutFrom.isAfter(toDate) && !blackoutTo.isBefore(fromDate)) {
+                            blockedPropIds.add(pid);
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[search] Impossible de vérifier les blackouts : {}", e.getMessage());
+            }
+
             Map<String, Integer> maxPeopleByProp;
             try {
                 maxPeopleByProp = capacityResolver.resolveMaxPeople(user, allProps, PublicBookingController::extractPropertyId);
