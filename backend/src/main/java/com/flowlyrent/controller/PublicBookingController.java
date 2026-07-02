@@ -667,11 +667,12 @@ public class PublicBookingController {
             }
             Stripe.apiKey = stripeSecretKey;
 
-            long amountCents   = toLong(body.get("amountCents"));
-            String currency    = body.getOrDefault("currency",    "eur").toString().toLowerCase();
-            String description = body.getOrDefault("description", "Réservation").toString();
-            String guestEmail  = body.getOrDefault("guestEmail",  "").toString();
-            String bookingId   = body.getOrDefault("bookingId",   "").toString();
+            long amountCents     = toLong(body.get("amountCents"));
+            String currency      = body.getOrDefault("currency",    "eur").toString().toLowerCase();
+            String description   = body.getOrDefault("description", "Réservation").toString();
+            String guestEmail    = body.getOrDefault("guestEmail",  "").toString();
+            String bookingId     = body.getOrDefault("bookingId",   "").toString();
+            String captureMethod = body.getOrDefault("captureMethod", "automatic").toString();
 
             if (amountCents <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Montant invalide"));
@@ -686,6 +687,12 @@ public class PublicBookingController {
                     .putMetadata("bookingId", bookingId)
                     .putMetadata("slug",      slug);
 
+            if ("manual".equalsIgnoreCase(captureMethod)) {
+                // Caution : autorise/bloque les fonds sans débiter — l'hôte capture ou annule
+                // ensuite directement depuis son propre Dashboard Stripe (Paiements)
+                builder.setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL);
+            }
+
             if (!guestEmail.isBlank()) {
                 builder.setReceiptEmail(guestEmail);
             }
@@ -695,8 +702,8 @@ public class PublicBookingController {
                     .build();
 
             PaymentIntent intent = PaymentIntent.create(builder.build(), requestOptions);
-            log.info("[payment-intent] Créé — bookingId={} slug={} amount={}{} account={} intent={}",
-                    bookingId, slug, amountCents, currency.toUpperCase(), user.getStripeAccountId(), intent.getId());
+            log.info("[payment-intent] Créé — bookingId={} slug={} amount={}{} account={} intent={} captureMethod={}",
+                    bookingId, slug, amountCents, currency.toUpperCase(), user.getStripeAccountId(), intent.getId(), captureMethod);
 
             return ResponseEntity.ok(Map.of("clientSecret", intent.getClientSecret()));
         } catch (Exception e) {

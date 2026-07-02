@@ -1417,10 +1417,14 @@
     },
     "payment": {
         "title": "Pago seguro",
+        "title_deposit": "Autorización de depósito",
         "summary": "Resumen",
         "property": "Alojamiento",
         "guest": "Viajero",
         "pay_now": "Pagar ahora",
+        "pay_now_deposit": "Autorizar el depósito",
+        "deposit_amount": "Importe del depósito",
+        "deposit_notice": "Este importe se bloqueará en su tarjeta sin cargarse. El anfitrión lo liberará o cobrará según las condiciones de la reserva.",
         "secure_stripe": "Pago seguro por Stripe — sus datos bancarios están cifrados"
     }
 }

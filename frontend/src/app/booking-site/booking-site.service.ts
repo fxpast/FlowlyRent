@@ -69,7 +69,7 @@ export class BookingSiteService {
   }
 
   createPaymentIntent(slug: string, data: {
-    bookingId: string; amountCents: number; currency: string; description: string; guestEmail: string;
+    bookingId: string; amountCents: number; currency: string; description: string; guestEmail: string; captureMethod?: string;
   }): Observable<{ clientSecret: string }> {
     return this.http.post<{ clientSecret: string }>(`${this.base}/${slug}/create-payment-intent`, data);
   }

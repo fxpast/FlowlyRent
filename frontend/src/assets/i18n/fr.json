@@ -1426,10 +1426,14 @@
     },
     "payment": {
         "title": "Paiement sécurisé",
+        "title_deposit": "Autorisation de caution",
         "summary": "Récapitulatif",
         "property": "Logement",
         "guest": "Voyageur",
         "pay_now": "Payer maintenant",
+        "pay_now_deposit": "Autoriser la caution",
+        "deposit_amount": "Montant de la caution",
+        "deposit_notice": "Ce montant sera bloqué sur votre carte sans être débité. Il sera libéré ou débité par l'hôte selon les conditions de la réservation.",
         "secure_stripe": "Paiement sécurisé par Stripe — vos données bancaires sont chiffrées"
     }
 }

@@ -1417,10 +1417,14 @@
     },
     "payment": {
         "title": "Pagamento sicuro",
+        "title_deposit": "Autorizzazione cauzione",
         "summary": "Riepilogo",
         "property": "Struttura",
         "guest": "Ospite",
         "pay_now": "Paga ora",
+        "pay_now_deposit": "Autorizza la cauzione",
+        "deposit_amount": "Importo della cauzione",
+        "deposit_notice": "Questo importo verrà bloccato sulla tua carta senza essere addebitato. Sarà rilasciato o addebitato dall'host secondo le condizioni della prenotazione.",
         "secure_stripe": "Pagamento sicuro tramite Stripe — i tuoi dati bancari sono crittografati"
     }
 }

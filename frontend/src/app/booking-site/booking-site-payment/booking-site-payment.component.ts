@@ -30,7 +30,14 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
       </nav>
 
       <div class="content">
-        <h1>{{ 'payment.title' | translate }}</h1>
+        <h1>{{ (isDeposit ? 'payment.title_deposit' : 'payment.title') | translate }}</h1>
+
+        @if (isDeposit) {
+          <div class="deposit-notice">
+            <span class="material-icons">info</span>
+            {{ 'payment.deposit_notice' | translate }}
+          </div>
+        }
 
         <!-- Récapitulatif -->
         <div class="summary-card">
@@ -60,7 +67,7 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
             </div>
           }
           <div class="summary-row total">
-            <span class="label">{{ 'bs.total_to_pay' | translate }}</span>
+            <span class="label">{{ (isDeposit ? 'payment.deposit_amount' : 'bs.total_to_pay') | translate }}</span>
             <span class="value">{{ formatPrice(state.amountCents / 100) }}</span>
           </div>
         </div>
@@ -88,7 +95,7 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
               <mat-spinner diameter="20"></mat-spinner>
             } @else {
               <span class="material-icons">lock</span>
-              {{ 'payment.pay_now' | translate }} — {{ formatPrice(state.amountCents / 100) }}
+              {{ (isDeposit ? 'payment.pay_now_deposit' : 'payment.pay_now') | translate }} — {{ formatPrice(state.amountCents / 100) }}
             }
           </button>
         }
@@ -156,6 +163,13 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
     .center { display: flex; justify-content: center; padding: 24px; }
     .error-box { background: #fce4ec; color: #c62828; border-radius: 8px; padding: 16px; font-size: .9rem; }
 
+    .deposit-notice {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: #e3f2fd; color: #0d47a1; border-radius: 8px;
+      padding: 12px 14px; font-size: .85rem; line-height: 1.4;
+    }
+    .deposit-notice .material-icons { font-size: 18px; flex-shrink: 0; }
+
     @media (max-width: 600px) {
       .lang-bar { display: none; }
       #payment-element { padding: 16px; }
@@ -190,6 +204,10 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
     return map[this.currentLang] ?? 'fr-FR';
   }
 
+  get isDeposit(): boolean {
+    return this.state.captureMethod === 'manual';
+  }
+
   ngOnInit() {
     this.initLang();
     this.slug = this.route.snapshot.params['slug'];
@@ -201,15 +219,16 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
       const amountCents = Number(qp.get('amountCents'));
       if (qp.get('bookingId') && amountCents > 0) {
         this.state = {
-          bookingId:    qp.get('bookingId'),
+          bookingId:      qp.get('bookingId'),
           amountCents,
-          currency:     qp.get('currency') ?? 'eur',
-          description:  qp.get('description') ?? '',
-          guestEmail:   qp.get('guestEmail') ?? '',
-          guestName:    qp.get('guestName') ?? '',
-          propertyName: qp.get('propertyName') ?? '',
-          checkIn:      qp.get('checkIn') ?? '',
-          checkOut:     qp.get('checkOut') ?? ''
+          currency:       qp.get('currency') ?? 'eur',
+          description:    qp.get('description') ?? '',
+          guestEmail:     qp.get('guestEmail') ?? '',
+          guestName:      qp.get('guestName') ?? '',
+          propertyName:   qp.get('propertyName') ?? '',
+          checkIn:        qp.get('checkIn') ?? '',
+          checkOut:       qp.get('checkOut') ?? '',
+          captureMethod:  qp.get('captureMethod') ?? 'automatic'
         };
       } else {
         this.router.navigate(['/', this.slug]);
@@ -232,11 +251,12 @@ export class BookingSitePaymentComponent implements OnInit, OnDestroy {
       const { publishableKey, stripeAccountId } = await this.svc.getStripePublishableKey(this.slug).toPromise() as any;
 
       const { clientSecret } = await this.svc.createPaymentIntent(this.slug, {
-        bookingId:   this.state.bookingId,
-        amountCents: this.state.amountCents,
-        currency:    this.state.currency ?? 'eur',
-        description: this.state.description ?? 'Réservation',
-        guestEmail:  this.state.guestEmail ?? ''
+        bookingId:     this.state.bookingId,
+        amountCents:   this.state.amountCents,
+        currency:      this.state.currency ?? 'eur',
+        description:   this.state.description ?? 'Réservation',
+        guestEmail:    this.state.guestEmail ?? '',
+        captureMethod: this.state.captureMethod ?? 'automatic'
       }).toPromise() as any;
 
       this.stripe = await loadStripe(publishableKey, { stripeAccount: stripeAccountId });

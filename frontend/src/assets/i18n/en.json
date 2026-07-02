@@ -1419,10 +1419,14 @@
     },
     "payment": {
         "title": "Secure payment",
+        "title_deposit": "Deposit authorization",
         "summary": "Summary",
         "property": "Property",
         "guest": "Guest",
         "pay_now": "Pay now",
+        "pay_now_deposit": "Authorize deposit",
+        "deposit_amount": "Deposit amount",
+        "deposit_notice": "This amount will be held on your card without being charged. It will be released or charged by the host according to the booking terms.",
         "secure_stripe": "Secure payment by Stripe — your card details are encrypted"
     }
 }

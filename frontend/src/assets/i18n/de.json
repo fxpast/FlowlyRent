@@ -1417,10 +1417,14 @@
     },
     "payment": {
         "title": "Sichere Zahlung",
+        "title_deposit": "Kautionsautorisierung",
         "summary": "Zusammenfassung",
         "property": "Unterkunft",
         "guest": "Gast",
         "pay_now": "Jetzt bezahlen",
+        "pay_now_deposit": "Kaution autorisieren",
+        "deposit_amount": "Kautionsbetrag",
+        "deposit_notice": "Dieser Betrag wird auf Ihrer Karte reserviert, ohne abgebucht zu werden. Er wird vom Gastgeber gemäß den Buchungsbedingungen freigegeben oder abgebucht.",
         "secure_stripe": "Sichere Zahlung über Stripe — Ihre Bankdaten sind verschlüsselt"
     }
 }

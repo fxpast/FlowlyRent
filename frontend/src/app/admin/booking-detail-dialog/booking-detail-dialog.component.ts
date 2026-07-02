@@ -973,15 +973,9 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const id = this.beds24Id;
     if (!id || !this.payAmount) return;
 
-    if (type === 'deposit') {
-      // Pré-autorisation Beds24 (blocage de fonds sans débit) — pas encore possible via Stripe Connect
-      const token = btoa(`${id}:${this.payAmount}`);
-      this.payLink.set(`${window.location.origin}/caution/${token}`);
-      this.payLinkCopied.set(false);
-      return;
-    }
-
-    // Paiement immédiat → lien Stripe Connect FlowlyRent (site public de l'hôte)
+    // Lien Stripe Connect FlowlyRent (site public de l'hôte) — pour la caution, le PaymentIntent
+    // est créé en captureMethod=manual : les fonds sont bloqués sans débit, et l'hôte capture ou
+    // annule ensuite directement depuis son propre Dashboard Stripe (Paiements)
     const slug = this.auth.getCurrentUser()?.publicSiteSlug;
     if (!slug) {
       this.snackBar.open(this.t.instant('booking_dialog.no_public_site'), this.t.instant('common.close'), { duration: 3000 });
@@ -990,24 +984,26 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     const pid = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
     const fallback = this.draft['propName'] || this.draft['propertyName'] || '';
     this.bookingService.getPropertyNames().subscribe({
-      next: names => this.buildStripePayLink(slug, id, names[pid] || fallback),
-      error: () => this.buildStripePayLink(slug, id, fallback)
+      next: names => this.buildStripePayLink(type, slug, id, names[pid] || fallback),
+      error: () => this.buildStripePayLink(type, slug, id, fallback)
     });
   }
 
-  private buildStripePayLink(slug: string, bookingId: string, propertyName: string): void {
+  private buildStripePayLink(type: 'payment' | 'deposit', slug: string, bookingId: string, propertyName: string): void {
     const amountCents = Math.round(Number(this.payAmount) * 100);
     const guestName = `${this.draft['guestFirstName'] || ''} ${this.draft['guestLastName'] || ''}`.trim();
+    const label = type === 'deposit' ? this.t.instant('booking_dialog.deposit_btn') : this.t.instant('booking_dialog.pay_btn');
     const params = new URLSearchParams({
       bookingId,
       amountCents: String(amountCents),
       currency: 'eur',
-      description: `${this.t.instant('booking_dialog.pay_btn')} #${bookingId}`,
+      description: `${label} #${bookingId}`,
       guestEmail: this.draft['guestEmail'] || '',
       guestName,
       propertyName,
       checkIn: (this.draft['arrival'] || '').toString().substring(0, 10),
-      checkOut: (this.draft['departure'] || '').toString().substring(0, 10)
+      checkOut: (this.draft['departure'] || '').toString().substring(0, 10),
+      captureMethod: type === 'deposit' ? 'manual' : 'automatic'
     });
     this.payLink.set(`${window.location.origin}/${slug}/payment?${params.toString()}`);
     this.payLinkCopied.set(false);
