@@ -1,6 +1,11 @@
 package com.flowlyrent.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flowlyrent.model.AutoResponderConfig;
+import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.repository.AutoResponderConfigRepository;
+import com.flowlyrent.repository.FaqRepository;
+import com.flowlyrent.repository.PropertyConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +23,9 @@ import java.util.stream.Collectors;
 /**
  * Assistance IA pour la rédaction des messages hôte → voyageur (dialog réservation, onglet
  * Messages) : corrige/améliore un brouillon, ou suggère une réponse si le champ est vide.
- * Réutilise Groq (mêmes clés que AutoResponderService), en single-shot sans function calling.
+ * Réutilise Groq et la configuration du répondeur automatique (AutoResponderConfig.systemPromptExtra,
+ * infos logement, FAQ) pour rester cohérent avec le ton et les instructions déjà définis par l'hôte —
+ * mais reste manuel : le texte généré ne remplace que le brouillon, jamais envoyé automatiquement.
  */
 @Service
 @RequiredArgsConstructor
@@ -32,6 +39,9 @@ public class MessageAssistService {
             .build();
 
     private final MessageService messageService;
+    private final AutoResponderConfigRepository autoResponderConfigRepo;
+    private final PropertyConfigRepository propertyConfigRepo;
+    private final FaqRepository faqRepo;
     private final ObjectMapper objectMapper;
 
     @Value("${groq.api-key:}")
@@ -40,7 +50,8 @@ public class MessageAssistService {
     @Value("${groq.model:llama-3.3-70b-versatile}")
     private String groqModel;
 
-    public String assist(Long userId, String bookingId, String draft) throws Exception {
+    public String assist(Long userId, String bookingId, String propertyId, String draft,
+                          String bookingContext) throws Exception {
         if (groqApiKey == null || groqApiKey.isBlank()) {
             throw new IllegalStateException("Assistant IA non configuré (GROQ_API_KEY manquant)");
         }
@@ -50,17 +61,24 @@ public class MessageAssistService {
                 .map(m -> ("HOST".equals(m.get("sender")) ? "Hôte" : "Voyageur") + " : " + m.getOrDefault("content", ""))
                 .collect(Collectors.joining("\n"));
 
+        AutoResponderConfig config = autoResponderConfigRepo.findByUserId(userId).orElse(null);
+        String extraPrompt = config != null ? config.getSystemPromptExtra() : null;
+
+        PropertyConfig propConfig = propertyId != null && !propertyId.isBlank()
+                ? propertyConfigRepo.findByUserIdAndBeds24PropertyId(userId, propertyId).orElse(null)
+                : null;
+        String propName   = propConfig != null && propConfig.getShortName() != null ? propConfig.getShortName() : "l'hébergement";
+        String accessCode = propConfig != null && propConfig.getAccessCode()  != null ? propConfig.getAccessCode()  : "(non défini)";
+
+        String faqContext = faqRepo.findAllByOrderByDisplayOrderAscCreatedAtAsc().stream()
+                .limit(8)
+                .map(f -> "Q : " + f.getQuestion() + "\nR : " + f.getAnswer())
+                .collect(Collectors.joining("\n\n"));
+
         boolean hasDraft = draft != null && !draft.isBlank();
 
-        String systemInstruction = hasDraft
-                ? "Tu es un assistant qui aide un hôte de location saisonnière à corriger et améliorer un message "
-                + "avant de l'envoyer à un voyageur. Corrige l'orthographe et la grammaire, améliore la clarté et "
-                + "le ton (professionnel et chaleureux), sans changer le sens ni la langue du texte d'origine. "
-                + "Réponds uniquement avec le texte corrigé, sans commentaire, préambule ni guillemets."
-                : "Tu es un assistant qui aide un hôte de location saisonnière à répondre à un voyageur. "
-                + "En te basant sur l'historique de conversation fourni, rédige une réponse appropriée, "
-                + "professionnelle et chaleureuse, dans la même langue que le dernier message du voyageur. "
-                + "Réponds uniquement avec le texte du message, sans commentaire, préambule ni guillemets.";
+        String systemInstruction = buildSystemInstruction(hasDraft, propName, accessCode,
+                bookingContext, faqContext, extraPrompt);
 
         String userContent = hasDraft
                 ? "Historique de la conversation :\n" + (history.isBlank() ? "(aucun message précédent)" : history)
@@ -103,5 +121,37 @@ public class MessageAssistService {
         String text = msgObj != null ? (String) msgObj.get("content") : null;
         if (text == null || text.isBlank()) throw new IllegalStateException("Réponse IA vide");
         return text.trim();
+    }
+
+    private String buildSystemInstruction(boolean hasDraft, String propName, String accessCode,
+                                           String bookingContext, String faqContext, String extraPrompt) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Tu es l'assistant de rédaction de l'hôte de l'hébergement « ").append(propName).append(" ».\n");
+        sb.append(hasDraft
+                ? "L'hôte a rédigé un brouillon de réponse à un voyageur. Corrige l'orthographe et la grammaire, "
+                + "améliore la clarté et le ton (professionnel et chaleureux), sans changer le sens ni la langue "
+                + "du texte d'origine.\n"
+                : "L'hôte souhaite répondre à un voyageur mais n'a encore rien écrit. En te basant sur l'historique "
+                + "de conversation, rédige une réponse appropriée, professionnelle et chaleureuse, dans la même "
+                + "langue que le dernier message du voyageur.\n");
+        sb.append("RÈGLE ABSOLUE : réponds TOUJOURS dans la même langue que le voyageur (ou celle du brouillon).\n");
+        sb.append("Ne prends jamais d'engagement financier ni ne promets de remboursement.\n\n");
+
+        if (bookingContext != null && !bookingContext.isBlank()) {
+            sb.append("=== CONTEXTE DU SÉJOUR ===\n").append(bookingContext).append("\n\n");
+        }
+        sb.append("Code d'accès : ").append(accessCode).append("\n\n");
+
+        if (!faqContext.isBlank()) {
+            sb.append("=== FAQ (utilise ces informations si pertinentes) ===\n").append(faqContext).append("\n\n");
+        }
+
+        if (extraPrompt != null && !extraPrompt.isBlank()) {
+            sb.append("=== INSTRUCTIONS SUPPLÉMENTAIRES DE L'HÔTE (Répondeur automatique) ===\n")
+                    .append(extraPrompt).append("\n\n");
+        }
+
+        sb.append("Réponds uniquement avec le texte du message, sans commentaire, préambule ni guillemets.");
+        return sb.toString();
     }
 }

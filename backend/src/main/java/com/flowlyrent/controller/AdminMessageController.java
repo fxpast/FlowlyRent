@@ -53,8 +53,10 @@ public class AdminMessageController {
                                        @RequestBody Map<String, String> body) {
         try {
             Long userId = securityUtils.getCurrentUserId();
-            String draft = body.getOrDefault("draft", "");
-            String text = messageAssistService.assist(userId, bookingId, draft);
+            String draft           = body.getOrDefault("draft", "");
+            String propertyId      = body.get("propertyId");
+            String bookingContext  = body.get("bookingContext");
+            String text = messageAssistService.assist(userId, bookingId, propertyId, draft, bookingContext);
             return ResponseEntity.ok(Map.of("text", text));
         } catch (Exception e) {
             return error(e);

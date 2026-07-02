@@ -311,9 +311,10 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Onglet Tester** : simule une réponse sans envoyer — pour valider le prompt sans impacter les voyageurs
 
 ### Assistant IA — Rédaction de message (dialog réservation, onglet Messages)
-- **`MessageAssistService.assist(userId, bookingId, draft)`** : réutilise Groq comme `AutoResponderService` (même clé, single-shot sans function calling), mais prompt différent — pas d'auto-envoi, l'hôte reste maître du texte final
+- **`MessageAssistService.assist(userId, bookingId, propertyId, draft, bookingContext)`** : réutilise Groq comme `AutoResponderService` (même clé, single-shot sans function calling), mais prompt différent — pas d'auto-envoi, l'hôte reste maître du texte final
+- **Réutilise les paramètres du répondeur automatique** : `AutoResponderConfig.systemPromptExtra` (instructions personnalisées de l'hôte), `PropertyConfig.shortName`/`accessCode` du logement, et les 8 premières entrées FAQ — même contexte que `AutoResponderService.generateReply()`, pour rester cohérent entre les réponses auto et l'assistance manuelle
 - Bouton `auto_awesome` (violet) dans la barre de saisie du chat, à côté du bouton copier : si le champ contient du texte → corrige/améliore (orthographe, ton, clarté, langue préservée) ; si le champ est vide → suggère une réponse basée sur l'historique de conversation (`MessageService.getMessages()`)
-- **`POST /admin/messages/{bookingId}/ai-assist`** : body `{ draft }`, retourne `{ text }` — le texte remplace directement `newMessage`, jamais envoyé automatiquement
+- **`POST /admin/messages/{bookingId}/ai-assist`** : body `{ draft, propertyId, bookingContext }` — `bookingContext` (voyageur, arrivée/départ, adultes/enfants) construit côté frontend depuis `this.draft` du dialog, pas de nouvel appel Beds24 pour l'obtenir. Retourne `{ text }` — le texte remplace directement `newMessage`, jamais envoyé automatiquement
 
 ---
 

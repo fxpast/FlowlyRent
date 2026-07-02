@@ -1195,8 +1195,16 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
     if (this.aiAssisting()) return;
     const bookingId = Number(this.data['id']);
     const draft = this.newMessage.trim();
+    const propertyId = String(this.draft['propId'] ?? this.draft['propertyId'] ?? '');
+    const guestName = `${this.draft['guestFirstName'] || ''} ${this.draft['guestLastName'] || ''}`.trim();
+    const arrival = (this.draft['arrival'] || '').toString().substring(0, 10);
+    const departure = (this.draft['departure'] || '').toString().substring(0, 10);
+    const numAdult = this.draft['numAdult'] ?? '?';
+    const numChild = this.draft['numChild'] ?? '0';
+    const bookingContext = `Voyageur : ${guestName} — Arrivée : ${arrival || '?'} — Départ : ${departure || '?'} — Adultes : ${numAdult} — Enfants : ${numChild}`;
+
     this.aiAssisting.set(true);
-    this.messageService.aiAssist(bookingId, draft).subscribe({
+    this.messageService.aiAssist(bookingId, draft, propertyId, bookingContext).subscribe({
       next: res => {
         this.newMessage = res.text;
         this.aiAssisting.set(false);
