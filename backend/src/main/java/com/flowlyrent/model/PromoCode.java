@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * site de réservation public (ex. "REDUC10" = 10% de réduction sur le prix des nuits).
  */
 @Entity
-@Table(name = "promo_codes", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "code"}))
+@Table(name = "promo_codes", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "beds24_property_id", "code"}))
 @Data
 public class PromoCode {
 
