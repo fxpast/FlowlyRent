@@ -26,6 +26,10 @@ export class MessageService {
     return this.http.post<Message>(`${this.base}/${bookingId}`, { content });
   }
 
+  aiAssist(bookingId: number, draft: string): Observable<{ text: string }> {
+    return this.http.post<{ text: string }>(`${this.base}/${bookingId}/ai-assist`, { draft });
+  }
+
   getUnreadCount(): Observable<{ count: number }> {
     return this.http.get<{ count: number }>(`${this.base}/unread-count`);
   }

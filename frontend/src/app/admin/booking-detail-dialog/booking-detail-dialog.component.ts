@@ -361,6 +361,15 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                     (click)="copyToClipboard()" [disabled]="!newMessage.trim()">
               <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
             </button>
+            <button mat-icon-button class="btn-ai-assist"
+                    [title]="(newMessage.trim() ? 'booking_dialog.ai_improve_tooltip' : 'booking_dialog.ai_suggest_tooltip') | translate"
+                    (click)="aiAssistMessage()" [disabled]="aiAssisting()">
+              @if (aiAssisting()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>auto_awesome</mat-icon>
+              }
+            </button>
             @if (isDirect()) {
               <div class="direct-btns">
                 <button mat-icon-button class="btn-email" [title]="'booking_dialog.send_email' | translate"
@@ -683,6 +692,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     .btn-email    { color: #1976d2; }
     .btn-sms      { color: #388e3c; }
     .btn-whatsapp { color: #25d366; }
+    .btn-ai-assist { color: #8e24aa; }
+    .btn-ai-assist mat-spinner { display: inline-block; }
 
     /* Ménage */
     .menage-content { padding: 16px 24px 8px; min-width: 360px; }
@@ -789,6 +800,7 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
   templateLang = signal<'fr' | 'en'>('fr');
   sendingMsg   = signal(false);
   copied       = signal(false);
+  aiAssisting  = signal(false);
   arrivalDate: Date | null = null;
   departureDate: Date | null = null;
   arrivalTime   = '16:00';
@@ -1176,6 +1188,23 @@ export class BookingDetailDialogComponent implements OnInit, OnDestroy {
         setTimeout(() => this.scrollToBottom(), 80);
       },
       error: () => { this.sendingMsg.set(false); }
+    });
+  }
+
+  aiAssistMessage(): void {
+    if (this.aiAssisting()) return;
+    const bookingId = Number(this.data['id']);
+    const draft = this.newMessage.trim();
+    this.aiAssisting.set(true);
+    this.messageService.aiAssist(bookingId, draft).subscribe({
+      next: res => {
+        this.newMessage = res.text;
+        this.aiAssisting.set(false);
+      },
+      error: () => {
+        this.aiAssisting.set(false);
+        this.snackBar.open(this.t.instant('booking_dialog.ai_assist_error'), this.t.instant('common.close'), { duration: 3000 });
+      }
     });
   }
 

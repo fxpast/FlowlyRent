@@ -328,6 +328,15 @@ notifications push (web push + Firebase Cloud Messaging). La session persistante
 également sur mobile : après la première connexion, l'application s'ouvre directement sur
 le tableau de bord.
 
+## Assistant IA de rédaction de message
+
+Dans le dialog d'une réservation, onglet **Messages**, un bouton IA (icône étincelles violette)
+se trouve à côté du champ de saisie de réponse : s'il y a déjà du texte saisi, l'IA le corrige
+et l'améliore (orthographe, ton, clarté) sans changer la langue ni le sens ; si le champ est
+vide, l'IA propose directement une réponse basée sur l'historique de la conversation. Le texte
+généré remplace le brouillon mais n'est **jamais envoyé automatiquement** — l'hôte reste
+toujours libre de le modifier avant de l'envoyer.
+
 ## Répondeur automatique de messages voyageurs
 
 La page **Répondeur automatique** (menu "Répondeur auto") permet à l'hôte de configurer

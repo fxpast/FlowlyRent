@@ -310,6 +310,11 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Logs** : chaque réponse auto est enregistrée dans `AutoResponderLog` (bookingId, question, réponse, modèle)
 - **Onglet Tester** : simule une réponse sans envoyer — pour valider le prompt sans impacter les voyageurs
 
+### Assistant IA — Rédaction de message (dialog réservation, onglet Messages)
+- **`MessageAssistService.assist(userId, bookingId, draft)`** : réutilise Groq comme `AutoResponderService` (même clé, single-shot sans function calling), mais prompt différent — pas d'auto-envoi, l'hôte reste maître du texte final
+- Bouton `auto_awesome` (violet) dans la barre de saisie du chat, à côté du bouton copier : si le champ contient du texte → corrige/améliore (orthographe, ton, clarté, langue préservée) ; si le champ est vide → suggère une réponse basée sur l'historique de conversation (`MessageService.getMessages()`)
+- **`POST /admin/messages/{bookingId}/ai-assist`** : body `{ draft }`, retourne `{ text }` — le texte remplace directement `newMessage`, jamais envoyé automatiquement
+
 ---
 
 ## Documentation détaillée
