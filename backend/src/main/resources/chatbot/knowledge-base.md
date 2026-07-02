@@ -306,6 +306,39 @@ paiement Stripe intégrée (`/{slug}/payment`) : carte bancaire, Apple Pay, Goog
 virement SEPA sont acceptés. Le paiement est sécurisé et traité directement sur le compte
 Stripe de l'hôte (via Stripe Connect).
 
+### Envoyer un lien de paiement ou de caution depuis une réservation
+
+Dans le **dialog d'une réservation** (onglet Détails), section "Demande de paiement",
+l'hôte saisit un montant puis choisit l'un des deux boutons :
+
+- **Paiement** : encaissement immédiat. Le voyageur paie et l'hôte reçoit l'argent
+  directement sur son compte Stripe, sans action supplémentaire.
+- **Caution** : le montant est **bloqué sur la carte du voyageur sans être débité**
+  (pré-autorisation). Rien n'est prélevé tant que l'hôte n'a pas capturé le paiement.
+
+Cliquer sur un des deux boutons génère un **lien court** (`flowlyrent.com/pay/xxxxx`) à
+copier ou envoyer directement au voyageur par email, SMS ou WhatsApp.
+
+### Comment capturer (débiter) ou annuler (libérer) une caution
+
+Une fois la caution autorisée par le voyageur, l'hôte doit se rendre **directement dans
+son propre Dashboard Stripe** (stripe.com → Paiements) — FlowlyRent n'a pas de bouton
+dédié pour ça, c'est une action à faire côté Stripe :
+
+1. Se connecter sur [dashboard.stripe.com](https://dashboard.stripe.com) avec le compte
+   Stripe connecté à FlowlyRent
+2. Aller dans **Paiements**, retrouver le paiement du voyageur concerné (montant, date,
+   statut "Non capturé" / "Uncaptured")
+3. Ouvrir le paiement :
+   - Pour **débiter la caution** (ex. dégâts constatés) → bouton **"Capturer le paiement"**
+   - Pour **libérer la caution sans rien débiter** (fin de séjour sans problème) → bouton
+     **"Annuler le paiement"**
+
+⚠️ **Important** : si l'hôte ne capture ni n'annule la caution, **Stripe l'annule
+automatiquement au bout d'environ 7 jours** (règle des réseaux de cartes bancaires) — les
+fonds sont alors libérés au voyageur sans intervention. Si l'hôte doit capturer la caution
+après ce délai, il doit générer un **nouveau lien** de caution.
+
 ## Portail Prestataire (rôle HOUSEKEEPER)
 
 Interface simplifiée, pensée mobile, pour les prestataires de ménage : onglet **Missions**
