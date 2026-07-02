@@ -26,7 +26,9 @@ import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
 import { HousekeeperService, HousekeeperProfile } from '../../core/services/housekeeper.service';
 import { BookingService } from '../../core/services/booking.service';
+import { UserService } from '../../core/services/user.service';
 import { LinenComponent } from '../linen/linen.component';
+import { generateHousekeepingChargesPdf } from './housekeeping-charges-pdf';
 
 interface Task {
   id: number;
@@ -593,6 +595,9 @@ const STATUS_KEYS: Record<string, string> = {
                       @if (entry.totalCost > 0) {
                         <span class="charges-badge-cost">{{ entry.totalCost | number:'1.2-2' }} €</span>
                       }
+                      <button mat-icon-button (click)="downloadChargesPdf(entry)" [matTooltip]="'housekeeping.download_charges_pdf' | translate">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
                     </div>
                   </div>
                   <div class="charges-list">
@@ -1014,10 +1019,13 @@ export class HousekeepingComponent implements OnInit {
     this.taskPageIndex.set(0);
   }
 
+  userProfile: any = null;
+
   constructor(
     private http: HttpClient,
     private housekeeperService: HousekeeperService,
     private bookingService: BookingService,
+    private userService: UserService,
     private snack: MatSnackBar,
     private dialog: MatDialog,
     private t: TranslateService
@@ -1028,12 +1036,17 @@ export class HousekeepingComponent implements OnInit {
     this.statuses  = Object.entries(STATUS_KEYS).map(([value, key]) => ({ value, label: this.t.instant(key) }));
     this.bookingService.getPropertiesWithDisplayNames().subscribe(p => this.properties.set(p));
     this.housekeeperService.getAll().subscribe(h => this.housekeepers.set(h));
+    this.userService.getProfile().subscribe({ next: p => this.userProfile = p, error: () => {} });
     this.http.get<any[]>(`${this.base}/admin/property-configs`).subscribe({
       next: cfgs => this.propConfigs.set(cfgs ?? []),
       error: () => {}
     });
     this.load();
     this.loadCharges();
+  }
+
+  downloadChargesPdf(entry: HkChargesEntry): void {
+    generateHousekeepingChargesPdf(entry, this.chargesMonthLabel(), this.userProfile, t => this.typeLabel(t));
   }
 
   loadCharges(): void {

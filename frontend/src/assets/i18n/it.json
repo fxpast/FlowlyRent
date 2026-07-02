@@ -289,6 +289,7 @@
         "no_tasks": "Nessun compito in questo periodo.",
         "providers_tab": "Personale",
         "monthly_charges": "Spese mensili",
+        "download_charges_pdf": "Scarica il PDF delle spese di pulizia",
         "status_pending": "Da fare",
         "status_in_progress": "In corso",
         "status_done": "Fatto",

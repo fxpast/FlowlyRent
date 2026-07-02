@@ -119,7 +119,10 @@ Module avec deux grandes sections :
    les assigner à un prestataire (housekeeper), suivre leur statut (À faire / En cours /
    Terminé / Annulé), signaler des incidents avec photos, et consulter les heures
    supplémentaires facturées par les prestataires. Le code d'accès du logement et le
-   générateur de code sont affichés directement dans l'onglet Entretien.
+   générateur de code sont affichés directement dans l'onglet Entretien. L'onglet **Charges**
+   récapitule mensuellement les frais dus à chaque prestataire (missions terminées avec
+   heures supplémentaires facturées) et permet de télécharger un PDF récapitulatif par
+   prestataire (détail des missions du mois + total).
 
 2. **Blanchisserie** : gestion du stock de linge par logement (draps, serviettes, taies,
    housses de couette, nappes...) avec quantité totale, quantité par ménage, et seuil

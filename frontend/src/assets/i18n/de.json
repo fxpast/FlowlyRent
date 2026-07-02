@@ -289,6 +289,7 @@
         "no_tasks": "Keine Aufgaben in diesem Zeitraum.",
         "providers_tab": "Personal",
         "monthly_charges": "Monatliche Kosten",
+        "download_charges_pdf": "Reinigungskosten-PDF herunterladen",
         "status_pending": "Zu erledigen",
         "status_in_progress": "In Bearbeitung",
         "status_done": "Erledigt",

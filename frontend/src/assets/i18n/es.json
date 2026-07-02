@@ -289,6 +289,7 @@
         "no_tasks": "Sin tareas en este período.",
         "providers_tab": "Personal",
         "monthly_charges": "Gastos mensuales",
+        "download_charges_pdf": "Descargar el PDF de gastos de limpieza",
         "status_pending": "Por hacer",
         "status_in_progress": "En progreso",
         "status_done": "Hecho",
