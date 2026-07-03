@@ -40,7 +40,8 @@ public class PublicConciergeController {
     private final ObjectMapper objectMapper;
 
     @GetMapping("/info")
-    public ResponseEntity<?> getInfo(@PathVariable String slug) {
+    public ResponseEntity<?> getInfo(@PathVariable String slug,
+                                      @RequestParam(required = false, defaultValue = "fr") String lang) {
         AppUser user = userRepo.findByPublicSiteSlug(slug).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
 
@@ -55,17 +56,52 @@ public class PublicConciergeController {
         m.put("phone", user.getPhone() != null ? user.getPhone() : "");
         m.put("email", user.getEmail() != null ? user.getEmail() : "");
         m.put("contactWhatsapp", config.getContactWhatsapp());
-        m.put("heroTitle", config.getHeroTitle());
-        m.put("heroSubtitle", config.getHeroSubtitle());
         m.put("heroImageUrl", config.getHeroImageUrl());
-        m.put("pitch", config.getPitch());
-        m.put("pricingText", config.getPricingText());
-        m.put("ctaButtonText", config.getCtaButtonText());
-        m.put("services", parseJsonList(config.getServicesJson()));
-        m.put("stats", parseJsonList(config.getStatsJson()));
-        m.put("steps", parseJsonList(config.getStepsJson()));
-        m.put("testimonials", parseJsonList(config.getTestimonialsJson()));
+        m.putAll(resolveContent(config, lang));
         return ResponseEntity.ok(m);
+    }
+
+    /**
+     * Contenu traduisible (hero titre/sous-titre, pitch, tarification, CTA, listes) — résolu
+     * dans la langue demandée depuis ConciergeConfig.translationsJson (ConciergeTranslationService),
+     * avec repli sur le français champ par champ si la traduction est absente/vide.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> resolveContent(ConciergeConfig config, String lang) {
+        Map<String, Object> fr = new LinkedHashMap<>();
+        fr.put("heroTitle", config.getHeroTitle());
+        fr.put("heroSubtitle", config.getHeroSubtitle());
+        fr.put("pitch", config.getPitch());
+        fr.put("pricingText", config.getPricingText());
+        fr.put("ctaButtonText", config.getCtaButtonText());
+        fr.put("services", parseJsonList(config.getServicesJson()));
+        fr.put("stats", parseJsonList(config.getStatsJson()));
+        fr.put("steps", parseJsonList(config.getStepsJson()));
+        fr.put("testimonials", parseJsonList(config.getTestimonialsJson()));
+
+        if (lang == null || lang.isBlank() || "fr".equalsIgnoreCase(lang) || config.getTranslationsJson() == null) {
+            return fr;
+        }
+
+        try {
+            Map<String, Object> allTranslations = objectMapper.readValue(
+                    config.getTranslationsJson(), new TypeReference<Map<String, Object>>() {});
+            Object langData = allTranslations.get(lang.toLowerCase());
+            if (langData instanceof Map<?, ?> map) {
+                Map<String, Object> merged = new LinkedHashMap<>(fr);
+                for (Map.Entry<?, ?> e : map.entrySet()) {
+                    Object v = e.getValue();
+                    boolean hasContent = v != null
+                            && (!(v instanceof String s) || !s.isBlank())
+                            && (!(v instanceof List<?> l) || !l.isEmpty());
+                    if (hasContent) merged.put(e.getKey().toString(), v);
+                }
+                return merged;
+            }
+        } catch (Exception e) {
+            log.debug("[concierge] Résolution traduction impossible : {}", e.getMessage());
+        }
+        return fr;
     }
 
     @PostMapping("/leads")

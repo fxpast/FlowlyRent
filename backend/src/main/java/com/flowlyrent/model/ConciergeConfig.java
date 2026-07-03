@@ -58,6 +58,11 @@ public class ConciergeConfig {
     @Column(name = "testimonials_json", columnDefinition = "TEXT")
     private String testimonialsJson;
 
+    /** Traductions auto (MyMemory, comme FaqTranslationService) : {"en": {...}, "es": {...}, "de": {...}, "it": {...}}
+     *  Régénéré en async à chaque sauvegarde de config — voir ConciergeTranslationService. */
+    @Column(name = "translations_json", columnDefinition = "TEXT")
+    private String translationsJson;
+
     @Column(name = "contact_whatsapp")
     private String contactWhatsapp;
 

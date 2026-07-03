@@ -8,6 +8,7 @@ import com.flowlyrent.model.enums.ConciergeLeadStatus;
 import com.flowlyrent.repository.ConciergeConfigRepository;
 import com.flowlyrent.repository.ConciergeLeadRepository;
 import com.flowlyrent.service.CloudinaryService;
+import com.flowlyrent.service.ConciergeTranslationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class AdminConciergeController {
     private final ConciergeConfigRepository configRepo;
     private final ConciergeLeadRepository leadRepo;
     private final CloudinaryService cloudinaryService;
+    private final ConciergeTranslationService translationService;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
 
@@ -73,6 +75,13 @@ public class AdminConciergeController {
             if (body.containsKey("testimonials")) config.setTestimonialsJson(objectMapper.writeValueAsString(body.get("testimonials")));
 
             configRepo.save(config);
+
+            List<String> translatableKeys = List.of("heroTitle", "heroSubtitle", "pitch", "pricingText",
+                    "ctaButtonText", "services", "stats", "steps", "testimonials");
+            if (translatableKeys.stream().anyMatch(body::containsKey)) {
+                translationService.translateAsync(config.getId());
+            }
+
             return ResponseEntity.ok(toDto(config));
         } catch (Exception e) {
             log.error("[concierge] Erreur sauvegarde config : {}", e.getMessage(), e);

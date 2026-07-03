@@ -9,8 +9,8 @@ export class ConciergeSiteService {
 
   constructor(private http: HttpClient) {}
 
-  getInfo(slug: string): Observable<any> {
-    return this.http.get<any>(`${this.base}/${slug}/concierge/info`);
+  getInfo(slug: string, lang = 'fr'): Observable<any> {
+    return this.http.get<any>(`${this.base}/${slug}/concierge/info`, { params: { lang } });
   }
 
   submitLead(slug: string, data: {

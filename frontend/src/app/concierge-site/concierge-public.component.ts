@@ -311,7 +311,11 @@ export class ConciergePublicComponent implements OnInit {
   ngOnInit(): void {
     this.initLang();
     this.slug = this.route.snapshot.params['slug'];
-    this.svc.getInfo(this.slug).subscribe({
+    this.loadInfo();
+  }
+
+  private loadInfo(): void {
+    this.svc.getInfo(this.slug, this.currentLang).subscribe({
       next: info => { this.info = info; this.loading.set(false); },
       error: () => { this.notFound.set(true); this.loading.set(false); }
     });
@@ -350,5 +354,6 @@ export class ConciergePublicComponent implements OnInit {
     this.currentLang = lang;
     this.translate.use(lang);
     localStorage.setItem('concierge_lang', lang);
+    if (!this.loading()) this.loadInfo();
   }
 }
