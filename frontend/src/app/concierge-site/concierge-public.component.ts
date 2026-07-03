@@ -205,7 +205,7 @@ import { ConciergeSiteService } from './concierge-site.service';
     .hero-subtitle { font-size: 1.15rem; color: #c7d0da; margin: 0 0 28px; }
     .cta-btn { background: #c9a24b !important; color: #0f1b2d !important; font-weight: 700; height: 48px; padding: 0 32px; font-size: 1rem; }
 
-    .pitch-section { max-width: 700px; margin: 0 auto; padding: 60px 24px; text-align: center; font-size: 1.15rem; line-height: 1.7; color: #c7d0da; }
+    .pitch-section { max-width: 700px; margin: 0 auto; padding: 60px 24px; text-align: center; font-size: 1.15rem; line-height: 1.7; color: #c7d0da; white-space: pre-wrap; }
 
     .services-section, .steps-section, .pricing-section, .testimonials-section, .contact-section {
       max-width: 1000px; margin: 0 auto; padding: 60px 24px;
@@ -247,7 +247,7 @@ import { ConciergeSiteService } from './concierge-site.service';
       border-radius: 12px; padding: 24px; position: relative;
     }
     .quote-icon { color: #c9a24b; opacity: .5; }
-    .testimonial-card p { color: #d5dde4; font-style: italic; margin: 8px 0 12px; }
+    .testimonial-card p { color: #d5dde4; font-style: italic; margin: 8px 0 12px; white-space: pre-wrap; }
     .testimonial-card strong { color: #fff; font-size: .9rem; }
 
     .contact-form { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
