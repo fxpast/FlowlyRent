@@ -178,14 +178,14 @@ import { ConciergeSiteService } from './concierge-site.service';
     }
   `,
   styles: [`
-    :host { display: block; font-family: 'Roboto', sans-serif; color: #eaeef2; }
+    :host { display: block; font-family: 'Roboto', sans-serif; color: #2c3340; }
     .loading-screen, .not-found-screen {
       min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
       background: #0f1b2d; color: #eaeef2; gap: 12px;
     }
     .not-found-screen mat-icon { font-size: 48px; width: 48px; height: 48px; color: #c9a24b; }
 
-    .page { background: #0f1b2d; min-height: 100vh; }
+    .page { background: #faf9f6; min-height: 100vh; color: #2c3340; }
 
     .lang-bar { position: absolute; top: 16px; right: 16px; z-index: 10; display: flex; gap: 4px; }
     .lang-btn {
@@ -205,26 +205,27 @@ import { ConciergeSiteService } from './concierge-site.service';
     .hero-subtitle { font-size: 1.15rem; color: #c7d0da; margin: 0 0 28px; }
     .cta-btn { background: #c9a24b !important; color: #0f1b2d !important; font-weight: 700; height: 48px; padding: 0 32px; font-size: 1rem; }
 
-    .pitch-section { max-width: 700px; margin: 0 auto; padding: 60px 24px; text-align: center; font-size: 1.15rem; line-height: 1.7; color: #c7d0da; white-space: pre-wrap; }
+    .pitch-section { max-width: 700px; margin: 0 auto; padding: 60px 24px; text-align: center; font-size: 1.15rem; line-height: 1.7; color: #4a5261; white-space: pre-wrap; }
 
     .services-section, .steps-section, .pricing-section, .testimonials-section, .contact-section {
       max-width: 1000px; margin: 0 auto; padding: 60px 24px;
     }
     .services-section h2, .steps-section h2, .pricing-section h2, .testimonials-section h2, .contact-section h2 {
-      text-align: center; font-size: 1.8rem; font-weight: 700; margin: 0 0 40px; color: #fff;
+      text-align: center; font-size: 1.8rem; font-weight: 700; margin: 0 0 40px; color: #1a1f2b;
     }
     .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 24px; }
     .service-card {
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+      background: #fff; border: 1px solid #ece7dd;
       border-radius: 12px; padding: 28px 20px; text-align: center;
+      box-shadow: 0 2px 10px rgba(15,27,45,.05);
     }
-    .service-icon { font-size: 36px; width: 36px; height: 36px; color: #c9a24b; margin-bottom: 12px; }
-    .service-card h3 { font-size: 1.1rem; margin: 0 0 8px; color: #fff; }
-    .service-card p { color: #b8c2cc; font-size: .92rem; line-height: 1.5; margin: 0; }
+    .service-icon { font-size: 36px; width: 36px; height: 36px; color: #b8893c; margin-bottom: 12px; }
+    .service-card h3 { font-size: 1.1rem; margin: 0 0 8px; color: #1a1f2b; }
+    .service-card p { color: #5c6677; font-size: .92rem; line-height: 1.5; margin: 0; }
 
     .stats-section {
       display: flex; flex-wrap: wrap; justify-content: center; gap: 48px;
-      background: rgba(201,162,75,.08); padding: 48px 24px; text-align: center;
+      background: #0f1b2d; padding: 48px 24px; text-align: center;
     }
     .stat-number { font-size: 2.2rem; font-weight: 800; color: #c9a24b; }
     .stat-label { color: #c7d0da; font-size: .9rem; margin-top: 4px; }
@@ -235,38 +236,44 @@ import { ConciergeSiteService } from './concierge-site.service';
       width: 40px; height: 40px; border-radius: 50%; background: #c9a24b; color: #0f1b2d;
       display: flex; align-items: center; justify-content: center; font-weight: 800; margin: 0 auto 12px;
     }
-    .step-item h3 { color: #fff; font-size: 1.05rem; margin: 0 0 6px; }
-    .step-item p { color: #b8c2cc; font-size: .9rem; margin: 0; }
+    .step-item h3 { color: #1a1f2b; font-size: 1.05rem; margin: 0 0 6px; }
+    .step-item p { color: #5c6677; font-size: .9rem; margin: 0; }
 
     .pricing-section { text-align: center; }
-    .pricing-section p { color: #c7d0da; font-size: 1.05rem; line-height: 1.7; white-space: pre-wrap; }
+    .pricing-section p {
+      color: #4a5261; font-size: 1.05rem; line-height: 1.7; white-space: pre-wrap;
+      background: #fbf3e3; border: 1px solid #ecd9ab; border-radius: 12px; padding: 24px 28px;
+      max-width: 640px; margin: 0 auto; text-align: left;
+    }
 
     .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
     .testimonial-card {
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+      background: #fff; border: 1px solid #ece7dd;
       border-radius: 12px; padding: 24px; position: relative;
+      box-shadow: 0 2px 10px rgba(15,27,45,.05);
     }
-    .quote-icon { color: #c9a24b; opacity: .5; }
-    .testimonial-card p { color: #d5dde4; font-style: italic; margin: 8px 0 12px; white-space: pre-wrap; }
-    .testimonial-card strong { color: #fff; font-size: .9rem; }
+    .quote-icon { color: #c9a24b; opacity: .7; }
+    .testimonial-card p { color: #4a5261; font-style: italic; margin: 8px 0 12px; white-space: pre-wrap; }
+    .testimonial-card strong { color: #1a1f2b; font-size: .9rem; }
 
+    .contact-section { background: #f2efe8; border-radius: 24px; }
     .contact-form { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
     .field-row { display: flex; gap: 12px; }
     .field-row .field-wrap { flex: 1; }
     .field-wrap { display: flex; flex-direction: column; gap: 4px; }
-    .field-wrap label { font-size: .82rem; color: #c7d0da; }
+    .field-wrap label { font-size: .82rem; color: #4a5261; }
     .text-input {
-      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
-      padding: 10px 12px; color: #fff; font-size: .95rem; font-family: inherit;
+      background: #fff; border: 1px solid #d8d2c4; border-radius: 8px;
+      padding: 10px 12px; color: #1a1f2b; font-size: .95rem; font-family: inherit;
     }
     .text-input:focus { outline: none; border-color: #c9a24b; }
     .submit-btn { width: 100%; margin-top: 8px; }
-    .error-box { background: rgba(198,40,40,.15); color: #ef9a9a; border-radius: 8px; padding: 10px 14px; font-size: .85rem; }
-    .lead-success { text-align: center; color: #a5d6a7; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .error-box { background: #fdecea; color: #c62828; border-radius: 8px; padding: 10px 14px; font-size: .85rem; }
+    .lead-success { text-align: center; color: #2e7d32; display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .lead-success mat-icon { font-size: 40px; width: 40px; height: 40px; }
 
     .footer {
-      border-top: 1px solid rgba(255,255,255,.1); padding: 32px 24px; text-align: center;
+      background: #0f1b2d; padding: 32px 24px; text-align: center;
       display: flex; flex-direction: column; gap: 10px; color: #8a97a5; font-size: .85rem;
     }
     .footer-name { color: #fff; font-weight: 600; font-size: 1rem; }
