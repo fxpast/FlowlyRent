@@ -6,6 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingSiteService } from '../booking-site.service';
+import { ConciergeSiteService } from '../../concierge-site/concierge-site.service';
 
 @Component({
   selector: 'app-booking-site-home',
@@ -114,8 +115,15 @@ import { BookingSiteService } from '../booking-site.service';
       </main>
 
       <footer class="site-footer">
-        <span>{{ 'bs.powered_by' | translate }}</span>
-        <strong>FlowlyRent</strong>
+        @if (conciergeEnabled()) {
+          <a class="concierge-link" (click)="goToConcierge()">
+            <span class="material-icons">storefront</span> {{ 'bs.concierge_link' | translate }}
+          </a>
+        }
+        <div class="powered-by">
+          <span>{{ 'bs.powered_by' | translate }}</span>
+          <strong>FlowlyRent</strong>
+        </div>
       </footer>
     </div>
   `,
@@ -230,8 +238,15 @@ import { BookingSiteService } from '../booking-site.service';
     .card-footer { padding: 12px 16px 16px; }
     .card-footer button { width: 100%; }
 
-    .site-footer { text-align: center; padding: 24px; color: #999; font-size: .85rem; }
-    .site-footer strong { color: #0288d1; margin-left: 4px; }
+    .site-footer { text-align: center; padding: 24px; color: #999; font-size: .85rem; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .powered-by strong { color: #0288d1; margin-left: 4px; }
+    .concierge-link {
+      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+      color: #0288d1; font-weight: 600; text-decoration: none;
+      border: 1px solid #b3e0f5; border-radius: 20px; padding: 6px 16px;
+    }
+    .concierge-link:hover { background: #e3f2fd; }
+    .concierge-link .material-icons { font-size: 18px; }
 
     @media (max-width: 700px) {
       .site-header h1 { font-size: 1.5rem; }
@@ -252,6 +267,7 @@ export class BookingSiteHomeComponent implements OnInit {
   searching = signal(false);
   searched = signal(false);
   availableIds = signal<Set<string>>(new Set());
+  conciergeEnabled = signal(false);
 
   searchFrom = '';
   searchTo = '';
@@ -274,6 +290,7 @@ export class BookingSiteHomeComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private svc: BookingSiteService,
+    private conciergeSvc: ConciergeSiteService,
     private translate: TranslateService
   ) {}
 
@@ -288,6 +305,14 @@ export class BookingSiteHomeComponent implements OnInit {
       next: props => { this.properties.set(props); this.loading.set(false); },
       error: () => { this.loading.set(false); this.error.set(this.translate.instant('bs.error_load')); }
     });
+    this.conciergeSvc.getInfo(this.slug, this.currentLang).subscribe({
+      next: () => this.conciergeEnabled.set(true),
+      error: () => this.conciergeEnabled.set(false)
+    });
+  }
+
+  goToConcierge(): void {
+    this.router.navigate(['/', this.slug, 'conciergerie']);
   }
 
   onFromChange() {

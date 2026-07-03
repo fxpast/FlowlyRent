@@ -1423,6 +1423,7 @@
         "adult": "adult",
         "home": "Home",
         "powered_by": "Powered by",
+        "concierge_link": "Are you a property owner? Discover our concierge services",
         "availability": "Availability",
         "select_checkin": "Click on a check-in date",
         "select_checkout": "Click on a check-out date",
