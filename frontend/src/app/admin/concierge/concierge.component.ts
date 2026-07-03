@@ -114,7 +114,7 @@ import {
                   <div class="list-row">
                     <mat-form-field appearance="outline" class="icon-field">
                       <mat-label>{{ 'concierge.icon_label' | translate }}</mat-label>
-                      <mat-select [ngModel]="iconSelectValue(item.icon)" (ngModelChange)="onIconSelect(item, $event)">
+                      <mat-select [ngModel]="iconSelectValue(item.icon, $index)" (ngModelChange)="onIconSelect(item, $index, $event)">
                         <mat-option value="">{{ 'concierge.icon_none' | translate }}</mat-option>
                         @for (opt of iconPresets; track opt.value) {
                           <mat-option [value]="opt.value">
@@ -125,7 +125,7 @@ import {
                       </mat-select>
                     </mat-form-field>
                     <mat-icon class="icon-preview">{{ item.icon || 'help_outline' }}</mat-icon>
-                    @if (iconSelectValue(item.icon) === '__custom__') {
+                    @if (iconSelectValue(item.icon, $index) === '__custom__') {
                       <mat-form-field appearance="outline" class="icon-custom-field">
                         <mat-label>{{ 'concierge.icon_custom_label' | translate }}</mat-label>
                         <input matInput [(ngModel)]="item.icon" placeholder="cleaning_services">
@@ -386,19 +386,25 @@ export class ConciergeComponent implements OnInit {
     { value: 'schedule',               labelKey: 'concierge.icon_available' }
   ];
 
+  /** Lignes où l'hôte a explicitement choisi "Personnalisé…" — état indépendant de item.icon
+   *  car une valeur vide (en cours de saisie) ne doit pas faire disparaître le champ texte. */
+  private customIconRows = new Set<number>();
+
   isCustomIcon(icon: string): boolean {
     return !!icon && !this.iconPresets.some(p => p.value === icon);
   }
 
-  iconSelectValue(icon: string): string {
+  iconSelectValue(icon: string, index: number): string {
+    if (this.customIconRows.has(index)) return '__custom__';
     if (!icon) return '';
     return this.isCustomIcon(icon) ? '__custom__' : icon;
   }
 
-  onIconSelect(item: ConciergeServiceItem, value: string): void {
+  onIconSelect(item: ConciergeServiceItem, index: number, value: string): void {
     if (value === '__custom__') {
-      if (!this.isCustomIcon(item.icon)) item.icon = '';
+      this.customIconRows.add(index);
     } else {
+      this.customIconRows.delete(index);
       item.icon = value;
     }
   }
@@ -478,7 +484,15 @@ export class ConciergeComponent implements OnInit {
   }
 
   addService(): void { this.config.services = [...this.config.services, { icon: '', title: '', description: '' }]; }
-  removeService(i: number): void { this.config.services = this.config.services.filter((_, idx) => idx !== i); }
+  removeService(i: number): void {
+    this.config.services = this.config.services.filter((_, idx) => idx !== i);
+    const shifted = new Set<number>();
+    for (const idx of this.customIconRows) {
+      if (idx < i) shifted.add(idx);
+      else if (idx > i) shifted.add(idx - 1);
+    }
+    this.customIconRows = shifted;
+  }
 
   addStat(): void { this.config.stats = [...this.config.stats, { number: '', label: '' }]; }
   removeStat(i: number): void { this.config.stats = this.config.stats.filter((_, idx) => idx !== i); }
