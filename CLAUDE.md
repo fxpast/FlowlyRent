@@ -258,6 +258,10 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 ### Boîtes à clé — Suppression automatique des orphelines
 - Quand un logement est dissocié de sa boîte à clé (`keyBoxId` vide dans `PUT /admin/property-configs/{id}`), si la boîte n'est plus associée à aucun autre logement (`repo.findByKeyBoxId().isEmpty()`), elle est supprimée automatiquement de la base
 
+### Import photos — Scraper Beds24 (`Beds24ScraperService`)
+- Scrape `https://beds24.com/booking.php?propid={id}` en HTTP statique (Jsoup, pas d'exécution JS) — fonctionne car **toutes** les photos sont déjà présentes dans le HTML brut, y compris celles du carousel
+- **Piège** : le carousel Bootstrap de Beds24 (`bootstrap-carousel-img`) n'utilise `src` classique que pour les 2 premières diapositives — toutes les suivantes utilisent l'attribut **`data-lazy-load-src`**, absent de `LAZY_ATTRS` avant correctif → seules 2 photos étaient trouvées au lieu de la galerie complète. Toujours vérifier le HTML brut (`curl` + `grep`) avant de conclure qu'un scraping incomplet vient du JS côté client — souvent c'est juste un attribut lazy-load non couvert.
+
 ### Arrivées/Départs — Filtre de prolongation
 - **Règle** : si deux réservations partagent le même logement (`propId`), le même prénom ET nom, et que `departure` de l'une = `arrival` de l'autre → c'est une prolongation
 - La réservation sortante est **masquée des départs** ; la réservation entrante est **masquée des arrivées**

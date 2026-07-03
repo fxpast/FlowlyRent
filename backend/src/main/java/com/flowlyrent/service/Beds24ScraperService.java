@@ -15,7 +15,11 @@ import java.util.stream.Collectors;
 public class Beds24ScraperService {
 
     private static final String BOOKING_URL = "https://beds24.com/booking.php?propid=";
-    private static final List<String> LAZY_ATTRS = List.of("src", "data-src", "data-lazy", "data-original", "data-image");
+    // "data-lazy-load-src" est l'attribut réellement utilisé par le carousel Beds24
+    // (bootstrap-carousel-img) pour toutes les diapositives sauf les deux premières,
+    // qui utilisent "src" — sans cet attribut le scraper ne trouvait que 2 photos.
+    private static final List<String> LAZY_ATTRS = List.of(
+            "src", "data-lazy-load-src", "data-src", "data-lazy", "data-original", "data-image");
 
     public List<String> scrapePropertyPhotos(String propId) {
         String url = BOOKING_URL + propId;
