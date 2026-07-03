@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
@@ -24,7 +25,7 @@ import {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
+    MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatSlideToggleModule, MatTabsModule, MatChipsModule, MatTooltipModule,
     MatProgressSpinnerModule, MatSnackBarModule, TranslateModule
   ],
@@ -113,9 +114,23 @@ import {
                   <div class="list-row">
                     <mat-form-field appearance="outline" class="icon-field">
                       <mat-label>{{ 'concierge.icon_label' | translate }}</mat-label>
-                      <input matInput [(ngModel)]="item.icon" placeholder="cleaning_services">
+                      <mat-select [ngModel]="iconSelectValue(item.icon)" (ngModelChange)="onIconSelect(item, $event)">
+                        <mat-option value="">{{ 'concierge.icon_none' | translate }}</mat-option>
+                        @for (opt of iconPresets; track opt.value) {
+                          <mat-option [value]="opt.value">
+                            <mat-icon class="option-icon">{{ opt.value }}</mat-icon> {{ opt.labelKey | translate }}
+                          </mat-option>
+                        }
+                        <mat-option value="__custom__">{{ 'concierge.icon_custom' | translate }}</mat-option>
+                      </mat-select>
                     </mat-form-field>
                     <mat-icon class="icon-preview">{{ item.icon || 'help_outline' }}</mat-icon>
+                    @if (iconSelectValue(item.icon) === '__custom__') {
+                      <mat-form-field appearance="outline" class="icon-custom-field">
+                        <mat-label>{{ 'concierge.icon_custom_label' | translate }}</mat-label>
+                        <input matInput [(ngModel)]="item.icon" placeholder="cleaning_services">
+                      </mat-form-field>
+                    }
                     <mat-form-field appearance="outline" class="title-field">
                       <mat-label>{{ 'concierge.item_title' | translate }}</mat-label>
                       <input matInput [(ngModel)]="item.title">
@@ -129,6 +144,11 @@ import {
                     </button>
                   </div>
                 }
+                <p class="icon-hint">
+                  <mat-icon class="hint-icon">info</mat-icon>
+                  {{ 'concierge.icon_hint' | translate }}
+                  <a href="https://fonts.google.com/icons" target="_blank">fonts.google.com/icons</a>
+                </p>
                 <button mat-stroked-button (click)="addService()">
                   <mat-icon>add</mat-icon> {{ 'concierge.add_service' | translate }}
                 </button>
@@ -308,8 +328,12 @@ import {
     .hero-preview-empty { display: flex; align-items: center; justify-content: center; color: #999; }
 
     .list-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-    .icon-field { width: 140px; }
+    .icon-field { width: 200px; }
+    .icon-custom-field { width: 160px; }
+    .option-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; margin-right: 6px; }
     .icon-preview { color: #666; }
+    .icon-hint { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: #888; margin: 4px 0 12px; }
+    .hint-icon { font-size: 16px; width: 16px; height: 16px; }
     .title-field { width: 200px; flex: 1; }
     .desc-field { flex: 2; min-width: 200px; }
     .stat-number-field { width: 100px; }
@@ -343,6 +367,41 @@ export class ConciergeComponent implements OnInit {
     contactWhatsapp: '', ctaButtonText: '',
     services: [], stats: [], steps: [], testimonials: []
   };
+
+  iconPresets: { value: string; labelKey: string }[] = [
+    { value: 'cleaning_services',      labelKey: 'concierge.icon_cleaning' },
+    { value: 'key',                    labelKey: 'concierge.icon_keys' },
+    { value: 'support_agent',          labelKey: 'concierge.icon_support' },
+    { value: 'payments',               labelKey: 'concierge.icon_payments' },
+    { value: 'photo_camera',           labelKey: 'concierge.icon_photo' },
+    { value: 'trending_up',            labelKey: 'concierge.icon_pricing' },
+    { value: 'build',                  labelKey: 'concierge.icon_maintenance' },
+    { value: 'local_laundry_service',  labelKey: 'concierge.icon_laundry' },
+    { value: 'calendar_month',         labelKey: 'concierge.icon_calendar' },
+    { value: 'chat',                   labelKey: 'concierge.icon_chat' },
+    { value: 'security',               labelKey: 'concierge.icon_security' },
+    { value: 'star',                   labelKey: 'concierge.icon_reviews' },
+    { value: 'home_work',              labelKey: 'concierge.icon_multiprop' },
+    { value: 'language',               labelKey: 'concierge.icon_multilang' },
+    { value: 'schedule',               labelKey: 'concierge.icon_available' }
+  ];
+
+  isCustomIcon(icon: string): boolean {
+    return !!icon && !this.iconPresets.some(p => p.value === icon);
+  }
+
+  iconSelectValue(icon: string): string {
+    if (!icon) return '';
+    return this.isCustomIcon(icon) ? '__custom__' : icon;
+  }
+
+  onIconSelect(item: ConciergeServiceItem, value: string): void {
+    if (value === '__custom__') {
+      if (!this.isCustomIcon(item.icon)) item.icon = '';
+    } else {
+      item.icon = value;
+    }
+  }
 
   slug = '';
   saving = signal(false);
