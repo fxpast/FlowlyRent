@@ -351,6 +351,24 @@ automatiquement au bout d'environ 7 jours** (règle des réseaux de cartes banca
 fonds sont alors libérés au voyageur sans intervention. Si l'hôte doit capturer la caution
 après ce délai, il doit générer un **nouveau lien** de caution.
 
+## Conciergerie — Page publique pour attirer des propriétaires
+
+Pour les hôtes qui exercent aussi une activité de **conciergerie** (gestion de biens pour le
+compte d'autres propriétaires), le menu **Conciergerie** permet de configurer une page publique
+marketing à l'adresse `flowlyrent.com/{votre-slug}/conciergerie` (même identifiant que le site de
+réservation voyageurs, configuré dans Paramètres). Cette page est **désactivée par défaut** — il
+faut l'activer dans l'onglet **Contenu** du menu Conciergerie.
+
+L'onglet Contenu permet de renseigner : une image et un titre d'en-tête, un texte de présentation,
+la liste des services proposés, des chiffres clés (ex. "120+ logements gérés"), les étapes du
+parcours ("comment ça marche"), une description de la tarification/commission, des témoignages, et
+un numéro WhatsApp de contact.
+
+Quand un propriétaire intéressé remplit le formulaire de contact sur la page publique, une
+**demande** est créée et visible dans l'onglet **Demandes** du menu Conciergerie — l'hôte reçoit
+aussi une notification push et une notification in-app. Chaque demande peut être marquée
+"Contacté" ou "Clôturée".
+
 ## Portail Prestataire (rôle HOUSEKEEPER)
 
 Interface simplifiée, pensée mobile, pour les prestataires de ménage : onglet **Missions**

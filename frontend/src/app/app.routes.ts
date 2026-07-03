@@ -66,6 +66,10 @@ export const routes: Routes = [
     loadComponent: () => import('./booking-site/booking-site-confirmation/booking-site-confirmation.component').then(m => m.BookingSiteConfirmationComponent)
   },
   {
+    path: ':slug/conciergerie',
+    loadComponent: () => import('./concierge-site/concierge-public.component').then(m => m.ConciergePublicComponent)
+  },
+  {
     path: ':userSlug/:pageSlug',
     loadComponent: () => import('./public/page-resolver/page-resolver.component').then(m => m.PageResolverComponent)
   },

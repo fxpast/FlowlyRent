@@ -53,6 +53,9 @@ interface NavItem { icon: string; label: string; route: string; }
               @if (item.route === 'notifications' && unreadNotifCount() > 0) {
                 <span class="badge">{{ unreadNotifCount() }}</span>
               }
+              @if (item.route === 'concierge' && conciergeNewLeadsCount() > 0) {
+                <span class="badge">{{ conciergeNewLeadsCount() }}</span>
+              }
             </a>
           }
         </mat-nav-list>
@@ -122,6 +125,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   unreadCount = signal(0);
   unreadNotifCount = signal(0);
+  conciergeNewLeadsCount = signal(0);
   isMobile = signal(false);
 
   private mq = window.matchMedia('(max-width: 768px)');
@@ -145,11 +149,13 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'trending_up',       label: 'nav.dynamic_pricing', route: 'dynamic-pricing' },
     { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
     { icon: 'quiz',              label: 'nav.faq',         route: 'faq' },
+    { icon: 'storefront',        label: 'nav.conciergerie', route: 'concierge' },
     { icon: 'settings',          label: 'nav.settings',    route: 'settings' }
   ];
 
   private msgInterval?: ReturnType<typeof setInterval>;
   private notifInterval?: ReturnType<typeof setInterval>;
+  private conciergeInterval?: ReturnType<typeof setInterval>;
 
   constructor(public auth: AuthService, private messageService: MessageService, private http: HttpClient, private push: PushNotificationService) {}
 
@@ -159,14 +165,17 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     this.push.init();
     this.loadUnreadCount();
     this.loadUnreadNotifCount();
-    this.msgInterval   = setInterval(() => this.loadUnreadCount(), 30000);
-    this.notifInterval = setInterval(() => this.loadUnreadNotifCount(), 60000);
+    this.loadConciergeNewLeadsCount();
+    this.msgInterval    = setInterval(() => this.loadUnreadCount(), 30000);
+    this.notifInterval  = setInterval(() => this.loadUnreadNotifCount(), 60000);
+    this.conciergeInterval = setInterval(() => this.loadConciergeNewLeadsCount(), 60000);
   }
 
   ngOnDestroy(): void {
     this.mq.removeEventListener('change', this.mqListener);
     clearInterval(this.msgInterval);
     clearInterval(this.notifInterval);
+    clearInterval(this.conciergeInterval);
   }
 
   private loadUnreadCount(): void {
@@ -176,6 +185,13 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   private loadUnreadNotifCount(): void {
     this.http.get<{count: number}>(`${environment.apiUrl}/admin/notifications/unread-count`).subscribe({
       next: r => this.unreadNotifCount.set(r.count),
+      error: () => {}
+    });
+  }
+
+  private loadConciergeNewLeadsCount(): void {
+    this.http.get<any[]>(`${environment.apiUrl}/admin/concierge/leads`).subscribe({
+      next: leads => this.conciergeNewLeadsCount.set((leads ?? []).filter(l => l.status === 'NEW').length),
       error: () => {}
     });
   }

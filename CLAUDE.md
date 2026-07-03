@@ -329,6 +329,17 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - Bouton `auto_awesome` (violet) dans la barre de saisie du chat, à côté du bouton copier : si le champ contient du texte → corrige/améliore (orthographe, ton, clarté, langue préservée) ; si le champ est vide → suggère une réponse basée sur l'historique de conversation (`MessageService.getMessages()`)
 - **`POST /admin/messages/{bookingId}/ai-assist`** : body `{ draft, propertyId, bookingContext }` — `bookingContext` (voyageur, arrivée/départ, adultes/enfants) construit côté frontend depuis `this.draft` du dialog, pas de nouvel appel Beds24 pour l'obtenir. Retourne `{ text }` — le texte remplace directement `newMessage`, jamais envoyé automatiquement
 
+### Conciergerie — Page publique B2B pour attirer des propriétaires
+
+- **But** : distincte du site de réservation voyageurs — cible les **propriétaires** qui cherchent à confier la gestion de leur bien à un hôte FlowlyRent exerçant une activité de conciergerie
+- **`ConciergeConfig`** (1 ligne/hôte, `concierge_configs`, pattern `PricingEventImpactConfig`) : `enabled`, hero (titre/sous-titre/image Cloudinary), `pitch`, et 4 listes stockées en JSON (`servicesJson`, `statsJson`, `stepsJson`, `testimonialsJson` — pattern `PropertyConfig.photoUrlsJson`, pas de table enfant), `pricingText` libre, `contactWhatsapp`, `ctaButtonText`
+- **`ConciergeLead`** (`concierge_leads`) : une ligne par soumission du formulaire de contact public (nom, email, tél, ville du bien, message, statut NEW/CONTACTED/CLOSED)
+- **Admin** (`AdminConciergeController`, menu "Conciergerie", `frontend/src/app/admin/concierge/`) : onglet Contenu (CRUD complet du `ConciergeConfig`, upload image hero via `CloudinaryService.uploadBase64`) + onglet Demandes (liste des `ConciergeLead`, changement de statut). Badge de compteur de demandes non traitées dans le menu (`admin-layout.component.ts`), même pattern que les badges messages/notifications
+- **Public** (`PublicConciergeController`, sans auth, **même `publicSiteSlug`** que le site voyageurs) :
+  - `GET /public/{slug}/concierge/info` → 404 si config absente ou `enabled=false`
+  - `POST /public/{slug}/concierge/leads` → crée le lead + notifie l'hôte (push `WebPushService.sendToUser` + `AdminNotification`, même pattern exact que `AutoResponderService.notifyHost()`)
+- **Page publique** : `/{slug}/conciergerie` (`frontend/src/app/concierge-site/`, dossier séparé de `booking-site/`) — design "publicité" distinct (palette navy `#0f1b2d` + accent doré `#c9a24b`), sections Hero → Pitch → Services → Stats → Comment ça marche → Tarification → Témoignages (masqué si vide) → Formulaire de contact → Footer
+
 ---
 
 ## Documentation détaillée

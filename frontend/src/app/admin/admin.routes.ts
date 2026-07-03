@@ -115,6 +115,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./faq/faq.component').then(m => m.AdminFaqComponent)
       },
       {
+        path: 'concierge',
+        loadComponent: () => import('./concierge/concierge.component').then(m => m.ConciergeComponent)
+      },
+      {
         path: 'onboarding',
         loadComponent: () => import('./onboarding/onboarding.component').then(m => m.OnboardingComponent)
       }
