@@ -103,7 +103,7 @@ interface NavItem { icon: string; label: string; route: string; }
     .active-link { background: rgba(255,255,255,0.15) !important; color: white !important; }
     .toolbar-logo { height: 32px; width: auto; filter: brightness(0) invert(1); }
     .toolbar-spacer { flex: 1 1 auto; }
-    .content { padding: 24px; }
+    .content { padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
     .badge {
       background: #f44336; color: white; border-radius: 10px;
       padding: 2px 6px; font-size: 11px; font-weight: bold;
@@ -116,7 +116,7 @@ interface NavItem { icon: string; label: string; route: string; }
       box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     }
     @media (max-width: 768px) {
-      .content { padding: 16px 12px; }
+      .content { padding: 16px 12px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
     }
   `]
 })

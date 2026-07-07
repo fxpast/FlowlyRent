@@ -43,13 +43,14 @@ import { PushNotificationService } from '../../core/services/push-notification.s
     :host { display: flex; flex-direction: column; min-height: 100vh; }
     .portal-toolbar { position: sticky; top: 0; z-index: 100; flex-shrink: 0; }
     .toolbar-title { font-size: 18px; font-weight: 600; }
-    .portal-body { flex: 1; max-width: 640px; width: 100%; margin: 0 auto; padding: 16px 16px 80px; box-sizing: border-box; }
-    @media (max-width: 680px) { .portal-body { padding: 8px 8px 80px; } }
+    .portal-body { flex: 1; max-width: 640px; width: 100%; margin: 0 auto; padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+    @media (max-width: 680px) { .portal-body { padding: 8px 8px calc(80px + env(safe-area-inset-bottom, 0px)); } }
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
       display: flex; background: white;
       border-top: 1px solid #e0e0e0;
       box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .bottom-nav a {
       flex: 1; display: flex; flex-direction: column; align-items: center;

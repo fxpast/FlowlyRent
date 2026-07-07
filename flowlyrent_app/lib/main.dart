@@ -165,17 +165,20 @@ class _WebViewScreenState extends State<WebViewScreen> {
         }
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            if (_hasError)
-              _buildErrorScreen()
-            else
-              WebViewWidget(controller: _controller),
-            if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: Color(0xFF1976D2)),
-              ),
-          ],
+        body: SafeArea(
+          top: false,
+          child: Stack(
+            children: [
+              if (_hasError)
+                _buildErrorScreen()
+              else
+                WebViewWidget(controller: _controller),
+              if (_isLoading)
+                const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF1976D2)),
+                ),
+            ],
+          ),
         ),
       ),
     );
