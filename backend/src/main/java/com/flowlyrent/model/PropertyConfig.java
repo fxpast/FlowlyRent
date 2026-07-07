@@ -64,6 +64,12 @@ public class PropertyConfig {
     @Column(name = "photo_urls_json", columnDefinition = "TEXT")
     private String photoUrlsJson;
 
+    /** Base de connaissance propre au logement (wifi, électroménager, parking, règles…),
+     *  saisie par l'hôte — injectée dans le prompt du répondeur automatique et de
+     *  l'assistant de rédaction en plus de PropertyConfig.shortName/accessCode. */
+    @Column(name = "knowledge_base_extra", columnDefinition = "TEXT")
+    private String knowledgeBaseExtra;
+
     /** Non null → ce PropertyConfig est le pendant iCal d'un LocalProperty (mode iCal).
      *  Null  → PropertyConfig Beds24 classique (mode channel manager). */
     @Column(name = "local_property_id")

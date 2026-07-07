@@ -423,7 +423,18 @@ une réponse automatique aux messages entrants des voyageurs Beds24.
 - **Mots-clés sensibles** : liste personnalisable séparée par des virgules (si vide, liste
   par défaut intégrée). Les mots-clés par défaut incluent des termes en français et en anglais.
 - **Instructions IA** : instructions supplémentaires injectées dans le prompt (ton, style,
-  informations spécifiques à ne pas oublier, restrictions).
+  informations spécifiques à ne pas oublier, restrictions). Ces instructions s'appliquent à
+  tous les logements de l'hôte.
+
+### Base de connaissance par logement
+- Dans **Logements → Paramètres du logement**, chaque logement dispose d'un champ texte libre
+  « Base de connaissance du logement » (wifi, électroménager, parking, règles de la maison,
+  recommandations locales…).
+- Ce contenu est injecté dans le prompt IA en plus de la FAQ générale, uniquement pour les
+  messages concernant ce logement précis — il complète les instructions IA globales de
+  l'hôte sans les remplacer.
+- Également utilisé par l'assistant de rédaction manuel (bouton IA dans l'onglet Messages
+  du détail d'une réservation), pour rester cohérent avec les réponses automatiques.
 
 ### Journal (onglet Journal)
 - Historique de tous les messages traités : date, réservation, classification (SIMPLE/SENSIBLE),

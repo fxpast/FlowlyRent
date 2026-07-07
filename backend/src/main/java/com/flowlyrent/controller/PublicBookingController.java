@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowlyrent.model.AppUser;
 import com.flowlyrent.model.Beds24Account;
 import com.flowlyrent.model.PropertyConfig;
+import com.flowlyrent.model.PropertyInventoryItem;
 import com.flowlyrent.model.PropertyPhoto;
 import com.flowlyrent.repository.AppUserRepository;
 import com.flowlyrent.repository.Beds24AccountRepository;
 import com.flowlyrent.repository.PropertyConfigRepository;
+import com.flowlyrent.repository.PropertyInventoryItemRepository;
 import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.PropertyCapacityResolverService;
@@ -44,6 +46,7 @@ public class PublicBookingController {
     private final Beds24AccountRepository accountRepo;
     private final PropertyConfigRepository propConfigRepo;
     private final PropertyPhotoRepository propertyPhotoRepo;
+    private final PropertyInventoryItemRepository inventoryRepo;
     private final com.flowlyrent.repository.PaymentLinkRepository paymentLinkRepo;
     private final com.flowlyrent.repository.PromoCodeRepository promoCodeRepo;
     private final ObjectMapper objectMapper;
@@ -187,6 +190,9 @@ public class PublicBookingController {
                 Integer maxPeople = capacityResolver.resolveMaxPeople(user, List.of(prop), PublicBookingController::extractPropertyId).get(propertyId);
                 if (maxPeople != null) prop.put("maxPeople", maxPeople);
             } catch (Exception ignored) {}
+            prop.put("equipment", inventoryRepo
+                    .findByUserIdAndBeds24PropertyIdOrderByCategoryAscSortOrderAscIdAsc(user.getId(), propertyId)
+                    .stream().map(this::inventoryItemToMap).collect(java.util.stream.Collectors.toList()));
             return ResponseEntity.ok(prop);
         } catch (Exception e) {
             return error(e);
@@ -982,6 +988,15 @@ public class PublicBookingController {
                 }
             }
         });
+    }
+
+    private Map<String, Object> inventoryItemToMap(PropertyInventoryItem item) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("category", item.getCategory());
+        m.put("label",    item.getLabel());
+        m.put("details",  item.getDetails());
+        m.put("quantity", item.getQuantity());
+        return m;
     }
 
     private static String truncateDate(String s) {

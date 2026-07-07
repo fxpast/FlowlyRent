@@ -108,6 +108,31 @@ interface CalMonth {
             }
           </div>
 
+          @if (equipmentByCategory().length > 0) {
+            <mat-divider></mat-divider>
+            <div class="equipment-section">
+              <h2>{{ 'bs.equipment_title' | translate }}</h2>
+              <div class="equipment-grid">
+                @for (cat of equipmentByCategory(); track cat.value) {
+                  <div class="equipment-cat">
+                    <div class="equipment-cat-header">
+                      <span class="material-icons">{{ cat.icon }}</span>
+                      <strong>{{ cat.labelKey | translate }}</strong>
+                    </div>
+                    <ul class="equipment-list">
+                      @for (item of cat.items; track item.label + (item.details ?? '')) {
+                        <li>
+                          {{ item.label }}{{ item.details ? ' (' + item.details + ')' : '' }}
+                          @if (item.quantity > 1) { <span class="equipment-qty">×{{ item.quantity }}</span> }
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           <mat-divider></mat-divider>
 
           <!-- ── Calendrier de disponibilité ─────────────────────────── -->
@@ -393,6 +418,14 @@ interface CalMonth {
     .location .material-icons, .feat .material-icons { font-size: 18px; color: #0288d1; }
     .description { color: #444; line-height: 1.7; margin-top: 16px; white-space: pre-wrap; }
 
+    .equipment-section h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 16px; }
+    .equipment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+    .equipment-cat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #1a1a2e; }
+    .equipment-cat-header .material-icons { font-size: 20px; color: #0288d1; }
+    .equipment-list { list-style: none; margin: 0; padding: 0; }
+    .equipment-list li { color: #555; font-size: .92rem; padding: 3px 0; }
+    .equipment-qty { color: #999; font-size: .85rem; margin-left: 4px; }
+
     mat-divider { margin: 28px 0 !important; }
 
     /* ─── Calendrier ─────────────────────────────────────────────────── */
@@ -562,6 +595,23 @@ export class BookingSitePropertyComponent implements OnInit {
   siteInfo = signal<any>(null);
   property = signal<any>({});
   photos = signal<any[]>([]);
+
+  private readonly EQUIPMENT_CATEGORIES = [
+    { value: 'BEDS',       icon: 'bed',          labelKey: 'bs.equipment_cat_BEDS' },
+    { value: 'APPLIANCES', icon: 'kitchen',      labelKey: 'bs.equipment_cat_APPLIANCES' },
+    { value: 'TECH',       icon: 'devices',      labelKey: 'bs.equipment_cat_TECH' },
+    { value: 'KITCHEN',    icon: 'coffee_maker', labelKey: 'bs.equipment_cat_KITCHEN' },
+    { value: 'BATHROOM',   icon: 'bathtub',      labelKey: 'bs.equipment_cat_BATHROOM' },
+    { value: 'OUTDOOR',    icon: 'deck',         labelKey: 'bs.equipment_cat_OUTDOOR' },
+    { value: 'OTHER',      icon: 'category',     labelKey: 'bs.equipment_cat_OTHER' }
+  ];
+
+  equipmentByCategory = computed(() => {
+    const items: any[] = this.property()?.equipment ?? [];
+    return this.EQUIPMENT_CATEGORIES
+      .map(cat => ({ ...cat, items: items.filter(i => i.category === cat.value) }))
+      .filter(cat => cat.items.length > 0);
+  });
   activePhoto = signal(0);
   loading = signal(true);
   error = signal('');

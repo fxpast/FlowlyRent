@@ -637,6 +637,33 @@ interface OccupancyStatus {
               </div>
               <mat-divider class="divider"></mat-divider>
 
+              <!-- Base de connaissance du logement (répondeur automatique voyageurs) -->
+              @if (!isIcalMode()) {
+                <div class="cleaning-section">
+                  <div class="cleaning-label">
+                    <mat-icon [matTooltip]="'properties.kb_hint' | translate">menu_book</mat-icon>
+                    <strong>{{ 'properties.kb_title' | translate }}</strong>
+                    <button type="button" mat-icon-button color="primary" (click)="generateKbDraft(p)"
+                            [matTooltip]="'properties.kb_generate' | translate">
+                      <mat-icon>auto_awesome</mat-icon>
+                    </button>
+                    @if (isKbDirty(p['id'])) {
+                      <button mat-flat-button color="primary" class="save-btn"
+                              (click)="saveKb(p['id'])">
+                        <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+                      </button>
+                    }
+                  </div>
+                  <p class="kb-desc">{{ 'properties.kb_desc' | translate }}</p>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <textarea matInput rows="5" cdkTextareaAutosize cdkAutosizeMinRows="5"
+                              [(ngModel)]="kbDraft[p['id']]"
+                              [placeholder]="'properties.kb_placeholder' | translate"></textarea>
+                  </mat-form-field>
+                </div>
+                <mat-divider class="divider"></mat-divider>
+              }
+
               <!-- Lien réservation Beds24 (masqué en mode iCal) -->
               @if (!isIcalMode() && shortNameSaved[p['id']]) {
                 <div class="code-section">
@@ -938,6 +965,7 @@ interface OccupancyStatus {
     .keybox-create-form { margin-top: 6px; padding: 10px; background: #f9f9f9; border-radius: 6px; border: 1px solid #e0e0e0; }
     .keybox-create-actions { display: flex; gap: 8px; margin-top: 4px; }
     .full-width { width: 100%; }
+    .kb-desc { font-size: 12px; color: #888; margin: 0 0 8px; }
 
     .cleaning-section { margin-top: 12px; }
     .cleaning-label {
@@ -1134,6 +1162,8 @@ export class PropertiesComponent implements OnInit {
   bookings    = signal<any[]>([]);
   shortNameSaved: Record<string, string> = {};
   shortNameDraft: Record<string, string> = {};
+  kbSaved: Record<string, string> = {};
+  kbDraft: Record<string, string> = {};
   codeSaved:   Record<string, string>  = {};
   codeDraft:   Record<string, string>  = {};
   prevCodes:   Record<string, string>  = {};
@@ -1317,6 +1347,8 @@ export class PropertiesComponent implements OnInit {
         for (const c of cfgs) {
           this.shortNameSaved[c.beds24PropertyId] = c.shortName ?? '';
           this.shortNameDraft[c.beds24PropertyId] = c.shortName ?? '';
+          this.kbSaved[c.beds24PropertyId] = c.knowledgeBaseExtra ?? '';
+          this.kbDraft[c.beds24PropertyId] = c.knowledgeBaseExtra ?? '';
           this.codeSaved[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.codeDraft[c.beds24PropertyId]     = c.accessCode         ?? '';
           this.prevCodes[c.beds24PropertyId]     = c.previousAccessCode ?? '';
@@ -1845,6 +1877,72 @@ export class PropertiesComponent implements OnInit {
         this.shortNameDraft[propId] = cfg.shortName ?? '';
         this.bookingService.clearPropsCache();
         this.snackBar.open(this.t.instant('properties.short_name_saved'), this.t.instant('common.ok'), { duration: 2000 });
+      },
+      error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
+    });
+  }
+
+  isKbDirty(propId: string): boolean {
+    return (this.kbDraft[propId] ?? '') !== (this.kbSaved[propId] ?? '');
+  }
+
+  generateKbDraft(p: any): void {
+    const propId = this.idOf(p);
+    const apply = () => {
+      const generated = this.buildKbSummary(p, propId);
+      const current = (this.kbDraft[propId] ?? '').trim();
+      if (current && current !== generated.trim()
+          && !confirm(this.t.instant('properties.kb_generate_confirm'))) {
+        return;
+      }
+      this.kbDraft[propId] = generated;
+    };
+    if (!this.inventoryMap()[propId]) {
+      this.inventoryService.getAll(propId).subscribe({
+        next: items => { this.inventoryMap.update(m => ({ ...m, [propId]: items })); apply(); },
+        error: () => apply()
+      });
+    } else {
+      apply();
+    }
+  }
+
+  private buildKbSummary(p: any, propId: string): string {
+    const lines: string[] = [];
+
+    if (p['address']) {
+      const parts = [p['address'], p['city'], p['country']].filter(Boolean);
+      lines.push(`${this.t.instant('properties.kb_gen_address')} : ${parts.join(', ')}`);
+    }
+    const maxGuests = p['maxGuests'] || p['maxPeople'];
+    if (maxGuests) lines.push(`${this.t.instant('properties.kb_gen_capacity')} : ${maxGuests}`);
+    if (this.roomCount(p)) lines.push(`${this.t.instant('properties.kb_gen_rooms')} : ${this.roomCount(p)}`);
+    const cleaningFee = this.pricingSaved[propId]?.cleaningFee;
+    if (cleaningFee) lines.push(`${this.t.instant('properties.kb_gen_cleaning_fee')} : ${cleaningFee} €`);
+
+    const items = this.inventoryMap()[propId] ?? [];
+    if (items.length) {
+      lines.push('');
+      lines.push(`${this.t.instant('properties.kb_gen_equipment')} :`);
+      for (const cat of this.categories) {
+        const catItems = items.filter(i => i.category === cat.value);
+        if (!catItems.length) continue;
+        const list = catItems
+          .map(i => `${i.label}${i.details ? ' (' + i.details + ')' : ''}${i.quantity > 1 ? ' x' + i.quantity : ''}`)
+          .join(', ');
+        lines.push(`- ${cat.label} : ${list}`);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  saveKb(propId: string): void {
+    this.propConfigService.updateKnowledgeBase(String(propId), this.kbDraft[propId] ?? '').subscribe({
+      next: cfg => {
+        this.kbSaved[propId] = cfg.knowledgeBaseExtra ?? '';
+        this.kbDraft[propId] = cfg.knowledgeBaseExtra ?? '';
+        this.snackBar.open(this.t.instant('properties.kb_saved'), this.t.instant('common.ok'), { duration: 2000 });
       },
       error: () => this.snackBar.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 })
     });

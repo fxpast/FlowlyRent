@@ -126,6 +126,10 @@ public class AdminPropertyConfigController {
             String v = body.get("coverPhotoUrl");
             cfg.setCoverPhotoUrl(v != null && !v.isBlank() ? v.trim() : null);
         }
+        if (body.containsKey("knowledgeBaseExtra")) {
+            String v = body.get("knowledgeBaseExtra");
+            cfg.setKnowledgeBaseExtra(v != null && !v.isBlank() ? v.trim() : null);
+        }
         return ResponseEntity.ok(toDto(repo.save(cfg)));
     }
 
@@ -240,6 +244,7 @@ public class AdminPropertyConfigController {
         m.put("discount7Nights", cfg.getDiscount7Nights());
         m.put("discount28Nights", cfg.getDiscount28Nights());
         m.put("coverPhotoUrl", cfg.getCoverPhotoUrl());
+        m.put("knowledgeBaseExtra", cfg.getKnowledgeBaseExtra());
         List<String> photoUrls = List.of();
         if (cfg.getPhotoUrlsJson() != null && !cfg.getPhotoUrlsJson().isBlank()) {
             try { photoUrls = objectMapper.readValue(cfg.getPhotoUrlsJson(), new TypeReference<>() {}); } catch (Exception ignored) {}

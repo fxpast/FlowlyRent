@@ -69,6 +69,7 @@ public class MessageAssistService {
                 : null;
         String propName   = propConfig != null && propConfig.getShortName() != null ? propConfig.getShortName() : "l'hébergement";
         String accessCode = propConfig != null && propConfig.getAccessCode()  != null ? propConfig.getAccessCode()  : "(non défini)";
+        String propKnowledgeBase = propConfig != null ? propConfig.getKnowledgeBaseExtra() : null;
 
         String faqContext = faqRepo.findAllByOrderByDisplayOrderAscCreatedAtAsc().stream()
                 .limit(8)
@@ -78,7 +79,7 @@ public class MessageAssistService {
         boolean hasDraft = draft != null && !draft.isBlank();
 
         String systemInstruction = buildSystemInstruction(hasDraft, propName, accessCode,
-                bookingContext, faqContext, extraPrompt);
+                bookingContext, faqContext, propKnowledgeBase, extraPrompt);
 
         String userContent = hasDraft
                 ? "Historique de la conversation :\n" + (history.isBlank() ? "(aucun message précédent)" : history)
@@ -124,7 +125,8 @@ public class MessageAssistService {
     }
 
     private String buildSystemInstruction(boolean hasDraft, String propName, String accessCode,
-                                           String bookingContext, String faqContext, String extraPrompt) {
+                                           String bookingContext, String faqContext,
+                                           String propKnowledgeBase, String extraPrompt) {
         StringBuilder sb = new StringBuilder();
         sb.append("Tu es l'assistant de rédaction de l'hôte de l'hébergement « ").append(propName).append(" ».\n");
         sb.append(hasDraft
@@ -144,6 +146,11 @@ public class MessageAssistService {
 
         if (!faqContext.isBlank()) {
             sb.append("=== FAQ (utilise ces informations si pertinentes) ===\n").append(faqContext).append("\n\n");
+        }
+
+        if (propKnowledgeBase != null && !propKnowledgeBase.isBlank()) {
+            sb.append("=== INFOS SPÉCIFIQUES AU LOGEMENT « ").append(propName).append(" » ===\n")
+              .append(propKnowledgeBase).append("\n\n");
         }
 
         if (extraPrompt != null && !extraPrompt.isBlank()) {

@@ -145,6 +145,7 @@ public class AutoResponderService {
         PropertyConfig propConfig = propConfigRepo.findByUserIdAndBeds24PropertyId(userId, propertyId).orElse(null);
         String propName   = propConfig != null && propConfig.getShortName() != null ? propConfig.getShortName() : "l'hébergement";
         String accessCode = propConfig != null && propConfig.getAccessCode()  != null ? propConfig.getAccessCode()  : "(non défini)";
+        String propKnowledgeBase = propConfig != null ? propConfig.getKnowledgeBaseExtra() : null;
 
         // FAQ (8 premières questions/réponses)
         String faqContext = faqRepo.findAllByOrderByDisplayOrderAscCreatedAtAsc().stream()
@@ -153,7 +154,7 @@ public class AutoResponderService {
                 .collect(Collectors.joining("\n\n"));
 
         String systemInstruction = buildSystemInstruction(propName, accessCode, bookingContext, faqContext,
-                config.getSystemPromptExtra());
+                propKnowledgeBase, config.getSystemPromptExtra());
 
         // Appel Groq (single-shot, sans function calling)
         Map<String, Object> body = Map.of(
@@ -192,7 +193,7 @@ public class AutoResponderService {
     }
 
     private String buildSystemInstruction(String propName, String accessCode, String bookingContext,
-                                           String faqContext, String extraPrompt) {
+                                           String faqContext, String propKnowledgeBase, String extraPrompt) {
         StringBuilder sb = new StringBuilder();
         sb.append("Tu es l'assistant automatique du propriétaire de l'hébergement « ").append(propName).append(" ».\n");
         sb.append("Tu réponds aux messages des voyageurs de manière chaleureuse, professionnelle et concise.\n");
@@ -206,6 +207,11 @@ public class AutoResponderService {
 
         if (!faqContext.isBlank()) {
             sb.append("=== FAQ (utilise ces informations si pertinentes) ===\n").append(faqContext).append("\n\n");
+        }
+
+        if (propKnowledgeBase != null && !propKnowledgeBase.isBlank()) {
+            sb.append("=== INFOS SPÉCIFIQUES AU LOGEMENT « ").append(propName).append(" » ===\n")
+              .append(propKnowledgeBase).append("\n\n");
         }
 
         if (extraPrompt != null && !extraPrompt.isBlank()) {

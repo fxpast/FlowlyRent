@@ -316,6 +316,12 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **`booking-site-property.component.ts`** : champ code promo + bouton "Appliquer" qui rappelle `checkAvailability()` (donc `getEstimate`) avec le code — pas d'endpoint de validation séparé. Le code appliqué est transmis dans le payload de `POST /{slug}/bookings` (`promoCode`), retiré avant l'envoi à Beds24 (Beds24 ne connaît pas ce champ) ; `PromoCode.usageCount` est incrémenté après création réussie de la réservation.
 - ⚠️ **Comme les réductions long séjour existantes, le prix final n'est pas revérifié côté serveur à la création de la réservation** — le backend fait confiance à `totalPrice` envoyé par le frontend (limite préexistante, pas spécifique aux codes promo).
 
+### Équipements du logement — Site de réservation public
+
+- **Source unique** : `PropertyInventoryItem` (`property_inventory_items`), déjà géré par l'hôte dans **Logements → Inventaire & Équipements** (`AdminPropertyInventoryController`, admin uniquement, scopé `userId`). Aucune nouvelle table — le site public réutilise directement cette liste.
+- **`GET /{slug}/properties/{propertyId}`** (`PublicBookingController.getProperty()`) embarque désormais un champ `equipment` (liste `{category, label, details, quantity}`) construit via `PropertyInventoryItemRepository.findByUserIdAndBeds24PropertyIdOrderByCategoryAscSortOrderAscIdAsc(user.getId(), propertyId)` — `user` déjà résolu par `userForSlug(slug)`, aucun nouvel endpoint dédié (même payload que la fiche logement, pas d'appel supplémentaire côté frontend).
+- **`booking-site-property.component.ts`** : section "Équipements" affichée entre la description et le calendrier de disponibilité, uniquement si `equipment` non vide. Regroupement par catégorie (`equipmentByCategory()` computed, ordre fixe BEDS → APPLIANCES → TECH → KITCHEN → BATHROOM → OUTDOOR → OTHER, mêmes catégories/icônes Material que `INVENTORY_CATEGORIES` côté admin) — libellés traduits (`bs.equipment_cat_*`), contrairement aux libellés français codés en dur de l'admin, car cette page est multilingue (sélecteur de langue du site public).
+
 ### Répondeur automatique — Messages voyageurs
 - **Webhook** : `POST /webhooks/beds24` reçoit les messages voyageurs Beds24 en temps réel
 - **Flux** : message reçu → `AutoResponderService` → Groq (`llama-3.3-70b-versatile`) → réponse postée via `Beds24ApiClient.sendMessage()`
@@ -323,9 +329,16 @@ Requises par Google Play — routes sous `/public/` sans authentification :
 - **Logs** : chaque réponse auto est enregistrée dans `AutoResponderLog` (bookingId, question, réponse, modèle)
 - **Onglet Tester** : simule une réponse sans envoyer — pour valider le prompt sans impacter les voyageurs
 
+### Base de connaissance par logement (répondeur automatique)
+- **`PropertyConfig.knowledgeBaseExtra`** (TEXT) : texte libre saisi par l'hôte par logement (wifi, électroménager, parking, règles de la maison, recommandations locales…) — **extension par logement** de la base de connaissance du chatbot, en complément des instructions IA globales (`AutoResponderConfig.systemPromptExtra`, host-wide) et de la FAQ (globale)
+- Saisi dans **Logements → Paramètres du logement**, section "Base de connaissance du logement" (sous "Codes promo", masquée en mode iCal — pas de messagerie voyageur dans ce mode) — pattern dirty-tracking identique au champ `shortName` (`kbDraft`/`kbSaved`, bouton save conditionnel)
+- `PUT /admin/property-configs/{beds24PropertyId}` avec clé `knowledgeBaseExtra` (même pattern `containsKey` que les autres champs du contrôleur)
+- Injecté par `AutoResponderService.buildSystemInstruction()` sous `=== INFOS SPÉCIFIQUES AU LOGEMENT ===`, **entre la FAQ et les instructions globales de l'hôte** — ne remplace ni la FAQ ni `systemPromptExtra`, s'y ajoute
+- N'alimente **pas** `RagService`/`ChatbotPromptService` (l'assistant IA portfolio-wide du panneau admin) — volontairement scopé au seul répondeur automatique voyageurs, car c'est l'hôte qui connaît déjà son propre logement
+
 ### Assistant IA — Rédaction de message (dialog réservation, onglet Messages)
 - **`MessageAssistService.assist(userId, bookingId, propertyId, draft, bookingContext)`** : réutilise Groq comme `AutoResponderService` (même clé, single-shot sans function calling), mais prompt différent — pas d'auto-envoi, l'hôte reste maître du texte final
-- **Réutilise les paramètres du répondeur automatique** : `AutoResponderConfig.systemPromptExtra` (instructions personnalisées de l'hôte), `PropertyConfig.shortName`/`accessCode` du logement, et les 8 premières entrées FAQ — même contexte que `AutoResponderService.generateReply()`, pour rester cohérent entre les réponses auto et l'assistance manuelle
+- **Réutilise les paramètres du répondeur automatique** : `AutoResponderConfig.systemPromptExtra` (instructions personnalisées de l'hôte), `PropertyConfig.shortName`/`accessCode`/`knowledgeBaseExtra` du logement, et les 8 premières entrées FAQ — même contexte que `AutoResponderService.generateReply()`, pour rester cohérent entre les réponses auto et l'assistance manuelle
 - Bouton `auto_awesome` (violet) dans la barre de saisie du chat, à côté du bouton copier : si le champ contient du texte → corrige/améliore (orthographe, ton, clarté, langue préservée) ; si le champ est vide → suggère une réponse basée sur l'historique de conversation (`MessageService.getMessages()`)
 - **`POST /admin/messages/{bookingId}/ai-assist`** : body `{ draft, propertyId, bookingContext }` — `bookingContext` (voyageur, arrivée/départ, adultes/enfants) construit côté frontend depuis `this.draft` du dialog, pas de nouvel appel Beds24 pour l'obtenir. Retourne `{ text }` — le texte remplace directement `newMessage`, jamais envoyé automatiquement
 

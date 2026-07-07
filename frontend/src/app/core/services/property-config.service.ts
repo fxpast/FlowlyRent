@@ -27,6 +27,7 @@ export interface PropertyConfig {
   discount28Nights?: number | null;
   coverPhotoUrl?: string | null;
   photoUrls?: string[];
+  knowledgeBaseExtra?: string | null;
   updatedAt?: string;
 }
 
@@ -71,6 +72,10 @@ export class PropertyConfigService {
 
   updateCoverPhoto(propId: string, url: string): Observable<PropertyConfig> {
     return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { coverPhotoUrl: url });
+  }
+
+  updateKnowledgeBase(propId: string, knowledgeBaseExtra: string): Observable<PropertyConfig> {
+    return this.http.put<PropertyConfig>(`${this.base}/${propId}`, { knowledgeBaseExtra });
   }
 
   scrapePhotos(propId: string): Observable<{ photos: string[] }> {
