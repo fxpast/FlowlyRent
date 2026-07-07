@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -229,9 +230,17 @@ const CATEGORY_ICONS: Record<string, string> = {
         <!-- ── En-tête articles ── -->
         <div class="section-header">
           <span class="section-title"><mat-icon>inventory_2</mat-icon> {{ 'linen.stock' | translate }}</span>
-          <button mat-flat-button color="primary" (click)="openItemForm()">
-            <mat-icon>add</mat-icon> {{ 'linen.add_item_btn' | translate }}
-          </button>
+          <div class="section-header-actions">
+            <button mat-stroked-button color="primary" (click)="returnAllFromLaundry()"
+                    [disabled]="totalAtLaundry() === 0 || returningAll()">
+              @if (returningAll()) { <mat-spinner diameter="16" style="display:inline-block"/> }
+              @else { <mat-icon>local_laundry_service</mat-icon> }
+              {{ 'linen.return_all_btn' | translate }}
+            </button>
+            <button mat-flat-button color="primary" (click)="openItemForm()">
+              <mat-icon>add</mat-icon> {{ 'linen.add_item_btn' | translate }}
+            </button>
+          </div>
         </div>
 
         <!-- Formulaire article (création / édition) -->
@@ -398,40 +407,46 @@ const CATEGORY_ICONS: Record<string, string> = {
 
         <!-- ── Historique ── -->
         <mat-divider style="margin: 28px 0 20px"></mat-divider>
-        <div class="section-title"><mat-icon>history</mat-icon> {{ 'linen.history_title' | translate }}</div>
+        <div class="section-title history-toggle" (click)="historyExpanded.set(!historyExpanded())">
+          <mat-icon>history</mat-icon> {{ 'linen.history_title' | translate }}
+          @if (movements().length > 0) { <span class="history-count">({{ movements().length }})</span> }
+          <mat-icon class="history-toggle-icon">{{ historyExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </div>
 
-        @if (movementsLoading()) {
-          <div class="center" style="margin-top:20px"><mat-spinner diameter="32" /></div>
-        } @else if (movements().length === 0) {
-          <p class="empty">{{ 'linen.no_movements' | translate }}</p>
-        } @else {
-          <div class="history-list">
-            @for (mv of movements(); track mv.id) {
-              <div class="mv-row" [class.to-laundry]="mv.direction === 'TO_LAUNDRY'">
-                <div class="mv-row-left">
-                  <mat-icon class="mv-icon">
-                    {{ mv.direction === 'TO_LAUNDRY' ? 'local_laundry_service' : 'check_circle' }}
-                  </mat-icon>
-                  <div class="mv-info">
-                    <div class="mv-label">{{ mv.linenItem.label }}</div>
-                    <div class="mv-sub">
-                      {{ (mv.direction === 'TO_LAUNDRY' ? 'linen.to_laundry_btn' : 'linen.from_laundry_title') | translate }}
-                      @if (mv.notes) { — {{ mv.notes }} }
+        @if (historyExpanded()) {
+          @if (movementsLoading()) {
+            <div class="center" style="margin-top:20px"><mat-spinner diameter="32" /></div>
+          } @else if (movements().length === 0) {
+            <p class="empty">{{ 'linen.no_movements' | translate }}</p>
+          } @else {
+            <div class="history-list">
+              @for (mv of movements(); track mv.id) {
+                <div class="mv-row" [class.to-laundry]="mv.direction === 'TO_LAUNDRY'">
+                  <div class="mv-row-left">
+                    <mat-icon class="mv-icon">
+                      {{ mv.direction === 'TO_LAUNDRY' ? 'local_laundry_service' : 'check_circle' }}
+                    </mat-icon>
+                    <div class="mv-info">
+                      <div class="mv-label">{{ mv.linenItem.label }}</div>
+                      <div class="mv-sub">
+                        {{ (mv.direction === 'TO_LAUNDRY' ? 'linen.to_laundry_btn' : 'linen.from_laundry_title') | translate }}
+                        @if (mv.notes) { — {{ mv.notes }} }
+                      </div>
                     </div>
                   </div>
+                  <div class="mv-row-right">
+                    <span class="mv-qty" [class.out]="mv.direction === 'TO_LAUNDRY'">
+                      {{ mv.direction === 'TO_LAUNDRY' ? '-' : '+' }}{{ mv.quantity }}
+                    </span>
+                    <span class="mv-date">{{ mv.movementDate | date:'dd/MM/yyyy':'':'fr-FR' }}</span>
+                    <button mat-icon-button color="warn" (click)="deleteMovement(mv)" [matTooltip]="'common.delete' | translate">
+                      <mat-icon style="font-size:16px;width:16px;height:16px">delete</mat-icon>
+                    </button>
+                  </div>
                 </div>
-                <div class="mv-row-right">
-                  <span class="mv-qty" [class.out]="mv.direction === 'TO_LAUNDRY'">
-                    {{ mv.direction === 'TO_LAUNDRY' ? '-' : '+' }}{{ mv.quantity }}
-                  </span>
-                  <span class="mv-date">{{ mv.movementDate | date:'dd/MM/yyyy':'':'fr-FR' }}</span>
-                  <button mat-icon-button color="warn" (click)="deleteMovement(mv)" [matTooltip]="'common.delete' | translate">
-                    <mat-icon style="font-size:16px;width:16px;height:16px">delete</mat-icon>
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          }
         }
       }
     </div>
@@ -440,8 +455,12 @@ const CATEGORY_ICONS: Record<string, string> = {
     .linen-root { padding: 8px 0 24px; }
     .prop-select { width: 320px; max-width: 100%; margin-bottom: 20px; }
     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .section-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .section-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; color: #333; }
     .section-title mat-icon { color: #1976d2; font-size: 20px; width: 20px; height: 20px; }
+    .history-toggle { cursor: pointer; user-select: none; }
+    .history-count { color: #888; font-weight: 400; font-size: 14px; }
+    .history-toggle-icon { margin-left: auto; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .empty { color: #999; font-size: 14px; padding: 20px 0; }
     .subtitle { color: #888; font-size: 13px; margin: -8px 0 16px; }
@@ -537,10 +556,16 @@ export class LinenComponent implements OnInit {
   itemsLoading      = signal(false);
   movementsLoading  = signal(false);
   templatesLoading  = signal(false);
+  historyExpanded   = signal(false);
+  returningAll      = signal(false);
   selectedPropId    = '';
 
   get categories() {
     return Object.entries(CATEGORY_LABEL_KEYS).map(([value, key]) => ({ value, label: this.t.instant(key) }));
+  }
+
+  totalAtLaundry(): number {
+    return this.items().reduce((sum, i) => sum + i.atLaundry, 0);
   }
 
   itemForm: {
@@ -701,6 +726,33 @@ export class LinenComponent implements OnInit {
       },
       error: () => {
         this.movementForm.saving = false;
+        this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  returnAllFromLaundry(): void {
+    const itemsAtLaundry = this.items().filter(i => i.atLaundry > 0);
+    if (itemsAtLaundry.length === 0 || this.returningAll()) return;
+    if (!confirm(this.t.instant('linen.return_all_confirm'))) return;
+    this.returningAll.set(true);
+    const today = localDateStr(new Date());
+    const calls = itemsAtLaundry.map(item => this.http.post(`${this.base}/admin/linen/movements`, {
+      linenItemId:  item.id,
+      direction:    'FROM_LAUNDRY',
+      quantity:     item.atLaundry,
+      movementDate: today,
+      notes:        null
+    }));
+    forkJoin(calls).subscribe({
+      next: () => {
+        this.returningAll.set(false);
+        this.snack.open(this.t.instant('linen.return_all_done'), '', { duration: 2500 });
+        this.loadItems();
+        this.loadMovements();
+      },
+      error: () => {
+        this.returningAll.set(false);
         this.snack.open(this.t.instant('common.error'), this.t.instant('common.close'), { duration: 3000 });
       }
     });

@@ -20,7 +20,6 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { localDateStr } from '../../core/utils/date.utils';
@@ -120,7 +119,7 @@ const STATUS_KEYS: Record<string, string> = {
     MatCardModule, MatButtonModule, MatIconModule, MatSelectModule,
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule,
     MatProgressSpinnerModule, MatDatepickerModule, MatNativeDateModule,
-    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule, MatMenuModule, MatPaginatorModule,
+    MatSnackBarModule, MatTabsModule, MatDividerModule, MatButtonToggleModule, MatTooltipModule, MatCheckboxModule, MatMenuModule,
     LinenComponent, TranslateModule
   ],
   template: `
@@ -307,14 +306,23 @@ const STATUS_KEYS: Record<string, string> = {
           } @else if (displayedTasks().length === 0) {
             <p class="empty">{{ 'housekeeping.no_tasks' | translate }}</p>
           } @else {
-            <mat-paginator
-              [length]="displayedTasks().length"
-              [pageSize]="taskPageSize()"
-              [pageIndex]="taskPageIndex()"
-              [pageSizeOptions]="[10, 20, 50, 100]"
-              (page)="onTaskPage($event)"
-              showFirstLastButtons>
-            </mat-paginator>
+            <div class="mobile-paginator">
+              <select class="mp-page-size" [ngModel]="taskPageSize()" (ngModelChange)="onTaskPageSizeChange($event)">
+                <option [value]="10">10</option>
+                <option [value]="20">20</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+              <span class="mp-range">{{ taskPageRangeLabel() }}</span>
+              <div class="mp-nav">
+                <button mat-icon-button [disabled]="taskPageIndex() === 0" (click)="onTaskPrevPage()">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <button mat-icon-button [disabled]="!hasNextTaskPage()" (click)="onTaskNextPage()">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
             <div class="tasks-grid">
               @for (task of paginatedTasks(); track task.id) {
                 <mat-card class="task-card" [class.done]="task.status === 'DONE'" [class.in-progress]="task.status === 'IN_PROGRESS'">
@@ -799,6 +807,13 @@ const STATUS_KEYS: Record<string, string> = {
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { text-align: center; color: #888; padding: 40px; }
     .tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+    /* Paginator — natif pour garder le plein contrôle de la largeur
+       (mat-paginator/mat-select ignorent les contraintes CSS externes) */
+    .mobile-paginator { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 4px 16px; }
+    .mp-page-size { flex: none; width: 56px; height: 36px; border: 1px solid rgba(0,0,0,0.38); border-radius: 4px; padding: 0 4px; font-size: 14px; font-family: Roboto, sans-serif; background: transparent; cursor: pointer; }
+    .mp-range { flex: 1; text-align: center; font-size: 13px; color: #666; white-space: nowrap; }
+    .mp-nav { flex: none; display: flex; align-items: center; }
     .quick-periods { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .task-card { padding: 16px; }
     .task-card.done { opacity: 0.65; }
@@ -996,9 +1011,29 @@ export class HousekeepingComponent implements OnInit {
     return all.slice(start, start + this.taskPageSize());
   });
 
-  onTaskPage(e: PageEvent): void {
-    this.taskPageIndex.set(e.pageIndex);
-    this.taskPageSize.set(e.pageSize);
+  taskPageRangeLabel(): string {
+    const total = this.displayedTasks().length;
+    if (total === 0) return '0';
+    const start = this.taskPageIndex() * this.taskPageSize() + 1;
+    const end = Math.min(start + this.taskPageSize() - 1, total);
+    return `${start}–${end} / ${total}`;
+  }
+
+  hasNextTaskPage(): boolean {
+    return (this.taskPageIndex() + 1) * this.taskPageSize() < this.displayedTasks().length;
+  }
+
+  onTaskPrevPage(): void {
+    if (this.taskPageIndex() > 0) this.taskPageIndex.set(this.taskPageIndex() - 1);
+  }
+
+  onTaskNextPage(): void {
+    if (this.hasNextTaskPage()) this.taskPageIndex.set(this.taskPageIndex() + 1);
+  }
+
+  onTaskPageSizeChange(size: string): void {
+    this.taskPageSize.set(Number(size));
+    this.taskPageIndex.set(0);
   }
 
   filteredTaskTypes = computed(() =>

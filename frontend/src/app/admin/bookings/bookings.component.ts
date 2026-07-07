@@ -169,14 +169,24 @@ import { environment } from '@env/environment';
           @if (sortedFiltered().length === 0) {
             <p class="empty">{{ 'bookings.no_results' | translate }}</p>
           }
-          <mat-paginator
-            [length]="sortedFiltered().length"
-            [pageSize]="pageSize()"
-            [pageIndex]="pageIndex()"
-            [pageSizeOptions]="[10, 20, 50]"
-            (page)="onPage($event)"
-            showFirstLastButtons>
-          </mat-paginator>
+          @if (sortedFiltered().length > 0) {
+            <div class="mobile-paginator">
+              <select class="mp-page-size" [ngModel]="pageSize()" (ngModelChange)="onMobilePageSizeChange($event)">
+                <option [value]="10">10</option>
+                <option [value]="20">20</option>
+                <option [value]="50">50</option>
+              </select>
+              <span class="mp-range">{{ pageRangeLabel() }}</span>
+              <div class="mp-nav">
+                <button mat-icon-button [disabled]="pageIndex() === 0" (click)="onMobilePrevPage()">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <button mat-icon-button [disabled]="!hasNextPage()" (click)="onMobileNextPage()">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Tableau desktop -->
@@ -289,6 +299,13 @@ import { environment } from '@env/environment';
     .clickable-card { cursor: pointer; transition: box-shadow 0.15s; }
     .clickable-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
 
+    /* Paginator mobile — natif pour garder le plein contrôle de la largeur
+       (mat-paginator/mat-select ignorent les contraintes CSS externes) */
+    .mobile-paginator { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 4px 0; }
+    .mp-page-size { flex: none; width: 56px; height: 36px; border: 1px solid rgba(0,0,0,0.38); border-radius: 4px; padding: 0 4px; font-size: 14px; font-family: Roboto, sans-serif; background: transparent; cursor: pointer; }
+    .mp-range { flex: 1; text-align: center; font-size: 13px; color: #666; white-space: nowrap; }
+    .mp-nav { flex: none; display: flex; align-items: center; }
+
     @media (max-width: 768px) {
       .mobile-list { display: flex; }
       .desktop-table { display: none; }
@@ -395,6 +412,31 @@ export class BookingsComponent implements OnInit {
   onPage(event: PageEvent): void {
     this.pageSize.set(event.pageSize);
     this.pageIndex.set(event.pageIndex);
+  }
+
+  pageRangeLabel(): string {
+    const total = this.sortedFiltered().length;
+    if (total === 0) return '0';
+    const start = this.pageIndex() * this.pageSize() + 1;
+    const end = Math.min(start + this.pageSize() - 1, total);
+    return `${start}–${end} / ${total}`;
+  }
+
+  hasNextPage(): boolean {
+    return (this.pageIndex() + 1) * this.pageSize() < this.sortedFiltered().length;
+  }
+
+  onMobilePrevPage(): void {
+    if (this.pageIndex() > 0) this.pageIndex.set(this.pageIndex() - 1);
+  }
+
+  onMobileNextPage(): void {
+    if (this.hasNextPage()) this.pageIndex.set(this.pageIndex() + 1);
+  }
+
+  onMobilePageSizeChange(size: string): void {
+    this.pageSize.set(Number(size));
+    this.pageIndex.set(0);
   }
 
   onSortChange(sort: Sort): void {
