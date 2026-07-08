@@ -15,6 +15,7 @@ import com.flowlyrent.repository.TaskPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
 import com.flowlyrent.service.CloudinaryService;
 import com.flowlyrent.service.FcmPushService;
+import com.flowlyrent.service.HousekeeperRewardsService;
 import com.flowlyrent.service.LinenService;
 import com.flowlyrent.service.WebPushService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,6 +57,7 @@ public class HousekeeperPortalController {
     private final Beds24AccountRepository accountRepo;
     private final WebPushService webPushService;
     private final FcmPushService fcmPushService;
+    private final HousekeeperRewardsService rewardsService;
 
     private HousekeeperProfile myProfile() {
         Long userId = securityUtils.getCurrentUserId();
@@ -217,6 +219,11 @@ public class HousekeeperPortalController {
         });
         photoRepo.deleteById(photoId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/rewards")
+    public ResponseEntity<Map<String, Object>> rewards() {
+        return ResponseEntity.ok(rewardsService.computeMyRewards(myProfile()));
     }
 
     @GetMapping("/arrivals")

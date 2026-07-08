@@ -15,6 +15,10 @@ export const housekeeperRoutes: Routes = [
       {
         path: 'reports',
         loadComponent: () => import('./reports/housekeeper-reports.component').then(m => m.HousekeeperReportsComponent)
+      },
+      {
+        path: 'rewards',
+        loadComponent: () => import('./rewards/housekeeper-rewards.component').then(m => m.HousekeeperRewardsComponent)
       }
     ]
   }

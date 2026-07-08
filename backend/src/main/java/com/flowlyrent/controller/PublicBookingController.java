@@ -13,6 +13,7 @@ import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.repository.PropertyInventoryItemRepository;
 import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.GuestRewardService;
 import com.flowlyrent.service.PropertyCapacityResolverService;
 import com.flowlyrent.service.RoomIdResolverService;
 import com.stripe.Stripe;
@@ -49,6 +50,7 @@ public class PublicBookingController {
     private final PropertyInventoryItemRepository inventoryRepo;
     private final com.flowlyrent.repository.PaymentLinkRepository paymentLinkRepo;
     private final com.flowlyrent.repository.PromoCodeRepository promoCodeRepo;
+    private final GuestRewardService guestRewardService;
     private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
@@ -566,10 +568,11 @@ public class PublicBookingController {
             String token  = beds24.tokenFor(account);
             Long   userId = account.getAppUser().getId();
 
-            // Sauvegarder propId, arrival et promoCode AVANT traitement (ils sont supprimés du payload Beds24)
+            // Sauvegarder propId, arrival, promoCode et guestEmail AVANT traitement (ils sont supprimés du payload Beds24)
             String fallbackPropId = null;
             String fallbackArrival = null;
             String usedPromoCode = null;
+            String guestEmail = null;
             if (!payload.isEmpty()) {
                 Map<String, Object> raw = payload.get(0);
                 Object rawPid = raw.get("propId") != null ? raw.get("propId") : raw.get("propertyId");
@@ -578,6 +581,8 @@ public class PublicBookingController {
                 if (!rawArr.isEmpty()) fallbackArrival = rawArr.substring(0, 10);
                 String rawPromo = Objects.toString(raw.get("promoCode"), "");
                 if (!rawPromo.isBlank()) usedPromoCode = rawPromo.trim();
+                String rawEmail = Objects.toString(raw.get("guestEmail"), "");
+                if (!rawEmail.isBlank()) guestEmail = rawEmail.trim();
             }
 
             List<Map<String, Object>> processed = new ArrayList<>();
@@ -688,8 +693,22 @@ public class PublicBookingController {
                 promoCodeRepo.findByUserIdAndBeds24PropertyIdAndCodeIgnoreCaseAndActiveTrue(userId, fallbackPropId, usedPromoCode)
                         .ifPresent(pc -> {
                             pc.setUsageCount(pc.getUsageCount() + 1);
+                            if (pc.getRestrictedGuestEmail() != null) pc.setActive(false);
                             promoCodeRepo.save(pc);
                         });
+            }
+
+            // Fidélité voyageurs : trace la réservation et émet une récompense si un palier est franchi
+            if (guestEmail != null && fallbackPropId != null && !saved.isEmpty()) {
+                Object savedBookingId = saved.get(0).get("id");
+                Map<String, Object> reward = guestRewardService.recordBookingAndMaybeIssueReward(
+                        account.getAppUser(), fallbackPropId, guestEmail,
+                        savedBookingId != null ? savedBookingId.toString() : null);
+                if (reward != null) {
+                    Map<String, Object> enriched = new HashMap<>(saved.get(0));
+                    enriched.put("guestReward", reward);
+                    saved = List.of(enriched);
+                }
             }
 
             return ResponseEntity.ok(saved);

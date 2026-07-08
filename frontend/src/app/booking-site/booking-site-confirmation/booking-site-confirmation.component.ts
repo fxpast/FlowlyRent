@@ -73,6 +73,26 @@ import { BookingSiteService } from '../booking-site.service';
             }
           </div>
 
+          @if (guestReward(); as reward) {
+            <div class="reward-badge">
+              <span class="material-icons">celebration</span>
+              <div>
+                <div class="reward-title">
+                  {{ 'bs.reward_unlocked' | translate: { count: reward.milestone } }}
+                </div>
+                <div class="reward-desc">
+                  {{ 'bs.reward_code_hint' | translate: { percent: reward.discountPercent } }}
+                </div>
+                <div class="reward-code-row">
+                  <code class="reward-code">{{ reward.code }}</code>
+                  <button mat-button (click)="copyRewardCode(reward.code)">
+                    <span class="material-icons">{{ codeCopied() ? 'check' : 'content_copy' }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
           <!-- Paiement en ligne via Beds24 si montant > 0 -->
           @if (totalAmount() > 0 && !paymentDone()) {
             <div class="payment-section">
@@ -159,6 +179,20 @@ import { BookingSiteService } from '../booking-site.service';
     }
     .paid-badge .material-icons { color: #43a047; }
 
+    .reward-badge {
+      width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left;
+      background: linear-gradient(135deg, #fff8e1, #fff3e0); border: 1px solid #ffcc80;
+      border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
+    }
+    .reward-badge .material-icons { font-size: 28px; color: #f57c00; flex-shrink: 0; }
+    .reward-title { font-weight: 700; color: #e65100; font-size: .95rem; }
+    .reward-desc { color: #6d4c00; font-size: .85rem; margin-top: 2px; }
+    .reward-code-row { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
+    .reward-code {
+      background: white; border: 1px dashed #f57c00; border-radius: 6px;
+      padding: 6px 12px; font-size: 1rem; font-weight: 700; letter-spacing: 1px; color: #e65100;
+    }
+
     .back-btn { color: #0288d1; margin-top: 8px; }
 
     @media (max-width: 600px) {
@@ -177,6 +211,8 @@ export class BookingSiteConfirmationComponent implements OnInit {
   paying = signal(false);
   paymentError = signal('');
   paymentDone = signal(false);
+  guestReward = signal<any>(null);
+  codeCopied = signal(false);
 
   langs = ['fr', 'en', 'es', 'de', 'it'];
   currentLang = 'fr';
@@ -200,6 +236,11 @@ export class BookingSiteConfirmationComponent implements OnInit {
 
     const paid = this.route.snapshot.queryParamMap.get('paid');
     if (paid === 'true') this.paymentDone.set(true);
+
+    // Perdu si la page est rafraîchie ou ouverte via un lien externe (history.state vide) —
+    // même limite déjà acceptée pour le flux de paiement (payOnline() ci-dessous).
+    const navState = history.state ?? {};
+    if (navState.guestReward) this.guestReward.set(navState.guestReward);
 
     this.svc.getSiteInfo(this.slug).subscribe({ next: v => this.siteInfo.set(v) });
     this.svc.getBooking(this.slug, this.bookingId).subscribe({
@@ -252,6 +293,13 @@ export class BookingSiteConfirmationComponent implements OnInit {
         checkIn:      b?.firstNight ?? b?.checkIn ?? '',
         checkOut:     b?.lastNight ?? b?.checkOut ?? ''
       }
+    });
+  }
+
+  copyRewardCode(code: string): void {
+    navigator.clipboard.writeText(code).then(() => {
+      this.codeCopied.set(true);
+      setTimeout(() => this.codeCopied.set(false), 2000);
     });
   }
 

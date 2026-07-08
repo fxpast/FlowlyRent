@@ -30,6 +30,26 @@ export interface TaskPhoto {
   uploadedAt: string;
 }
 
+export interface RewardBadge {
+  key: string;
+  unlocked: boolean;
+}
+
+export interface LeaderboardEntry {
+  housekeeperId: number;
+  name: string;
+  points: number;
+  isMe: boolean;
+}
+
+export interface HousekeeperRewards {
+  points: number;
+  levelKey: string;
+  nextLevelThreshold: number;
+  badges: RewardBadge[];
+  leaderboard: LeaderboardEntry[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class HousekeeperPortalService {
   readonly baseUrl = `${environment.apiUrl}/housekeeper`;
@@ -90,5 +110,9 @@ export class HousekeeperPortalService {
 
   getDepartures(): Observable<any[]> {
     return this.http.get<any[]>(`${this.base}/departures`);
+  }
+
+  getRewards(): Observable<HousekeeperRewards> {
+    return this.http.get<HousekeeperRewards>(`${this.base}/rewards`);
   }
 }

@@ -37,6 +37,10 @@ import { PushNotificationService } from '../../core/services/push-notification.s
         <mat-icon>warning</mat-icon>
         <span>{{ 'housekeeper.nav_incidents' | translate }}</span>
       </a>
+      <a routerLink="rewards" routerLinkActive="active">
+        <mat-icon>emoji_events</mat-icon>
+        <span>{{ 'housekeeper.nav_rewards' | translate }}</span>
+      </a>
     </nav>
   `,
   styles: [`

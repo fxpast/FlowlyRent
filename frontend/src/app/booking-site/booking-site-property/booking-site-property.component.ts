@@ -930,7 +930,9 @@ export class BookingSitePropertyComponent implements OnInit {
         const booking = Array.isArray(result) ? result[0] : result;
         const bookingId = booking?.bookingId ?? booking?.id;
         if (bookingId) {
-          this.router.navigate(['/', this.slug, 'booking', bookingId]);
+          this.router.navigate(['/', this.slug, 'booking', bookingId], {
+            state: { guestReward: booking?.guestReward }
+          });
         } else {
           this.bookingError.set(this.translate.instant('bs.error_booking_id'));
         }

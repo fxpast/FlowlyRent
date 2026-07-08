@@ -40,6 +40,12 @@ public class PromoCode {
     @Column(name = "usage_count", nullable = false)
     private int usageCount = 0;
 
+    /** Non null → code de fidélité généré automatiquement pour ce voyageur
+     *  précis (gamification), désactivé après son unique utilisation.
+     *  Null → code promo classique créé par l'hôte, réutilisable. */
+    @Column(name = "restricted_guest_email")
+    private String restrictedGuestEmail;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

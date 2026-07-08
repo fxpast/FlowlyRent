@@ -119,6 +119,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./concierge/concierge.component').then(m => m.ConciergeComponent)
       },
       {
+        path: 'rewards',
+        loadComponent: () => import('./rewards/rewards.component').then(m => m.RewardsComponent)
+      },
+      {
         path: 'onboarding',
         loadComponent: () => import('./onboarding/onboarding.component').then(m => m.OnboardingComponent)
       }

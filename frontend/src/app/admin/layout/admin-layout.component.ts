@@ -150,6 +150,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { icon: 'rate_review',       label: 'nav.feedback',    route: 'feedback' },
     { icon: 'quiz',              label: 'nav.faq',         route: 'faq' },
     { icon: 'storefront',        label: 'nav.conciergerie', route: 'concierge' },
+    { icon: 'emoji_events',      label: 'nav.rewards',     route: 'rewards' },
     { icon: 'settings',          label: 'nav.settings',    route: 'settings' }
   ];
 
