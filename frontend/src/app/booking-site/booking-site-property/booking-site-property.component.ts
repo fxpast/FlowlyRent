@@ -120,7 +120,7 @@ interface CalMonth {
                       <strong>{{ cat.labelKey | translate }}</strong>
                     </div>
                     <ul class="equipment-list">
-                      @for (item of cat.items; track item.label + (item.details ?? '')) {
+                      @for (item of cat.items; track $index) {
                         <li>
                           {{ item.label }}{{ item.details ? ' (' + item.details + ')' : '' }}
                           @if (item.quantity > 1) { <span class="equipment-qty">×{{ item.quantity }}</span> }
