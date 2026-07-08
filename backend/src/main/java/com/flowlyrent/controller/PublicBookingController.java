@@ -13,6 +13,7 @@ import com.flowlyrent.repository.PropertyConfigRepository;
 import com.flowlyrent.repository.PropertyInventoryItemRepository;
 import com.flowlyrent.repository.PropertyPhotoRepository;
 import com.flowlyrent.service.Beds24ApiClient;
+import com.flowlyrent.service.BookingConfirmationEmailService;
 import com.flowlyrent.service.GuestRewardService;
 import com.flowlyrent.service.PropertyCapacityResolverService;
 import com.flowlyrent.service.RoomIdResolverService;
@@ -51,6 +52,7 @@ public class PublicBookingController {
     private final com.flowlyrent.repository.PaymentLinkRepository paymentLinkRepo;
     private final com.flowlyrent.repository.PromoCodeRepository promoCodeRepo;
     private final GuestRewardService guestRewardService;
+    private final BookingConfirmationEmailService bookingConfirmationEmailService;
     private final ObjectMapper objectMapper;
 
     @Value("${stripe.secret-key}")
@@ -568,21 +570,27 @@ public class PublicBookingController {
             String token  = beds24.tokenFor(account);
             Long   userId = account.getAppUser().getId();
 
-            // Sauvegarder propId, arrival, promoCode et guestEmail AVANT traitement (ils sont supprimés du payload Beds24)
+            // Sauvegarder propId, arrival/departure, promoCode et infos voyageur AVANT traitement (supprimés du payload Beds24)
             String fallbackPropId = null;
             String fallbackArrival = null;
+            String fallbackDeparture = null;
             String usedPromoCode = null;
             String guestEmail = null;
+            String guestFirstName = null;
             if (!payload.isEmpty()) {
                 Map<String, Object> raw = payload.get(0);
                 Object rawPid = raw.get("propId") != null ? raw.get("propId") : raw.get("propertyId");
                 if (rawPid != null) fallbackPropId = rawPid.toString().trim();
                 String rawArr = Objects.toString(raw.get("arrival"), "");
                 if (!rawArr.isEmpty()) fallbackArrival = rawArr.substring(0, 10);
+                String rawDep = Objects.toString(raw.get("departure"), "");
+                if (!rawDep.isEmpty()) fallbackDeparture = rawDep.substring(0, 10);
                 String rawPromo = Objects.toString(raw.get("promoCode"), "");
                 if (!rawPromo.isBlank()) usedPromoCode = rawPromo.trim();
                 String rawEmail = Objects.toString(raw.get("guestEmail"), "");
                 if (!rawEmail.isBlank()) guestEmail = rawEmail.trim();
+                String rawFirstName = Objects.toString(raw.get("guestFirstName"), "");
+                if (!rawFirstName.isBlank()) guestFirstName = rawFirstName.trim();
             }
 
             List<Map<String, Object>> processed = new ArrayList<>();
@@ -699,16 +707,24 @@ public class PublicBookingController {
             }
 
             // Fidélité voyageurs : trace la réservation et émet une récompense si un palier est franchi
+            Map<String, Object> guestReward = null;
             if (guestEmail != null && fallbackPropId != null && !saved.isEmpty()) {
                 Object savedBookingId = saved.get(0).get("id");
-                Map<String, Object> reward = guestRewardService.recordBookingAndMaybeIssueReward(
+                guestReward = guestRewardService.recordBookingAndMaybeIssueReward(
                         account.getAppUser(), fallbackPropId, guestEmail,
                         savedBookingId != null ? savedBookingId.toString() : null);
-                if (reward != null) {
+                if (guestReward != null) {
                     Map<String, Object> enriched = new HashMap<>(saved.get(0));
-                    enriched.put("guestReward", reward);
+                    enriched.put("guestReward", guestReward);
                     saved = List.of(enriched);
                 }
+            }
+
+            // Email de confirmation automatique (rédigé par l'IA), réservation directe uniquement
+            if (guestEmail != null && fallbackPropId != null && fallbackArrival != null && fallbackDeparture != null) {
+                bookingConfirmationEmailService.sendConfirmation(
+                        account.getAppUser(), fallbackPropId, guestFirstName, guestEmail,
+                        fallbackArrival, fallbackDeparture, guestReward);
             }
 
             return ResponseEntity.ok(saved);

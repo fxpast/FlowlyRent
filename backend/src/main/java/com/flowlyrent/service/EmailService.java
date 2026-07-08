@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.internet.MimeMessage;
 
 /**
- * Service d'envoi d'emails transactionnels (abonnements, notifications système).
- * Les emails liés aux réservations sont gérés directement par Beds24.
+ * Service d'envoi d'emails transactionnels (abonnements, notifications système,
+ * confirmation de réservation directe via BookingConfirmationEmailService).
+ * Les réservations OTA (Airbnb, Booking...) ont leur propre confirmation
+ * envoyée par la plateforme — ce service ne concerne que les envois FlowlyRent.
  */
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,9 @@ public class EmailService {
 
     @Value("${spring.mail.username:}")
     private String fromAddress;
+
+    @Value("${spring.mail.password:}")
+    private String smtpPassword;
 
     @Value("${app.name:FlowlyRent}")
     private String appName;
@@ -43,6 +48,7 @@ public class EmailService {
     }
 
     public boolean isConfigured() {
-        return fromAddress != null && !fromAddress.isBlank();
+        return fromAddress != null && !fromAddress.isBlank()
+                && smtpPassword != null && !smtpPassword.isBlank();
     }
 }

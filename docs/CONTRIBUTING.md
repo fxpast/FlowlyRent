@@ -26,6 +26,11 @@ STRIPE_CLIENT_ID=ca_...   # Dashboard Stripe → Connect → Paramètres → ID 
 CLOUDINARY_SECRET=<api_secret Cloudinary>
 # CLOUDINARY_CLOUD_NAME et CLOUDINARY_API_KEY ont des défauts non-sensibles dans application.yml
 
+# Email (SMTP) — emails transactionnels + confirmation de réservation directe (IA)
+MAIL_USERNAME=contact@flowlyrent.com   # défaut non-sensible dans application.yml, à surcharger si besoin
+MAIL_PASSWORD=<mot de passe d'application Gmail, PAS le mot de passe du compte>
+# MAIL_HOST/MAIL_PORT ont des défauts (smtp.gmail.com:587) — à surcharger si autre fournisseur (OVH...)
+
 # Compte superadmin auto-créé au démarrage (AdminBootstrap)
 ADMIN_USERNAME=admin@flowlyrent.com
 ADMIN_PASSWORD=<mot de passe sécurisé>
