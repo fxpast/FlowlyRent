@@ -97,6 +97,16 @@ barres colorées selon la plateforme (Direct, Airbnb, Booking, Abritel). Permet 
 ou modifier une réservation, ajouter des périodes bloquées (indisponibilités), et définir
 des tarifs spécifiques pour certaines dates (overrides).
 
+### Périodes blackout (indisponibilité)
+
+Un calendrier peut contenir des **périodes blackout** : ce sont des plages de dates
+bloquées manuellement par l'hôte (indisponibilités, travaux, usage personnel…). Un
+logement dont le calendrier présente des indicateurs blackout sur une période donnée est
+**indisponible** pour cette période — il n'apparaît pas dans les résultats de recherche
+du site public pour ces dates, et le bouton "Vérifier disponibilité" sur sa fiche
+logement affiche les dates comme bloquées. La recherche de disponibilité tient compte
+des blackouts en plus des réservations existantes.
+
 ## Réservations (Bookings)
 
 Tableau de toutes les réservations (passées et futures), filtrable et triable : voyageur,
