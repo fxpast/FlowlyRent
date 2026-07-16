@@ -100,12 +100,15 @@ des tarifs spécifiques pour certaines dates (overrides).
 ### Périodes blackout (indisponibilité)
 
 Un calendrier peut contenir des **périodes blackout** : ce sont des plages de dates
-bloquées manuellement par l'hôte (indisponibilités, travaux, usage personnel…). Un
-logement dont le calendrier présente des indicateurs blackout sur une période donnée est
-**indisponible** pour cette période — il n'apparaît pas dans les résultats de recherche
-du site public pour ces dates, et le bouton "Vérifier disponibilité" sur sa fiche
-logement affiche les dates comme bloquées. La recherche de disponibilité tient compte
-des blackouts en plus des réservations existantes.
+bloquées manuellement par l'hôte (indisponibilités, travaux, usage personnel…).
+
+**Règle de disponibilité :** un logement est considéré **disponible** sur une période
+uniquement si son calendrier ne contient **aucun indicateur blackout** sur ces dates
+(et aucune réservation chevauchante). Dès qu'un blackout est présent, le logement est
+**indisponible** — il n'apparaît pas dans les résultats de recherche du site public
+pour ces dates, et le bouton "Vérifier disponibilité" sur sa fiche logement affiche
+les dates comme bloquées. La recherche de disponibilité vérifie systématiquement les
+blackouts en plus des réservations existantes.
 
 ## Réservations (Bookings)
 
