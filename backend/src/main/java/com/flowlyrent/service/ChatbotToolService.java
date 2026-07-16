@@ -390,7 +390,40 @@ public class ChatbotToolService {
                 })
                 .map(b -> idStr(b.get("propId") != null ? b.get("propId") : b.get("propertyId")))
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(HashSet::new));
+
+        // Blackouts posés manuellement — même logique que PublicBookingController.searchAvailability
+        try {
+            Map<String, String> calParams = new HashMap<>();
+            calParams.put("startDate", finalFrom.toString());
+            calParams.put("endDate", finalTo.toString());
+            calParams.put("includeOverride", "1");
+            for (Map<String, Object> room : beds24.getCalendar(token, calParams)) {
+                Object pidObj = room.get("propId") != null ? room.get("propId")
+                        : room.get("propertyId") != null ? room.get("propertyId") : room.get("id");
+                String pid = idStr(pidObj);
+                if (pid == null || occupiedIds.contains(pid)) continue;
+                Object calObj = room.get("calendar");
+                if (!(calObj instanceof List<?> cal)) continue;
+                for (Object o : cal) {
+                    if (!(o instanceof Map<?, ?> rawRange)) continue;
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> range = (Map<String, Object>) rawRange;
+                    if (!"blackout".equalsIgnoreCase(Objects.toString(range.get("override"), ""))) continue;
+                    String f  = truncateDate(range.get("from"));
+                    String t2 = truncateDate(range.get("to"));
+                    if (f.isEmpty() || t2.isEmpty()) continue;
+                    LocalDate blackoutFrom = LocalDate.parse(f);
+                    LocalDate blackoutTo   = LocalDate.parse(t2);
+                    if (!blackoutFrom.isAfter(finalTo) && !blackoutTo.isBefore(finalFrom)) {
+                        occupiedIds.add(pid);
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[chatbot:get_free_properties] Impossible de vérifier les blackouts : {}", e.getMessage());
+        }
 
         List<Map<String, Object>> free = allPropIds.stream()
                 .filter(id -> !occupiedIds.contains(id))
