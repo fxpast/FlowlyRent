@@ -289,9 +289,7 @@ détaillées sur une réservation spécifique : email, téléphone, nombre d'adu
 notes, frais de ménage, ID Beds24, adresse du voyageur. L'outil **`get_free_properties`**
 identifie quels logements sont libres (non occupés) et lesquels sont occupés sur une
 période donnée, en tenant compte des séjours déjà en cours au moment du début de la
-période et des périodes blackout (indisponibilités posées manuellement par l'hôte). Un
-logement avec un blackout actif sur la période est retourné dans `occupiedProperties`,
-jamais dans `freeProperties`. Quand l'hôte demande une action que le chatbot ne peut pas effectuer (envoyer
+période. Quand l'hôte demande une action que le chatbot ne peut pas effectuer (envoyer
 un SMS, modifier un prix, etc.), l'outil **`report_unhandled_action`** enregistre la
 demande pour que l'équipe FlowlyRent puisse en tenir compte.
 
